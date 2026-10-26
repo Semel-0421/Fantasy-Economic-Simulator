@@ -133,10 +133,14 @@ namespace FES.Data
                     if (!TryGetGood(goodKey, grade, out var good))
                         throw new FormatException($"recipes.csv row {r + 1}: unknown good '{goodKey}'.");
                     var line = new RecipeLine(good, recipes.GetInt(r, "qty"));
+                    if (line.Quantity < 0) throw new FormatException($"recipes.csv row {r + 1}: qty must not be negative.");
                     string role = recipes.GetString(r, "role");
-                    if (role == "in") lines.inputs.Add(line);
-                    else if (role == "out") lines.outputs.Add(line);
-                    else throw new FormatException($"recipes.csv row {r + 1}: role must be 'in' or 'out'.");
+                    var roleLines = role == "in" ? lines.inputs
+                        : role == "out" ? lines.outputs
+                        : throw new FormatException($"recipes.csv row {r + 1}: role must be 'in' or 'out'.");
+                    if (roleLines.Exists(l => l.Good.Value == good.Value))
+                        throw new FormatException($"recipes.csv row {r + 1}: '{goodKey}' is listed twice as '{role}' in recipe '{key}'.");
+                    roleLines.Add(line);
                 }
             }
             var recipeByKey = new Dictionary<string, RecipeDef>(StringComparer.Ordinal);

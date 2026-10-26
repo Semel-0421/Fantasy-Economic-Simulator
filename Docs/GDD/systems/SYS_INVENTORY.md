@@ -28,6 +28,8 @@ warehouses at owned sites as the business expands.
 - [Confirmed] An order larger than the market stock fills up to the stock (DEC-020).
 - [Confirmed] Selling special goods needs a license (DEC-021, DEC-024); details in SYS-LICENSES.
 - [Confirmed] Output that does not fit a warehouse is sold at the market (DEC-029).
+- [Confirmed] A warehouse of a facility lost to bankruptcy can be emptied for a period, then its goods are
+  gone (DEC-052).
 - [Confirmed] Cash is carried in continents' coins and trades are paid in the market's local coin
   (DEC-031); exchange happens at international banks (SYS-BANKING).
 

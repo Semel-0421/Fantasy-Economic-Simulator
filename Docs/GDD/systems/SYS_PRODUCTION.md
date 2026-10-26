@@ -37,6 +37,17 @@ raw materials propagate to finished goods, and each node's specialties give ever
   DEC-037).
 - [Confirmed] A seized facility is auctioned (the player may bid); with no winning bid it goes to a new NPC
   operator (DEC-039).
+- [Confirmed] Facilities pay a weekly upkeep (wages), which can push cash below zero (DEC-051).
+- [Confirmed] A facility whose cash stays below zero for 5 consecutive weeks goes bankrupt (DEC-051).
+- [Confirmed] When the player loses a facility, they can still empty its warehouse for a period; what is
+  left afterwards is gone (DEC-052).
+- [Draft] Upkeep per level-1 facility: primary 50, secondary 100, tertiary 50, times the facility level
+  (`facility.<tier>.upkeep`). The upkeep leaves the economy until money totals exist (P9).
+- [Draft] Claim period on a lost warehouse: 8 weeks (`cargo.lost_warehouse_weeks`); during it the player
+  may only take goods out. Buying the facility back ends the claim, the goods staying the player's.
+- [Draft] Starting cash per tier: primary 500, secondary 2,000, tertiary 1,000 (`facility.<tier>.start_cash`).
+- [Draft] Bought inputs are not scaled by event modifiers, like the player's purchases; output still is
+  (Claude's proposal).
 - [Draft] Tag list, tag-to-specialty table and effect sizes start as placeholder data and config values,
   tuned in balancing (not a design question).
 
@@ -45,13 +56,24 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - A facility that can afford only part of its inputs: counts as short (all or nothing).
 
 ## Unity implementation notes
-- `ProductionSystem` is a single-threaded Burst job (`ProductionJob`); facility order is already fixed, so
-  first-come input allocation stays deterministic.
-- All-or-nothing needs two passes per facility inside the job: check stock and cash for every input, then
-  consume, pay and add outputs.
-- `FacilityTable` gains a cash column; its save section version bumps with a migration. Bankruptcy resets
-  the row (new operator, starting cash) so facility ids stay stable.
-- Player-owned output needs the job to emit into a player-storage buffer instead of market supply.
+Cash, inputs, income, bankruptcy and player output are implemented (P4); specialties and loans are not.
+- `ProductionJob` (single-threaded Burst) runs two passes per facility in facility order: check every
+  input's stock and the total cost, then buy (stock out, through supply into demand, like
+  `MarketFlows.Buy`), pay, and produce. An input with no market anywhere means the facility never produces.
+- `FacilityTable` has `Cash`, `NegativeCashWeeks` and `WarehouseClaimUntil` (section version 2;
+  `FacilityTableV1Migration` writes an unset cash that `ProductionSystem.OnLoaded` replaces with the tier's
+  starting cash). After the production job and the warehouse overflow sale, `FacilityUpkeepJob` (Burst)
+  charges upkeep and lists bankrupt facilities. Bankruptcy resets the row (NPC owner, automated, starting
+  cash), sets the warehouse claim for a player facility and publishes `FacilityBankrupt`; an expired claim
+  clears the warehouse and publishes `LostWarehouseCleared`.
+- The job emits player-owned output into a buffer; the system then stores it in
+  `CargoHolders.Warehouse(facility)` (capacity `cargo.warehouse.max_weight` / `max_size`, [Draft] 2,000 /
+  1,500) and sells the overflow into the facility's cash.
+- `MoveCargoCommand` moves goods between the cart and the warehouse (out of a lost warehouse during its
+  claim), `MoveFacilityCashCommand` pays coins in or takes them out; both need the player at the facility's
+  node. A bought facility keeps its cash.
+- Until P5 carries ore to cities, smithies only pay upkeep, so they cycle through bankruptcy and new
+  operators about every 25 weeks.
 - Specialties: `map_nodes.csv` gains a `tags` column and a new `specialties.csv` maps tags to categories
   or goods (file and column names Claude-chosen, [Draft]). The four effects plug into facility spawning,
   `MarketLayoutBuilder` (always carried), the production job (bonus and grade roll) and the pricing anchor

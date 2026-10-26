@@ -42,6 +42,8 @@ namespace FES.Agents
     /// <summary>Producers: farms, mines, workshops, services (SoA). Behavior comes from FacilityDef and its recipe.</summary>
     public sealed class FacilityTable : NativeTable
     {
+        public const string SectionKey = "agents.facilities";
+
         public readonly NativeColumn<int> Node;
         public readonly NativeColumn<int> DefIndex;
         public readonly NativeColumn<int> Owner;
@@ -49,9 +51,21 @@ namespace FES.Agents
         public readonly NativeColumn<int> Level;
         /// <summary>Raw Fx.</summary>
         public readonly NativeColumn<long> Efficiency;
+        /// <summary>
+        /// Coins of the facility's continent. Pays for inputs and weekly upkeep; NPC output sales add to it.
+        /// Upkeep can push it below zero.
+        /// </summary>
+        public readonly NativeColumn<long> Cash;
+        /// <summary>Consecutive weeks that ended with cash below zero.</summary>
+        public readonly NativeColumn<int> NegativeCashWeeks;
+        /// <summary>
+        /// After the player lost this facility to bankruptcy: the turn until which they can still empty its
+        /// warehouse, or -1.
+        /// </summary>
+        public readonly NativeColumn<int> WarehouseClaimUntil;
 
-        public override string Key => "agents.facilities";
-        public override int Version => 1;
+        public override string Key => SectionKey;
+        public override int Version => 2;
 
         public FacilityTable()
         {
@@ -61,9 +75,12 @@ namespace FES.Agents
             Mode = Column<byte>();
             Level = Column<int>();
             Efficiency = Column<long>();
+            Cash = Column<long>();
+            NegativeCashWeeks = Column<int>();
+            WarehouseClaimUntil = Column<int>();
         }
 
-        public FacilityId Add(int node, int defIndex, int owner, ControlMode mode, int level, Fx efficiency)
+        public FacilityId Add(int node, int defIndex, int owner, ControlMode mode, int level, Fx efficiency, long cash)
         {
             Node.Add(node);
             DefIndex.Add(defIndex);
@@ -71,7 +88,39 @@ namespace FES.Agents
             Mode.Add((byte)mode);
             Level.Add(level);
             Efficiency.Add(efficiency.Raw);
+            Cash.Add(cash);
+            NegativeCashWeeks.Add(0);
+            WarehouseClaimUntil.Add(-1);
             return new FacilityId(Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// Version 1 had no cash or warehouse-claim columns. The migration cannot see the facility types, so it writes a negative
+    /// cash that <see cref="ProductionSystem"/> replaces with the tier's starting cash after loading.
+    /// </summary>
+    public sealed class FacilityTableV1Migration : ISaveMigration
+    {
+        public const long UnsetCash = -1;
+
+        public string SectionKey => FacilityTable.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(UnsetCash);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0); // NegativeCashWeeks
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(-1); // WarehouseClaimUntil
+            }
+            return output.ToArray();
         }
     }
 

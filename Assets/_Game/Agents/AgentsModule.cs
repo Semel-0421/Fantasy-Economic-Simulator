@@ -36,6 +36,7 @@ namespace FES.Agents
 
             builder.AddMigration(new PlayerStateV1Migration());
             builder.AddMigration(new PlayerStateV2Migration());
+            builder.AddMigration(new FacilityTableV1Migration());
 
             builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());
@@ -75,7 +76,7 @@ namespace FES.Agents
                         // Salt packs (tier, index) without collisions for up to 2^24 producers per tier and node.
                         var rng = DetRandom.For(seed, 0, SpawnStream, n, ((uint)t << 24) | (uint)k);
                         var def = defs[rng.NextInt(defs.Count)];
-                        table.Add(n, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One);
+                        table.Add(n, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, db.Config.FacilityStartCash[t]);
                     }
                 }
             }

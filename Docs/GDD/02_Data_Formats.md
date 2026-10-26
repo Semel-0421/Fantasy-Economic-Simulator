@@ -62,6 +62,10 @@ changing a default in code does.
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
+| facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
+| facility.<tier>.upkeep | 50/100/50 | weekly upkeep of a level-1 facility (times its level) |
+| facility.bankrupt_weeks | 5 | consecutive weeks with cash below zero before bankruptcy |
+| cargo.lost_warehouse_weeks | 8 | weeks a lost facility's warehouse can still be emptied |
 | producers.<level>.<tier> | village primary 4, tertiary 2; city secondary 4 | producer groups per node |
 | grade.<grade>.price_permille | 600/1000/1800/3500 | grade price multipliers |
 | price.adjust_permille / max_step_permille / anchor_permille / stock_pressure_permille / min | 250 / 150 / 20 / 250 / 1 | pricing |
@@ -72,6 +76,7 @@ changing a default in code does.
 | lod.focus_level | Region | default LOD policy: detailed subtree around the player |
 | player.start_node, player.start_cash | random village from the seed, 500 | player start; start_node is a test/debug override |
 | cargo.cart.max_weight, cargo.cart.max_size | 400, 300 | player cart capacity ([Draft] placeholders) |
+| cargo.warehouse.max_weight, cargo.warehouse.max_size | 2000, 1500 | warehouse at each player facility ([Draft]) |
 
 `<level>` = continent, nation, region, city, village. `<tier>` = primary, secondary, tertiary.
 `<grade>` = low, mid, high, best.

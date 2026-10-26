@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-032 resolved by DEC-051 (upkeep, bankrupt after 5 weeks below zero) and DEC-052 (lost warehouse claimable for a period)
+- [systems/SYS_PRODUCTION.md] Upkeep, negative-cash bankruptcy, warehouse claim; drafts replaced
+- [systems/SYS_INVENTORY.md] Lost warehouse claim (DEC-052)
+- [02_Data_Formats.md] Upkeep, bankruptcy weeks and claim period keys
+- [04_Roadmap.md] P4 done
+- [systems/SYS_PRODUCTION.md] Implementation notes for facility cash, inputs, income, bankruptcy, warehouse output; drafts for the bankruptcy trigger, lost warehouse and starting cash
+- [03_Decisions.md] Q-032 registered (Claude added): bankruptcy trigger and the lost warehouse's goods
+- [02_Data_Formats.md] facility and warehouse config keys
 - [04_Roadmap.md] P1 and P2 done
 - [systems/SYS_INVENTORY.md] Implementation notes: weight/size columns, per-continent coins, cart, trade commands; executed trades not scaled by modifiers ([Draft])
 - [systems/SYS_PLAYER_START.md] Random village start implemented; start_node removed from shipped config

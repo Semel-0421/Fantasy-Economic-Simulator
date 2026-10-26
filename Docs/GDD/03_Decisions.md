@@ -10,6 +10,17 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
+### Q-032 [resolved] When a facility counts as out of cash, and what happens to its warehouse
+- Registered: 2026-10-27 (Claude added)
+- Context: P4 needs a trigger for bankruptcy (DEC-028, DEC-035). Facilities have no running costs yet, so
+  cash never goes below zero; it only falls short of the inputs' price.
+- Open: bankrupt after N consecutive weeks unable to pay for inputs that are in stock (built as a [Draft]
+  with N = 4, `facility.bankrupt_weeks`), at once, or only with upkeep costs (wages) that can push cash
+  below zero · whether goods in the warehouse of a lost player facility are lost with it (built as a
+  [Draft]), moved to the player, or sold
+- Impact: SYS-PRODUCTION, SYS-INVENTORY
+- Resolved: DEC-051, DEC-052
+
 ### Q-031 [resolved] How households are modelled
 - Registered: 2026-10-27 (Claude added)
 - Context: household income follows a Pareto split, the top 20% moving 80% of money (DEC-049), and demand
@@ -248,6 +259,24 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ## Decision log
+
+### DEC-052 A lost facility's warehouse can be emptied for a while
+- Date: 2026-10-27
+- Decision: when the player loses a facility to bankruptcy, they can still take the goods out of its
+  warehouse for a period; whatever is left after that is gone.
+- Alternatives: lost with the facility (Claude's earlier draft, rejected) · sold, proceeds to the player
+  (rejected) · sold, proceeds to the new operator (rejected)
+- Impact: [SYS-PRODUCTION](systems/SYS_PRODUCTION.md), [SYS-INVENTORY](systems/SYS_INVENTORY.md)
+- Resolves: Q-032
+
+### DEC-051 Upkeep, and bankruptcy after five weeks below zero
+- Date: 2026-10-27
+- Decision: facilities pay a weekly upkeep (wages), which can push their cash below zero. A facility whose
+  cash stays below zero for 5 consecutive weeks goes bankrupt.
+- Alternatives: bankrupt after N weeks unable to pay for inputs in stock (Claude's earlier draft, rejected)
+  · bankrupt the first week it cannot pay (rejected) · bankrupt as soon as cash is below zero (rejected)
+- Impact: [SYS-PRODUCTION](systems/SYS_PRODUCTION.md), config `facility.bankrupt_weeks`
+- Resolves: Q-032
 
 ### DEC-050 Households and population
 - Date: 2026-10-27

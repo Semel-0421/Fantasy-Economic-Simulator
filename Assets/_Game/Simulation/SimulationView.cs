@@ -44,13 +44,16 @@ namespace FES.Simulation
         public readonly FacilityDef Def;
         public readonly bool PlayerOwned;
         public readonly ControlMode Mode;
+        /// <summary>Coins of the facility's continent.</summary>
+        public readonly long Cash;
 
-        public FacilityInfo(FacilityId id, FacilityDef def, bool playerOwned, ControlMode mode)
+        public FacilityInfo(FacilityId id, FacilityDef def, bool playerOwned, ControlMode mode, long cash)
         {
             Id = id;
             Def = def;
             PlayerOwned = playerOwned;
             Mode = mode;
+            Cash = cash;
         }
     }
 
@@ -155,9 +158,15 @@ namespace FES.Simulation
             {
                 if (_facilities.Node[f] != node.Value) continue;
                 into.Add(new FacilityInfo(new FacilityId(f), Database.Facilities[_facilities.DefIndex[f]],
-                    _facilities.Owner[f] == OwnerIds.Player, (ControlMode)_facilities.Mode[f]));
+                    _facilities.Owner[f] == OwnerIds.Player, (ControlMode)_facilities.Mode[f], _facilities.Cash[f]));
             }
         }
+
+        /// <summary>The warehouse of a facility, sorted by good id. Holds goods while the player owns it.</summary>
+        public void GetWarehouse(FacilityId facility, List<CargoItem> into) => _cargo.Collect(CargoHolders.Warehouse(facility), into);
+        public CargoLoad WarehouseLoad(FacilityId facility) =>
+            _cargo.LoadOf(CargoHolders.Warehouse(facility), _markets.GoodWeight, _markets.GoodSize);
+        public CargoCapacity WarehouseCapacity => new CargoCapacity(Database.Config.WarehouseMaxWeight, Database.Config.WarehouseMaxSize);
 
         // Player
 
@@ -208,6 +217,13 @@ namespace FES.Simulation
 
         public void FoundCompany(NodeId headquarters, GuidanceAxis focus, long cost) =>
             _queue.Enqueue(new FoundCompanyCommand(headquarters, focus, cost));
+
+        /// <summary>Loads (toWarehouse false) or unloads goods at a player-owned facility the player is at.</summary>
+        public void MoveCargo(FacilityId facility, GoodId good, int quantity, bool toWarehouse) =>
+            _queue.Enqueue(new MoveCargoCommand(facility, good, quantity, toWarehouse));
+
+        /// <summary>Pays coins into (positive) or takes them out of (negative) a player-owned facility the player is at.</summary>
+        public void MoveFacilityCash(FacilityId facility, long amount) => _queue.Enqueue(new MoveFacilityCashCommand(facility, amount));
 
         public void SetFacilityControl(FacilityId facility, ControlMode mode) =>
             _queue.Enqueue(new SetFacilityControlCommand(facility, mode));

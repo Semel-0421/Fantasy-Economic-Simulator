@@ -11,6 +11,10 @@ namespace FES.Agents
     public static class CargoHolders
     {
         public const int PlayerCart = 0;
+        const int WarehouseBase = 1 << 28;
+
+        /// <summary>The warehouse at a facility; it holds goods while the player owns the facility.</summary>
+        public static int Warehouse(FacilityId facility) => WarehouseBase + facility.Value;
     }
 
     public readonly struct CargoItem
@@ -102,6 +106,13 @@ namespace FES.Agents
             }
             else if (next == 0) RemoveRowSwapBack(row);
             else Quantity[row] = (int)next;
+        }
+
+        /// <summary>Removes everything the holder carries.</summary>
+        public void Clear(int holder)
+        {
+            for (int r = Count - 1; r >= 0; r--)
+                if (Holder[r] == holder) RemoveRowSwapBack(r);
         }
 
         public CargoLoad LoadOf(int holder, NativeArray<int> unitWeight, NativeArray<int> unitSize)

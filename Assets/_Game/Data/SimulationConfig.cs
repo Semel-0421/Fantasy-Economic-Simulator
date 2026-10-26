@@ -48,6 +48,18 @@ namespace FES.Data
         /// <summary>Weekly output variance of detailed facilities, +- permille around the expected value.</summary>
         public int ProductionVariancePermille = 100;
 
+        /// <summary>Starting cash of a facility (and of a new operator after bankruptcy), per industry tier.</summary>
+        public readonly long[] FacilityStartCash = { 500, 2000, 1000 };
+
+        /// <summary>Weekly running cost (wages) of a level-1 facility, per industry tier; scales with level.</summary>
+        public readonly long[] FacilityUpkeep = { 50, 100, 50 };
+
+        /// <summary>A facility goes bankrupt after this many consecutive weeks with cash below zero (DEC-051).</summary>
+        public int FacilityBankruptWeeks = 5;
+
+        /// <summary>Weeks the player can still empty the warehouse of a facility lost to bankruptcy (DEC-052).</summary>
+        public int LostWarehouseWeeks = 8;
+
         public Fx PriceAdjustRate = Fx.FromPermille(250);
         public Fx PriceMaxStep = Fx.FromPermille(150);
         public Fx PriceAnchorRate = Fx.FromPermille(20);
@@ -78,6 +90,10 @@ namespace FES.Data
         /// <summary>The player's cart: cargo must fit both the total weight and the total size.</summary>
         public long CartMaxWeight = 400;
         public long CartMaxSize = 300;
+
+        /// <summary>The warehouse at each player-owned facility.</summary>
+        public long WarehouseMaxWeight = 2000;
+        public long WarehouseMaxSize = 1500;
 
         SimulationConfig()
         {
@@ -141,6 +157,16 @@ namespace FES.Data
                 GradePriceMultiplier[g] = Permille(v, $"grade.{grade}.price_permille", GradePriceMultiplier[g]);
             }
             ProductionVariancePermille = Int(v, "production.variance_permille", ProductionVariancePermille);
+            for (int t = 0; t < IndustryTiers.Count; t++)
+            {
+                string tier = ((IndustryTier)t).ToString().ToLowerInvariant();
+                FacilityStartCash[t] = Long(v, $"facility.{tier}.start_cash", FacilityStartCash[t]);
+                FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
+            }
+            FacilityBankruptWeeks = Int(v, "facility.bankrupt_weeks", FacilityBankruptWeeks);
+            if (FacilityBankruptWeeks < 1) throw new FormatException("config.csv: facility.bankrupt_weeks must be >= 1.");
+            LostWarehouseWeeks = Int(v, "cargo.lost_warehouse_weeks", LostWarehouseWeeks);
+            if (LostWarehouseWeeks < 0) throw new FormatException("config.csv: cargo.lost_warehouse_weeks must be >= 0.");
             PriceAdjustRate = Permille(v, "price.adjust_permille", PriceAdjustRate);
             PriceMaxStep = Permille(v, "price.max_step_permille", PriceMaxStep);
             PriceAnchorRate = Permille(v, "price.anchor_permille", PriceAnchorRate);
@@ -166,6 +192,8 @@ namespace FES.Data
             PlayerStartCash = Long(v, "player.start_cash", PlayerStartCash);
             CartMaxWeight = Long(v, "cargo.cart.max_weight", CartMaxWeight);
             CartMaxSize = Long(v, "cargo.cart.max_size", CartMaxSize);
+            WarehouseMaxWeight = Long(v, "cargo.warehouse.max_weight", WarehouseMaxWeight);
+            WarehouseMaxSize = Long(v, "cargo.warehouse.max_size", WarehouseMaxSize);
         }
 
         void Record(string key, string value) => _effective[key] = value;

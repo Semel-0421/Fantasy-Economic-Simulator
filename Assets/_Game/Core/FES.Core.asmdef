@@ -1,0 +1,9 @@
+{
+    "name": "FES.Core",
+    "rootNamespace": "FES.Core",
+    "references": [
+        "Unity.Collections"
+    ],
+    "allowUnsafeCode": false,
+    "autoReferenced": false
+}

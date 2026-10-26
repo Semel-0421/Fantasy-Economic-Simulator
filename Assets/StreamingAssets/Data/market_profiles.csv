@@ -1,0 +1,10 @@
+# Which goods each market level carries (sparse layout). grades: * or e.g. Low|Mid
+level,category,grades
+Village,grain,Low|Mid
+Village,ore,Low|Mid
+Village,textile,Low|Mid
+Village,provisions,Low|Mid
+City,*,Low|Mid|High
+Region,*,*
+Nation,*,*
+Continent,*,*

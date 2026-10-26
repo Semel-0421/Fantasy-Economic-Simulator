@@ -1,0 +1,12 @@
+{
+    "name": "FES.Economy",
+    "rootNamespace": "FES.Economy",
+    "references": [
+        "FES.Core",
+        "FES.Data",
+        "FES.World",
+        "Unity.Burst",
+        "Unity.Collections"
+    ],
+    "autoReferenced": false
+}

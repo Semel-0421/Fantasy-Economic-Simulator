@@ -1,0 +1,13 @@
+{
+    "name": "FES.Simulation",
+    "rootNamespace": "FES.Simulation",
+    "references": [
+        "FES.Core",
+        "FES.Data",
+        "FES.World",
+        "FES.Economy",
+        "FES.Agents",
+        "FES.Persistence"
+    ],
+    "autoReferenced": false
+}

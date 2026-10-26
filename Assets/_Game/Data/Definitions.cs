@@ -1,0 +1,191 @@
+using System.Collections.Generic;
+using FES.Core;
+
+namespace FES.Data
+{
+    // Immutable static definitions. String keys are the stable identity in data files;
+    // dense indices are assigned at load time in file order.
+
+    public sealed class GoodCategoryDef
+    {
+        public readonly int Index;
+        public readonly string Key;
+
+        public GoodCategoryDef(int index, string key)
+        {
+            Index = index;
+            Key = key;
+        }
+    }
+
+    /// <summary>One tradable item: a base good at one quality grade (4,000 independent items at full scale).</summary>
+    public sealed class GoodDef
+    {
+        public readonly GoodId Id;
+        public readonly string BaseKey;
+        public readonly int CategoryIndex;
+        /// <summary>Reference price in the smallest coin unit, already scaled by the grade multiplier.</summary>
+        public readonly int BasePrice;
+        /// <summary>Weekly demand per village-sized market before level weighting.</summary>
+        public readonly int BaseDemand;
+
+        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand)
+        {
+            Id = id;
+            BaseKey = baseKey;
+            CategoryIndex = categoryIndex;
+            BasePrice = basePrice;
+            BaseDemand = baseDemand;
+        }
+
+        public QualityGrade Grade => Id.Grade;
+        public string Key => $"{BaseKey}@{Grade.ToString().ToLowerInvariant()}";
+    }
+
+    public readonly struct RecipeLine
+    {
+        public readonly GoodId Good;
+        public readonly int Quantity;
+
+        public RecipeLine(GoodId good, int quantity)
+        {
+            Good = good;
+            Quantity = quantity;
+        }
+    }
+
+    /// <summary>Weekly inputs and outputs of one facility at level 1 and full efficiency.</summary>
+    public sealed class RecipeDef
+    {
+        public readonly int Index;
+        public readonly string Key;
+        public readonly RecipeLine[] Inputs;
+        public readonly RecipeLine[] Outputs;
+
+        public RecipeDef(int index, string key, RecipeLine[] inputs, RecipeLine[] outputs)
+        {
+            Index = index;
+            Key = key;
+            Inputs = inputs;
+            Outputs = outputs;
+        }
+    }
+
+    /// <summary>A producer type: farms/mines (primary), workshops/factories (secondary), services (tertiary).</summary>
+    public sealed class FacilityDef
+    {
+        public readonly int Index;
+        public readonly string Key;
+        public readonly IndustryTier Tier;
+        public readonly RecipeDef Recipe;
+
+        public FacilityDef(int index, string key, IndustryTier tier, RecipeDef recipe)
+        {
+            Index = index;
+            Key = key;
+            Tier = tier;
+            Recipe = recipe;
+        }
+    }
+
+    public enum ModifierTarget : byte
+    {
+        Supply = 0,
+        Demand = 1,
+        Value = 2,
+    }
+
+    public static class ModifierTargets
+    {
+        public const int Count = 3;
+    }
+
+    /// <summary>A random world event (disaster, festival, ...) that scales a market's supply, demand or value.</summary>
+    public sealed class WorldEventDef
+    {
+        public readonly int Index;
+        public readonly string Key;
+        public readonly WorldLevel ScopeLevel;
+        /// <summary>Affected category index, or -1 for all categories.</summary>
+        public readonly int CategoryIndex;
+        public readonly ModifierTarget Target;
+        public readonly Fx Multiplier;
+        public readonly int DurationTurns;
+        /// <summary>Chance per eligible node per turn, in permille.</summary>
+        public readonly int ChancePermille;
+
+        public WorldEventDef(int index, string key, WorldLevel scopeLevel, int categoryIndex, ModifierTarget target,
+            Fx multiplier, int durationTurns, int chancePermille)
+        {
+            Index = index;
+            Key = key;
+            ScopeLevel = scopeLevel;
+            CategoryIndex = categoryIndex;
+            Target = target;
+            Multiplier = multiplier;
+            DurationTurns = durationTurns;
+            ChancePermille = chancePermille;
+        }
+    }
+
+    /// <summary>Which goods the markets of one world level carry (drives the sparse market layout).</summary>
+    public sealed class MarketProfileRule
+    {
+        public readonly WorldLevel Level;
+        /// <summary>Category index, or -1 for all categories.</summary>
+        public readonly int CategoryIndex;
+        /// <summary>Bit i set = grade i carried.</summary>
+        public readonly int GradeMask;
+
+        public MarketProfileRule(WorldLevel level, int categoryIndex, int gradeMask)
+        {
+            Level = level;
+            CategoryIndex = categoryIndex;
+            GradeMask = gradeMask;
+        }
+
+        public bool Matches(GoodDef good) =>
+            (CategoryIndex < 0 || CategoryIndex == good.CategoryIndex) && (GradeMask & (1 << (int)good.Grade)) != 0;
+    }
+
+    public sealed class MapNodeDef
+    {
+        public string Key;
+        public string Name;
+        public WorldLevel Level;
+        /// <summary>Parent node key; empty for continents.</summary>
+        public string ParentKey;
+    }
+
+    public sealed class RouteDef
+    {
+        public string FromKey;
+        public string ToKey;
+        public int TravelTurns;
+        public int CostPerUnit;
+    }
+
+    /// <summary>World layout. Produced by a handcrafted source today, by a procedural generator later.</summary>
+    public sealed class MapDef
+    {
+        public readonly List<MapNodeDef> Nodes = new List<MapNodeDef>();
+        public readonly List<RouteDef> Routes = new List<RouteDef>();
+
+        /// <summary>Structural hash (keys, levels, parents, routes) so saves can detect a changed map.</summary>
+        public ulong ComputeHash()
+        {
+            ulong h = DetHash.Of("map");
+            foreach (var n in Nodes)
+                h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(n.Key), DetHash.Combine((ulong)n.Level, DetHash.Of(n.ParentKey ?? string.Empty))));
+            foreach (var r in Routes)
+                h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),
+                    DetHash.Combine((ulong)(uint)r.TravelTurns, (ulong)(uint)r.CostPerUnit))));
+            return h;
+        }
+    }
+
+    public interface IMapSource
+    {
+        MapDef LoadMap();
+    }
+}

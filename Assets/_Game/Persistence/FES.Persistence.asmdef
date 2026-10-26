@@ -1,0 +1,9 @@
+{
+    "name": "FES.Persistence",
+    "rootNamespace": "FES.Persistence",
+    "references": [
+        "FES.Core"
+    ],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

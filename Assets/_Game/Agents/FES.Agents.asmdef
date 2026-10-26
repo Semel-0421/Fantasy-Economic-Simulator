@@ -1,0 +1,12 @@
+{
+    "name": "FES.Agents",
+    "rootNamespace": "FES.Agents",
+    "references": [
+        "FES.Core",
+        "FES.Data",
+        "FES.World",
+        "FES.Economy",
+        "Unity.Collections"
+    ],
+    "autoReferenced": false
+}

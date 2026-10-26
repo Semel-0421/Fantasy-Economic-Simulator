@@ -1,0 +1,10 @@
+# Base goods. Each row becomes 4 items (low/mid/high/best); base_price is the mid-grade price in coins.
+key,category,base_price,base_demand
+wheat,grain,10,40
+barley,grain,8,25
+iron_ore,ore,20,10
+copper_ore,ore,18,8
+wool,textile,15,12
+linen,textile,22,8
+iron_tools,tools,90,4
+bread,provisions,14,30

@@ -1,0 +1,10 @@
+{
+    "name": "FES.World",
+    "rootNamespace": "FES.World",
+    "references": [
+        "FES.Core",
+        "FES.Data",
+        "Unity.Collections"
+    ],
+    "autoReferenced": false
+}

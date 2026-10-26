@@ -1,0 +1,6 @@
+# Random world events. chance_permille is per eligible node per turn. category * = all.
+key,level,category,target,mul_permille,duration,chance_permille
+drought,Region,grain,Supply,500,6,8
+bumper_harvest,Region,grain,Supply,1500,4,8
+mine_collapse,Village,ore,Supply,300,8,2
+festival,City,provisions,Demand,1600,1,10

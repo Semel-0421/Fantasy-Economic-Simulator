@@ -1,0 +1,10 @@
+# Tunables. Missing keys use code defaults (see SimulationConfig).
+key,value
+tier.continent.period,4
+tier.nation.period,4
+tier.nation.offset,1
+tier.region.period,2
+tier.city.period,1
+tier.village.period,1
+player.start_node,aur_n1_r1_c1_v1
+player.start_cash,500

@@ -1,0 +1,9 @@
+{
+    "name": "FES.Data",
+    "rootNamespace": "FES.Data",
+    "references": [
+        "FES.Core"
+    ],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

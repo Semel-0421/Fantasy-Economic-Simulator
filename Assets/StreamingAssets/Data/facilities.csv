@@ -1,0 +1,8 @@
+key,tier,recipe
+wheat_farm,Primary,farm_wheat
+barley_farm,Primary,farm_barley
+iron_mine,Primary,mine_iron
+copper_mine,Primary,mine_copper
+sheep_pasture,Primary,pasture_wool
+smithy,Secondary,smith_tools
+bakery,Tertiary,bake_bread

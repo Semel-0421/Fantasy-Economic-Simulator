@@ -1,0 +1,9 @@
+{
+    "name": "FES.Unity",
+    "rootNamespace": "FES.Unity",
+    "references": [
+        "FES.Core",
+        "FES.Data",
+        "FES.Simulation"
+    ]
+}

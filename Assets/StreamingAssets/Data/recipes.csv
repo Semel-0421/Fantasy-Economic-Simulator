@@ -1,0 +1,11 @@
+# Weekly inputs/outputs per facility at level 1. role: in|out
+recipe,role,good,grade,qty
+farm_wheat,out,wheat,Mid,60
+farm_barley,out,barley,Low,50
+mine_iron,out,iron_ore,Mid,25
+mine_copper,out,copper_ore,Low,20
+pasture_wool,out,wool,Mid,20
+smith_tools,in,iron_ore,Mid,10
+smith_tools,out,iron_tools,Mid,4
+bake_bread,in,wheat,Mid,20
+bake_bread,out,bread,Mid,24

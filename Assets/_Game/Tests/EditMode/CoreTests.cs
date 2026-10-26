@@ -97,6 +97,61 @@ namespace FES.Tests
             Assert.AreEqual(1, clock.Turn);
         }
 
+        sealed class StubModule : ISimModule
+        {
+            public StubModule(string id, params string[] requires)
+            {
+                Id = id;
+                Requires = requires;
+            }
+            public string Id { get; }
+            public IReadOnlyList<string> Requires { get; }
+            public void Register(SimBuilder builder) { }
+        }
+
+        static string[] SortedIds(params ISimModule[] modules) => ModuleOrder.Sort(modules).ConvertAll(m => m.Id).ToArray();
+
+        [Test]
+        public void ModuleOrder_PlacesRequirementsFirst_StableOtherwise()
+        {
+            // Among ready modules the one added first wins: "agents" was added before "mod".
+            CollectionAssert.AreEqual(new[] { "world", "economy", "agents", "mod" },
+                SortedIds(new StubModule("agents", "economy"), new StubModule("economy", "world"),
+                    new StubModule("world"), new StubModule("mod", "world")));
+            CollectionAssert.AreEqual(new[] { "b", "a" }, SortedIds(new StubModule("b"), new StubModule("a")));
+        }
+
+        [Test]
+        public void ModuleOrder_RejectsMissingAndCyclicRequirements()
+        {
+            StringAssert.Contains("'missing'", Assert.Throws<System.InvalidOperationException>(
+                () => ModuleOrder.Sort(new ISimModule[] { new StubModule("a", "missing") })).Message);
+            StringAssert.Contains("cycle", Assert.Throws<System.InvalidOperationException>(
+                () => ModuleOrder.Sort(new ISimModule[] { new StubModule("a", "b"), new StubModule("b", "a") })).Message);
+        }
+
+        [Test]
+        public void SimBuilder_ReplacesAndRemovesSystemsById()
+        {
+            var log = new List<string>();
+            using var world = new WorldState();
+            var builder = new SimBuilder(world, new ServiceRegistry());
+            var replacement = new RecordingSystem("x", SimPhase.Markets, 0, log);
+            builder.ReplaceSystem(replacement);
+            builder.RemoveSystem("y");
+            builder.AddSystem(new RecordingSystem("x", SimPhase.Markets, 0, log));
+            builder.AddSystem(new RecordingSystem("y", SimPhase.Markets, 0, log));
+            builder.AddSystem(new RecordingSystem("z", SimPhase.Markets, 0, log));
+            var systems = builder.BuildPipeline().Systems;
+            Assert.AreEqual(2, systems.Count);
+            Assert.AreSame(replacement, systems[0]);
+            Assert.AreEqual("z", systems[1].Id);
+
+            var unknown = new SimBuilder(world, new ServiceRegistry());
+            unknown.RemoveSystem("nope");
+            Assert.Throws<System.InvalidOperationException>(() => unknown.BuildPipeline());
+        }
+
         sealed class Ping : ISimEvent
         {
         }

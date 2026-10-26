@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FES.Core;
 using FES.Data;
 using FES.World;
@@ -134,7 +135,10 @@ namespace FES.Economy
     /// <summary>Registers markets, modifiers, flows, currency and their systems. Requires the world module.</summary>
     public sealed class EconomyModule : ISimModule
     {
+        static readonly string[] RequiredModules = { "world" };
+
         public string Id => "economy";
+        public IReadOnlyList<string> Requires => RequiredModules;
 
         public void Register(SimBuilder builder)
         {

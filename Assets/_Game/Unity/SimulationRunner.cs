@@ -29,7 +29,9 @@ namespace FES.Unity
         public void AdvanceTurn()
         {
             Simulation.AdvanceTurn();
-            Debug.Log($"[FES] Turn {Simulation.Turn} done, {Simulation.LastTurnEvents.Count} events, hash {Simulation.ComputeHash():X16}.");
+            var view = Simulation.View;
+            Debug.Log($"[FES] Year {view.Year} week {view.Week}: player at {view.NodeName(view.PlayerNode)} with {view.PlayerCash} coins, " +
+                      $"{Simulation.LastTurnEvents.Count} events, hash {Simulation.ComputeHash():X16}.");
         }
 
         void OnDestroy()

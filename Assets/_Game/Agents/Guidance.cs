@@ -4,21 +4,6 @@ using FES.Data;
 
 namespace FES.Agents
 {
-    /// <summary>Directions the player's business can grow in. Nothing is gated; weights only bias offers, events and LOD.</summary>
-    public enum GuidanceAxis : byte
-    {
-        Trade = 0,
-        Agriculture = 1,
-        Industry = 2,
-        Finance = 3,
-        Guild = 4,
-    }
-
-    public static class GuidanceAxes
-    {
-        public const int Count = 5;
-    }
-
     /// <summary>One guiding signal: push the business toward <see cref="Axis"/>, centered on <see cref="FocusNode"/>.</summary>
     public readonly struct GuidanceSignal
     {

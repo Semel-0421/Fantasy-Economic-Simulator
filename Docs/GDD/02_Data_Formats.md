@@ -3,7 +3,8 @@
 All files live in `Assets/StreamingAssets/Data/`. CSV with a header row; lines starting with `#` and blank lines
 are ignored; quote fields containing commas (a quote only opens a field as its first character).
 Integers outside the int range, numeric enum values and unterminated quotes are load errors. Keys are the stable identity; dense ids are assigned in
-file order at load. Any change to these files changes the data hash, so older saves are rejected.
+file order at load. Any change to these files changes the data hash, so older saves are rejected —
+except `config.csv`, which is hashed by its effective values (see below).
 
 ## goods.csv (required)
 
@@ -47,7 +48,10 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
 
 ## config.csv
 
-`key,value` pairs; every key has a code default (`SimulationConfig`).
+`key,value` pairs; every key has a code default (`SimulationConfig`). Unknown keys are load errors
+(typos would otherwise fall back to the default silently). The data hash uses the effective value of
+every key, defaults included: comments, row order and restating a default do not affect saves, while
+changing a default in code does.
 
 | key | default | meaning |
 |---|---|---|

@@ -9,8 +9,10 @@ namespace FES.Agents
     public sealed class AgentsModule : ISimModule
     {
         static readonly uint SpawnStream = DetHash.Of("agents.spawn");
+        static readonly string[] RequiredModules = { "world", "economy" };
 
         public string Id => "agents";
+        public IReadOnlyList<string> Requires => RequiredModules;
 
         public void Register(SimBuilder builder)
         {

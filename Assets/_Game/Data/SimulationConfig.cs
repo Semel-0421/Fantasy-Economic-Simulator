@@ -7,11 +7,14 @@ namespace FES.Data
 {
     /// <summary>
     /// Tunable numbers loaded from config.csv (key,value). Every key has a default, so the file only
-    /// needs the values that differ. Integers only: permille values are converted to Fx here.
-    /// Gameplay numbers belong here, not in system code.
+    /// needs the values that differ; unknown keys are load errors. Integers only: permille values are
+    /// converted to Fx here. Gameplay numbers belong here, not in system code.
     /// </summary>
     public sealed class SimulationConfig
     {
+        // Every key's effective value (file value or code default), normalized; the source of ComputeHash.
+        readonly SortedDictionary<string, string> _effective = new SortedDictionary<string, string>(StringComparer.Ordinal);
+
         public readonly TierCadence[] TierCadences =
         {
             new TierCadence(4, 0), // Continent
@@ -70,22 +73,43 @@ namespace FES.Data
         public string PlayerStartNode = string.Empty;
         public long PlayerStartCash = 500;
 
-        public SimulationConfig()
+        SimulationConfig()
         {
             ProducersPerNode[(int)WorldLevel.Village, (int)IndustryTier.Primary] = 4;
             ProducersPerNode[(int)WorldLevel.Village, (int)IndustryTier.Tertiary] = 2;
             ProducersPerNode[(int)WorldLevel.City, (int)IndustryTier.Secondary] = 4;
         }
 
+        /// <summary>Code defaults only.</summary>
+        public static SimulationConfig Defaults() => Load(null);
+
         public static SimulationConfig Load(CsvTable table)
         {
             var config = new SimulationConfig();
-            if (table == null) return config;
             var values = new Dictionary<string, string>(StringComparer.Ordinal);
-            for (int r = 0; r < table.RowCount; r++)
-                values[table.GetString(r, "key")] = table.GetString(r, "value");
+            if (table != null)
+                for (int r = 0; r < table.RowCount; r++)
+                    values[table.GetString(r, "key")] = table.GetString(r, "value");
             config.Apply(values);
+            foreach (var key in values.Keys)
+                if (!config._effective.ContainsKey(key))
+                    throw new FormatException($"config.csv: unknown key '{key}'.");
             return config;
+        }
+
+        /// <summary>Every key with its effective value (file or default), sorted by key.</summary>
+        public IReadOnlyDictionary<string, string> EffectiveValues => _effective;
+
+        /// <summary>
+        /// Hash of the effective values, so a changed code default changes the data hash just like an
+        /// edited file, while comments, row order and explicitly restated defaults do not.
+        /// </summary>
+        public ulong ComputeHash()
+        {
+            ulong hash = DetHash.Of(GameDatabase.ConfigFile);
+            foreach (var entry in _effective)
+                hash = DetHash.Combine(hash, DetHash.Combine(DetHash.Of(entry.Key), DetHash.Of(entry.Value)));
+            return hash;
         }
 
         void Apply(Dictionary<string, string> v)
@@ -130,11 +154,15 @@ namespace FES.Data
                 LodFocusLevel = CsvTable.TryParseEnumName(focus, out WorldLevel level)
                     ? level
                     : throw new FormatException($"config.csv: lod.focus_level '{focus}' is not a WorldLevel.");
+            Record("lod.focus_level", LodFocusLevel.ToString());
             PlayerStartNode = v.TryGetValue("player.start_node", out var start) ? start : PlayerStartNode;
+            Record("player.start_node", PlayerStartNode);
             PlayerStartCash = Long(v, "player.start_cash", PlayerStartCash);
         }
 
-        static int Int(Dictionary<string, string> v, string key, int fallback)
+        void Record(string key, string value) => _effective[key] = value;
+
+        int Int(Dictionary<string, string> v, string key, int fallback)
         {
             long value = Long(v, key, fallback);
             if (value < int.MinValue || value > int.MaxValue)
@@ -142,15 +170,24 @@ namespace FES.Data
             return (int)value;
         }
 
-        static long Long(Dictionary<string, string> v, string key, long fallback)
+        long Long(Dictionary<string, string> v, string key, long fallback)
         {
-            if (!v.TryGetValue(key, out var s)) return fallback;
-            if (!long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out long value))
-                throw new FormatException($"config.csv: '{key}' = '{s}' is not an integer.");
+            long value = v.TryGetValue(key, out var s) ? Parse(key, s) : fallback;
+            Record(key, value.ToString(CultureInfo.InvariantCulture));
             return value;
         }
 
-        static Fx Permille(Dictionary<string, string> v, string key, Fx fallback) =>
-            v.ContainsKey(key) ? Fx.FromPermille(Long(v, key, 0)) : fallback;
+        // Recorded as the raw Fx value, so a file value of 1000 and the default Fx.One hash the same.
+        Fx Permille(Dictionary<string, string> v, string key, Fx fallback)
+        {
+            var value = v.TryGetValue(key, out var s) ? Fx.FromPermille(Parse(key, s)) : fallback;
+            Record(key, "fx:" + value.Raw.ToString(CultureInfo.InvariantCulture));
+            return value;
+        }
+
+        static long Parse(string key, string s) =>
+            long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out long value)
+                ? value
+                : throw new FormatException($"config.csv: '{key}' = '{s}' is not an integer.");
     }
 }

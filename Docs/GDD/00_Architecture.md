@@ -13,14 +13,23 @@ Status: skeleton implemented (2026-10-27). Code: `Assets/_Game/`. Tests: `Assets
 
 | Assembly | Folder | Depends on | Contents |
 |---|---|---|---|
-| `FES.Core` | `Core/` | Collections | ids, `Fx` fixed-point, `DetRandom`, `SimClock`, `WorldState`, `ISimSystem`/`ISimModule`, `TurnPipeline`, `EventBus`, commands, `TierSchedule`, `NativeIO`, `NativeTable` |
+| `FES.Core` | `Core/` | Collections | ids, shared enums (incl. `GuidanceAxis`), `Fx` fixed-point, `DetRandom`, `SimClock`, `WorldState`, `ISimSystem`/`ISimModule`, `TurnPipeline`, `EventBus`, commands, `TierSchedule`, `NativeIO`, `NativeTable` |
 | `FES.Data` | `Data/` | Core | CSV loader, definitions, `SimulationConfig`, `GameDatabase`, `CsvMapSource` |
 | `FES.World` | `World/` | Core, Data | `NodeTable` (hierarchy), `RouteTable`, `WorldBuilder`, `WorldModule` |
 | `FES.Economy` | `Economy/` | Core, Data, World | `MarketStore` (sparse), `MarketFlows`, Burst pricing/consumption jobs, modifiers + world events, currency |
 | `FES.Agents` | `Agents/` | Core, Data, World, Economy | player, merchants, facilities, production, LOD, guidance, player commands |
 | `FES.Persistence` | `Persistence/` | Core | save container, section versioning, migrations |
-| `FES.Simulation` | `Simulation/` | all above | `SimulationBuilder` (composition root), `GameSimulation` facade |
-| `FES.Unity` | `Unity/` | Simulation | `SimulationRunner` MonoBehaviour — the only code allowed to use `UnityEngine` |
+| `FES.Simulation` | `Simulation/` | all above | `SimulationBuilder` (composition root), `GameSimulation` facade, `SimulationView` (read-only queries), `PlayerActions` |
+| `FES.Unity` | `Unity/` | Core, Data, Simulation | `SimulationRunner` MonoBehaviour — the only code allowed to use `UnityEngine` |
+
+Modules declare the modules they need (`ISimModule.Requires`); `ModuleOrder.Sort` registers them in
+dependency order, stable by the order added, and rejects missing modules and cycles.
+Single systems can be swapped or dropped by id (`SimulationBuilder.ReplaceSystem` / `RemoveSystem`)
+without touching the module that registers them.
+
+Presentation reads state only through `GameSimulation.View` (copies and immutable definitions, never
+components or native arrays) and changes it only through `GameSimulation.Actions`, which queue commands.
+That is why `FES.Unity` needs no reference to World, Economy or Agents.
 
 `FES.Data` and `FES.Persistence` set `noEngineReferences` (compiler-enforced). The other simulation
 assemblies cannot, because `NativeArray` and the job system live in `UnityEngine.CoreModule`;
@@ -66,7 +75,9 @@ shorter than the slowest repricing period they cover.
   x64, saves are portable, and the Burst job equals managed execution (`Pricing_BurstJob_MatchesManagedExecution`).
 - Rounding is symmetric (half away from zero: `Fx.MulInt`, `Fx.RoundShift`). Floor rounding would bias
   every flow and price step downward.
-- The data hash normalizes line endings and BOM, and `.gitattributes` forces LF for `*.csv`.
+- The data hash covers the definition files' text (line endings and BOM normalized; `.gitattributes`
+  forces LF for `*.csv`), the map, and the effective config values — code defaults included, so
+  changing a default in `SimulationConfig` invalidates old saves just like editing `config.csv`.
 - Randomness: `DetRandom.For(seed, turn, stream, entity, salt)` — stateless, independent of thread count
   and iteration order. Stream ids come from `DetHash.Of("system.id")` (never `string.GetHashCode`).
 - `WorldState.ComputeHash()` hashes every persistent component; tests compare hashes across runs and
@@ -144,10 +155,9 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 - Production does not gate on input availability; player-owned output goes to markets, not inventory.
 - Travel is instant (route travel time/cost unused).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
-- Saves reject changed data instead of remapping ids by key, and code-side config defaults are not part
-  of the data hash (ship explicit values in `config.csv` to be safe).
+- Saves reject changed data instead of remapping ids by key.
 - Sections missing from an older save keep the freshly built state.
-- Module order is manual (no dependency sort); default systems cannot be replaced individually.
-- Presentation has no read-only views yet; `FES.Unity` would need extra assembly references for a UI.
+- `SimulationView` covers the map, markets, facilities, player, guidance and currency; merchants and
+  events have no view yet.
 - `SimulationRunner` reads StreamingAssets with `File` IO, which does not work inside an Android APK.
 - Production runs as managed code (4.4 ms at full scale) — the next candidate for a Burst job.

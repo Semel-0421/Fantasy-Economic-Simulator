@@ -47,6 +47,21 @@ namespace FES.Core
         Automated = 1,
     }
 
+    /// <summary>Directions the player's business can grow in. Nothing is gated; weights only bias offers, events and LOD.</summary>
+    public enum GuidanceAxis : byte
+    {
+        Trade = 0,
+        Agriculture = 1,
+        Industry = 2,
+        Finance = 3,
+        Guild = 4,
+    }
+
+    public static class GuidanceAxes
+    {
+        public const int Count = 5;
+    }
+
     /// <summary>Simulation level of detail: per-entity stepping or summarized node-level flows.</summary>
     public enum SimDetail : byte
     {

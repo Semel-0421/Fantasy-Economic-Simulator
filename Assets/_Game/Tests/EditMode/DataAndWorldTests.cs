@@ -49,7 +49,25 @@ namespace FES.Tests
             Assert.AreEqual(Enum.GetValues(typeof(QualityGrade)).Length, QualityGrades.Count);
             Assert.AreEqual(Enum.GetValues(typeof(IndustryTier)).Length, IndustryTiers.Count);
             Assert.AreEqual(Enum.GetValues(typeof(ModifierTarget)).Length, ModifierTargets.Count);
-            Assert.AreEqual(Enum.GetValues(typeof(FES.Agents.GuidanceAxis)).Length, FES.Agents.GuidanceAxes.Count);
+            Assert.AreEqual(Enum.GetValues(typeof(GuidanceAxis)).Length, GuidanceAxes.Count);
+        }
+
+        static SimulationConfig Config(string rows) => SimulationConfig.Load(CsvTable.Parse("config.csv", "key,value\n" + rows));
+
+        [Test]
+        public void ConfigHash_CoversEffectiveValues_NotFileText()
+        {
+            ulong defaults = SimulationConfig.Defaults().ComputeHash();
+            Assert.AreEqual(defaults, Config("# restated defaults\nprice.min,1\nguidance.weight.buy_facility_permille,1000\n").ComputeHash());
+            Assert.AreNotEqual(defaults, Config("price.min,2\n").ComputeHash());
+            Assert.AreEqual("fx:65536", SimulationConfig.Defaults().EffectiveValues["guidance.weight.buy_facility_permille"]);
+        }
+
+        [Test]
+        public void Config_RejectsUnknownKeys()
+        {
+            var e = Assert.Throws<FormatException>(() => Config("price.adjust_permile,250\n"));
+            StringAssert.Contains("price.adjust_permile", e.Message);
         }
 
         [Test]

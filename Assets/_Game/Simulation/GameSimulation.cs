@@ -18,10 +18,12 @@ namespace FES.Simulation
     {
         readonly TurnPipeline _pipeline;
         readonly ulong _dataHash;
+        SimulationView _view;
 
         public readonly SimContext Context;
         public readonly GameDatabase Database;
         public readonly MigrationRegistry Migrations = new MigrationRegistry();
+        public readonly PlayerActions Actions;
 
         internal GameSimulation(SimContext context, TurnPipeline pipeline, GameDatabase database, ulong dataHash)
         {
@@ -29,7 +31,11 @@ namespace FES.Simulation
             _pipeline = pipeline;
             Database = database;
             _dataHash = dataHash;
+            Actions = new PlayerActions(context.Commands);
         }
+
+        /// <summary>Read-only queries for presentation (needs the default modules' components).</summary>
+        public SimulationView View => _view ??= new SimulationView(World, Database);
 
         public WorldState World => Context.World;
         public int Turn => Context.Turn;
@@ -81,8 +87,9 @@ namespace FES.Simulation
     }
 
     /// <summary>
-    /// Composition root. Modules register in order (world, economy, agents by default); add your own
-    /// with <see cref="AddModule"/> and override default services with <see cref="ConfigureServices"/>.
+    /// Composition root. Modules register in dependency order (<see cref="ISimModule.Requires"/>, then the
+    /// order added); add your own with <see cref="AddModule"/>, override default services with
+    /// <see cref="ConfigureServices"/> and swap single systems with <see cref="ReplaceSystem"/> / <see cref="RemoveSystem"/>.
     /// </summary>
     public sealed class SimulationBuilder
     {
@@ -92,6 +99,7 @@ namespace FES.Simulation
         readonly List<ISimModule> _modules = new List<ISimModule>();
         readonly HashSet<string> _moduleIds = new HashSet<string>(StringComparer.Ordinal);
         readonly List<Action<ServiceRegistry>> _serviceOverrides = new List<Action<ServiceRegistry>>();
+        readonly List<Action<SimBuilder>> _systemOverrides = new List<Action<SimBuilder>>();
 
         public SimulationBuilder(GameDatabase database, MapDef map, ulong seed)
         {
@@ -119,7 +127,7 @@ namespace FES.Simulation
             return this;
         }
 
-        /// <summary>Appends a module. Modules register in the order added; ids must be unique.</summary>
+        /// <summary>Adds a module. Ids must be unique; required modules register first, wherever they were added.</summary>
         public SimulationBuilder AddModule(ISimModule module)
         {
             if (!_moduleIds.Add(module.Id))
@@ -132,6 +140,20 @@ namespace FES.Simulation
         public SimulationBuilder ConfigureServices(Action<ServiceRegistry> configure)
         {
             _serviceOverrides.Add(configure);
+            return this;
+        }
+
+        /// <summary>Runs <paramref name="replacement"/> instead of the module system with the same id.</summary>
+        public SimulationBuilder ReplaceSystem(ISimSystem replacement)
+        {
+            _systemOverrides.Add(b => b.ReplaceSystem(replacement));
+            return this;
+        }
+
+        /// <summary>Drops the module system with this id from the pipeline.</summary>
+        public SimulationBuilder RemoveSystem(string systemId)
+        {
+            _systemOverrides.Add(b => b.RemoveSystem(systemId));
             return this;
         }
 
@@ -148,8 +170,9 @@ namespace FES.Simulation
 
                 var clock = world.Add(new SimClock(_seed));
                 var builder = new SimBuilder(world, services);
+                foreach (var overrideSystem in _systemOverrides) overrideSystem(builder);
                 builder.AddSystem(new CommandSystem());
-                foreach (var module in _modules) module.Register(builder);
+                foreach (var module in ModuleOrder.Sort(_modules)) module.Register(builder);
 
                 pipeline = builder.BuildPipeline();
                 var context = new SimContext(world, services, new TierSchedule(_database.Config.TierCadences), clock);

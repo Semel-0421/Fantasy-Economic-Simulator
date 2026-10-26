@@ -145,6 +145,7 @@ namespace FES.World
     public sealed class WorldModule : ISimModule
     {
         public string Id => "world";
+        public IReadOnlyList<string> Requires => Array.Empty<string>();
 
         public void Register(SimBuilder builder)
         {

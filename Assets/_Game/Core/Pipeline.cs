@@ -55,7 +55,52 @@ namespace FES.Core
     {
         /// <summary>Unique module id; the composition root rejects duplicates.</summary>
         string Id { get; }
+
+        /// <summary>Ids of modules whose components and services this module needs; they register first.</summary>
+        IReadOnlyList<string> Requires { get; }
+
         void Register(SimBuilder builder);
+    }
+
+    public static class ModuleOrder
+    {
+        /// <summary>
+        /// Orders modules so each registers after the modules it requires. Stable: among modules whose
+        /// requirements are met, the one added first goes first. Throws on missing modules and cycles.
+        /// </summary>
+        public static List<ISimModule> Sort(IReadOnlyList<ISimModule> modules)
+        {
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var m in modules) ids.Add(m.Id);
+            foreach (var m in modules)
+            foreach (var required in m.Requires)
+                if (!ids.Contains(required))
+                    throw new InvalidOperationException($"Module '{m.Id}' requires module '{required}', which is not added.");
+
+            var sorted = new List<ISimModule>(modules.Count);
+            var placed = new HashSet<string>(StringComparer.Ordinal);
+            var pending = new List<ISimModule>(modules);
+            while (pending.Count > 0)
+            {
+                int next = pending.FindIndex(m => AllPlaced(m.Requires, placed));
+                if (next < 0)
+                {
+                    var names = pending.ConvertAll(m => m.Id);
+                    throw new InvalidOperationException($"Modules form a dependency cycle: {string.Join(", ", names)}.");
+                }
+                sorted.Add(pending[next]);
+                placed.Add(pending[next].Id);
+                pending.RemoveAt(next);
+            }
+            return sorted;
+        }
+
+        static bool AllPlaced(IReadOnlyList<string> required, HashSet<string> placed)
+        {
+            foreach (var id in required)
+                if (!placed.Contains(id)) return false;
+            return true;
+        }
     }
 
     /// <summary>
@@ -102,6 +147,8 @@ namespace FES.Core
     {
         readonly List<ISimSystem> _systems = new List<ISimSystem>();
         readonly HashSet<string> _systemIds = new HashSet<string>(StringComparer.Ordinal);
+        // System id -> replacement registered before modules ran; null removes the system.
+        readonly Dictionary<string, ISimSystem> _overrides = new Dictionary<string, ISimSystem>(StringComparer.Ordinal);
 
         public readonly WorldState World;
         public readonly ServiceRegistry Services;
@@ -112,14 +159,45 @@ namespace FES.Core
             Services = services;
         }
 
+        /// <summary>
+        /// Call before modules register: when a module adds a system with the replacement's id, the
+        /// replacement runs instead. Keeping the id keeps the system's RNG stream and save identity.
+        /// </summary>
+        public void ReplaceSystem(ISimSystem replacement) =>
+            SetOverride(replacement?.Id ?? throw new ArgumentNullException(nameof(replacement)), replacement);
+
+        /// <summary>Call before modules register: the system with this id is not run.</summary>
+        public void RemoveSystem(string id) => SetOverride(id, null);
+
+        void SetOverride(string id, ISimSystem system)
+        {
+            if (_systemIds.Contains(id))
+                throw new InvalidOperationException($"System '{id}' is already registered; override it before modules register.");
+            if (_overrides.ContainsKey(id))
+                throw new InvalidOperationException($"System '{id}' is replaced or removed twice.");
+            _overrides.Add(id, system);
+        }
+
         public void AddSystem(ISimSystem system)
         {
             if (!_systemIds.Add(system.Id))
                 throw new InvalidOperationException($"System id '{system.Id}' is registered twice.");
+            if (_overrides.TryGetValue(system.Id, out var replacement))
+            {
+                if (system is IDisposable discarded) discarded.Dispose();
+                if (replacement == null) return;
+                system = replacement;
+            }
             _systems.Add(system);
         }
 
-        public TurnPipeline BuildPipeline() => new TurnPipeline(_systems);
+        public TurnPipeline BuildPipeline()
+        {
+            foreach (var id in _overrides.Keys)
+                if (!_systemIds.Contains(id))
+                    throw new InvalidOperationException($"Cannot replace or remove system '{id}': no module registers it.");
+            return new TurnPipeline(_systems);
+        }
     }
 
     public sealed class TurnPipeline : IDisposable

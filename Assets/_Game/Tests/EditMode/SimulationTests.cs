@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FES.Agents;
 using FES.Core;
+using FES.Data;
 using FES.Economy;
 using FES.Simulation;
 using FES.World;
@@ -130,6 +132,68 @@ namespace FES.Tests
             Assert.Throws<System.InvalidOperationException>(() => builder.AddModule(new WorldModule()));
             using var sim = builder.Build();
             Assert.AreEqual(0, sim.Turn);
+        }
+
+        [Test]
+        public void Builder_OrdersModulesByRequirements()
+        {
+            var source = TestWorlds.Sample();
+            using var reversed = new SimulationBuilder(GameDatabase.Load(source), new CsvMapSource(source).LoadMap(), 7)
+                .AddModule(new AgentsModule()).AddModule(new EconomyModule()).AddModule(new WorldModule()).Build();
+            using var standard = TestWorlds.BuildSample(seed: 7);
+            for (int t = 0; t < 5; t++)
+            {
+                reversed.AdvanceTurn();
+                standard.AdvanceTurn();
+            }
+            Assert.AreEqual(standard.ComputeHash(), reversed.ComputeHash());
+        }
+
+        [Test]
+        public void Builder_ReplacesAndRemovesDefaultSystems()
+        {
+            var pricing = new PricingSystem { ForceManaged = true };
+            using var sim = SimulationBuilder.FromData(TestWorlds.Sample(), 1)
+                .ReplaceSystem(pricing)
+                .RemoveSystem("agents.merchants")
+                .Build();
+            Assert.IsTrue(sim.Systems.Contains(pricing));
+            Assert.IsFalse(sim.Systems.Any(s => s.Id == "agents.merchants"));
+            sim.AdvanceTurn();
+
+            var unknown = SimulationBuilder.FromData(TestWorlds.Sample(), 1).RemoveSystem("no.such.system");
+            Assert.Throws<System.InvalidOperationException>(() => unknown.Build());
+        }
+
+        [Test]
+        public void View_ReadsState_AndActionsQueueCommands()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var view = sim.View;
+            var player = sim.World.Get<PlayerState>();
+            Assert.AreEqual(player.Node, view.PlayerNode.Value);
+            Assert.AreEqual(WorldLevel.Village, view.NodeLevel(view.PlayerNode));
+            Assert.IsTrue(view.TryFindNode(view.NodeKey(view.PlayerNode), out var found));
+            Assert.AreEqual(view.PlayerNode, found);
+
+            sim.AdvanceTurn();
+            var quotes = new List<MarketQuote>();
+            view.GetQuotes(view.PlayerNode, quotes);
+            Assert.Greater(quotes.Count, 0);
+            Assert.IsTrue(view.TryGetQuote(view.PlayerNode, quotes[0].Good, out var quote));
+            Assert.AreEqual(quotes[0].Price, quote.Price);
+            Assert.Greater(quote.Price, 0);
+
+            var routes = new List<RouteInfo>();
+            view.GetRoutesFrom(view.PlayerNode, routes);
+            Assert.Greater(routes.Count, 0);
+            long cash = view.PlayerCash;
+            sim.Actions.FoundCompany(view.PlayerNode, GuidanceAxis.Guild, 100);
+            sim.Actions.Travel(routes[0].To);
+            sim.AdvanceTurn();
+            Assert.AreEqual(cash - 100, view.PlayerCash);
+            Assert.AreEqual(routes[0].To, view.PlayerNode);
+            Assert.AreEqual(GuidanceAxis.Guild, view.DominantGuidance);
         }
 
         [Test]

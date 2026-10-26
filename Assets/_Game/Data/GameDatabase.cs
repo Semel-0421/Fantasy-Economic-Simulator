@@ -27,7 +27,10 @@ namespace FES.Data
 
         public SimulationConfig Config { get; private set; }
 
-        /// <summary>Hash of every definition file's text. Saves refuse to load against different data.</summary>
+        /// <summary>
+        /// Hash of every definition file's text plus the effective config values (defaults included).
+        /// Saves refuse to load against different data.
+        /// </summary>
         public ulong ContentHash { get; private set; }
 
         public int GoodCount => Goods.Count;
@@ -59,7 +62,7 @@ namespace FES.Data
         {
             var db = new GameDatabase();
             ulong hash = 0;
-            CsvTable Read(string file, bool required)
+            CsvTable Read(string file, bool required, bool hashText = true)
             {
                 if (!source.Exists(file))
                 {
@@ -67,11 +70,12 @@ namespace FES.Data
                     return null;
                 }
                 string text = source.ReadText(file);
-                hash = DetHash.Combine(hash, HashText(file, text));
+                if (hashText) hash = DetHash.Combine(hash, HashText(file, text));
                 return CsvTable.Parse(file, text);
             }
 
-            db.Config = SimulationConfig.Load(Read(ConfigFile, false));
+            db.Config = SimulationConfig.Load(Read(ConfigFile, false, hashText: false));
+            hash = DetHash.Combine(hash, db.Config.ComputeHash());
             db.LoadGoods(Read(GoodsFile, true));
             db.LoadRecipesAndFacilities(Read(RecipesFile, false), Read(FacilitiesFile, false));
             db.LoadEvents(Read(EventsFile, false));

@@ -12,8 +12,10 @@ How to add features without editing existing systems.
    - `Execute(ctx)`: read/write components; publish `ISimEvent`s for notifications.
    - Own native memory? Also implement `IDisposable`; the pipeline disposes it.
    - Keep derived (non-saved) state? Implement `ILoadListener` to rebuild it after a load.
-2. Register it from a module: `builder.AddSystem(new TaxSystem());`
+2. Register it from a module: `builder.AddSystem(new TaxSystem());`. The module lists the modules whose
+   components it reads in `Requires` (e.g. `{ "world", "economy" }`); they register first.
 3. Add the module to the builder: `SimulationBuilder.FromData(src, seed).AddModule(new TaxModule())`.
+   The order of `AddModule` calls does not matter beyond tie-breaking.
 
 Rules: systems never call each other; share data through components, notify through events.
 Event handlers must never change simulation state (events are for UI, logs and achievements).
@@ -43,12 +45,32 @@ SimulationBuilder.FromData(source, seed)
 
 Replaceable today: `ILodPolicy`, `IMerchantBehavior`, `ICurrencyModel`.
 
+Any single system can also be replaced or dropped by id, without editing its module:
+
+```csharp
+SimulationBuilder.FromData(source, seed)
+    .ReplaceSystem(new MyPricingSystem())   // its Id must be "economy.pricing"
+    .RemoveSystem("agents.merchants")
+    .Build();
+```
+
+The replacement keeps the id, so it keeps the RNG stream and pipeline slot. Naming an id that no
+module registers is a build error.
+
+## Read state from presentation
+
+UI code uses `GameSimulation.View` (`SimulationView`) for queries and `GameSimulation.Actions`
+(`PlayerActions`) for player actions. Views return copies (`MarketQuote`, `RouteInfo`, `FacilityInfo`)
+and fill caller-owned lists to avoid allocations per frame. New queries go into `SimulationView`;
+never hand components or `NativeArray`s to presentation.
+
 ## Add a player action
 
 Implement `ICommand` (`Validate` must not mutate and must reject negative amounts; `Apply` mutates;
 commands keep no simulation-derived state). To steer expansion direction, also implement
 `IGuidanceSource.GetGuidance`. Enqueue with `GameSimulation.Enqueue(cmd)`; it runs at the start
-of the next turn and publishes `CommandApplied` / `CommandRejected`.
+of the next turn and publishes `CommandApplied` / `CommandRejected`. Add a matching method to
+`PlayerActions` so presentation can issue it without referencing the command's assembly.
 
 ## Add market flows
 

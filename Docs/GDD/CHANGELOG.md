@@ -1,0 +1,52 @@
+# Changelog
+
+## 2026-10-27
+- [03_Decisions.md] Q-031 resolved by DEC-050 (five quintiles, population, income-proportional luxuries, yearly change)
+- [systems/SYS_MARKETS.md] Households and population
+- [04_Roadmap.md] P10 ready
+- [03_Decisions.md] Q-026, Q-028, Q-029 resolved by DEC-046 to DEC-048; memo as DEC-049; Q-030 (deferred) and Q-031 (Claude added) registered
+- [systems/SYS_MARKETS.md] Elasticity, demand weights, Pareto income
+- [04_Roadmap.md] P10 market demand added
+- [03_Decisions.md] Q-027 resolved by DEC-044; elasticity memo as DEC-045; Q-028, Q-029 registered (Claude added); Q-026 still open
+- [systems/SYS_MARKETS.md] New (DEC-045)
+- [systems/SYS_BANKING.md] Financial events (DEC-044)
+- [03_Decisions.md] Q-025 resolved by DEC-042; memo as DEC-043 (quarterly records, yearly statistics); Q-026 (unselected) and Q-027 (Claude added) registered
+- [systems/SYS_BANKING.md] Money totals, minting flow, effects, statistics
+- [03_Decisions.md] Q-023 and Q-024 resolved by DEC-038 and DEC-039; memo recorded as DEC-040 (random village start) and DEC-041 (state-owned banks, money totals); Q-025 registered (Claude added)
+- [systems/SYS_PLAYER_START.md] New (DEC-040)
+- [systems/SYS_BANKING.md] Any-asset collateral, auction with leftover to the bank, state ownership, money totals
+- [systems/SYS_MERCHANTS.md] Merchant collateral (DEC-038)
+- [systems/SYS_PRODUCTION.md] Seized facilities auctioned (DEC-039)
+- [systems/SYS_INVENTORY.md] Cargo and ships as collateral
+- [04_Roadmap.md] Random start in P2; P5 and P9 unblocked except money totals
+- [03_Decisions.md] Q-019 to Q-022 resolved by DEC-034 to DEC-037; Q-023 and Q-024 registered (Claude added)
+- [systems/SYS_ROUTE_HAZARDS.md] Passage, owned ships, NPC merchants need no ship (DEC-034)
+- [systems/SYS_PRODUCTION.md] Player facilities go bankrupt too (DEC-035); facility loans and seizure
+- [systems/SYS_BANKING.md] Deposits with interest and payment, international bank cities, exchange fee, loan rules (DEC-036, DEC-037)
+- [systems/SYS_MERCHANTS.md] No ships needed, merchant loans
+- [systems/SYS_INVENTORY.md] Passage uses cart capacity, owned ships carry more
+- [04_Roadmap.md] Readiness updated: P1 to P4 and P6 to P9 ready
+- [03_Decisions.md] Q-012 to Q-018 resolved by DEC-024 to DEC-030; banking memo recorded as DEC-031 to DEC-033; DEC-019 superseded and DEC-008 changed by DEC-031; Q-019 to Q-022 registered (Claude added)
+- [systems/SYS_BANKING.md] New: national banks, international exchange, loans and seizure
+- [systems/SYS_LICENSES.md] Per-good, nation-issued, yearly, sell-only licenses (DEC-024)
+- [systems/SYS_ROUTE_HAZARDS.md] Terrain effects, ships on water, encounter rules (DEC-025, DEC-026)
+- [systems/SYS_TRAVEL_COSTS.md] Toll valuation at local prices (DEC-027); currency moved to SYS-BANKING (DEC-031)
+- [systems/SYS_PRODUCTION.md] Facility cash flow and bankruptcy (DEC-028), overflow sold (DEC-029)
+- [systems/SYS_INVENTORY.md] Overflow sale, cash in local coins
+- [systems/SYS_MERCHANTS.md] Licensed groups, encounters, cross-continent exchange
+- [04_Roadmap.md] P9 banks added; readiness updated
+- [03_Decisions.md] Q-001 to Q-011 resolved by DEC-011 to DEC-020; DEC-021 to DEC-023 from memo (licenses, terrain, encounters); Q-012 to Q-018 registered (Claude added)
+- [systems/SYS_MERCHANTS.md] Bankruptcy and replacement, same costs as the player, partial fills
+- [systems/SYS_PRODUCTION.md] Facility cash, terrain-tag specialties with four effects
+- [systems/SYS_INVENTORY.md] Weight and size per base good, placeholder capacities, partial fills, licenses
+- [systems/SYS_TRAVEL_COSTS.md] Base fee per trip, toll on every entered node with specialty surcharge, gold-unit purse with exchange fee
+- [systems/SYS_LICENSES.md] New (DEC-021)
+- [systems/SYS_ROUTE_HAZARDS.md] New: hard terrain and random encounters (DEC-022, DEC-023)
+- [04_Roadmap.md] P7 licenses and P8 terrain and encounters added; readiness per phase
+- [INDEX.md] New entry point for the design docs
+- [03_Decisions.md] DEC-001 to DEC-010 recorded; Q-001 to Q-011 registered (Q-002 to Q-011 Claude added)
+- [systems/SYS_MERCHANTS.md] New: arbitrage merchants with cargo and travel time (DEC-003)
+- [systems/SYS_PRODUCTION.md] New: input purchase, all-or-nothing, player output to storage, specialties (DEC-004, DEC-005, DEC-010)
+- [systems/SYS_INVENTORY.md] New: item weight and size, cart and warehouses, trading at current price (DEC-005, DEC-006, DEC-009)
+- [systems/SYS_TRAVEL_COSTS.md] New: base fee plus per-unit cost, protective tariffs, exchange (DEC-007, DEC-008)
+- [04_Roadmap.md] New: implementation phases P1 to P6

@@ -42,11 +42,20 @@ fits = sum(qty * size) <= max_size  and  sum(qty * weight) <= max_weight
 - Buy order limited by stock, capacity and cash at once: the smallest limit wins.
 
 ## Unity implementation notes
-- `goods.csv` gains `weight` and `size` columns (names Claude-chosen, [Draft]); `GameDatabase` copies them
-  per base good into native arrays next to `GoodBasePrice`.
-- `PlayerState.Cash` becomes a per-continent coin balance (save migration).
-- One persistent `CargoTable` (holder id, good id, quantity) can serve the cart, warehouses and merchant
-  groups; capacity checks live in one helper so every holder uses the same rule.
-- New commands `BuyGoodsCommand` / `SellGoodsCommand` (and `PlayerActions` methods) validate license,
-  stock, capacity and cash, then go through `MarketFlows` so event modifiers still apply.
+Implemented in P1/P2 (license checks wait for P7, warehouses for P4).
+- `goods.csv` has optional `weight` and `size` columns (names Claude-chosen, [Draft]; default 1). They live
+  on `GoodDef` and in `MarketStore.GoodWeight` / `GoodSize` native arrays next to `GoodBasePrice`.
+- `PlayerState.Coins` holds one balance per continent (section version 3; `PlayerStateV2Migration` puts the
+  old single balance in the continent the player is in). Facilities are paid in their continent's coin,
+  a company in its headquarters' coin.
+- `CargoTable` (holder, good, quantity) is persistent; `CargoHolders.PlayerCart` is the only holder so far.
+  `CargoCapacity.MaxAdditional` is the one capacity rule; the cart's limits are `cargo.cart.max_weight` /
+  `cargo.cart.max_size` ([Draft] 400 / 300).
+- `BuyGoodsCommand` / `SellGoodsCommand` (`PlayerActions.BuyGoods` / `SellGoods`) trade at the player's
+  node, not while travelling, and publish `GoodsTraded` with requested and filled quantities.
+- [Draft] (Claude's proposal) Executed trades are not scaled by event modifiers: modifiers change how much
+  NPCs produce and consume, not a trade that already happened. `MarketFlows.Buy` takes the units out of
+  the stock at once and adds them to this turn's supply and demand, so the price feels the demand while
+  the stock left after clearing stays exact; `MarketFlows.Sell` adds the units to this turn's supply.
+- The cart lookup is linear; index cargo by holder before merchants carry goods (P5).
 

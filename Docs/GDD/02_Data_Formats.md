@@ -14,6 +14,8 @@ except `config.csv`, which is hashed by its effective values (see below).
 | category | category key; categories are created in order of first appearance |
 | base_price | Mid-grade reference price in coins |
 | base_demand | weekly demand of a village market (scaled by level weight) |
+| weight | weight of one unit, shared by all grades (optional, default 1) |
+| size | size (volume) of one unit, shared by all grades (optional, default 1) |
 
 Each row expands to 4 items (`key@low`, `@mid`, `@high`, `@best`) with prices scaled by
 `grade.<grade>.price_permille` (defaults 600 / 1000 / 1800 / 3500).
@@ -68,7 +70,8 @@ changing a default in code does.
 | guidance.decay_permille | 10 | weekly guidance decay |
 | guidance.weight.buy_facility_permille, guidance.weight.found_company_permille | 1000, 5000 | guidance signal weights |
 | lod.focus_level | Region | default LOD policy: detailed subtree around the player |
-| player.start_node, player.start_cash | first village, 500 | player start |
+| player.start_node, player.start_cash | random village from the seed, 500 | player start; start_node is a test/debug override |
+| cargo.cart.max_weight, cargo.cart.max_size | 400, 300 | player cart capacity ([Draft] placeholders) |
 
 `<level>` = continent, nation, region, city, village. `<tier>` = primary, secondary, tertiary.
 `<grade>` = low, mid, high, best.

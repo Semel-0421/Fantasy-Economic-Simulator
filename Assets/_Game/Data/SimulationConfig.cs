@@ -70,8 +70,14 @@ namespace FES.Data
         /// <summary>The default LOD policy simulates the player's ancestor at this level (and its subtree) in detail.</summary>
         public WorldLevel LodFocusLevel = WorldLevel.Region;
 
+        /// <summary>Test/debug override; empty (the default) starts the player in a random village.</summary>
         public string PlayerStartNode = string.Empty;
+        /// <summary>Starting coins, in the start continent's currency.</summary>
         public long PlayerStartCash = 500;
+
+        /// <summary>The player's cart: cargo must fit both the total weight and the total size.</summary>
+        public long CartMaxWeight = 400;
+        public long CartMaxSize = 300;
 
         SimulationConfig()
         {
@@ -158,6 +164,8 @@ namespace FES.Data
             PlayerStartNode = v.TryGetValue("player.start_node", out var start) ? start : PlayerStartNode;
             Record("player.start_node", PlayerStartNode);
             PlayerStartCash = Long(v, "player.start_cash", PlayerStartCash);
+            CartMaxWeight = Long(v, "cargo.cart.max_weight", CartMaxWeight);
+            CartMaxSize = Long(v, "cargo.cart.max_size", CartMaxSize);
         }
 
         void Record(string key, string value) => _effective[key] = value;

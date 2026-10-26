@@ -28,14 +28,20 @@ namespace FES.Data
         public readonly int BasePrice;
         /// <summary>Weekly demand per village-sized market before level weighting.</summary>
         public readonly int BaseDemand;
+        /// <summary>Weight of one unit; set per base good, so every grade shares it.</summary>
+        public readonly int Weight;
+        /// <summary>Size (volume) of one unit; set per base good, so every grade shares it.</summary>
+        public readonly int Size;
 
-        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand)
+        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size)
         {
             Id = id;
             BaseKey = baseKey;
             CategoryIndex = categoryIndex;
             BasePrice = basePrice;
             BaseDemand = baseDemand;
+            Weight = weight;
+            Size = size;
         }
 
         public QualityGrade Grade => Id.Grade;

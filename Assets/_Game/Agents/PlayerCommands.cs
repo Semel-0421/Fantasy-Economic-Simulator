@@ -1,5 +1,6 @@
 using FES.Core;
 using FES.Data;
+using FES.Economy;
 using FES.World;
 
 namespace FES.Agents
@@ -77,6 +78,129 @@ namespace FES.Agents
         }
     }
 
+    /// <summary>A buy or sell the player made, with how much of the order was filled.</summary>
+    public sealed class GoodsTraded : ISimEvent
+    {
+        public readonly NodeId Market;
+        public readonly GoodId Good;
+        public readonly bool Bought;
+        public readonly int Requested;
+        public readonly int Filled;
+        public readonly int Price;
+        public readonly int Turn;
+
+        public GoodsTraded(NodeId market, GoodId good, bool bought, int requested, int filled, int price, int turn)
+        {
+            Market = market;
+            Good = good;
+            Bought = bought;
+            Requested = requested;
+            Filled = filled;
+            Price = price;
+            Turn = turn;
+        }
+    }
+
+    /// <summary>
+    /// Buys goods at the player's market at its current price, paid in the local coin, into the cart.
+    /// An order fills up to the smallest of the stock, the cart's room and what the coins pay for (DEC-020).
+    /// </summary>
+    public sealed class BuyGoodsCommand : ICommand
+    {
+        public readonly GoodId Good;
+        public readonly int Quantity;
+
+        public BuyGoodsCommand(GoodId good, int quantity)
+        {
+            Good = good;
+            Quantity = quantity;
+        }
+
+        public CommandResult Validate(SimContext ctx)
+        {
+            var error = PlayerTrade.Check(ctx, Good, Quantity, out int cell);
+            if (error != null) return CommandResult.Fail(error);
+            return Fill(ctx, cell) > 0 ? CommandResult.Success : CommandResult.Fail("Nothing can be bought: no stock, room or cash.");
+        }
+
+        public void Apply(SimContext ctx)
+        {
+            PlayerTrade.Check(ctx, Good, Quantity, out int cell);
+            int filled = Fill(ctx, cell);
+            var player = ctx.World.Get<PlayerState>();
+            int price = ctx.World.Get<MarketStore>().Price[cell];
+            player.LocalCoins -= (long)filled * price;
+            ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, filled);
+            ctx.World.Get<MarketFlows>().Buy(cell, filled);
+            ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, true, Quantity, filled, price, ctx.Turn));
+        }
+
+        int Fill(SimContext ctx, int cell)
+        {
+            var markets = ctx.World.Get<MarketStore>();
+            var load = ctx.World.Get<CargoTable>().LoadOf(CargoHolders.PlayerCart, markets.GoodWeight, markets.GoodSize);
+            long fill = System.Math.Min(Quantity, markets.Stock[cell]);
+            fill = System.Math.Min(fill, PlayerTrade.CartCapacity(ctx)
+                .MaxAdditional(load, markets.GoodWeight[Good.Value], markets.GoodSize[Good.Value]));
+            fill = System.Math.Min(fill, ctx.World.Get<PlayerState>().LocalCoins / markets.Price[cell]);
+            return (int)System.Math.Max(0, fill);
+        }
+    }
+
+    /// <summary>Sells goods from the cart at the player's market at its current price, for local coins.</summary>
+    public sealed class SellGoodsCommand : ICommand
+    {
+        public readonly GoodId Good;
+        public readonly int Quantity;
+
+        public SellGoodsCommand(GoodId good, int quantity)
+        {
+            Good = good;
+            Quantity = quantity;
+        }
+
+        public CommandResult Validate(SimContext ctx)
+        {
+            var error = PlayerTrade.Check(ctx, Good, Quantity, out _);
+            if (error != null) return CommandResult.Fail(error);
+            return Fill(ctx) > 0 ? CommandResult.Success : CommandResult.Fail("The cart holds none of this good.");
+        }
+
+        public void Apply(SimContext ctx)
+        {
+            PlayerTrade.Check(ctx, Good, Quantity, out int cell);
+            int filled = Fill(ctx);
+            var player = ctx.World.Get<PlayerState>();
+            int price = ctx.World.Get<MarketStore>().Price[cell];
+            player.LocalCoins += (long)filled * price;
+            ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, -filled);
+            ctx.World.Get<MarketFlows>().Sell(cell, filled);
+            ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, false, Quantity, filled, price, ctx.Turn));
+        }
+
+        int Fill(SimContext ctx) => System.Math.Min(Quantity, ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good));
+    }
+
+    static class PlayerTrade
+    {
+        /// <summary>Checks shared by buying and selling; returns an error or null, and the market cell.</summary>
+        public static string Check(SimContext ctx, GoodId good, int quantity, out int cell)
+        {
+            cell = -1;
+            if (quantity <= 0) return "Quantity must be positive.";
+            var player = ctx.World.Get<PlayerState>();
+            if (player.IsTravelling) return "Cannot trade while travelling.";
+            if (!good.IsValid || good.Value >= ctx.Services.Get<GameDatabase>().GoodCount) return "Unknown good.";
+            return ctx.World.Get<MarketStore>().TryFindCell(player.Node, good, out cell) ? null : "This market does not trade that good.";
+        }
+
+        public static CargoCapacity CartCapacity(SimContext ctx)
+        {
+            var config = ctx.Services.Get<GameDatabase>().Config;
+            return new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
+        }
+    }
+
     /// <summary>Switches a player-owned facility between direct management and automation.</summary>
     public sealed class SetFacilityControlCommand : ICommand
     {
@@ -121,14 +245,14 @@ namespace FES.Agents
             if (!Facility.IsValid || Facility.Value >= facilities.Count) return CommandResult.Fail("Unknown facility.");
             if (Price < 0) return CommandResult.Fail("Price must not be negative.");
             if (facilities.Owner[Facility.Value] != OwnerIds.Npc) return CommandResult.Fail("Facility is not for sale.");
-            if (ctx.World.Get<PlayerState>().Cash < Price) return CommandResult.Fail("Not enough cash.");
+            if (ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) < Price) return CommandResult.Fail("Not enough cash.");
             return CommandResult.Success;
         }
 
         public void Apply(SimContext ctx)
         {
             var facilities = ctx.World.Get<FacilityTable>();
-            ctx.World.Get<PlayerState>().Cash -= Price;
+            ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) -= Price;
             facilities.Owner[Facility.Value] = OwnerIds.Player;
             facilities.Mode[Facility.Value] = (byte)ControlMode.Manual;
         }
@@ -158,10 +282,10 @@ namespace FES.Agents
             var nodes = ctx.World.Get<NodeTable>();
             if (!Headquarters.IsValid || Headquarters.Value >= nodes.Count) return CommandResult.Fail("Unknown headquarters node.");
             if (Cost < 0) return CommandResult.Fail("Cost must not be negative.");
-            return ctx.World.Get<PlayerState>().Cash >= Cost ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
+            return ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) >= Cost ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }
 
-        public void Apply(SimContext ctx) => ctx.World.Get<PlayerState>().Cash -= Cost;
+        public void Apply(SimContext ctx) => ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) -= Cost;
 
         public GuidanceSignal GetGuidance(SimContext ctx) =>
             new GuidanceSignal(Focus, ctx.Services.Get<GameDatabase>().Config.GuidanceWeightFoundCompany, Headquarters);

@@ -69,6 +69,7 @@ namespace FES.Simulation
         readonly PlayerState _player;
         readonly GuidanceState _guidance;
         readonly FacilityTable _facilities;
+        readonly CargoTable _cargo;
 
         public readonly GameDatabase Database;
 
@@ -83,6 +84,7 @@ namespace FES.Simulation
             _player = world.Get<PlayerState>();
             _guidance = world.Get<GuidanceState>();
             _facilities = world.Get<FacilityTable>();
+            _cargo = world.Get<CargoTable>();
         }
 
         // Clock
@@ -165,7 +167,14 @@ namespace FES.Simulation
         /// <summary>The trip's destination, or <see cref="NodeId.None"/>.</summary>
         public NodeId TravelDestination => new NodeId(_player.TravelDestination);
         public int ArrivalTurn => _player.ArrivalTurn;
-        public long PlayerCash => _player.Cash;
+        /// <summary>Coins of the continent the player is in: what trades here are paid with.</summary>
+        public long PlayerCash => _player.LocalCoins;
+        public long PlayerCoins(int continent) => _player.Coins[continent];
+
+        /// <summary>The cart's contents, sorted by good id.</summary>
+        public void GetCart(List<CargoItem> into) => _cargo.Collect(CargoHolders.PlayerCart, into);
+        public CargoLoad CartLoad => _cargo.LoadOf(CargoHolders.PlayerCart, _markets.GoodWeight, _markets.GoodSize);
+        public CargoCapacity CartCapacity => new CargoCapacity(Database.Config.CartMaxWeight, Database.Config.CartMaxSize);
         public GuidanceAxis DominantGuidance => _guidance.Dominant;
         public Fx GuidanceWeight(GuidanceAxis axis) => _guidance[axis];
 
@@ -188,6 +197,11 @@ namespace FES.Simulation
         internal PlayerActions(CommandQueue queue) => _queue = queue;
 
         public void Travel(NodeId destination) => _queue.Enqueue(new TravelCommand(destination));
+
+        /// <summary>Buys at the player's market; fills partially when stock, cart room or coins run short.</summary>
+        public void BuyGoods(GoodId good, int quantity) => _queue.Enqueue(new BuyGoodsCommand(good, quantity));
+
+        public void SellGoods(GoodId good, int quantity) => _queue.Enqueue(new SellGoodsCommand(good, quantity));
 
         public void BuyFacility(FacilityId facility, long price, GuidanceAxis axis) =>
             _queue.Enqueue(new BuyFacilityCommand(facility, price, axis));

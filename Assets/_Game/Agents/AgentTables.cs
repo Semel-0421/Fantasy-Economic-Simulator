@@ -1,5 +1,6 @@
 using System.IO;
 using FES.Core;
+using FES.World;
 
 namespace FES.Agents
 {
@@ -78,33 +79,60 @@ namespace FES.Agents
     public sealed class PlayerState : IPersistentComponent
     {
         public const string SectionKey = "agents.player";
+        /// <summary>Coin count written by <see cref="PlayerStateV2Migration"/>: one legacy balance follows.</summary>
+        internal const int LegacyCashMarker = -1;
+
+        readonly NodeTable _nodes;
 
         public int Node;
-        public long Cash;
+        /// <summary>Coins carried, per continent currency. Trades are paid in the market's local coin.</summary>
+        public readonly long[] Coins;
         /// <summary>Node the player is travelling to, or -1.</summary>
         public int TravelDestination = -1;
         /// <summary>Turn on which the player reaches <see cref="TravelDestination"/>.</summary>
         public int ArrivalTurn = -1;
 
+        public PlayerState(NodeTable nodes)
+        {
+            _nodes = nodes;
+            Coins = new long[nodes.ContinentCount];
+        }
+
         public bool IsTravelling => TravelDestination >= 0;
 
+        /// <summary>Continent of <see cref="Node"/>: its coins are the local currency.</summary>
+        public int LocalContinent => _nodes.Continent[Node];
+
+        public ref long CoinsAt(int node) => ref Coins[_nodes.Continent[node]];
+
+        public ref long LocalCoins => ref Coins[LocalContinent];
+
         public string Key => SectionKey;
-        public int Version => 2;
+        public int Version => 3;
 
         public void Write(BinaryWriter writer)
         {
             writer.Write(Node);
-            writer.Write(Cash);
             writer.Write(TravelDestination);
             writer.Write(ArrivalTurn);
+            writer.Write(Coins.Length);
+            foreach (long coins in Coins) writer.Write(coins);
         }
 
         public void Read(BinaryReader reader)
         {
             Node = reader.ReadInt32();
-            Cash = reader.ReadInt64();
             TravelDestination = reader.ReadInt32();
             ArrivalTurn = reader.ReadInt32();
+            int count = reader.ReadInt32();
+            System.Array.Clear(Coins, 0, Coins.Length);
+            if (count == LegacyCashMarker)
+            {
+                Coins[LocalContinent] = reader.ReadInt64();
+                return;
+            }
+            if (count != Coins.Length) throw new InvalidDataException($"Saved continent count {count} != {Coins.Length}.");
+            for (int c = 0; c < count; c++) Coins[c] = reader.ReadInt64();
         }
     }
 
@@ -122,6 +150,36 @@ namespace FES.Agents
                 writer.Write(section);
                 writer.Write(-1); // TravelDestination
                 writer.Write(-1); // ArrivalTurn
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Version 2 had one cash balance. It becomes the coins of the continent the player is in; the
+    /// migration cannot see the map, so it leaves a marker that <see cref="PlayerState.Read"/> resolves.
+    /// </summary>
+    public sealed class PlayerStateV2Migration : ISaveMigration
+    {
+        public string SectionKey => PlayerState.SectionKey;
+        public int FromVersion => 2;
+
+        public byte[] Migrate(byte[] section)
+        {
+            using var reader = new BinaryReader(new MemoryStream(section));
+            int node = reader.ReadInt32();
+            long cash = reader.ReadInt64();
+            int destination = reader.ReadInt32();
+            int arrival = reader.ReadInt32();
+
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(node);
+                writer.Write(destination);
+                writer.Write(arrival);
+                writer.Write(PlayerState.LegacyCashMarker);
+                writer.Write(cash);
             }
             return output.ToArray();
         }

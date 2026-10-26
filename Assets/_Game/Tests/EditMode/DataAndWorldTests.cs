@@ -78,7 +78,10 @@ namespace FES.Tests
             Assert.AreEqual(5, db.Categories.Count);
             Assert.IsTrue(db.TryGetGood("wheat", QualityGrade.High, out var wheatHigh));
             Assert.AreEqual(18, db.Good(wheatHigh).BasePrice); // 10 * 1.8
-            Assert.AreEqual("aur_n1_r1_c1_v1", db.Config.PlayerStartNode);
+            Assert.AreEqual(string.Empty, db.Config.PlayerStartNode);
+            Assert.AreEqual(5, db.Good(wheatHigh).Weight);
+            Assert.AreEqual(4, db.Good(wheatHigh).Size);
+            Assert.AreEqual(400, db.Config.CartMaxWeight);
             Assert.AreEqual(4, db.Config.TierCadences[(int)WorldLevel.Nation].Period);
             Assert.AreNotEqual(0UL, db.ContentHash);
         }

@@ -30,6 +30,8 @@ namespace FES.Economy
         public NativeArray<int> GoodBasePrice;
         public NativeArray<int> GoodBaseDemand;
         public NativeArray<int> GoodCategory;
+        public NativeArray<int> GoodWeight;
+        public NativeArray<int> GoodSize;
 
         // Dynamic state (saved).
         public NativeArray<int> Price;
@@ -51,6 +53,8 @@ namespace FES.Economy
             GoodBasePrice = new NativeArray<int>(goodCount, Allocator.Persistent);
             GoodBaseDemand = new NativeArray<int>(goodCount, Allocator.Persistent);
             GoodCategory = new NativeArray<int>(goodCount, Allocator.Persistent);
+            GoodWeight = new NativeArray<int>(goodCount, Allocator.Persistent);
+            GoodSize = new NativeArray<int>(goodCount, Allocator.Persistent);
             Price = new NativeArray<int>(cellCount, Allocator.Persistent);
             PrevPrice = new NativeArray<int>(cellCount, Allocator.Persistent);
             Stock = new NativeArray<int>(cellCount, Allocator.Persistent);
@@ -106,7 +110,7 @@ namespace FES.Economy
 
         /// <summary>Approximate native memory in bytes, for budgeting.</summary>
         public long NativeBytes =>
-            (long)MarketCount * 2 * sizeof(int) + (long)CellCount * 6 * sizeof(int) + (long)GoodBasePrice.Length * 3 * sizeof(int);
+            (long)MarketCount * 2 * sizeof(int) + (long)CellCount * 6 * sizeof(int) + (long)GoodBasePrice.Length * 5 * sizeof(int);
 
         public void Dispose()
         {
@@ -116,6 +120,8 @@ namespace FES.Economy
             GoodBasePrice.DisposeIfCreated();
             GoodBaseDemand.DisposeIfCreated();
             GoodCategory.DisposeIfCreated();
+            GoodWeight.DisposeIfCreated();
+            GoodSize.DisposeIfCreated();
             Price.DisposeIfCreated();
             PrevPrice.DisposeIfCreated();
             Stock.DisposeIfCreated();
@@ -155,6 +161,8 @@ namespace FES.Economy
                 store.GoodBasePrice[g] = db.Goods[g].BasePrice;
                 store.GoodBaseDemand[g] = db.Goods[g].BaseDemand;
                 store.GoodCategory[g] = db.Goods[g].CategoryIndex;
+                store.GoodWeight[g] = db.Goods[g].Weight;
+                store.GoodSize[g] = db.Goods[g].Size;
             }
 
             int cell = 0;

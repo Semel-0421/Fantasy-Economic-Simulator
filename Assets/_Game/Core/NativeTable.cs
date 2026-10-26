@@ -8,6 +8,7 @@ namespace FES.Core
     interface INativeColumn : IDisposable
     {
         int Length { get; }
+        void RemoveAtSwapBack(int index);
         void Write(BinaryWriter writer);
         void Read(BinaryReader reader);
     }
@@ -26,6 +27,8 @@ namespace FES.Core
         }
 
         public void Add(T value) => _list.Add(value);
+
+        public void RemoveAtSwapBack(int index) => _list.RemoveAtSwapBack(index);
 
         /// <summary>View for jobs. Invalidated when the column grows.</summary>
         public NativeArray<T> AsArray() => _list.AsArray();
@@ -57,6 +60,12 @@ namespace FES.Core
             var column = new NativeColumn<T>();
             _columns.Add(column);
             return column;
+        }
+
+        /// <summary>Removes a row by moving the last row into its place, so the last row's index changes.</summary>
+        protected void RemoveRowSwapBack(int row)
+        {
+            foreach (var c in _columns) c.RemoveAtSwapBack(row);
         }
 
         public void Write(BinaryWriter writer)

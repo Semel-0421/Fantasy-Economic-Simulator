@@ -40,6 +40,28 @@ namespace FES.Economy
         public void AddSupply(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Supply);
         public void AddDemand(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Demand);
 
+        /// <summary>
+        /// A purchase executed now at the current price. The units leave the stock at once (so they cannot be
+        /// sold twice) and pass through this turn's supply into its demand, so the price sees the demand at
+        /// the next repricing while the stock left after clearing is exact. Executed trades are not scaled
+        /// by event modifiers.
+        /// </summary>
+        public void Buy(int cell, int quantity)
+        {
+            if (quantity < 0 || quantity > _store.Stock[cell])
+                throw new ArgumentOutOfRangeException(nameof(quantity), $"Cannot buy {quantity} of stock {_store.Stock[cell]}.");
+            _store.Stock[cell] -= quantity;
+            _store.AddSupplyRaw(cell, quantity);
+            _store.AddDemandRaw(cell, quantity);
+        }
+
+        /// <summary>A sale executed now at the current price: the units join this turn's supply, unscaled.</summary>
+        public void Sell(int cell, int quantity)
+        {
+            if (quantity < 0) throw new ArgumentOutOfRangeException(nameof(quantity));
+            _store.AddSupplyRaw(cell, quantity);
+        }
+
         void Add(int market, int cell, long quantity, ModifierTarget target)
         {
             int category = _store.GoodCategory[_store.CellGood[cell]];

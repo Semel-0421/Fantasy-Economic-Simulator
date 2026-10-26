@@ -20,5 +20,6 @@ The opening shapes the first goal: a peddler with no bank access builds a base b
 ## Unity implementation notes
 - The village is picked with `DetRandom` from the world seed, so the same seed always starts in the same
   village and saves stay deterministic.
-- The existing `player.start_node` config key (used by the sample data and tests) becomes a test/debug
-  override; shipped data leaves it empty ([Draft], Claude's proposal).
+- `player.start_node` is a test/debug override; the shipped `config.csv` leaves it out ([Draft], Claude's
+  proposal). Implemented in P2: `AgentsModule` picks the village with the `agents.player.start` stream.
+- Starting cash is paid in the start continent's coin.

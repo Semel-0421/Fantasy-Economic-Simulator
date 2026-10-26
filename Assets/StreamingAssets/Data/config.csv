@@ -6,5 +6,6 @@ tier.nation.offset,1
 tier.region.period,2
 tier.city.period,1
 tier.village.period,1
-player.start_node,aur_n1_r1_c1_v1
 player.start_cash,500
+cargo.cart.max_weight,400
+cargo.cart.max_size,300

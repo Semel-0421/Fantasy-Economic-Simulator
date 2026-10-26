@@ -103,13 +103,13 @@ namespace FES.Tests
             using var buffer = new MemoryStream();
             sim.Save(buffer);
             var player = sim.World.Get<PlayerState>();
-            long cash = player.Cash;
+            long cash = player.LocalCoins;
 
             sim.Enqueue(new FoundCompanyCommand(new NodeId(player.Node), GuidanceAxis.Trade, 100));
             buffer.Position = 0;
             sim.Load(buffer);
             sim.AdvanceTurn();
-            Assert.AreEqual(cash, player.Cash);
+            Assert.AreEqual(cash, player.LocalCoins);
         }
 
         [Test]
@@ -117,11 +117,11 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var player = sim.World.Get<PlayerState>();
-            long cash = player.Cash;
+            long cash = player.LocalCoins;
             sim.Enqueue(new BuyFacilityCommand(new FacilityId(0), -1000, GuidanceAxis.Industry));
             sim.Enqueue(new FoundCompanyCommand(new NodeId(player.Node), GuidanceAxis.Trade, -1000));
             sim.AdvanceTurn();
-            Assert.AreEqual(cash, player.Cash);
+            Assert.AreEqual(cash, player.LocalCoins);
             Assert.AreEqual(2, sim.LastTurnEvents.OfType<CommandRejected>().Count());
         }
 
@@ -233,13 +233,177 @@ namespace FES.Tests
                 writer.Write(77L);
             }
             using var sim = TestWorlds.BuildSample();
-            var migrated = sim.Migrations.Upgrade(PlayerState.SectionKey, 1, 2, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(PlayerState.SectionKey, 1, 3, v1.ToArray());
 
-            var player = new PlayerState();
+            var nodes = sim.World.Get<NodeTable>();
+            var player = new PlayerState(nodes);
             player.Read(new BinaryReader(new MemoryStream(migrated)));
             Assert.AreEqual(3, player.Node);
-            Assert.AreEqual(77L, player.Cash);
+            Assert.AreEqual(77L, player.Coins[nodes.Continent[3]]);
+            Assert.AreEqual(77L, player.Coins.Sum());
             Assert.IsFalse(player.IsTravelling);
+        }
+
+        [Test]
+        public void Player_StartsInARandomVillage_FixedBySeed()
+        {
+            var starts = new HashSet<int>();
+            for (ulong seed = 1; seed <= 12; seed++)
+            {
+                using var sim = TestWorlds.BuildSample(seed);
+                using var again = TestWorlds.BuildSample(seed);
+                var view = sim.View;
+                Assert.AreEqual(WorldLevel.Village, view.NodeLevel(view.PlayerNode));
+                Assert.AreEqual(view.PlayerNode, again.View.PlayerNode);
+                Assert.AreEqual(sim.Database.Config.PlayerStartCash, view.PlayerCash);
+                starts.Add(view.PlayerNode.Value);
+            }
+            Assert.Greater(starts.Count, 1);
+        }
+
+        static MarketQuote MostStocked(GameSimulation sim)
+        {
+            var quotes = new List<MarketQuote>();
+            sim.View.GetQuotes(sim.View.PlayerNode, quotes);
+            return quotes.OrderByDescending(q => q.Stock).ThenBy(q => q.Good.Value).First();
+        }
+
+        [Test]
+        public void BuyAndSell_MoveGoodsAndCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var view = sim.View;
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+            var quote = MostStocked(sim);
+            Assume.That(quote.Stock, Is.GreaterThanOrEqualTo(5));
+            long coins = view.PlayerCash;
+
+            sim.Actions.BuyGoods(quote.Good, 5);
+            sim.Enqueue(new BuyGoodsCommand(quote.Good, 0));
+            sim.Actions.SellGoods(quote.Good, 2);
+            sim.AdvanceTurn();
+            var trades = sim.LastTurnEvents.OfType<GoodsTraded>().ToList();
+            Assert.AreEqual(2, trades.Count);
+            Assert.AreEqual(1, sim.LastTurnEvents.OfType<CommandRejected>().Count());
+            Assert.AreEqual(5, trades[0].Filled);
+            Assert.AreEqual(2, trades[1].Filled);
+            Assert.AreEqual(coins - 5L * trades[0].Price + 2L * trades[1].Price, view.PlayerCash);
+
+            var cart = new List<CargoItem>();
+            view.GetCart(cart);
+            Assert.AreEqual(1, cart.Count);
+            Assert.AreEqual(quote.Good, cart[0].Good);
+            Assert.AreEqual(3, cart[0].Quantity);
+            var def = sim.Database.Good(quote.Good);
+            Assert.AreEqual(3L * def.Weight, view.CartLoad.Weight);
+            Assert.AreEqual(3L * def.Size, view.CartLoad.Size);
+
+            sim.Actions.SellGoods(quote.Good, 100);
+            sim.AdvanceTurn();
+            Assert.AreEqual(3, sim.LastTurnEvents.OfType<GoodsTraded>().Single().Filled);
+            view.GetCart(cart);
+            Assert.AreEqual(0, cart.Count);
+        }
+
+        [Test]
+        public void Buy_TakesStockAtOnce_AndAddsDemand()
+        {
+            using var sim = TestWorlds.BuildSample();
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+            var quote = MostStocked(sim);
+            Assume.That(quote.Stock, Is.GreaterThanOrEqualTo(4));
+            var markets = sim.World.Get<MarketStore>();
+            markets.TryFindCell(sim.View.PlayerNode.Value, quote.Good, out int cell);
+            int demand = markets.Demand[cell];
+
+            var flows = sim.World.Get<MarketFlows>();
+            flows.Buy(cell, 4);
+            Assert.AreEqual(quote.Stock - 4, markets.Stock[cell]);
+            Assert.AreEqual(demand + 4, markets.Demand[cell]);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => flows.Buy(cell, markets.Stock[cell] + 1));
+        }
+
+        [Test]
+        public void Buy_FillsPartially_UpToTheSmallestLimit()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var view = sim.View;
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+            var quote = MostStocked(sim);
+            Assume.That(quote.Stock, Is.GreaterThan(0));
+
+            sim.Actions.BuyGoods(quote.Good, 1_000_000);
+            sim.AdvanceTurn();
+            var trade = sim.LastTurnEvents.OfType<GoodsTraded>().Single();
+            var def = sim.Database.Good(quote.Good);
+            long room = view.CartCapacity.MaxAdditional(new CargoLoad(0, 0), def.Weight, def.Size);
+            long affordable = sim.Database.Config.PlayerStartCash / trade.Price;
+            Assert.AreEqual(System.Math.Min(System.Math.Min(quote.Stock, room), affordable), trade.Filled);
+            Assert.Less(trade.Filled, trade.Requested);
+            Assert.LessOrEqual(view.CartLoad.Weight, view.CartCapacity.MaxWeight);
+            Assert.LessOrEqual(view.CartLoad.Size, view.CartCapacity.MaxSize);
+            Assert.GreaterOrEqual(view.PlayerCash, 0);
+        }
+
+        [Test]
+        public void Trade_IsRejectedWhileTravelling_OrForUnknownGoods()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var view = sim.View;
+            for (int t = 0; t < 2; t++) sim.AdvanceTurn();
+            var quote = MostStocked(sim);
+            var routes = new List<RouteInfo>();
+            view.GetRoutesFrom(view.PlayerNode, routes);
+            sim.Actions.BuyGoods(new GoodId(sim.Database.GoodCount), 1);
+            sim.Actions.Travel(routes[0].To);
+            sim.Actions.BuyGoods(quote.Good, 1);
+            sim.AdvanceTurn();
+            Assert.AreEqual(2, sim.LastTurnEvents.OfType<CommandRejected>().Count());
+            Assert.AreEqual(0, sim.LastTurnEvents.OfType<GoodsTraded>().Count());
+        }
+
+        [Test]
+        public void Cart_SurvivesSaveAndLoad()
+        {
+            using var sim = TestWorlds.BuildSample();
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+            var quote = MostStocked(sim);
+            Assume.That(quote.Stock, Is.GreaterThanOrEqualTo(4));
+            sim.Actions.BuyGoods(quote.Good, 4);
+            sim.AdvanceTurn();
+            using var buffer = new MemoryStream();
+            sim.Save(buffer);
+
+            using var copy = TestWorlds.BuildSample(seed: 99);
+            buffer.Position = 0;
+            copy.Load(buffer);
+            Assert.AreEqual(sim.ComputeHash(), copy.ComputeHash());
+            var cart = new List<CargoItem>();
+            copy.View.GetCart(cart);
+            Assert.AreEqual(4, cart.Single().Quantity);
+            Assert.AreEqual(sim.View.PlayerCash, copy.View.PlayerCash);
+        }
+
+        [Test]
+        public void PlayerStateV2Save_PutsCashInTheLocalContinent()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            int node = nodes.Count - 1;
+            using var v2 = new MemoryStream();
+            using (var writer = new BinaryWriter(v2))
+            {
+                writer.Write(node);
+                writer.Write(123L);
+                writer.Write(-1);
+                writer.Write(-1);
+            }
+            var migrated = sim.Migrations.Upgrade(PlayerState.SectionKey, 2, 3, v2.ToArray());
+            var player = new PlayerState(nodes);
+            player.Read(new BinaryReader(new MemoryStream(migrated)));
+            Assert.AreEqual(node, player.Node);
+            Assert.AreEqual(123L, player.LocalCoins);
+            Assert.AreEqual(123L, player.Coins.Sum());
         }
 
         [Test]
@@ -248,13 +412,13 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var player = sim.World.Get<PlayerState>();
             var guidance = sim.World.Get<GuidanceState>();
-            long cash = player.Cash;
+            long cash = player.LocalCoins;
 
             sim.Enqueue(new FoundCompanyCommand(new NodeId(player.Node), GuidanceAxis.Trade, 200));
             sim.Enqueue(new FoundCompanyCommand(new NodeId(player.Node), GuidanceAxis.Trade, 1_000_000));
             sim.AdvanceTurn();
 
-            Assert.AreEqual(cash - 200, player.Cash);
+            Assert.AreEqual(cash - 200, player.LocalCoins);
             Assert.AreEqual(1, sim.LastTurnEvents.OfType<CommandRejected>().Count());
             Assert.AreEqual(GuidanceAxis.Trade, guidance.Dominant);
             Assert.Greater(guidance[GuidanceAxis.Trade].Raw, Fx.FromInt(4).Raw);
@@ -276,6 +440,7 @@ namespace FES.Tests
             Assert.IsFalse(lod.IsDetailed(facilities.Node[far]));
             Assert.IsTrue(lod.IsDetailed(player.Node));
 
+            player.CoinsAt(facilities.Node[far]) += 100; // paid in the facility's continent coin
             sim.Enqueue(new BuyFacilityCommand(new FacilityId(far), 100, GuidanceAxis.Agriculture));
             sim.AdvanceTurn(); // Commands phase runs before the Lod phase, so this same turn sees the purchase
             Assert.AreEqual(OwnerIds.Player, facilities.Owner[far]);

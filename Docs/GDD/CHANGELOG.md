@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P1 and P2 done
+- [systems/SYS_INVENTORY.md] Implementation notes: weight/size columns, per-continent coins, cart, trade commands; executed trades not scaled by modifiers ([Draft])
+- [systems/SYS_PLAYER_START.md] Random village start implemented; start_node removed from shipped config
+- [02_Data_Formats.md] goods.csv weight/size, cart capacity keys, random start
 - [03_Decisions.md] Q-031 resolved by DEC-050 (five quintiles, population, income-proportional luxuries, yearly change)
 - [systems/SYS_MARKETS.md] Households and population
 - [04_Roadmap.md] P10 ready

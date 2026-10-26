@@ -9,6 +9,7 @@ namespace FES.Agents
     public sealed class AgentsModule : ISimModule
     {
         static readonly uint SpawnStream = DetHash.Of("agents.spawn");
+        static readonly uint StartStream = DetHash.Of("agents.player.start");
         static readonly string[] RequiredModules = { "world", "economy" };
 
         public string Id => "agents";
@@ -20,9 +21,10 @@ namespace FES.Agents
             var nodes = builder.World.Get<NodeTable>();
             var seed = builder.World.Get<SimClock>().Seed;
 
-            var player = builder.World.Add(new PlayerState());
-            player.Node = ResolveStartNode(db.Config, nodes);
-            player.Cash = db.Config.PlayerStartCash;
+            var player = builder.World.Add(new PlayerState(nodes));
+            player.Node = ResolveStartNode(db.Config, nodes, seed);
+            player.LocalCoins = db.Config.PlayerStartCash;
+            builder.World.Add(new CargoTable());
 
             SpawnFacilities(builder.World.Add(new FacilityTable()), nodes, db, seed);
             SpawnMerchants(builder.World.Add(new AgentTable()), nodes, db.Config);
@@ -33,6 +35,7 @@ namespace FES.Agents
             builder.Services.SetDefault<IMerchantBehavior>(new IdleMerchantBehavior());
 
             builder.AddMigration(new PlayerStateV1Migration());
+            builder.AddMigration(new PlayerStateV2Migration());
 
             builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());
@@ -41,14 +44,16 @@ namespace FES.Agents
             builder.AddSystem(new GuidanceSystem());
         }
 
-        static int ResolveStartNode(SimulationConfig config, NodeTable nodes)
+        /// <summary>A random village from the world seed (DEC-040), unless config names a start node.</summary>
+        static int ResolveStartNode(SimulationConfig config, NodeTable nodes, ulong seed)
         {
             if (!string.IsNullOrEmpty(config.PlayerStartNode))
                 return nodes.TryFind(config.PlayerStartNode, out var start)
                     ? start.Value
                     : throw new System.FormatException($"player.start_node '{config.PlayerStartNode}' is not on the map.");
             int villages = nodes.LevelCount(WorldLevel.Village);
-            return villages > 0 ? nodes.LevelStart(WorldLevel.Village) : 0;
+            if (villages == 0) return 0;
+            return nodes.LevelStart(WorldLevel.Village) + DetRandom.For(seed, 0, StartStream, 0).NextInt(villages);
         }
 
         static void SpawnFacilities(FacilityTable table, NodeTable nodes, GameDatabase db, ulong seed)

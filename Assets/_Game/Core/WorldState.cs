@@ -26,6 +26,17 @@ namespace FES.Core
     }
 
     /// <summary>
+    /// Upgrades one save section by one version: FromVersion -> FromVersion + 1. The module that owns the
+    /// component registers it with <see cref="SimBuilder.AddMigration"/>.
+    /// </summary>
+    public interface ISaveMigration
+    {
+        string SectionKey { get; }
+        int FromVersion { get; }
+        byte[] Migrate(byte[] section);
+    }
+
+    /// <summary>
     /// Typed container for every piece of simulation state. Not an ECS: each component is a
     /// struct-of-arrays table registered once by its module. Systems read and write components;
     /// they never call each other.

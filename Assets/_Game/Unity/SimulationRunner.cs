@@ -1,4 +1,4 @@
-using System.IO;
+using System.Collections;
 using FES.Data;
 using FES.Simulation;
 using UnityEngine;
@@ -14,13 +14,15 @@ namespace FES.Unity
         [SerializeField] string dataFolder = "Data";
         [SerializeField] ulong seed = 12345;
 
+        /// <summary>Null until the data has loaded (a few frames on Android).</summary>
         public GameSimulation Simulation { get; private set; }
 
-        void Awake()
+        public bool IsReady => Simulation != null;
+
+        IEnumerator Start()
         {
-            // TODO: on Android StreamingAssets lives inside the APK; copy the data files to
-            // persistentDataPath (UnityWebRequest) before building, or ship them as TextAssets.
-            var source = new FileDataSource(Path.Combine(Application.streamingAssetsPath, dataFolder));
+            IDataSource source = null;
+            yield return StreamingAssetsData.Load(dataFolder, loaded => source = loaded);
             Simulation = SimulationBuilder.FromData(source, seed).Build();
             Debug.Log($"[FES] Simulation ready: {Simulation.Systems.Count} systems, turn {Simulation.Turn}.");
         }
@@ -28,6 +30,11 @@ namespace FES.Unity
         [ContextMenu("Advance Turn")]
         public void AdvanceTurn()
         {
+            if (!IsReady)
+            {
+                Debug.LogWarning("[FES] Simulation is still loading.");
+                return;
+            }
             Simulation.AdvanceTurn();
             var view = Simulation.View;
             Debug.Log($"[FES] Year {view.Year} week {view.Week}: player at {view.NodeName(view.PlayerNode)} with {view.PlayerCash} coins, " +

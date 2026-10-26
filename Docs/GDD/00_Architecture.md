@@ -17,10 +17,10 @@ Status: skeleton implemented (2026-10-27). Code: `Assets/_Game/`. Tests: `Assets
 | `FES.Data` | `Data/` | Core | CSV loader, definitions, `SimulationConfig`, `GameDatabase`, `CsvMapSource` |
 | `FES.World` | `World/` | Core, Data | `NodeTable` (hierarchy), `RouteTable`, `WorldBuilder`, `WorldModule` |
 | `FES.Economy` | `Economy/` | Core, Data, World | `MarketStore` (sparse), `MarketFlows`, Burst pricing/consumption jobs, modifiers + world events, currency |
-| `FES.Agents` | `Agents/` | Core, Data, World, Economy | player, merchants, facilities, production, LOD, guidance, player commands |
+| `FES.Agents` | `Agents/` | Core, Data, World, Economy | player, travel, merchants, facilities, Burst production, LOD, guidance, player commands |
 | `FES.Persistence` | `Persistence/` | Core | save container, section versioning, migrations |
 | `FES.Simulation` | `Simulation/` | all above | `SimulationBuilder` (composition root), `GameSimulation` facade, `SimulationView` (read-only queries), `PlayerActions` |
-| `FES.Unity` | `Unity/` | Core, Data, Simulation | `SimulationRunner` MonoBehaviour — the only code allowed to use `UnityEngine` |
+| `FES.Unity` | `Unity/` | Core, Data, Simulation | `SimulationRunner` MonoBehaviour, `StreamingAssetsData` loader — the only code allowed to use `UnityEngine` |
 
 Modules declare the modules they need (`ISimModule.Requires`); `ModuleOrder.Sort` registers them in
 dependency order, stable by the order added, and rejects missing modules and cycles.
@@ -43,6 +43,14 @@ assemblies cannot, because `NativeArray` and the job system live in `UnityEngine
   index range (`LevelStart`/`LevelCount`) that tier jobs iterate.
 - **Markets**: every node has exactly one market; market index = node index.
 - **Routes**: directed edges with travel turns and per-unit cost, CSR outgoing lists.
+- **Travel**: `TravelCommand` starts a trip along a route; the player counts as at the origin until
+  `agents.travel` moves them on turn (start + travel turns), publishing `PlayerArrived`.
+
+## Data loading
+
+`StreamingAssetsData.Load` (coroutine) reads the data folder directly where StreamingAssets is a plain
+folder (Windows, Editor) and fetches `DataFiles.All` with `UnityWebRequest` where it is a URL (Android
+APK). `SimulationRunner.Simulation` is null until loading finishes (`IsReady`).
 
 Target scale (measured by `FullScale_MemoryAndTurnTime`):
 
@@ -89,10 +97,10 @@ Phases run in order; within a phase systems run by `(Order, Id)`; events dispatc
 
 | Phase | Systems (Order band) |
 |---|---|
-| Commands | `core.commands` — validate + apply queued player commands; records `Commands.AppliedThisTurn` |
+| Commands | `core.commands` — validate + apply queued player commands; records `Commands.AppliedThisTurn`; `agents.travel` (Late) — completes trips due this turn |
 | Lod | `agents.lod` — `ILodPolicy` marks nodes Detailed / Aggregate |
 | Environment | `economy.world_events` (Default) — expire/roll modifiers; `economy.modifier_fold` (Late) — refold `MarketFlows` |
-| Production | `economy.consumption` (Early, Burst), `agents.production` (Default) |
+| Production | `economy.consumption` (Early, Burst), `agents.production` (Default, Burst) |
 | Agents | `agents.merchants` — `IMerchantBehavior` (placeholder: idle) |
 | Markets | `economy.pricing` (Late, Burst) — only levels due per `TierSchedule` |
 | Finance | `economy.currency` — yearly minting, price index, exchange rates (pricing sees it next turn) |
@@ -104,8 +112,13 @@ are consumed at Late.
 
 Default cadence (`config.csv`): village 1, city 1, region 2, nation 4 (offset 1), continent 4.
 
-Measured on the full-scale world (Editor, Windows desktop, safety checks on): **~11 ms/turn**
-(production 4.9 ms managed, pricing 3.9 ms, consumption 1.5 ms, modifier fold 0.6 ms). Not yet profiled on Android.
+Measured on the full-scale world (Editor, Windows desktop, safety checks on): **~7 ms/turn**
+(pricing 3.3 ms, consumption 1.3 ms, production 1.0 ms, modifier fold 0.7 ms). Not yet profiled on Android.
+
+Production is a single-threaded Burst job: facilities share market cells and cells clamp after every
+add, so facility order must stay fixed. Each facility's target cells and modifier slots are resolved
+once and cached until the facility table changes. Moving it from managed code to Burst left the
+simulation hash unchanged (`Production_BurstJob_MatchesManagedExecution` guards it).
 
 ## Level of detail
 
@@ -143,7 +156,8 @@ and set a focus node. Weights decay 1%/turn; signal weights are in config. Futur
 
 Header (magic, format version, data hash, seed, turn) + one length-prefixed section per
 `IPersistentComponent` (key, version, bytes). Unknown sections are skipped; older sections run
-through `MigrationRegistry`; a different data hash (definitions + map) is rejected.
+through `MigrationRegistry`; a different data hash (definitions + map) is rejected. Modules register
+migrations for the components they own (`SimBuilder.AddMigration`), e.g. `PlayerStateV1Migration`.
 Loading is atomic: the file is parsed and migrated before anything is applied, and
 `GameSimulation.Load` restores a backup if applying fails. After a load, queued commands and
 undelivered events are dropped and `ILoadListener` systems rebuild derived state (LOD, modifier folds).
@@ -153,11 +167,9 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 
 - Merchant trading is a placeholder (`IdleMerchantBehavior`); no inter-market trade flows yet.
 - Production does not gate on input availability; player-owned output goes to markets, not inventory.
-- Travel is instant (route travel time/cost unused).
+- Travel takes the route's turns but costs nothing (route cost is per cargo unit; the player has no cargo yet).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
 - Saves reject changed data instead of remapping ids by key.
 - Sections missing from an older save keep the freshly built state.
 - `SimulationView` covers the map, markets, facilities, player, guidance and currency; merchants and
   events have no view yet.
-- `SimulationRunner` reads StreamingAssets with `File` IO, which does not work inside an Android APK.
-- Production runs as managed code (4.4 ms at full scale) — the next candidate for a Burst job.

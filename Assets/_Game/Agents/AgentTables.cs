@@ -74,25 +74,56 @@ namespace FES.Agents
         }
     }
 
-    /// <summary>The peddler the player controls.</summary>
+    /// <summary>The peddler the player controls. While travelling, the player still counts as at <see cref="Node"/>.</summary>
     public sealed class PlayerState : IPersistentComponent
     {
+        public const string SectionKey = "agents.player";
+
         public int Node;
         public long Cash;
+        /// <summary>Node the player is travelling to, or -1.</summary>
+        public int TravelDestination = -1;
+        /// <summary>Turn on which the player reaches <see cref="TravelDestination"/>.</summary>
+        public int ArrivalTurn = -1;
 
-        public string Key => "agents.player";
-        public int Version => 1;
+        public bool IsTravelling => TravelDestination >= 0;
+
+        public string Key => SectionKey;
+        public int Version => 2;
 
         public void Write(BinaryWriter writer)
         {
             writer.Write(Node);
             writer.Write(Cash);
+            writer.Write(TravelDestination);
+            writer.Write(ArrivalTurn);
         }
 
         public void Read(BinaryReader reader)
         {
             Node = reader.ReadInt32();
             Cash = reader.ReadInt64();
+            TravelDestination = reader.ReadInt32();
+            ArrivalTurn = reader.ReadInt32();
+        }
+    }
+
+    /// <summary>Version 1 had no travel state: the player was never in transit.</summary>
+    public sealed class PlayerStateV1Migration : ISaveMigration
+    {
+        public string SectionKey => PlayerState.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(-1); // TravelDestination
+                writer.Write(-1); // ArrivalTurn
+            }
+            return output.ToArray();
         }
     }
 }

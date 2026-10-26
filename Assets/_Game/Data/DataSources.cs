@@ -11,6 +11,16 @@ namespace FES.Data
         string ReadText(string name);
     }
 
+    /// <summary>Every file a data folder can hold. Sources that cannot list folders (Android APK) fetch these.</summary>
+    public static class DataFiles
+    {
+        public static readonly IReadOnlyList<string> All = new[]
+        {
+            GameDatabase.GoodsFile, GameDatabase.RecipesFile, GameDatabase.FacilitiesFile, GameDatabase.EventsFile,
+            GameDatabase.MarketProfilesFile, GameDatabase.ConfigFile, CsvMapSource.NodesFile, CsvMapSource.RoutesFile,
+        };
+    }
+
     public sealed class FileDataSource : IDataSource
     {
         readonly string _root;

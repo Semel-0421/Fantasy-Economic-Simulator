@@ -30,8 +30,9 @@ Use `ctx.IsDue(level)` to respect tier cadence, and `ctx.RandomFor(stream, entit
   disposal then cover every column automatically.
 - Persistent: choose a permanent `Key` (`"economy.taxes"`), start at `Version = 1`, write fields
   explicitly (never raw struct memory with padding). `NativeIO` writes/reads `NativeArray`/`NativeList`.
-- Changing the layout later: bump `Version` and register an `ISaveMigration` for the old version on
-  `GameSimulation.Migrations`.
+- Changing the layout later: bump `Version` and register an `ISaveMigration` for the old version from
+  the owning module with `builder.AddMigration(...)` (see `PlayerStateV1Migration`).
+- A new data file: add its name to `DataFiles.All`, or Android builds will not load it.
 
 ## Replace a rule
 

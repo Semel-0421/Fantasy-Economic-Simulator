@@ -4,7 +4,10 @@ using FES.World;
 
 namespace FES.Agents
 {
-    /// <summary>Moves the player along a route from their current node.</summary>
+    /// <summary>
+    /// Sets the player off along a route from their current node. The trip takes the route's travel
+    /// turns; <see cref="TravelSystem"/> moves the player on arrival.
+    /// </summary>
     public sealed class TravelCommand : ICommand
     {
         public readonly NodeId Destination;
@@ -15,16 +18,63 @@ namespace FES.Agents
         {
             var nodes = ctx.World.Get<NodeTable>();
             if (!Destination.IsValid || Destination.Value >= nodes.Count) return CommandResult.Fail("Unknown destination.");
-            var routes = ctx.World.Get<RouteTable>();
-            int from = ctx.World.Get<PlayerState>().Node;
-            int start = routes.OutStart[from];
-            for (int k = start; k < start + routes.OutCount[from]; k++)
-                if (routes.To[routes.RouteIndex[k]] == Destination.Value) return CommandResult.Success;
-            return CommandResult.Fail("No route to destination.");
+            var player = ctx.World.Get<PlayerState>();
+            if (player.IsTravelling) return CommandResult.Fail("Already travelling.");
+            return FindRoute(ctx, player.Node) >= 0 ? CommandResult.Success : CommandResult.Fail("No route to destination.");
         }
 
-        // TODO: multi-turn travel using the route's travel time and transport cost.
-        public void Apply(SimContext ctx) => ctx.World.Get<PlayerState>().Node = Destination.Value;
+        // TODO: charge the route's transport cost once the player carries cargo.
+        public void Apply(SimContext ctx)
+        {
+            var player = ctx.World.Get<PlayerState>();
+            player.TravelDestination = Destination.Value;
+            player.ArrivalTurn = ctx.Turn + ctx.World.Get<RouteTable>().TravelTurns[FindRoute(ctx, player.Node)];
+        }
+
+        int FindRoute(SimContext ctx, int from)
+        {
+            var routes = ctx.World.Get<RouteTable>();
+            int start = routes.OutStart[from];
+            for (int k = start; k < start + routes.OutCount[from]; k++)
+                if (routes.To[routes.RouteIndex[k]] == Destination.Value) return routes.RouteIndex[k];
+            return -1;
+        }
+    }
+
+    public sealed class PlayerArrived : ISimEvent
+    {
+        public readonly NodeId Node;
+        public readonly int Turn;
+
+        public PlayerArrived(NodeId node, int turn)
+        {
+            Node = node;
+            Turn = turn;
+        }
+    }
+
+    /// <summary>
+    /// Completes trips: on the arrival turn the player moves to the destination. Runs right after commands,
+    /// so LOD and every later phase of that turn already see the player at the new node.
+    /// </summary>
+    public sealed class TravelSystem : ISimSystem
+    {
+        PlayerState _player;
+
+        public string Id => "agents.travel";
+        public SimPhase Phase => SimPhase.Commands;
+        public int Order => SimOrder.Late;
+
+        public void Initialize(SimContext ctx) => _player = ctx.World.Get<PlayerState>();
+
+        public void Execute(SimContext ctx)
+        {
+            if (!_player.IsTravelling || ctx.Turn < _player.ArrivalTurn) return;
+            _player.Node = _player.TravelDestination;
+            _player.TravelDestination = -1;
+            _player.ArrivalTurn = -1;
+            ctx.Events.Publish(new PlayerArrived(new NodeId(_player.Node), ctx.Turn));
+        }
     }
 
     /// <summary>Switches a player-owned facility between direct management and automation.</summary>

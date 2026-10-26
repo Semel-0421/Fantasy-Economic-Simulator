@@ -32,8 +32,10 @@ namespace FES.Economy
             for (int i = 0; i < Multipliers.Length; i++) Multipliers[i] = Fx.OneRaw;
         }
 
-        public long Multiplier(int market, int category, ModifierTarget target) =>
-            Multipliers[(market * CategoryCount + category) * ModifierTargets.Count + (int)target];
+        public int MultiplierIndex(int market, int category, ModifierTarget target) =>
+            (market * CategoryCount + category) * ModifierTargets.Count + (int)target;
+
+        public long Multiplier(int market, int category, ModifierTarget target) => Multipliers[MultiplierIndex(market, category, target)];
 
         public void AddSupply(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Supply);
         public void AddDemand(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Demand);

@@ -177,7 +177,9 @@ namespace FES.Simulation
                 pipeline = builder.BuildPipeline();
                 var context = new SimContext(world, services, new TierSchedule(_database.Config.TierCadences), clock);
                 pipeline.Initialize(context);
-                return new GameSimulation(context, pipeline, _database, DetHash.Combine(_database.ContentHash, _map.ComputeHash()));
+                var simulation = new GameSimulation(context, pipeline, _database, DetHash.Combine(_database.ContentHash, _map.ComputeHash()));
+                foreach (var migration in builder.Migrations) simulation.Migrations.Register(migration);
+                return simulation;
             }
             catch
             {

@@ -11,6 +11,7 @@
         "FES.Agents",
         "FES.Persistence",
         "FES.Simulation",
+        "FES.Unity",
         "Unity.Collections"
     ],
     "includePlatforms": [

@@ -6,6 +6,7 @@
         "FES.Data",
         "FES.World",
         "FES.Economy",
+        "Unity.Burst",
         "Unity.Collections"
     ],
     "autoReferenced": false

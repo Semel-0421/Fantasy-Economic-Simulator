@@ -159,7 +159,12 @@ namespace FES.Simulation
 
         // Player
 
+        /// <summary>Where the player is; while travelling, the node they left.</summary>
         public NodeId PlayerNode => new NodeId(_player.Node);
+        public bool IsTravelling => _player.IsTravelling;
+        /// <summary>The trip's destination, or <see cref="NodeId.None"/>.</summary>
+        public NodeId TravelDestination => new NodeId(_player.TravelDestination);
+        public int ArrivalTurn => _player.ArrivalTurn;
         public long PlayerCash => _player.Cash;
         public GuidanceAxis DominantGuidance => _guidance.Dominant;
         public Fx GuidanceWeight(GuidanceAxis axis) => _guidance[axis];

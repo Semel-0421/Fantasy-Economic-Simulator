@@ -15,14 +15,6 @@ namespace FES.Persistence
         public int Turn;
     }
 
-    /// <summary>Upgrades one save section by one version: FromVersion -> FromVersion + 1.</summary>
-    public interface ISaveMigration
-    {
-        string SectionKey { get; }
-        int FromVersion { get; }
-        byte[] Migrate(byte[] section);
-    }
-
     public sealed class MigrationRegistry
     {
         readonly Dictionary<(string, int), ISaveMigration> _migrations = new Dictionary<(string, int), ISaveMigration>();

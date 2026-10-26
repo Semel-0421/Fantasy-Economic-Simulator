@@ -178,6 +178,13 @@ namespace FES.Core
             _overrides.Add(id, system);
         }
 
+        readonly List<ISaveMigration> _migrations = new List<ISaveMigration>();
+
+        /// <summary>Save migrations registered by modules for the components they own.</summary>
+        public IReadOnlyList<ISaveMigration> Migrations => _migrations;
+
+        public void AddMigration(ISaveMigration migration) => _migrations.Add(migration);
+
         public void AddSystem(ISimSystem system)
         {
             if (!_systemIds.Add(system.Id))

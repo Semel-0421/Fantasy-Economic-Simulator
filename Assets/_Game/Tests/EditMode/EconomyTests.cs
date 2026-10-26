@@ -106,6 +106,22 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Production_BurstJob_MatchesManagedExecution()
+        {
+            using var burst = TestWorlds.BuildSample(seed: 9);
+            using var managed = TestWorlds.BuildSample(seed: 9);
+            foreach (var s in managed.Systems)
+                if (s is FES.Agents.ProductionSystem p) p.ForceManaged = true;
+
+            for (int t = 0; t < 20; t++)
+            {
+                burst.AdvanceTurn();
+                managed.AdvanceTurn();
+            }
+            Assert.AreEqual(managed.ComputeHash(), burst.ComputeHash());
+        }
+
+        [Test]
         public void Prices_MoveOverTime_AndStayPositive()
         {
             using var sim = TestWorlds.BuildSample();

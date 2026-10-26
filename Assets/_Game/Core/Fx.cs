@@ -53,6 +53,18 @@ namespace FES.Core
             return RoundShift(value * Raw);
         }
 
+        /// <summary>
+        /// Burst-safe <see cref="MulInt"/> on a raw value: equal to it whenever |value| and |raw| are at most
+        /// 2^31, and saturating (instead of falling back to decimal) beyond that.
+        /// </summary>
+        public static long MulIntRaw(long value, long raw)
+        {
+            if (value == 0 || raw == 0) return 0;
+            if (value > SafeFactor || value < -SafeFactor || raw > SafeFactor || raw < -SafeFactor)
+                return (value < 0) != (raw < 0) ? long.MinValue >> FractionBits : long.MaxValue >> FractionBits;
+            return RoundShift(value * raw);
+        }
+
         /// <summary>Converts a Q16 product to an integer, rounding half away from zero. Burst-safe.</summary>
         public static long RoundShift(long product) =>
             product >= 0 ? (product + HalfRaw) >> FractionBits : -((-product + HalfRaw) >> FractionBits);

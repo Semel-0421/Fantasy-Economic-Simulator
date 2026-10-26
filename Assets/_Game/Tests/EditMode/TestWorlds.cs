@@ -19,9 +19,7 @@ namespace FES.Tests
         {
             var sample = Sample();
             var data = new InMemoryDataSource();
-            foreach (var f in new[] { GameDatabase.GoodsFile, GameDatabase.RecipesFile, GameDatabase.FacilitiesFile,
-                         GameDatabase.EventsFile, GameDatabase.MarketProfilesFile, GameDatabase.ConfigFile,
-                         CsvMapSource.NodesFile, CsvMapSource.RoutesFile })
+            foreach (var f in DataFiles.All)
                 data.Add(f, sample.ReadText(f));
             return data.Add(file, text);
         }

@@ -192,8 +192,54 @@ namespace FES.Tests
             sim.Actions.Travel(routes[0].To);
             sim.AdvanceTurn();
             Assert.AreEqual(cash - 100, view.PlayerCash);
-            Assert.AreEqual(routes[0].To, view.PlayerNode);
             Assert.AreEqual(GuidanceAxis.Guild, view.DominantGuidance);
+            Assert.IsTrue(view.IsTravelling);
+            Assert.AreEqual(routes[0].To, view.TravelDestination);
+        }
+
+        [Test]
+        public void Travel_TakesRouteTurns_AndRejectsSecondTrip()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var view = sim.View;
+            var start = view.PlayerNode;
+            var routes = new List<RouteInfo>();
+            view.GetRoutesFrom(start, routes);
+            var route = routes[0];
+
+            sim.Actions.Travel(route.To);
+            sim.Actions.Travel(route.To);
+            sim.AdvanceTurn();
+            Assert.AreEqual(1, sim.LastTurnEvents.OfType<CommandRejected>().Count());
+            Assert.AreEqual(sim.Turn - 1 + route.TravelTurns, view.ArrivalTurn);
+
+            while (view.IsTravelling)
+            {
+                Assert.AreEqual(start, view.PlayerNode);
+                sim.AdvanceTurn();
+            }
+            Assert.AreEqual(route.To, view.PlayerNode);
+            Assert.AreEqual(1, sim.LastTurnEvents.OfType<PlayerArrived>().Count());
+            Assert.AreEqual(route.TravelTurns + 1, sim.Turn);
+        }
+
+        [Test]
+        public void PlayerStateV1Save_IsMigratedByTheAgentsModule()
+        {
+            using var v1 = new MemoryStream();
+            using (var writer = new BinaryWriter(v1))
+            {
+                writer.Write(3);
+                writer.Write(77L);
+            }
+            using var sim = TestWorlds.BuildSample();
+            var migrated = sim.Migrations.Upgrade(PlayerState.SectionKey, 1, 2, v1.ToArray());
+
+            var player = new PlayerState();
+            player.Read(new BinaryReader(new MemoryStream(migrated)));
+            Assert.AreEqual(3, player.Node);
+            Assert.AreEqual(77L, player.Cash);
+            Assert.IsFalse(player.IsTravelling);
         }
 
         [Test]

@@ -32,6 +32,9 @@ namespace FES.Agents
             builder.Services.SetDefault<ILodPolicy>(new DefaultLodPolicy());
             builder.Services.SetDefault<IMerchantBehavior>(new IdleMerchantBehavior());
 
+            builder.AddMigration(new PlayerStateV1Migration());
+
+            builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());
             builder.AddSystem(new ProductionSystem());
             builder.AddSystem(new MerchantSystem());

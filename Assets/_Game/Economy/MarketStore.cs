@@ -9,7 +9,8 @@ using Unity.Collections;
 namespace FES.Economy
 {
     /// <summary>
-    /// Sparse SoA market state. Each market (= node) carries only the goods its level's profile allows;
+    /// Sparse SoA market state. Each market (= node) carries the goods its level's profile allows plus its
+    /// node's specialties;
     /// its cells are the contiguous range [MarketCellStart[m], MarketCellStart[m] + MarketCellCount[m])
     /// sorted by good id. Hot loops iterate cells linearly; lookups by (market, good) binary-search.
     /// Supply and Demand are accumulators since the market's last price update: producers, consumers and
@@ -25,6 +26,8 @@ namespace FES.Economy
         public NativeArray<int> MarketCellStart;
         public NativeArray<int> MarketCellCount;
         public NativeArray<int> CellGood;
+        /// <summary>Per cell: 1 when the good is a specialty of the market's node (anchored lower), else 0.</summary>
+        public NativeArray<byte> CellSpecialty;
 
         // Per-good static data copied from definitions so jobs can read it.
         public NativeArray<int> GoodBasePrice;
@@ -50,6 +53,7 @@ namespace FES.Economy
             MarketCellStart = new NativeArray<int>(marketCount, Allocator.Persistent);
             MarketCellCount = new NativeArray<int>(marketCount, Allocator.Persistent);
             CellGood = new NativeArray<int>(cellCount, Allocator.Persistent);
+            CellSpecialty = new NativeArray<byte>(cellCount, Allocator.Persistent);
             GoodBasePrice = new NativeArray<int>(goodCount, Allocator.Persistent);
             GoodBaseDemand = new NativeArray<int>(goodCount, Allocator.Persistent);
             GoodCategory = new NativeArray<int>(goodCount, Allocator.Persistent);
@@ -110,13 +114,14 @@ namespace FES.Economy
 
         /// <summary>Approximate native memory in bytes, for budgeting.</summary>
         public long NativeBytes =>
-            (long)MarketCount * 2 * sizeof(int) + (long)CellCount * 6 * sizeof(int) + (long)GoodBasePrice.Length * 5 * sizeof(int);
+            (long)MarketCount * 2 * sizeof(int) + (long)CellCount * (6 * sizeof(int) + sizeof(byte)) + (long)GoodBasePrice.Length * 5 * sizeof(int);
 
         public void Dispose()
         {
             MarketCellStart.DisposeIfCreated();
             MarketCellCount.DisposeIfCreated();
             CellGood.DisposeIfCreated();
+            CellSpecialty.DisposeIfCreated();
             GoodBasePrice.DisposeIfCreated();
             GoodBaseDemand.DisposeIfCreated();
             GoodCategory.DisposeIfCreated();
@@ -130,10 +135,13 @@ namespace FES.Economy
         }
     }
 
-    /// <summary>Lays out the sparse market cells from the per-level market profiles.</summary>
+    /// <summary>
+    /// Lays out the sparse market cells from the per-level market profiles. A node's specialties are always
+    /// carried (DEC-016), in every grade its level carries for any good, and anchored lower.
+    /// </summary>
     public static class MarketLayoutBuilder
     {
-        public static MarketStore Build(NodeTable nodes, GameDatabase db)
+        public static MarketStore Build(NodeTable nodes, GameDatabase db, NodeSpecialties specialties)
         {
             // Every market of a level carries the same goods, so resolve the profile once per level.
             var goodsPerLevel = new List<int>[WorldLevels.Count];
@@ -151,8 +159,27 @@ namespace FES.Economy
                 }
             }
 
+            var gradeMaskPerLevel = new int[WorldLevels.Count];
+            foreach (var rule in db.MarketProfiles) gradeMaskPerLevel[(int)rule.Level] |= rule.GradeMask;
+
+            // Most nodes have no specialties and share their level's list.
+            var goodsPerNode = new List<int>[nodes.Count];
             long cells = 0;
-            for (int n = 0; n < nodes.Count; n++) cells += goodsPerLevel[nodes.Level[n]].Count;
+            for (int n = 0; n < nodes.Count; n++)
+            {
+                var goods = goodsPerLevel[nodes.Level[n]];
+                if (specialties.Count[n] > 0)
+                {
+                    var merged = new SortedSet<int>(goods);
+                    int mask = gradeMaskPerLevel[nodes.Level[n]];
+                    for (int k = specialties.Start[n]; k < specialties.Start[n] + specialties.Count[n]; k++)
+                        for (int g = 0; g < QualityGrades.Count; g++)
+                            if ((mask & (1 << g)) != 0) merged.Add(GoodId.From(specialties.BaseGood[k], (QualityGrade)g).Value);
+                    goods = new List<int>(merged);
+                }
+                goodsPerNode[n] = goods;
+                cells += goods.Count;
+            }
             if (cells > int.MaxValue) throw new InvalidOperationException("Market cell count exceeds int range.");
 
             var store = new MarketStore(nodes.Count, (int)cells, db.GoodCount);
@@ -168,14 +195,18 @@ namespace FES.Economy
             int cell = 0;
             for (int n = 0; n < nodes.Count; n++)
             {
-                var goods = goodsPerLevel[nodes.Level[n]];
+                var goods = goodsPerNode[n];
                 store.MarketCellStart[n] = cell;
                 store.MarketCellCount[n] = goods.Count;
                 foreach (int g in goods)
                 {
+                    bool specialty = specialties.IsSpecialty(n, new GoodId(g).BaseIndex);
+                    var anchor = specialty ? db.Config.SpecialtyPriceMultiplier : Fx.One;
+                    int price = (int)Math.Max(1, anchor.MulInt(db.Goods[g].BasePrice));
                     store.CellGood[cell] = g;
-                    store.Price[cell] = db.Goods[g].BasePrice;
-                    store.PrevPrice[cell] = db.Goods[g].BasePrice;
+                    store.CellSpecialty[cell] = (byte)(specialty ? 1 : 0);
+                    store.Price[cell] = price;
+                    store.PrevPrice[cell] = price;
                     cell++;
                 }
             }

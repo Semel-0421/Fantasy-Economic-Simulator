@@ -42,3 +42,5 @@ value_n(cargo) = sum(qty * market_price(n or nearest ancestor trading the good))
 - Each route is one edge today, so a trip enters one node; tolls are charged when the trip starts, valued
   at the destination's prices.
 - Arbitrage (SYS-MERCHANTS) and the player's trip planning share one cost function.
+- The surcharge's specialty categories come from `NodeSpecialties` (P6): a category counts when one of the
+  node's specialty base goods is in it.

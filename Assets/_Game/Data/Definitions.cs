@@ -134,6 +134,20 @@ namespace FES.Data
         }
     }
 
+    /// <summary>One row of specialties.csv: a terrain tag makes a base good, or a whole category, a specialty.</summary>
+    public sealed class SpecialtyRule
+    {
+        public readonly string Tag;
+        /// <summary>Base good indices the tag makes specialties, sorted.</summary>
+        public readonly int[] BaseGoods;
+
+        public SpecialtyRule(string tag, int[] baseGoods)
+        {
+            Tag = tag;
+            BaseGoods = baseGoods;
+        }
+    }
+
     /// <summary>Which goods the markets of one world level carry (drives the sparse market layout).</summary>
     public sealed class MarketProfileRule
     {
@@ -161,6 +175,8 @@ namespace FES.Data
         public WorldLevel Level;
         /// <summary>Parent node key; empty for continents.</summary>
         public string ParentKey;
+        /// <summary>Terrain tags (coast, mountain, ...); specialties follow from them (DEC-016).</summary>
+        public string[] Tags = System.Array.Empty<string>();
     }
 
     public sealed class RouteDef
@@ -182,7 +198,10 @@ namespace FES.Data
         {
             ulong h = DetHash.Of("map");
             foreach (var n in Nodes)
+            {
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(n.Key), DetHash.Combine((ulong)n.Level, DetHash.Of(n.ParentKey ?? string.Empty))));
+                foreach (var tag in n.Tags) h = DetHash.Combine(h, DetHash.Of(tag));
+            }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),
                     DetHash.Combine((ulong)(uint)r.TravelTurns, (ulong)(uint)r.CostPerUnit))));

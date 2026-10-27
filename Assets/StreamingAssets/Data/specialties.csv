@@ -1,0 +1,7 @@
+# Terrain tag -> specialty goods (DEC-016). An empty good means every base good of the category.
+# [Draft] placeholder tags and goods.
+tag,category,good
+plains,grain,
+mountain,ore,
+pasture,textile,wool
+smithing,tools,iron_tools

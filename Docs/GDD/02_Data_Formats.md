@@ -44,9 +44,16 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
 
 ## map_nodes.csv / map_routes.csv
 
-- Nodes: `key,name,level,parent`. Continents have an empty parent. A node's parent must be one level
-  up, except villages, which may hang off a city or a region.
+- Nodes: `key,name,level,parent,tags`. Continents have an empty parent. A node's parent must be one level
+  up, except villages, which may hang off a city or a region. `tags` (optional) lists terrain tags
+  separated by `|`; every tag must appear in `specialties.csv`.
 - Routes: `from,to,travel_turns,cost_per_unit` (directed; add both directions for two-way travel).
+
+## specialties.csv
+
+`tag,category,good` — a terrain tag makes `good` (a base good of `category`) a specialty of every node
+carrying the tag; an empty `good` means every base good of the category. Several rows per tag add up.
+Optional; the sample tags and goods are [Draft] placeholders.
 
 ## config.csv
 
@@ -63,6 +70,7 @@ changing a default in code does.
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
+| specialty.output_permille, specialty.grade_up_permille, specialty.price_permille | 1250, 200, 800 | specialty output bonus, share one grade higher, local anchor price ([Draft]) |
 | facility.<tier>.upkeep | 50/100/50 | weekly upkeep of a level-1 facility (times its level) |
 | facility.bankrupt_weeks | 5 | consecutive weeks with cash below zero before bankruptcy |
 | cargo.lost_warehouse_weeks | 8 | weeks a lost facility's warehouse can still be emptied |

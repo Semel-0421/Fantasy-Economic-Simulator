@@ -51,6 +51,7 @@ namespace FES.Agents
     /// warehouse, and what does not fit is sold. Then every facility pays its weekly upkeep, which can push
     /// its cash below zero; after <see cref="SimulationConfig.FacilityBankruptWeeks"/> such weeks in a row it
     /// goes bankrupt and gets a new NPC operator (DEC-051).
+    /// Facilities making one of their node's specialties produce more, partly one grade higher (DEC-016).
     /// Detailed facilities roll weekly efficiency variance; aggregate ones use the expected value.
     /// Runs as a single-threaded Burst job (facilities share stock, so order decides who is served first);
     /// each facility's lines are resolved once and cached until the facility table changes.
@@ -59,6 +60,7 @@ namespace FES.Agents
     {
         const string SystemId = "agents.production";
         static readonly uint Stream = DetHash.Of(SystemId);
+        static readonly uint GradeStream = DetHash.Of("agents.production.grade");
 
         GameDatabase _db;
         MarketStore _markets;
@@ -66,6 +68,7 @@ namespace FES.Agents
         FacilityTable _facilities;
         CargoTable _cargo;
         LodState _lod;
+        NodeSpecialties _specialties;
 
         // Lines of every facility, inputs then outputs: [LineStart[f], LineStart[f + 1]). Cell -1 = no market.
         NativeList<int> _lineStart;
@@ -74,9 +77,17 @@ namespace FES.Agents
         NativeList<int> _lineModifier;
         NativeList<int> _lineQuantity;
         NativeList<byte> _lineIsInput;
+        // Output lines only: the specialty multiplier (raw Fx, 1.0 otherwise) and the one-grade-higher
+        // good with its market cell and modifier (-1 when the line has no grade-up).
+        NativeList<long> _lineOutputMul;
+        NativeList<int> _lineUpGood;
+        NativeList<int> _lineUpCell;
+        NativeList<int> _lineUpModifier;
         int _linesForCount = -1;
 
-        NativeList<int> _playerOutputLine;
+        NativeList<int> _playerOutputFacility;
+        NativeList<int> _playerOutputGood;
+        NativeList<int> _playerOutputCell;
         NativeList<int> _playerOutputQuantity;
         NativeList<int> _bankrupt;
         NativeArray<long> _defUpkeep;
@@ -96,13 +107,20 @@ namespace FES.Agents
             _facilities = ctx.World.Get<FacilityTable>();
             _cargo = ctx.World.Get<CargoTable>();
             _lod = ctx.World.Get<LodState>();
+            _specialties = ctx.World.Get<NodeSpecialties>();
             _lineStart = new NativeList<int>(Allocator.Persistent);
             _lineCell = new NativeList<int>(Allocator.Persistent);
             _lineGood = new NativeList<int>(Allocator.Persistent);
             _lineModifier = new NativeList<int>(Allocator.Persistent);
             _lineQuantity = new NativeList<int>(Allocator.Persistent);
             _lineIsInput = new NativeList<byte>(Allocator.Persistent);
-            _playerOutputLine = new NativeList<int>(Allocator.Persistent);
+            _lineOutputMul = new NativeList<long>(Allocator.Persistent);
+            _lineUpGood = new NativeList<int>(Allocator.Persistent);
+            _lineUpCell = new NativeList<int>(Allocator.Persistent);
+            _lineUpModifier = new NativeList<int>(Allocator.Persistent);
+            _playerOutputFacility = new NativeList<int>(Allocator.Persistent);
+            _playerOutputGood = new NativeList<int>(Allocator.Persistent);
+            _playerOutputCell = new NativeList<int>(Allocator.Persistent);
             _playerOutputQuantity = new NativeList<int>(Allocator.Persistent);
             _bankrupt = new NativeList<int>(Allocator.Persistent);
             _defUpkeep = new NativeArray<long>(_db.Facilities.Count, Allocator.Persistent);
@@ -120,7 +138,9 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             if (_linesForCount != _facilities.Count) BuildLines();
-            _playerOutputLine.Clear();
+            _playerOutputFacility.Clear();
+            _playerOutputGood.Clear();
+            _playerOutputCell.Clear();
             _playerOutputQuantity.Clear();
             _bankrupt.Clear();
 
@@ -129,7 +149,9 @@ namespace FES.Agents
                 Seed = ctx.Seed,
                 Turn = ctx.Turn,
                 Stream = Stream,
+                GradeStream = GradeStream,
                 VariancePermille = _db.Config.ProductionVariancePermille,
+                GradeUpChanceRaw = _db.Config.SpecialtyGradeUpChance.Raw,
                 FacilityNode = _facilities.Node.AsArray(),
                 FacilityOwner = _facilities.Owner.AsArray(),
                 FacilityLevel = _facilities.Level.AsArray(),
@@ -138,15 +160,22 @@ namespace FES.Agents
                 NodeDetail = _lod.Detail,
                 LineStart = _lineStart.AsArray(),
                 LineCell = _lineCell.AsArray(),
+                LineGood = _lineGood.AsArray(),
                 LineModifier = _lineModifier.AsArray(),
                 LineQuantity = _lineQuantity.AsArray(),
                 LineIsInput = _lineIsInput.AsArray(),
+                LineOutputMul = _lineOutputMul.AsArray(),
+                LineUpGood = _lineUpGood.AsArray(),
+                LineUpCell = _lineUpCell.AsArray(),
+                LineUpModifier = _lineUpModifier.AsArray(),
                 ModifierMul = _flows.Multipliers,
                 Price = _markets.Price,
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
                 Demand = _markets.Demand,
-                PlayerOutputLine = _playerOutputLine,
+                PlayerOutputFacility = _playerOutputFacility,
+                PlayerOutputGood = _playerOutputGood,
+                PlayerOutputCell = _playerOutputCell,
                 PlayerOutputQuantity = _playerOutputQuantity,
             };
             if (ForceManaged) job.Execute();
@@ -175,18 +204,17 @@ namespace FES.Agents
         void StorePlayerOutput()
         {
             var capacity = new CargoCapacity(_db.Config.WarehouseMaxWeight, _db.Config.WarehouseMaxSize);
-            for (int i = 0; i < _playerOutputLine.Length; i++)
+            for (int i = 0; i < _playerOutputFacility.Length; i++)
             {
-                int line = _playerOutputLine[i];
-                int f = FacilityOfLine(line);
-                var good = new GoodId(_lineGood[line]);
+                int f = _playerOutputFacility[i];
+                var good = new GoodId(_playerOutputGood[i]);
                 int holder = CargoHolders.Warehouse(new FacilityId(f));
                 var load = _cargo.LoadOf(holder, _markets.GoodWeight, _markets.GoodSize);
                 int quantity = _playerOutputQuantity[i];
                 int stored = Math.Min(quantity, capacity.MaxAdditional(load, _markets.GoodWeight[good.Value], _markets.GoodSize[good.Value]));
                 _cargo.Change(holder, good, stored);
 
-                int cell = _lineCell[line];
+                int cell = _playerOutputCell[i];
                 int overflow = quantity - stored;
                 if (overflow == 0 || cell < 0) continue; // no market for the good: the overflow is lost
                 _flows.Sell(cell, overflow);
@@ -222,19 +250,6 @@ namespace FES.Agents
 
         long StartCash(int f) => _db.Config.FacilityStartCash[(int)_db.Facilities[_facilities.DefIndex[f]].Tier];
 
-        int FacilityOfLine(int line)
-        {
-            // Lines are sorted by facility: binary-search the start offsets.
-            int lo = 0, hi = _lineStart.Length - 2;
-            while (lo < hi)
-            {
-                int mid = (lo + hi + 1) >> 1;
-                if (_lineStart[mid] <= line) lo = mid;
-                else hi = mid - 1;
-            }
-            return lo;
-        }
-
         void BuildLines()
         {
             _lineStart.Clear();
@@ -243,6 +258,10 @@ namespace FES.Agents
             _lineModifier.Clear();
             _lineQuantity.Clear();
             _lineIsInput.Clear();
+            _lineOutputMul.Clear();
+            _lineUpGood.Clear();
+            _lineUpCell.Clear();
+            _lineUpModifier.Clear();
             for (int f = 0; f < _facilities.Count; f++)
             {
                 _lineStart.Add(_lineCell.Length);
@@ -262,11 +281,31 @@ namespace FES.Agents
                 _lineCell.Add(found ? cell : -1);
                 _lineGood.Add(line.Good.Value);
                 // Inputs are purchases from stock and, like the player's, are not scaled by event modifiers.
-                _lineModifier.Add(found && !isInput ? _flows.MultiplierIndex(market, _db.Good(line.Good).CategoryIndex, ModifierTarget.Supply) : -1);
+                _lineModifier.Add(found && !isInput ? SupplyModifier(market, line.Good) : -1);
                 _lineQuantity.Add(line.Quantity);
                 _lineIsInput.Add((byte)(isInput ? 1 : 0));
+
+                // A specialty of the facility's own node: more output, and some of it one grade higher (DEC-016).
+                bool specialty = !isInput && _specialties.IsSpecialty(node, line.Good.BaseIndex);
+                _lineOutputMul.Add(specialty ? _db.Config.SpecialtyOutputMultiplier.Raw : Fx.OneRaw);
+                int upGood = -1, upCell = -1, upModifier = -1;
+                if (specialty && line.Good.Grade < QualityGrade.Best)
+                {
+                    var higher = GoodId.From(line.Good.BaseIndex, line.Good.Grade + 1);
+                    if (_flows.TryFindNearestMarket(node, higher, out int upMarket, out upCell))
+                    {
+                        upGood = higher.Value;
+                        upModifier = SupplyModifier(upMarket, higher);
+                    }
+                }
+                _lineUpGood.Add(upGood);
+                _lineUpCell.Add(upCell);
+                _lineUpModifier.Add(upModifier);
             }
         }
+
+        int SupplyModifier(int market, GoodId good) =>
+            _flows.MultiplierIndex(market, _db.Good(good).CategoryIndex, ModifierTarget.Supply);
 
         public void Dispose()
         {
@@ -276,7 +315,13 @@ namespace FES.Agents
             if (_lineModifier.IsCreated) _lineModifier.Dispose();
             if (_lineQuantity.IsCreated) _lineQuantity.Dispose();
             if (_lineIsInput.IsCreated) _lineIsInput.Dispose();
-            if (_playerOutputLine.IsCreated) _playerOutputLine.Dispose();
+            if (_lineOutputMul.IsCreated) _lineOutputMul.Dispose();
+            if (_lineUpGood.IsCreated) _lineUpGood.Dispose();
+            if (_lineUpCell.IsCreated) _lineUpCell.Dispose();
+            if (_lineUpModifier.IsCreated) _lineUpModifier.Dispose();
+            if (_playerOutputFacility.IsCreated) _playerOutputFacility.Dispose();
+            if (_playerOutputGood.IsCreated) _playerOutputGood.Dispose();
+            if (_playerOutputCell.IsCreated) _playerOutputCell.Dispose();
             if (_playerOutputQuantity.IsCreated) _playerOutputQuantity.Dispose();
             if (_bankrupt.IsCreated) _bankrupt.Dispose();
             _defUpkeep.DisposeIfCreated();
@@ -287,7 +332,9 @@ namespace FES.Agents
     /// Weekly facility production in facility order, so results are independent of Burst. Two passes per
     /// facility: check every input's stock and the total cost, then buy, pay and produce. A purchase takes
     /// units out of the stock and passes them through supply into demand, like <see cref="MarketFlows.Buy"/>.
-    /// Cells are clamped after every add, like <see cref="MarketFlows"/>.
+    /// Cells are clamped after every add, like <see cref="MarketFlows"/>. A specialty output line is
+    /// multiplied, and part of it comes out one grade higher: all of it with the grade-up chance when the
+    /// facility is detailed, the expected share when it is aggregate.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct ProductionJob : IJob
@@ -295,7 +342,9 @@ namespace FES.Agents
         public ulong Seed;
         public int Turn;
         public uint Stream;
+        public uint GradeStream;
         public int VariancePermille;
+        public long GradeUpChanceRaw;
 
         [ReadOnly] public NativeArray<int> FacilityNode;
         [ReadOnly] public NativeArray<int> FacilityOwner;
@@ -305,9 +354,14 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> LineStart;
         [ReadOnly] public NativeArray<int> LineCell;
+        [ReadOnly] public NativeArray<int> LineGood;
         [ReadOnly] public NativeArray<int> LineModifier;
         [ReadOnly] public NativeArray<int> LineQuantity;
         [ReadOnly] public NativeArray<byte> LineIsInput;
+        [ReadOnly] public NativeArray<long> LineOutputMul;
+        [ReadOnly] public NativeArray<int> LineUpGood;
+        [ReadOnly] public NativeArray<int> LineUpCell;
+        [ReadOnly] public NativeArray<int> LineUpModifier;
         [ReadOnly] public NativeArray<long> ModifierMul;
         [ReadOnly] public NativeArray<int> Price;
 
@@ -315,17 +369,19 @@ namespace FES.Agents
         public NativeArray<int> Supply;
         public NativeArray<int> Demand;
 
-        /// <summary>Output of player-owned facilities (line, quantity), stored by the system after the job.</summary>
-        public NativeList<int> PlayerOutputLine;
+        /// <summary>Output of player-owned facilities (facility, good, market cell, quantity), stored after the job.</summary>
+        public NativeList<int> PlayerOutputFacility;
+        public NativeList<int> PlayerOutputGood;
+        public NativeList<int> PlayerOutputCell;
         public NativeList<int> PlayerOutputQuantity;
 
         public void Execute()
         {
             for (int f = 0; f < FacilityNode.Length; f++)
             {
+                bool detailed = NodeDetail[FacilityNode[f]] == (byte)SimDetail.Detailed;
                 var output = Fx.FromRaw(FacilityEfficiency[f]) * Fx.FromInt(FacilityLevel[f]);
-                if (NodeDetail[FacilityNode[f]] == (byte)SimDetail.Detailed)
-                    output *= DetRandom.For(Seed, Turn, Stream, f).NextSpread(VariancePermille);
+                if (detailed) output *= DetRandom.For(Seed, Turn, Stream, f).NextSpread(VariancePermille);
                 // Aggregate: expected output, no per-facility randomness or decisions.
 
                 int start = LineStart[f], end = LineStart[f + 1];
@@ -357,20 +413,36 @@ namespace FES.Agents
                         Demand[cell] = MarketStore.ClampToNonNegativeInt(Demand[cell] + quantity);
                         continue;
                     }
-                    if (cell >= 0) quantity = Fx.MulIntRaw(quantity, ModifierMul[LineModifier[k]]);
-                    int clamped = MarketStore.ClampToNonNegativeInt(quantity);
-                    if (playerOwned)
+
+                    quantity = Fx.MulIntRaw(quantity, LineOutputMul[k]);
+                    long upgraded = 0;
+                    if (LineUpGood[k] >= 0)
                     {
-                        if (clamped == 0) continue;
-                        PlayerOutputLine.Add(k);
-                        PlayerOutputQuantity.Add(clamped);
+                        if (!detailed) upgraded = Fx.MulIntRaw(quantity, GradeUpChanceRaw);
+                        else if (DetRandom.For(Seed, Turn, GradeStream, f, (uint)k).NextFx01().Raw < GradeUpChanceRaw) upgraded = quantity;
+                        Emit(f, LineUpGood[k], LineUpCell[k], LineUpModifier[k], upgraded, playerOwned);
                     }
-                    else if (cell >= 0)
-                    {
-                        Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
-                        FacilityCash[f] += (long)clamped * Price[cell];
-                    }
+                    Emit(f, LineGood[k], cell, LineModifier[k], quantity - upgraded, playerOwned);
                 }
+            }
+        }
+
+        void Emit(int f, int good, int cell, int modifier, long quantity, bool playerOwned)
+        {
+            if (cell >= 0) quantity = Fx.MulIntRaw(quantity, ModifierMul[modifier]);
+            int clamped = MarketStore.ClampToNonNegativeInt(quantity);
+            if (clamped == 0) return;
+            if (playerOwned)
+            {
+                PlayerOutputFacility.Add(f);
+                PlayerOutputGood.Add(good);
+                PlayerOutputCell.Add(cell);
+                PlayerOutputQuantity.Add(clamped);
+            }
+            else if (cell >= 0)
+            {
+                Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
+                FacilityCash[f] += (long)clamped * Price[cell];
             }
         }
     }

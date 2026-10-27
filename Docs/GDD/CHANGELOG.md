@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P6 done
+- [systems/SYS_PRODUCTION.md] Specialty implementation notes: tags, always carried, lower anchor, output bonus, grade-up
+- [02_Data_Formats.md] map_nodes.csv tags, specialties.csv, specialty config keys
+- [systems/SYS_TRAVEL_COSTS.md] Surcharge categories come from node specialties
 - [03_Decisions.md] Q-032 resolved by DEC-051 (upkeep, bankrupt after 5 weeks below zero) and DEC-052 (lost warehouse claimable for a period)
 - [systems/SYS_PRODUCTION.md] Upkeep, negative-cash bankruptcy, warehouse claim; drafts replaced
 - [systems/SYS_INVENTORY.md] Lost warehouse claim (DEC-052)

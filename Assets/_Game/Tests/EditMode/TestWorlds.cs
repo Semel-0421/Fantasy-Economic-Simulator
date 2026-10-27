@@ -15,13 +15,17 @@ namespace FES.Tests
         public static GameSimulation BuildSample(ulong seed = 42) => SimulationBuilder.FromData(Sample(), seed).Build();
 
         /// <summary>The sample data with one file replaced.</summary>
-        public static IDataSource SampleWith(string file, string text)
+        public static IDataSource SampleWith(string file, string text) => SampleWith((file, text));
+
+        /// <summary>The sample data with some files replaced.</summary>
+        public static IDataSource SampleWith(params (string file, string text)[] files)
         {
             var sample = Sample();
             var data = new InMemoryDataSource();
             foreach (var f in DataFiles.All)
                 data.Add(f, sample.ReadText(f));
-            return data.Add(file, text);
+            foreach (var (file, text) in files) data.Add(file, text);
+            return data;
         }
 
         /// <summary>

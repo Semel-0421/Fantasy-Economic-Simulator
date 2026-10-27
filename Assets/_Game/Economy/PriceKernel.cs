@@ -82,6 +82,8 @@ namespace FES.Economy
         public int CategoryCount;
         /// <summary>Bit l set = markets of WorldLevel l are due.</summary>
         public int DueLevelMask;
+        /// <summary>Anchor multiplier (raw Q16) for cells of a node's specialties.</summary>
+        public long SpecialtyAnchorMulRaw;
 
         /// <summary>Per level: turns since that level last repriced.</summary>
         [ReadOnly] public NativeArray<int> LevelElapsed;
@@ -91,6 +93,7 @@ namespace FES.Economy
         /// <summary>Per market: currency price index of its continent (raw Q16).</summary>
         [ReadOnly] public NativeArray<long> MarketAnchorMul;
         [ReadOnly] public NativeArray<int> CellGood;
+        [ReadOnly] public NativeArray<byte> CellSpecialty;
         [ReadOnly] public NativeArray<int> GoodBasePrice;
         [ReadOnly] public NativeArray<int> GoodCategory;
         /// <summary><see cref="MarketFlows.Multipliers"/>; only the Value target is read here.</summary>
@@ -117,6 +120,7 @@ namespace FES.Economy
                 int good = CellGood[c];
                 int m = (modifierBase + GoodCategory[good]) * ModifierTargets.Count + (int)ModifierTarget.Value;
                 long valueMul = Fx.RoundShift(ModifierMul[m] * anchorMul);
+                if (CellSpecialty[c] != 0) valueMul = Fx.RoundShift(valueMul * SpecialtyAnchorMulRaw);
 
                 int price = Price[c], prev = PrevPrice[c], stock = Stock[c], supply = Supply[c], demand = Demand[c];
                 PriceKernel.Step(Params, GoodBasePrice[good], valueMul, elapsed,

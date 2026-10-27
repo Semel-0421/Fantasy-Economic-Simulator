@@ -64,6 +64,7 @@ namespace FES.Economy
         PriceParams _params;
         NativeArray<long> _anchorMul;
         NativeArray<int> _levelElapsed;
+        long _specialtyAnchorMulRaw;
 
         public string Id => "economy.pricing";
         public SimPhase Phase => SimPhase.Markets;
@@ -79,6 +80,7 @@ namespace FES.Economy
             _flows = ctx.World.Get<MarketFlows>();
             _currency = ctx.World.Get<CurrencyState>();
             _params = PriceParams.From(ctx.Services.Get<GameDatabase>().Config);
+            _specialtyAnchorMulRaw = ctx.Services.Get<GameDatabase>().Config.SpecialtyPriceMultiplier.Raw;
             _anchorMul = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _levelElapsed = new NativeArray<int>(WorldLevels.Count, Allocator.Persistent);
         }
@@ -102,12 +104,14 @@ namespace FES.Economy
                 Params = _params,
                 CategoryCount = _flows.CategoryCount,
                 DueLevelMask = dueMask,
+                SpecialtyAnchorMulRaw = _specialtyAnchorMulRaw,
                 LevelElapsed = _levelElapsed,
                 MarketLevel = _nodes.Level,
                 MarketCellStart = _markets.MarketCellStart,
                 MarketCellCount = _markets.MarketCellCount,
                 MarketAnchorMul = _anchorMul,
                 CellGood = _markets.CellGood,
+                CellSpecialty = _markets.CellSpecialty,
                 GoodBasePrice = _markets.GoodBasePrice,
                 GoodCategory = _markets.GoodCategory,
                 ModifierMul = _flows.Multipliers,
@@ -146,7 +150,7 @@ namespace FES.Economy
             var nodes = builder.World.Get<NodeTable>();
             var clock = builder.World.Get<SimClock>();
 
-            var markets = builder.World.Add(MarketLayoutBuilder.Build(nodes, db));
+            var markets = builder.World.Add(MarketLayoutBuilder.Build(nodes, db, builder.World.Get<NodeSpecialties>()));
             builder.World.Add(new MarketModifierTable());
             builder.World.Add(new MarketFlows(markets, nodes, db.Categories.Count));
 

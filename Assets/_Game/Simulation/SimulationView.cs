@@ -73,6 +73,7 @@ namespace FES.Simulation
         readonly GuidanceState _guidance;
         readonly FacilityTable _facilities;
         readonly CargoTable _cargo;
+        readonly NodeSpecialties _specialties;
 
         public readonly GameDatabase Database;
 
@@ -88,6 +89,7 @@ namespace FES.Simulation
             _guidance = world.Get<GuidanceState>();
             _facilities = world.Get<FacilityTable>();
             _cargo = world.Get<CargoTable>();
+            _specialties = world.Get<NodeSpecialties>();
         }
 
         // Clock
@@ -113,6 +115,16 @@ namespace FES.Simulation
             int start = _nodes.ChildStart[node.Value];
             for (int k = start; k < start + _nodes.ChildCount[node.Value]; k++) into.Add(new NodeId(_nodes.Children[k]));
         }
+
+        /// <summary>The node's specialty base goods (keys, sorted by index): made better, carried always, sold cheaper.</summary>
+        public void GetSpecialties(NodeId node, List<string> into)
+        {
+            into.Clear();
+            for (int k = _specialties.Start[node.Value]; k < _specialties.Start[node.Value] + _specialties.Count[node.Value]; k++)
+                into.Add(Database.Good(GoodId.From(_specialties.BaseGood[k], QualityGrade.Mid)).BaseKey);
+        }
+
+        public bool IsSpecialty(NodeId node, GoodId good) => _specialties.IsSpecialty(node.Value, good.BaseIndex);
 
         public void GetRoutesFrom(NodeId node, List<RouteInfo> into)
         {

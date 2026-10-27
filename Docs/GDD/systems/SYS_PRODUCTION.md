@@ -56,7 +56,7 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - A facility that can afford only part of its inputs: counts as short (all or nothing).
 
 ## Unity implementation notes
-Cash, inputs, income, bankruptcy and player output are implemented (P4); specialties and loans are not.
+Cash, inputs, income, bankruptcy and player output (P4) and specialties (P6) are implemented; loans are not.
 - `ProductionJob` (single-threaded Burst) runs two passes per facility in facility order: check every
   input's stock and the total cost, then buy (stock out, through supply into demand, like
   `MarketFlows.Buy`), pay, and produce. An input with no market anywhere means the facility never produces.
@@ -74,9 +74,17 @@ Cash, inputs, income, bankruptcy and player output are implemented (P4); special
   node. A bought facility keeps its cash.
 - Until P5 carries ore to cities, smithies only pay upkeep, so they cycle through bankruptcy and new
   operators about every 25 weeks.
-- Specialties: `map_nodes.csv` gains a `tags` column and a new `specialties.csv` maps tags to categories
-  or goods (file and column names Claude-chosen, [Draft]). The four effects plug into facility spawning,
-  `MarketLayoutBuilder` (always carried), the production job (bonus and grade roll) and the pricing anchor
-  (lower local price).
-- Effect sizes (bonus %, grade chance, price discount) start as config values [Draft].
+- Specialties: `map_nodes.csv` has a `tags` column and `specialties.csv` maps tags to categories or base
+  goods (file and column names Claude-chosen, [Draft]). `NodeSpecialties` (world component, not saved)
+  holds each node's specialty base goods; a node's specialties come from its own tags only.
+- Always carried: `MarketLayoutBuilder` adds a node's specialties in every grade its level carries for any
+  good (a village: Low and Mid).
+- Lower price: `MarketStore.CellSpecialty` marks the cells; their anchor (and starting price) is
+  multiplied by `specialty.price_permille`.
+- Production: an output line of a node's specialty is multiplied by `specialty.output_permille`; inputs
+  stay the same. Of that output, `specialty.grade_up_permille` comes out one grade higher: a detailed
+  facility rolls once per line and week (all or none), an aggregate one splits by the expected share. No
+  grade-up from Best, or when no market up the hierarchy trades the higher grade.
+- Effect sizes ([Draft]): output x1.25, 20% one grade higher, local anchor x0.8. Facility spawning does
+  not favour specialties.
 

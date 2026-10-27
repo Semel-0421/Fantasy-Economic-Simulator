@@ -152,6 +152,7 @@ namespace FES.World
             var map = builder.Services.Get<MapDef>();
             var nodes = builder.World.Add(WorldBuilder.BuildNodes(map));
             builder.World.Add(WorldBuilder.BuildRoutes(map, nodes));
+            builder.World.Add(new NodeSpecialties(map, nodes, builder.Services.Get<GameDatabase>()));
         }
     }
 }

@@ -51,6 +51,15 @@ namespace FES.Data
         /// <summary>Starting cash of a facility (and of a new operator after bankruptcy), per industry tier.</summary>
         public readonly long[] FacilityStartCash = { 500, 2000, 1000 };
 
+        /// <summary>Output multiplier for a facility making one of its node's specialties (DEC-016).</summary>
+        public Fx SpecialtyOutputMultiplier = Fx.FromPermille(1250);
+
+        /// <summary>Share of a specialty's output that comes out one grade higher (chance per week when detailed).</summary>
+        public Fx SpecialtyGradeUpChance = Fx.FromPermille(200);
+
+        /// <summary>Anchor price multiplier for a node's specialties in its own market.</summary>
+        public Fx SpecialtyPriceMultiplier = Fx.FromPermille(800);
+
         /// <summary>Weekly running cost (wages) of a level-1 facility, per industry tier; scales with level.</summary>
         public readonly long[] FacilityUpkeep = { 50, 100, 50 };
 
@@ -163,6 +172,11 @@ namespace FES.Data
                 FacilityStartCash[t] = Long(v, $"facility.{tier}.start_cash", FacilityStartCash[t]);
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
             }
+            SpecialtyOutputMultiplier = Permille(v, "specialty.output_permille", SpecialtyOutputMultiplier);
+            SpecialtyGradeUpChance = Permille(v, "specialty.grade_up_permille", SpecialtyGradeUpChance);
+            SpecialtyPriceMultiplier = Permille(v, "specialty.price_permille", SpecialtyPriceMultiplier);
+            if (SpecialtyGradeUpChance.Raw < 0 || SpecialtyGradeUpChance.Raw > Fx.One.Raw)
+                throw new FormatException("config.csv: specialty.grade_up_permille must be within 0..1000.");
             FacilityBankruptWeeks = Int(v, "facility.bankrupt_weeks", FacilityBankruptWeeks);
             if (FacilityBankruptWeeks < 1) throw new FormatException("config.csv: facility.bankrupt_weeks must be >= 1.");
             LostWarehouseWeeks = Int(v, "cargo.lost_warehouse_weeks", LostWarehouseWeeks);

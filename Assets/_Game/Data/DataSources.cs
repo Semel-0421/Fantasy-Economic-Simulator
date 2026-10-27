@@ -17,7 +17,8 @@ namespace FES.Data
         public static readonly IReadOnlyList<string> All = new[]
         {
             GameDatabase.GoodsFile, GameDatabase.RecipesFile, GameDatabase.FacilitiesFile, GameDatabase.EventsFile,
-            GameDatabase.MarketProfilesFile, GameDatabase.ConfigFile, CsvMapSource.NodesFile, CsvMapSource.RoutesFile,
+            GameDatabase.MarketProfilesFile, GameDatabase.ConfigFile, GameDatabase.SpecialtiesFile,
+            CsvMapSource.NodesFile, CsvMapSource.RoutesFile,
         };
     }
 

@@ -24,6 +24,7 @@ namespace FES.Data
                     Name = nodes.GetStringOr(r, "name", nodes.GetString(r, "key")),
                     Level = nodes.GetEnum<WorldLevel>(r, "level"),
                     ParentKey = nodes.GetString(r, "parent"),
+                    Tags = ParseTags(nodes.GetStringOr(r, "tags", string.Empty)),
                 });
             }
             if (_source.Exists(RoutesFile))
@@ -41,6 +42,15 @@ namespace FES.Data
                 }
             }
             return map;
+        }
+
+        /// <summary>Tags are separated by '|'; blanks are ignored.</summary>
+        static string[] ParseTags(string text)
+        {
+            var tags = new System.Collections.Generic.List<string>();
+            foreach (var part in text.Split('|'))
+                if (part.Trim().Length > 0) tags.Add(part.Trim());
+            return tags.ToArray();
         }
     }
 }

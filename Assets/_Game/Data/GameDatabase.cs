@@ -13,6 +13,7 @@ namespace FES.Data
         public const string EventsFile = "events.csv";
         public const string MarketProfilesFile = "market_profiles.csv";
         public const string ConfigFile = "config.csv";
+        public const string SpecialtiesFile = "specialties.csv";
 
         readonly Dictionary<string, int> _categoryByKey = new Dictionary<string, int>(StringComparer.Ordinal);
         readonly Dictionary<string, int> _baseGoodByKey = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -24,6 +25,7 @@ namespace FES.Data
         public readonly List<FacilityDef> Facilities = new List<FacilityDef>();
         public readonly List<WorldEventDef> Events = new List<WorldEventDef>();
         public readonly List<MarketProfileRule> MarketProfiles = new List<MarketProfileRule>();
+        readonly Dictionary<string, SpecialtyRule> _specialtiesByTag = new Dictionary<string, SpecialtyRule>(StringComparer.Ordinal);
 
         public SimulationConfig Config { get; private set; }
 
@@ -34,6 +36,10 @@ namespace FES.Data
         public ulong ContentHash { get; private set; }
 
         public int GoodCount => Goods.Count;
+        public int BaseGoodCount => _baseGoodByKey.Count;
+
+        /// <summary>The specialties a terrain tag gives; false for a tag specialties.csv does not list.</summary>
+        public bool TryGetSpecialty(string tag, out SpecialtyRule rule) => _specialtiesByTag.TryGetValue(tag, out rule);
 
         public GoodDef Good(GoodId id) => Goods[id.Value];
 
@@ -80,6 +86,7 @@ namespace FES.Data
             db.LoadRecipesAndFacilities(Read(RecipesFile, false), Read(FacilitiesFile, false));
             db.LoadEvents(Read(EventsFile, false));
             db.LoadMarketProfiles(Read(MarketProfilesFile, true));
+            db.LoadSpecialties(Read(SpecialtiesFile, false));
             db.ContentHash = hash;
             return db;
         }
@@ -206,6 +213,35 @@ namespace FES.Data
                             : throw new FormatException($"{t.Name} row {r + 1}: unknown grade '{g}'.");
                 MarketProfiles.Add(new MarketProfileRule(t.GetEnum<WorldLevel>(r, "level"), CategoryOrAll(t, r), mask));
             }
+        }
+
+        // tag,category,good: an empty good means every base good of the category. Rows of one tag add up.
+        void LoadSpecialties(CsvTable t)
+        {
+            if (t == null) return;
+            var byTag = new SortedDictionary<string, SortedSet<int>>(StringComparer.Ordinal);
+            for (int r = 0; r < t.RowCount; r++)
+            {
+                string tag = t.GetString(r, "tag");
+                string category = t.GetString(r, "category");
+                if (!_categoryByKey.TryGetValue(category, out int categoryIndex))
+                    throw new FormatException($"{t.Name} row {r + 1}: unknown category '{category}'.");
+                if (!byTag.TryGetValue(tag, out var goods)) byTag.Add(tag, goods = new SortedSet<int>());
+                string goodKey = t.GetStringOr(r, "good", string.Empty);
+                if (goodKey.Length == 0)
+                {
+                    for (int b = 0; b < BaseGoodCount; b++)
+                        if (Goods[b * QualityGrades.Count].CategoryIndex == categoryIndex) goods.Add(b);
+                    continue;
+                }
+                if (!_baseGoodByKey.TryGetValue(goodKey, out int baseIndex))
+                    throw new FormatException($"{t.Name} row {r + 1}: unknown good '{goodKey}'.");
+                if (Goods[baseIndex * QualityGrades.Count].CategoryIndex != categoryIndex)
+                    throw new FormatException($"{t.Name} row {r + 1}: '{goodKey}' is not in category '{category}'.");
+                goods.Add(baseIndex);
+            }
+            foreach (var entry in byTag)
+                _specialtiesByTag.Add(entry.Key, new SpecialtyRule(entry.Key, new List<int>(entry.Value).ToArray()));
         }
 
         int CategoryOrAll(CsvTable t, int row)

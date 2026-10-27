@@ -42,7 +42,10 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - [Confirmed] When the player loses a facility, they can still empty its warehouse for a period; what is
   left afterwards is gone (DEC-052).
 - [Draft] Upkeep per level-1 facility: primary 50, secondary 100, tertiary 50, times the facility level
-  (`facility.<tier>.upkeep`). The upkeep leaves the economy until money totals exist (P9).
+  (`facility.<tier>.upkeep`).
+- [Confirmed] Upkeep is paid as wages to the households of the facility's node (DEC-061; until P13a it
+  still leaves the economy).
+- [Confirmed] Profit above 26 weeks of costs is paid out at 10% a week to the owning group (DEC-061).
 - [Draft] Claim period on a lost warehouse: 8 weeks (`cargo.lost_warehouse_weeks`); during it the player
   may only take goods out. Buying the facility back ends the claim, the goods staying the player's.
 - [Draft] Starting cash per tier: primary 500, secondary 2,000, tertiary 1,000 (`facility.<tier>.start_cash`).

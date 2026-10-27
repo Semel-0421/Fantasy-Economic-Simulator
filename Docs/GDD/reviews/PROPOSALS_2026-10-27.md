@@ -15,6 +15,8 @@ measurements of the sample world.
 
 ## 1. The money loop (extends Q-036)
 
+Decided: every recommended answer below, as DEC-061 and DEC-062 (2026-10-27).
+
 Analysed by an agent with a temporary probe that diffed every cash holder each turn over six years of
 the sample world (2 continents; per continent 76 facilities, 230 merchant groups, 364 market cells; the
 player idle). Figures are per continent per year; "experiment" marks emulations run inside the probe,

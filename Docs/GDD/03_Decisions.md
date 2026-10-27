@@ -10,6 +10,17 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
+### Q-038 [resolved] How the money loop closes
+- Registered: 2026-10-27 (Claude added, from the design review)
+- Context: money enters when markets pay any seller and through auctions nobody pays for; fees, tolls,
+  upkeep, licenses and purchases vanish. Measured in the sample world: money totals x6.3 in six years
+  against x1.46 coin supply (reviews/PROPOSALS_2026-10-27.md, item 1).
+- Options: A) full circular flow with household cash and trader floats  B) route sinks and cap payouts
+  C) keep the loop open, index from totals  D) A's ledger with one purse per nation
+- Claude's recommendation: A, built through D first
+- Impact: SYS-MARKETS, SYS-BANKING, SYS-PRODUCTION, SYS-TRAVEL-COSTS, SYS-MERCHANTS, SYS-INTEREST-GROUPS
+- Resolved: DEC-061
+
 ### Q-037 [resolved] Status-quo bias in the policy review, and who opposes minting
 - Registered: 2026-10-27 (Claude added)
 - Context: with a fixed move threshold, P12b's sample world pushed every policy one way each year to its
@@ -22,7 +33,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Impact: SYS-INTEREST-GROUPS
 - Resolved: DEC-060
 
-### Q-036 [open] When measured money totals drive the price index
+### Q-036 [resolved] When measured money totals drive the price index
 - Registered: 2026-10-27 (Claude added)
 - Context: DEC-042 makes the continent total drive inflation. P9b measured the totals growing about
   twentyfold every half year because unmet demand drove prices without bound. P10's demand curve stopped
@@ -35,6 +46,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   facility upkeep paid to households, purchases capped by their budget)  C) a mix of both
 - Claude's recommendation: B, after a phase that closes the money loop between households and markets
 - Impact: SYS-BANKING, SYS-MARKETS
+- Resolved: DEC-062
 
 ### Q-035 [resolved] What each kind of interest group wants
 - Registered: 2026-10-27 (Claude added)
@@ -318,6 +330,44 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-062 The price index follows published money totals once households spend
+- Date: 2026-10-27
+- Decision: once households pay for their consumption (P13b), each continent's price index follows its
+  published money total instead of the minted coin supply.
+- Alternatives: keep the coin supply (rejected) · a mix of both (rejected)
+- Impact: [SYS-BANKING](systems/SYS_BANKING.md), [SYS-MARKETS](systems/SYS_MARKETS.md)
+- Resolves: Q-036
+
+### DEC-061 A closed money loop
+- Date: 2026-10-27
+- Decision: money is created only by minting and moves between holders otherwise. Built in two steps: a
+  purse per nation first, then cash per node.
+  - Households hold cash per node and spend it on consumption split by the quintile shares; demand
+    follows their budget.
+  - Facility upkeep is paid as wages to the households of the facility's node.
+  - Tolls and license prices go to the nation's bank reserve; trip fees, passage and guards are wages
+    at the trip's origin; insurance premiums go to the guild; a ship's price goes to the households of
+    the port.
+  - Markets pay sellers only from traders' floats; when a float runs short, payouts are capped.
+  - Facility profit above 26 weeks of costs is paid out at 10% a week to the owning group, which passes
+    about 80% of it to the top quintile of its home node.
+  - The state spends reserves above a target as public wages.
+  - Auction buyers and new operators pay from their group's cash; withdrawals in a bank run go to the
+    nation's households.
+  - At the start, household cash is set so that each continent's money total equals its starting coin
+    supply.
+- Reason: measured in the sample world, money totals grew x6.3 in six years against x1.46 coin supply;
+  an emulation of this loop kept the total equal to the coin supply with prices nearly unchanged
+  (reviews/PROPOSALS_2026-10-27.md, item 1)
+- Alternatives: route sinks and cap payouts only (rejected) · open loop with the index from totals
+  (rejected) · nation purses only (rejected as the end state; kept as the first step) · dividends to
+  groups only, or none (rejected) · market payouts from nothing (rejected) · no state spending (rejected)
+  · household cash per nation (rejected) · small starting household cash (rejected)
+- Impact: [SYS-MARKETS](systems/SYS_MARKETS.md), [SYS-BANKING](systems/SYS_BANKING.md),
+  [SYS-PRODUCTION](systems/SYS_PRODUCTION.md), [SYS-TRAVEL-COSTS](systems/SYS_TRAVEL_COSTS.md),
+  [SYS-MERCHANTS](systems/SYS_MERCHANTS.md), [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md)
+- Resolves: Q-038
+
 ### DEC-060 Status-quo bias in the policy review; inflation turns groups against minting
 - Date: 2026-10-27
 - Decision: a policy needs more weight to move the further it already stands from its start: each step
@@ -500,6 +550,8 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   by the international bank or released to markets (rejected) · statistics only (rejected)
 - Impact: [SYS-BANKING](systems/SYS_BANKING.md); open: Q-026, Q-027
 - Resolves: Q-025
+- Changed by: DEC-061 (holders include household cash and traders' floats; money moves instead of
+  vanishing), DEC-062 (the price index follows the total once households spend)
 
 ### DEC-041 Banks are state-owned; money is aggregated per nation and per continent
 - Date: 2026-10-27

@@ -46,6 +46,11 @@ faster than its cash at the risk of losing what it owns.
 - [Confirmed] Yearly minted coins go to the international bank, which distributes them to national banks
   (DEC-042).
 - [Confirmed] Totals drive loan interest, the price index (continent total) and financial events (DEC-042).
+  Until households spend (P13b) the index follows the coin supply; then the published continent total
+  (DEC-062).
+- [Confirmed] Money is created only by minting (DEC-061). Tolls and license prices go to the nation's
+  reserve; the state spends reserves above a target as public wages; auction buyers and new operators
+  pay from their group's cash; withdrawals in a bank run go to the nation's households (DEC-061).
 - [Confirmed] Financial state is recorded quarterly; statistics are published yearly, and NPC agents use the
   same published statistics at the same time (DEC-043).
 - [Confirmed] Banks lend only from their reserves; a nation can run out of credit (DEC-046).

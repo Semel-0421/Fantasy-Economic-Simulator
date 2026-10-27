@@ -30,6 +30,10 @@ flowchart LR
     P12a --> P12b[P12b Influence and policy]
     P9b --> P12b
     P12b --> P12c[P12c Shares, privatization]
+    P12b --> P13a[P13a Money conservation, nation purses]
+    P13a --> P13b[P13b Household spending, trader floats]
+    P13b --> P13c[P13c Dividends, state spending, derived income]
+    P13c --> P13d[P13d Index from totals, retuning]
 ```
 
 | Phase | Scope | Systems | Ready? |
@@ -49,6 +53,10 @@ flowchart LR
 | P12a | Interest groups owning facilities and merchant groups, the player's company, guild membership with cheaper insurance, guild hall warehouses and cheaper licenses | SYS-INTEREST-GROUPS | Done |
 | P12b | Influence (assets, lobbying, members and jobs), yearly weighted policy review of tolls, licenses and minting, player lobbying | SYS-INTEREST-GROUPS | Done |
 | P12c | Company shares, privatization of state enterprises | SYS-INTEREST-GROUPS | Later (DEC-056) |
+| P13a | Money conservation: an invariant test (a continent's money changes only by minting), every source from nothing fixed, every sink routed (DEC-061), a purse per nation, starting household money = coin supply minus held money | SYS-MARKETS, SYS-BANKING | Ready |
+| P13b | Households pay for consumption, demand follows their budget, traders' floats pay sellers and cap payouts, aggregate flows move value between floats; household cash per node | SYS-MARKETS | After P13a |
+| P13c | Dividends to groups and the top quintile, state spending above a reserve target, income per head derived yearly from measured income | SYS-MARKETS, SYS-INTEREST-GROUPS, SYS-BANKING | After P13b |
+| P13d | Price index from published totals (DEC-062), retuning with a ten-year sample run, turn cost within +1.5 ms | SYS-BANKING | After P13c |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -59,9 +67,8 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P12b are done; P12c (shares, privatization) is later (DEC-056). Money still enters through
-  market sales without limit (Q-036); a later phase could pay facility wages to households and cap their
-  purchases by income.
+- P1 to P12b are done; P12c (shares, privatization) is later (DEC-056). Next: P13a to P13d close the money
+  loop (DEC-061, DEC-062); balance numbers should wait for them.
 - With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.

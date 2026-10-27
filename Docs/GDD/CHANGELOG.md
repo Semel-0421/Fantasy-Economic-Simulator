@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-038 (Claude added) resolved by DEC-061 (closed money loop); Q-036 resolved by DEC-062 (index from published totals after P13b); DEC-042 changed by both
+- [systems/SYS_MARKETS.md, SYS_BANKING.md, SYS_PRODUCTION.md, SYS_TRAVEL_COSTS.md, SYS_INTEREST_GROUPS.md] Money loop rules
+- [04_Roadmap.md] P13a to P13d added
 - [reviews/REVIEW_2026-10-27.md] Design review (fix first, then continue)
 - [reviews/PROPOSALS_2026-10-27.md] Options, recommendations and expected effects for the five decisions; money loop measured over six sample years
 - [03_Decisions.md] Q-037 (Claude added) resolved by DEC-060: status-quo bias +100% per step; inflation turns groups other than state enterprises against minting (changes DEC-059)

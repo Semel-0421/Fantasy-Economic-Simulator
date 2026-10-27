@@ -24,6 +24,12 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 - [Confirmed] Population starts from a default per node size, adjustable per node in map data (DEC-050).
 - [Confirmed] Luxuries are bought in proportion to income, with no class split (DEC-050).
 - [Confirmed] Population and income change yearly with economic conditions (DEC-050).
+- [Confirmed] Households hold cash per node and pay for their consumption, split by the quintile shares;
+  demand follows their budget (DEC-061).
+- [Confirmed] Markets pay sellers only from traders' floats; when a float runs short, payouts are capped
+  (DEC-061).
+- [Confirmed] At the start, household cash makes each continent's money total equal its starting coin
+  supply (DEC-061).
 - [Draft] Default population per level, quintile shares and yearly change rates start as placeholder
   config values.
 - [Draft] Elasticity values per class start as placeholder config values.

@@ -46,6 +46,8 @@ player meets rivals and allies instead of an anonymous market.
   (DEC-059).
 - [Confirmed] Stances change with a group's business: a group losing money leans toward protection
   (DEC-059).
+- [Confirmed] Groups receive their facilities' profit above 26 weeks of costs (10% a week) and pass about
+  80% of it to the top quintile of their home node (DEC-061).
 - [Confirmed] Status-quo bias: each step a policy already stands from its start raises the weight it needs
   to move again by 100% of the base threshold (DEC-060).
 

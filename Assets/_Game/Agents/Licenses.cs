@@ -81,6 +81,19 @@ namespace FES.Agents
         public static long Price(GameDatabase db, int baseGood) =>
             db.Config.LicensePriceMultiplier.MulInt(db.Good(GoodId.From(baseGood, QualityGrade.Mid)).BasePrice);
 
+        /// <summary>
+        /// What the player pays in <paramref name="nationNode"/>: members of a guild of the good's trade in that
+        /// nation get its recommendation and a discount (DEC-057).
+        /// </summary>
+        public static long PlayerPrice(WorldState world, GameDatabase db, int baseGood, int nationNode, int turn)
+        {
+            long price = Price(db, baseGood);
+            int category = db.Good(GoodId.From(baseGood, QualityGrade.Mid)).CategoryIndex;
+            return GuildBenefits.MemberOfTrade(world, db, nationNode, category, turn)
+                ? price - db.Config.GuildLicenseDiscount.MulInt(price)
+                : price;
+        }
+
         /// <summary>Whether the player may sell <paramref name="good"/> at <paramref name="node"/> this turn (DEC-024).</summary>
         public static bool PlayerMaySell(WorldState world, GameDatabase db, GoodId good, int node, int turn)
         {
@@ -145,13 +158,12 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             if (player.IsTravelling) return CommandResult.Fail("Licenses are bought in a nation, not on the road.");
             if (Nation(ctx) < 0) return CommandResult.Fail("No nation issues licenses here.");
-            return player.LocalCoins >= LicenseRules.Price(db, Good.BaseIndex) ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
+            return player.LocalCoins >= Price(ctx) ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }
 
         public void Apply(SimContext ctx)
         {
-            var db = ctx.Services.Get<GameDatabase>();
-            long price = LicenseRules.Price(db, Good.BaseIndex);
+            long price = Price(ctx);
             int nation = Nation(ctx);
             var licenses = ctx.World.Get<LicenseTable>();
             ctx.World.Get<PlayerState>().LocalCoins -= price;
@@ -161,6 +173,9 @@ namespace FES.Agents
         }
 
         int Nation(SimContext ctx) => ctx.World.Get<NodeTable>().AncestorAt(ctx.World.Get<PlayerState>().Node, WorldLevel.Nation);
+
+        long Price(SimContext ctx) =>
+            LicenseRules.PlayerPrice(ctx.World, ctx.Services.Get<GameDatabase>(), Good.BaseIndex, Nation(ctx), ctx.Turn);
 
         public GuidanceSignal GetGuidance(SimContext ctx) => new GuidanceSignal(
             GuidanceAxis.Trade, ctx.Services.Get<GameDatabase>().Config.GuidanceWeightBuyLicense, new NodeId(ctx.World.Get<PlayerState>().Node));

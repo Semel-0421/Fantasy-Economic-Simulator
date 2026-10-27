@@ -67,15 +67,34 @@ flowchart LR
 ```
 
 ## Unity implementation notes
-Planned as P12a (groups, ownership, company, guild membership and benefits), P12b (influence and the
-yearly policy review) and P12c (shares, privatization).
+P12a (groups, ownership, company, guild membership and benefits) is built; P12b (influence and the yearly
+policy review) and P12c (shares, privatization) are not.
+- [Draft] (Claude's proposals, built in P12a):
+  - Start: one state enterprise and two companies per nation; a guild per city for every trade (goods
+    category) that the city's or its villages' facilities produce; a private enterprise per node with
+    assets left over.
+  - Owners: facility types marked `state_owned` in `facilities.csv` (sample: mines) belong to the
+    nation's state enterprise; workshops (secondary tier) and merchant groups based at region level and
+    above to the nation's companies in turn; everything else to the private enterprise of its node.
+  - A bankrupt NPC facility stays with its group under a new manager; a player facility lost to
+    bankruptcy, or a seized one no bid wins, goes to the private enterprise of its node.
+  - Guild fee 200 a year (to the guild's cash). Insurance is 30% cheaper on trips starting in a city (or
+    its village) where the player belongs to any guild; licenses are 30% cheaper with membership of a
+    guild of the good's trade anywhere in the nation. Guild hall: 1,000 weight / 800 size per guild;
+    goods stay there when membership lapses, usable again after renewing; hall goods count as collateral
+    and are seized after facility warehouses.
+  - Group cash does nothing yet; P12b spends it on lobbying.
 - [Draft] (Claude's proposal) "Where it produces" and "where it buys" are a nation's markets where the
   group's facilities sell output and buy inputs; a stance is the signed balance of those volumes per
   policy. The loss tilt grows with the share of the group's cash lost over the last year.
-- A persistent `GroupTable` (kind, home node, nation, cash, influence) and an owner group column on
-  `FacilityTable` and `AgentTable`, replacing the plain NPC owner; `OwnerIds.Player` stays the player.
+- Persistent `GroupTable` (kind, home node, trade, cash, player flag) and `GuildMembershipTable`; a
+  `Group` column on `FacilityTable` and `AgentTable` (section version 3, `GroupColumnMigration`), next to
+  the existing owner flag; `GroupSystem.OnLoaded` gives owners to rows from older saves. `GroupSetup`
+  founds and assigns; `GroupDirectory` looks groups up.
+- `FoundCompanyCommand` creates the player's company (once) and makes it the group of the player's
+  facilities; facilities bought later join it. `JoinGuildCommand`, `MoveGuildHallCargoCommand` and
+  `GuildBenefits` cover membership; `GroupSystem` drops lapsed memberships (`GuildMembershipExpired`).
 - Existing per-entity cash stays where it is; group cash funds expansion, road building and lobbying.
-- `FoundCompanyCommand` creates the player's company row.
 - The review runs with the yearly statistics (DEC-043), so policy changes and published figures line up.
 - The minting rate becomes per continent (today one config value for all), since it is set by the
   nations' reviews.

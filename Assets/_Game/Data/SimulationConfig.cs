@@ -116,6 +116,18 @@ namespace FES.Data
         public long RoadBuildCostPerTurn = 300;
         public int RoadBuildWeeks = 8;
 
+        /// <summary>Starting cash per interest group kind: company, guild, state enterprise, private enterprise.</summary>
+        public readonly long[] GroupStartCash = { 20000, 2000, 50000, 1000 };
+        /// <summary>NPC companies founded per nation.</summary>
+        public int CompaniesPerNation = 2;
+        /// <summary>Yearly guild fee; members pay less for insurance and for licenses in the guild's trade (DEC-057).</summary>
+        public long GuildFee = 200;
+        public Fx GuildInsuranceDiscount = Fx.FromPermille(300);
+        public Fx GuildLicenseDiscount = Fx.FromPermille(300);
+        /// <summary>Limits of a guild hall warehouse used by a member.</summary>
+        public long GuildHallMaxWeight = 1000;
+        public long GuildHallMaxSize = 800;
+
         /// <summary>Share of each continent's starting coin supply its national banks hold as reserves, split evenly.</summary>
         public Fx BankInitialReserveShare = Fx.FromPermille(100);
         /// <summary>Yearly interest on deposits, credited weekly (DEC-036).</summary>
@@ -299,6 +311,15 @@ namespace FES.Data
             RoadBuildCostPerTurn = Long(v, "road.build_cost_per_turn", RoadBuildCostPerTurn);
             RoadBuildWeeks = Int(v, "road.build_weeks", RoadBuildWeeks);
             if (RoadBuildWeeks < 1) throw new FormatException("config.csv: road.build_weeks must be >= 1.");
+            string[] groupKeys = { "company", "guild", "state", "private" };
+            for (int k = 0; k < GroupStartCash.Length; k++)
+                GroupStartCash[k] = Long(v, $"groups.{groupKeys[k]}.start_cash", GroupStartCash[k]);
+            CompaniesPerNation = Int(v, "groups.companies_per_nation", CompaniesPerNation);
+            GuildFee = Long(v, "guild.fee", GuildFee);
+            GuildInsuranceDiscount = Permille(v, "guild.insurance_discount_permille", GuildInsuranceDiscount);
+            GuildLicenseDiscount = Permille(v, "guild.license_discount_permille", GuildLicenseDiscount);
+            GuildHallMaxWeight = Long(v, "guild.hall_max_weight", GuildHallMaxWeight);
+            GuildHallMaxSize = Long(v, "guild.hall_max_size", GuildHallMaxSize);
             BankInitialReserveShare = Permille(v, "bank.initial_reserve_permille", BankInitialReserveShare);
             DepositInterestPerYear = Permille(v, "bank.deposit_interest_permille", DepositInterestPerYear);
             ExchangeFee = Permille(v, "bank.exchange_fee_permille", ExchangeFee);

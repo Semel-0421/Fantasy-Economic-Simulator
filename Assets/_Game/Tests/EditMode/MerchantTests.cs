@@ -183,7 +183,7 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 2, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 3, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {

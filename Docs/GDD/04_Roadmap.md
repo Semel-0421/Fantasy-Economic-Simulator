@@ -46,7 +46,7 @@ flowchart LR
 | P9 | State-owned national and international banks, exchange with fee, deposits with interest and payment, player loans on any collateral, weekly repayment, seizure and auction, finite reserves | SYS-BANKING | Done |
 | P9b | NPC loans (facilities, merchant groups), money totals per nation and continent, reserve-driven loan rates, quarterly records and yearly statistics, financial events | SYS-BANKING | Ready |
 | P11 | Ports (ship trade, port-only water routes, docked ships), paved roads (condition, cheaper and safer travel, map roads, player building, upkeep and decay) | SYS-INFRASTRUCTURE | Done |
-| P12a | Interest groups owning facilities and merchant groups, the player's company, guild membership with cheaper insurance, guild hall warehouses and cheaper licenses | SYS-INTEREST-GROUPS | Ready |
+| P12a | Interest groups owning facilities and merchant groups, the player's company, guild membership with cheaper insurance, guild hall warehouses and cheaper licenses | SYS-INTEREST-GROUPS | Done |
 | P12b | Influence (assets, lobbying, members and jobs), yearly weighted policy review of tolls, licenses and minting, player lobbying | SYS-INTEREST-GROUPS | After P9b |
 | P12c | Company shares, privatization of state enterprises | SYS-INTEREST-GROUPS | Later (DEC-056) |
 
@@ -59,8 +59,8 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P9 and P11 are done. Next: P9b (money totals, NPC loans, events), P10 (market demand) or P12a
-  (interest groups); P12b waits for P9b and P12a.
+- P1 to P9, P11 and P12a are done. Next: P9b (money totals, NPC loans, events) or P10 (market demand);
+  P12b waits for P9b.
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.
 - Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,

@@ -26,9 +26,11 @@ namespace FES.Agents
         public readonly NativeColumn<int> ArrivalTurn;
         /// <summary>Consecutive weeks that ended with cash below zero.</summary>
         public readonly NativeColumn<int> NegativeCashWeeks;
+        /// <summary>The interest group owning the merchant group; -1 for none (DEC-055).</summary>
+        public readonly NativeColumn<int> Group;
 
         public override string Key => SectionKey;
-        public override int Version => 2;
+        public override int Version => 3;
 
         public AgentTable()
         {
@@ -41,6 +43,7 @@ namespace FES.Agents
             Destination = Column<int>();
             ArrivalTurn = Column<int>();
             NegativeCashWeeks = Column<int>();
+            Group = Column<int>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -54,6 +57,7 @@ namespace FES.Agents
             Destination.Add(-1);
             ArrivalTurn.Add(-1);
             NegativeCashWeeks.Add(0);
+            Group.Add(-1);
             return new AgentId(Count - 1);
         }
 
@@ -114,9 +118,11 @@ namespace FES.Agents
         /// warehouse, or -1.
         /// </summary>
         public readonly NativeColumn<int> WarehouseClaimUntil;
+        /// <summary>The interest group owning an NPC facility, or the player's company; -1 for none (DEC-055).</summary>
+        public readonly NativeColumn<int> Group;
 
         public override string Key => SectionKey;
-        public override int Version => 2;
+        public override int Version => 3;
 
         public FacilityTable()
         {
@@ -129,6 +135,7 @@ namespace FES.Agents
             Cash = Column<long>();
             NegativeCashWeeks = Column<int>();
             WarehouseClaimUntil = Column<int>();
+            Group = Column<int>();
         }
 
         public FacilityId Add(int node, int defIndex, int owner, ControlMode mode, int level, Fx efficiency, long cash)
@@ -142,6 +149,7 @@ namespace FES.Agents
             Cash.Add(cash);
             NegativeCashWeeks.Add(0);
             WarehouseClaimUntil.Add(-1);
+            Group.Add(-1);
             return new FacilityId(Count - 1);
         }
     }

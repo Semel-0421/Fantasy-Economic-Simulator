@@ -28,7 +28,8 @@ Good id = `baseIndex * 4 + grade`.
 
 ## facilities.csv
 
-`key,tier,recipe` — tier is `Primary`, `Secondary` or `Tertiary`. Spawn counts per node come from
+`key,tier,recipe,state_owned` — tier is `Primary`, `Secondary` or `Tertiary`; `state_owned` (optional, 1)
+gives facilities of the type to their nation's state enterprise. Spawn counts per node come from
 `producers.<level>.<tier>` in config; the facility type is picked deterministically among that tier's defs.
 
 ## events.csv
@@ -91,6 +92,10 @@ changing a default in code does.
 | road.cost_reduction_permille, road.danger_reduction_permille | 400, 500 | effect of a fully paved road ([Draft]) |
 | road.upkeep, road.decay_permille | 5, 5 | weekly upkeep per paved route; condition lost per unpaid week |
 | road.build_cost_per_turn, road.build_weeks | 300, 8 | building a road ([Draft]) |
+| groups.company.start_cash, groups.guild.start_cash, groups.state.start_cash, groups.private.start_cash | 20000, 2000, 50000, 1000 | starting cash per interest group kind ([Draft]) |
+| groups.companies_per_nation | 2 | NPC companies founded per nation |
+| guild.fee, guild.insurance_discount_permille, guild.license_discount_permille | 200, 300, 300 | yearly guild fee and member discounts ([Draft]) |
+| guild.hall_max_weight, guild.hall_max_size | 1000, 800 | a member's guild hall warehouse |
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
 | bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |

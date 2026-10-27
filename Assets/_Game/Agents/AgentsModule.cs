@@ -34,8 +34,14 @@ namespace FES.Agents
             builder.World.Add(new LoanTable());
             builder.World.Add(new AuctionTable());
 
-            SpawnFacilities(builder.World.Add(new FacilityTable()), nodes, db, seed);
-            SpawnMerchants(builder.World.Add(new AgentTable()), nodes, db.Config);
+            var facilities = builder.World.Add(new FacilityTable());
+            SpawnFacilities(facilities, nodes, db, seed);
+            var merchants = builder.World.Add(new AgentTable());
+            SpawnMerchants(merchants, nodes, db.Config);
+            var groups = builder.World.Add(new GroupTable());
+            GroupSetup.Found(groups, nodes, db, facilities);
+            GroupSetup.AssignOwners(groups, nodes, db, facilities, merchants);
+            builder.World.Add(new GuildMembershipTable());
             builder.World.Add(new GuidanceState());
             builder.World.Add(new LodState(nodes.Count));
 
@@ -47,6 +53,8 @@ namespace FES.Agents
             builder.AddMigration(new FacilityTableV1Migration());
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
+            builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
+            builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
 
             builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());
@@ -56,6 +64,7 @@ namespace FES.Agents
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
             builder.AddSystem(new RoadSystem());
+            builder.AddSystem(new GroupSystem());
         }
 
         /// <summary>A random village from the world seed (DEC-040), unless config names a start node.</summary>

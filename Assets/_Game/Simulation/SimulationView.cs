@@ -56,14 +56,38 @@ namespace FES.Simulation
         public readonly ControlMode Mode;
         /// <summary>Coins of the facility's continent.</summary>
         public readonly long Cash;
+        /// <summary>The interest group owning it, or -1.</summary>
+        public readonly int Group;
 
-        public FacilityInfo(FacilityId id, FacilityDef def, bool playerOwned, ControlMode mode, long cash)
+        public FacilityInfo(FacilityId id, FacilityDef def, bool playerOwned, ControlMode mode, long cash, int group)
         {
             Id = id;
             Def = def;
             PlayerOwned = playerOwned;
             Mode = mode;
             Cash = cash;
+            Group = group;
+        }
+    }
+
+    public readonly struct GroupInfo
+    {
+        public readonly int Id;
+        public readonly GroupKind Kind;
+        public readonly NodeId Home;
+        /// <summary>A guild's trade, or -1.</summary>
+        public readonly int Category;
+        public readonly long Cash;
+        public readonly bool IsPlayer;
+
+        public GroupInfo(int id, GroupKind kind, NodeId home, int category, long cash, bool isPlayer)
+        {
+            Id = id;
+            Kind = kind;
+            Home = home;
+            Category = category;
+            Cash = cash;
+            IsPlayer = isPlayer;
         }
     }
 
@@ -211,7 +235,7 @@ namespace FES.Simulation
             {
                 if (_facilities.Node[f] != node.Value) continue;
                 into.Add(new FacilityInfo(new FacilityId(f), Database.Facilities[_facilities.DefIndex[f]],
-                    _facilities.Owner[f] == OwnerIds.Player, (ControlMode)_facilities.Mode[f], _facilities.Cash[f]));
+                    _facilities.Owner[f] == OwnerIds.Player, (ControlMode)_facilities.Mode[f], _facilities.Cash[f], _facilities.Group[f]));
             }
         }
 
@@ -237,7 +261,12 @@ namespace FES.Simulation
         public void GetLicenses(List<LicenseInfo> into) => LicenseSystem.Collect(_licenses, into);
 
         /// <summary>What a license for the good costs, in the coin of the nation that issues it.</summary>
-        public long LicensePrice(GoodId good) => LicenseRules.Price(Database, good.BaseIndex);
+        public long LicensePrice(GoodId good)
+        {
+            int nation = _nodes.AncestorAt(_player.Node, WorldLevel.Nation);
+            return nation < 0 ? LicenseRules.Price(Database, good.BaseIndex)
+                : LicenseRules.PlayerPrice(_world, Database, good.BaseIndex, nation, _clock.Turn);
+        }
 
         /// <summary>Whether the player may sell the good at their node now (no license needed, or a valid one held).</summary>
         public bool MaySell(GoodId good) => LicenseRules.PlayerMaySell(_world, Database, good, _player.Node, _clock.Turn);
@@ -248,6 +277,32 @@ namespace FES.Simulation
         public CargoCapacity CartCapacity => new CargoCapacity(Database.Config.CartMaxWeight, Database.Config.CartMaxSize);
         public GuidanceAxis DominantGuidance => _guidance.Dominant;
         public Fx GuidanceWeight(GuidanceAxis axis) => _guidance[axis];
+
+        // Interest groups
+
+        public GroupInfo Group(int id)
+        {
+            var groups = _world.Get<GroupTable>();
+            return new GroupInfo(id, groups.KindOf(id), new NodeId(groups.Node[id]), groups.Category[id], groups.Cash[id], groups.IsPlayer[id] != 0);
+        }
+
+        public int GroupCount => _world.Get<GroupTable>().Count;
+
+        /// <summary>The player's company, or -1 before it is founded.</summary>
+        public int PlayerCompany => _world.Get<GroupTable>().PlayerCompany();
+
+        /// <summary>The guilds of a city (one per trade), by id.</summary>
+        public void GetGuildsAt(NodeId city, List<GroupInfo> into)
+        {
+            into.Clear();
+            var groups = _world.Get<GroupTable>();
+            for (int g = 0; g < groups.Count; g++)
+                if (groups.KindOf(g) == GroupKind.Guild && groups.Node[g] == city.Value) into.Add(Group(g));
+        }
+
+        public bool IsGuildMember(int guild) => _world.Get<GuildMembershipTable>().IsMember(guild, _clock.Turn);
+
+        public void GetGuildHall(int guild, List<CargoItem> into) => _cargo.Collect(CargoHolders.GuildHall(guild), into);
 
         // Banks (a nation is given by its node)
 
@@ -319,6 +374,13 @@ namespace FES.Simulation
 
         /// <summary>Bids for a seized facility; paid when the auction closes.</summary>
         public void Bid(FacilityId facility, long amount) => _queue.Enqueue(new BidCommand(facility, amount));
+
+        /// <summary>Joins, or renews for a year, a guild in the city the player is in.</summary>
+        public void JoinGuild(int guild) => _queue.Enqueue(new JoinGuildCommand(guild));
+
+        /// <summary>Moves goods between the cart and a member's guild hall in its city.</summary>
+        public void MoveGuildHallCargo(int guild, GoodId good, int quantity, bool toHall) =>
+            _queue.Enqueue(new MoveGuildHallCargoCommand(guild, good, quantity, toHall));
 
         /// <summary>Buys, or renews for a year, the license for a good from the nation the player is in.</summary>
         public void BuyLicense(GoodId good) => _queue.Enqueue(new BuyLicenseCommand(good));

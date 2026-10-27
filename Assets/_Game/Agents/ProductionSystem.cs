@@ -69,6 +69,7 @@ namespace FES.Agents
         CargoTable _cargo;
         LodState _lod;
         NodeSpecialties _specialties;
+        GroupDirectory _groups;
 
         // Lines of every facility, inputs then outputs: [LineStart[f], LineStart[f + 1]). Cell -1 = no market.
         NativeList<int> _lineStart;
@@ -108,6 +109,7 @@ namespace FES.Agents
             _cargo = ctx.World.Get<CargoTable>();
             _lod = ctx.World.Get<LodState>();
             _specialties = ctx.World.Get<NodeSpecialties>();
+            _groups = new GroupDirectory(ctx.World.Get<GroupTable>(), ctx.World.Get<NodeTable>());
             _lineStart = new NativeList<int>(Allocator.Persistent);
             _lineCell = new NativeList<int>(Allocator.Persistent);
             _lineGood = new NativeList<int>(Allocator.Persistent);
@@ -232,6 +234,8 @@ namespace FES.Agents
             _facilities.Cash[f] = StartCash(f);
             _facilities.NegativeCashWeeks[f] = 0;
             _facilities.WarehouseClaimUntil[f] = claimUntil;
+            // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.
+            if (wasPlayer) _facilities.Group[f] = _groups.PrivateAt(_facilities.Node[f], _db.Config);
             ctx.Events.Publish(new FacilityBankrupt(new FacilityId(f), wasPlayer, claimUntil, ctx.Turn));
         }
 

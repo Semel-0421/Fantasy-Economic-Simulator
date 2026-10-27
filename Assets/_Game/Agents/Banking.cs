@@ -279,7 +279,9 @@ namespace FES.Agents
         readonly MarketStore _markets;
         readonly MarketFlows _flows;
         readonly CurrencyState _currency;
+        readonly GroupTable _groups;
         readonly List<CargoItem> _items = new List<CargoItem>();
+        readonly List<int> _holders = new List<int>();
 
         public PlayerBalanceSheet(WorldState world, GameDatabase db)
         {
@@ -295,6 +297,7 @@ namespace FES.Agents
             _markets = world.Get<MarketStore>();
             _flows = world.Get<MarketFlows>();
             _currency = world.Get<CurrencyState>();
+            _groups = world.Get<GroupTable>();
         }
 
         /// <summary>Deposits, warehouse and cart cargo at market prices, and player facilities, in <paramref name="continent"/>'s coin.</summary>
@@ -312,6 +315,13 @@ namespace FES.Agents
             }
             value += Convert(CargoValue(CargoHolders.PlayerCart, _player.Node), _player.LocalContinent, continent);
             if (_ship.Owned) value += Convert(_db.Config.ShipPrice, _ship.BoughtContinent, continent);
+            _cargo.CollectHolders(_holders);
+            foreach (int holder in _holders)
+            {
+                if (!CargoHolders.IsGuildHall(holder, out int guild)) continue;
+                int city = _groups.Node[guild];
+                value += Convert(CargoValue(holder, city), _nodes.Continent[city], continent);
+            }
             return value;
         }
 
@@ -366,7 +376,10 @@ namespace FES.Agents
         MarketFlows _flows;
         CurrencyState _currency;
         PlayerBalanceSheet _sheet;
+        GroupDirectory _groups;
+        GroupTable _groupTable;
         readonly List<CargoItem> _items = new List<CargoItem>();
+        readonly List<int> _holders = new List<int>();
 
         public string Id => "agents.banks";
         public SimPhase Phase => SimPhase.Finance;
@@ -388,6 +401,8 @@ namespace FES.Agents
             _flows = ctx.World.Get<MarketFlows>();
             _currency = ctx.World.Get<CurrencyState>();
             _sheet = new PlayerBalanceSheet(ctx.World, _db);
+            _groupTable = ctx.World.Get<GroupTable>();
+            _groups = new GroupDirectory(_groupTable, _nodes);
         }
 
         /// <summary>Starting reserves: a config share of each continent's coin supply, split evenly over its nations.</summary>
@@ -503,6 +518,15 @@ namespace FES.Agents
                 if (value > 0) ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.WarehouseCargo, new FacilityId(f), value, ctx.Turn));
             }
 
+            _cargo.CollectHolders(_holders);
+            foreach (int holder in _holders)
+            {
+                if (Owed(r) <= 0) break;
+                if (!CargoHolders.IsGuildHall(holder, out int guild)) continue;
+                long value = SellCargo(r, holder, _groupTable.Node[guild]);
+                if (value > 0) ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.WarehouseCargo, FacilityId.None, value, ctx.Turn));
+            }
+
             // A moving cart has no fixed place: it is taken when the player is next at one of the lender's branches.
             if (Owed(r) > 0 && !_player.IsTravelling && _banks.BranchNation(_player.Node) == nation)
             {
@@ -591,6 +615,8 @@ namespace FES.Agents
 
             _facilities.Owner[f] = won ? OwnerIds.Player : OwnerIds.Npc;
             _facilities.Mode[f] = (byte)(won ? ControlMode.Manual : ControlMode.Automated);
+            // [Draft] Without a winning bid a local family buys it.
+            _facilities.Group[f] = won ? _groupTable.PlayerCompany() : _groups.PrivateAt(_facilities.Node[f], _db.Config);
             if (!won)
             {
                 _facilities.Cash[f] = _db.Config.FacilityStartCash[(int)_db.Facilities[_facilities.DefIndex[f]].Tier];

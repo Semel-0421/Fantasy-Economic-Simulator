@@ -240,7 +240,7 @@ namespace FES.Tests
                 facilities.Level.Write(writer);
                 facilities.Efficiency.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(FacilityTable.SectionKey, 1, 2, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(FacilityTable.SectionKey, 1, 3, v1.ToArray());
             facilities.Read(new BinaryReader(new MemoryStream(migrated)));
             Assert.AreEqual(FacilityTableV1Migration.UnsetCash, facilities.Cash[0]);
 

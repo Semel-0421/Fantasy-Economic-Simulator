@@ -88,13 +88,16 @@ namespace FES.Data
         public readonly string Key;
         public readonly IndustryTier Tier;
         public readonly RecipeDef Recipe;
+        /// <summary>Strategic: facilities of this type belong to their nation's state enterprise (DEC-055).</summary>
+        public readonly bool StateOwned;
 
-        public FacilityDef(int index, string key, IndustryTier tier, RecipeDef recipe)
+        public FacilityDef(int index, string key, IndustryTier tier, RecipeDef recipe, bool stateOwned = false)
         {
             Index = index;
             Key = key;
             Tier = tier;
             Recipe = recipe;
+            StateOwned = stateOwned;
         }
     }
 

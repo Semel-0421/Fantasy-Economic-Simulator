@@ -115,8 +115,10 @@ namespace FES.Agents
             }
             var cart = new System.Collections.Generic.List<CargoItem>();
             world.Get<CargoTable>().Collect(CargoHolders.PlayerCart, cart);
-            var ship = world.Get<PlayerShip>().AvailableAt(world.Get<PlayerState>().Node);
-            quote = costs.Quote(route, cart, new TripOptions(options.Guards, options.Insurance, ship));
+            int node = world.Get<PlayerState>().Node;
+            bool ship = world.Get<PlayerShip>().AvailableAt(node);
+            bool member = GuildBenefits.MemberHere(world, node, world.Get<SimClock>().Turn);
+            quote = costs.Quote(route, cart, new TripOptions(options.Guards, options.Insurance, ship, member));
             return true;
         }
 
@@ -517,6 +519,7 @@ namespace FES.Agents
             facilities.Owner[Facility.Value] = OwnerIds.Player;
             facilities.Mode[Facility.Value] = (byte)ControlMode.Manual;
             facilities.WarehouseClaimUntil[Facility.Value] = -1; // a lost warehouse bought back is the player's again
+            facilities.Group[Facility.Value] = ctx.World.Get<GroupTable>().PlayerCompany();
         }
 
         public GuidanceSignal GetGuidance(SimContext ctx) => new GuidanceSignal(
@@ -544,10 +547,19 @@ namespace FES.Agents
             var nodes = ctx.World.Get<NodeTable>();
             if (!Headquarters.IsValid || Headquarters.Value >= nodes.Count) return CommandResult.Fail("Unknown headquarters node.");
             if (Cost < 0) return CommandResult.Fail("Cost must not be negative.");
+            if (ctx.World.Get<GroupTable>().PlayerCompany() >= 0) return CommandResult.Fail("The company is already founded.");
             return ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) >= Cost ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }
 
-        public void Apply(SimContext ctx) => ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) -= Cost;
+        /// <summary>The player's company becomes an interest group and owns the player's facilities (DEC-056).</summary>
+        public void Apply(SimContext ctx)
+        {
+            ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) -= Cost;
+            int company = ctx.World.Get<GroupTable>().Add(GroupKind.Company, Headquarters.Value, -1, 0, player: true);
+            var facilities = ctx.World.Get<FacilityTable>();
+            for (int f = 0; f < facilities.Count; f++)
+                if (facilities.Owner[f] == OwnerIds.Player) facilities.Group[f] = company;
+        }
 
         public GuidanceSignal GetGuidance(SimContext ctx) =>
             new GuidanceSignal(Focus, ctx.Services.Get<GameDatabase>().Config.GuidanceWeightFoundCompany, Headquarters);

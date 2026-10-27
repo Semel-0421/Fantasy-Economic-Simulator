@@ -20,6 +20,17 @@ namespace FES.Agents
 
         /// <summary>The load of a merchant group on a trip.</summary>
         public static int Merchant(AgentId merchant) => MerchantBase + merchant.Value;
+
+        const int GuildHallBase = 3 << 28;
+
+        /// <summary>A guild hall warehouse the player uses as a member (DEC-057).</summary>
+        public static int GuildHall(int guild) => GuildHallBase + guild;
+
+        public static bool IsGuildHall(int holder, out int guild)
+        {
+            guild = holder - GuildHallBase;
+            return holder >= GuildHallBase && guild < (1 << 28);
+        }
     }
 
     public readonly struct CargoItem
@@ -139,6 +150,14 @@ namespace FES.Agents
             for (int r = 0; r < Count; r++)
                 if (Holder[r] == holder) into.Add(new CargoItem(new GoodId(Good[r]), Quantity[r]));
             into.Sort((a, b) => a.Good.Value.CompareTo(b.Good.Value));
+        }
+
+        /// <summary>Distinct holders with any cargo, in row order.</summary>
+        public void CollectHolders(List<int> into)
+        {
+            into.Clear();
+            for (int r = 0; r < Count; r++)
+                if (!into.Contains(Holder[r])) into.Add(Holder[r]);
         }
 
         // Linear: fine while only the player's cart holds cargo. Index by holder before merchants carry goods (P5).

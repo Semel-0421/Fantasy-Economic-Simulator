@@ -66,12 +66,15 @@ namespace FES.Agents
         public readonly bool Insurance;
         /// <summary>The traveller owns a ship, so a water route needs no passage.</summary>
         public readonly bool OwnShip;
+        /// <summary>A member of a guild where the trip starts insures for less (DEC-057).</summary>
+        public readonly bool GuildMember;
 
-        public TripOptions(bool guards, bool insurance, bool ownShip)
+        public TripOptions(bool guards, bool insurance, bool ownShip, bool guildMember = false)
         {
             Guards = guards;
             Insurance = insurance;
             OwnShip = ownShip;
+            GuildMember = guildMember;
         }
     }
 
@@ -141,6 +144,7 @@ namespace FES.Agents
             long valueHere = _currency.Convert(value, toContinent, fromContinent);
             long guards = options.Guards ? config.GuardBaseCost + config.GuardCostShare.MulInt(valueHere) : 0;
             long insurance = options.Insurance ? config.InsurancePremium.MulInt(valueHere) : 0;
+            if (options.GuildMember) insurance -= config.GuildInsuranceDiscount.MulInt(insurance);
             return new TripQuote(route, fee, fromContinent, toll, toContinent, (int)System.Math.Min(units, int.MaxValue),
                 passage, guards, insurance, value, EncounterChance(route, value, options.Guards));
         }

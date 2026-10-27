@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P12a done
+- [systems/SYS_INTEREST_GROUPS.md] Drafts for starting groups, owners, ownership changes, guild fees, discounts and halls; implementation notes
+- [02_Data_Formats.md] facilities.csv state_owned, group and guild config keys
 - [03_Decisions.md] Q-035 resolved by DEC-059 (stances from own trade, state enterprises protect and mint, stances shift with business)
 - [systems/SYS_INTEREST_GROUPS.md] Stance rules and table; draft for measuring "own trade"
 - [04_Roadmap.md] P12b no longer waits on Q-035

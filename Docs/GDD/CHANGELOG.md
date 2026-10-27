@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-10-27
+- [reviews/REVIEW_2026-10-27.md] Design review (fix first, then continue)
+- [reviews/PROPOSALS_2026-10-27.md] Options, recommendations and expected effects for the five decisions; money loop measured over six sample years
 - [03_Decisions.md] Q-037 (Claude added) resolved by DEC-060: status-quo bias +100% per step; inflation turns groups other than state enterprises against minting (changes DEC-059)
 - [systems/SYS_INTEREST_GROUPS.md] Minting stances, status-quo bias rule, sample results
 - [02_Data_Formats.md] policy.inflation_opposition_permille

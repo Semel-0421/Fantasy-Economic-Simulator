@@ -76,6 +76,33 @@ namespace FES.Data
         /// <summary>Anchor price multiplier for a node's specialties in its own market.</summary>
         public Fx SpecialtyPriceMultiplier = Fx.FromPermille(800);
 
+        /// <summary>Per route terrain: extra travel turns, multiplier on the route's fees, chance of an encounter per trip.</summary>
+        public readonly int[] TerrainExtraTurns = { 0, 1, 0, 0 };
+        public readonly Fx[] TerrainCostMultiplier = { Fx.One, Fx.FromPermille(1500), Fx.FromPermille(1200), Fx.FromPermille(1500) };
+        public readonly Fx[] TerrainDanger = { Fx.FromPermille(50), Fx.FromPermille(100), Fx.FromPermille(60), Fx.FromPermille(80) };
+
+        /// <summary>A region's danger factor unless the map sets it (1.0 = normal).</summary>
+        public Fx RegionDanger = Fx.One;
+        /// <summary>Cargo value that doubles the encounter chance; the chance grows linearly with value.</summary>
+        public long DangerValueScale = 2000;
+        /// <summary>Share of the coins or of every carried good an encounter takes.</summary>
+        public Fx EncounterCashLoss = Fx.FromPermille(300);
+        public Fx EncounterCargoLoss = Fx.FromPermille(300);
+        /// <summary>Guards cost a base plus a share of the cargo's value, and cut the encounter chance.</summary>
+        public long GuardBaseCost = 10;
+        public Fx GuardCostShare = Fx.FromPermille(20);
+        public Fx GuardReduction = Fx.FromPermille(700);
+        /// <summary>Guild insurance costs a share of the cargo's value and refunds a share of any loss.</summary>
+        public Fx InsurancePremium = Fx.FromPermille(30);
+        public Fx InsuranceRefund = Fx.FromPermille(800);
+        /// <summary>Passage on a water route without an own ship: a base fare plus a fare per cargo unit (DEC-034).</summary>
+        public long PassageBaseFee = 20;
+        public long PassagePerUnit = 2;
+        /// <summary>An own ship: its price (also its collateral value) and cargo limits on water routes.</summary>
+        public long ShipPrice = 5000;
+        public long ShipMaxWeight = 3000;
+        public long ShipMaxSize = 2400;
+
         /// <summary>Share of each continent's starting coin supply its national banks hold as reserves, split evenly.</summary>
         public Fx BankInitialReserveShare = Fx.FromPermille(100);
         /// <summary>Yearly interest on deposits, credited weekly (DEC-036).</summary>
@@ -228,6 +255,29 @@ namespace FES.Data
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
                 FacilityValue[t] = Long(v, $"facility.{tier}.value", FacilityValue[t]);
             }
+            for (int t = 0; t < RouteTerrains.Count; t++)
+            {
+                string terrain = ((RouteTerrain)t).ToString().ToLowerInvariant();
+                TerrainExtraTurns[t] = Int(v, $"terrain.{terrain}.extra_turns", TerrainExtraTurns[t]);
+                TerrainCostMultiplier[t] = Permille(v, $"terrain.{terrain}.cost_permille", TerrainCostMultiplier[t]);
+                TerrainDanger[t] = Permille(v, $"terrain.{terrain}.danger_permille", TerrainDanger[t]);
+                if (TerrainExtraTurns[t] < 0) throw new FormatException($"config.csv: terrain.{terrain}.extra_turns must not be negative.");
+            }
+            RegionDanger = Permille(v, "danger.region_permille", RegionDanger);
+            DangerValueScale = Long(v, "danger.value_scale", DangerValueScale);
+            if (DangerValueScale < 1) throw new FormatException("config.csv: danger.value_scale must be >= 1.");
+            EncounterCashLoss = Permille(v, "encounter.cash_loss_permille", EncounterCashLoss);
+            EncounterCargoLoss = Permille(v, "encounter.cargo_loss_permille", EncounterCargoLoss);
+            GuardBaseCost = Long(v, "guard.base_cost", GuardBaseCost);
+            GuardCostShare = Permille(v, "guard.cost_permille", GuardCostShare);
+            GuardReduction = Permille(v, "guard.reduction_permille", GuardReduction);
+            InsurancePremium = Permille(v, "insurance.premium_permille", InsurancePremium);
+            InsuranceRefund = Permille(v, "insurance.refund_permille", InsuranceRefund);
+            PassageBaseFee = Long(v, "passage.base_fee", PassageBaseFee);
+            PassagePerUnit = Long(v, "passage.per_unit", PassagePerUnit);
+            ShipPrice = Long(v, "ship.price", ShipPrice);
+            ShipMaxWeight = Long(v, "ship.max_weight", ShipMaxWeight);
+            ShipMaxSize = Long(v, "ship.max_size", ShipMaxSize);
             BankInitialReserveShare = Permille(v, "bank.initial_reserve_permille", BankInitialReserveShare);
             DepositInterestPerYear = Permille(v, "bank.deposit_interest_permille", DepositInterestPerYear);
             ExchangeFee = Permille(v, "bank.exchange_fee_permille", ExchangeFee);

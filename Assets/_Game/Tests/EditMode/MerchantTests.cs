@@ -137,6 +137,7 @@ namespace FES.Tests
             using var routeTurns = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
             using var routeCost = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
             using var routeBudget = new NativeArray<long>(1, Allocator.Temp);
+            using var routeLoss = new NativeArray<long>(new[] { Fx.FromPermille(100).Raw }, Allocator.Temp);
             using var cellStart = new NativeArray<int>(new[] { 0, 1 }, Allocator.Temp);
             using var cellCount = new NativeArray<int>(new[] { 1, 1 }, Allocator.Temp);
             using var cellGood = new NativeArray<int>(new[] { 0, 0 }, Allocator.Temp);
@@ -155,17 +156,17 @@ namespace FES.Tests
                 NodeDetail = detail, NodeContinent = continent, NodeCapacity = capacity, NodeCategorySpecialty = specialty,
                 Tariff = rates, SpecialtySurcharge = rates,
                 OutStart = outStart, OutCount = outCount, RouteIndex = routeIndex, RouteTo = routeTo,
-                RouteTurns = routeTurns, RouteCostPerUnit = routeCost, RouteBudget = routeBudget,
+                RouteTurns = routeTurns, RouteCostPerUnit = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
                 MarketCellStart = cellStart, MarketCellCount = cellCount, CellGood = cellGood,
                 GoodCategory = goodZero, GoodWeight = goodWeight, GoodLicensed = licensed,
                 Price = price, Stock = stock, Supply = supply, Demand = demand,
             }.Execute();
 
-            // margin 30 - 10 - 1 = 19; half the stock times 19/30 = 31 units.
+            // margin 30 - 10 - 1 = 19; half the stock times 19/30 = 31 units, 10% (3) lost on the way.
             Assert.AreEqual(69, stock[0]);
             Assert.AreEqual(31, supply[0]);
             Assert.AreEqual(31, demand[0]);
-            Assert.AreEqual(31, supply[1]);
+            Assert.AreEqual(28, supply[1]);
         }
 
         [Test]

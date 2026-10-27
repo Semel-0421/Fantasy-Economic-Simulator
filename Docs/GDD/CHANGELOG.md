@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P8 done
+- [systems/SYS_ROUTE_HAZARDS.md] Placeholders and Claude's proposals for terrain, encounters, guards, insurance, passage and ships; implementation notes
+- [systems/SYS_MERCHANTS.md] Aggregate flows lose the expected encounter share
+- [02_Data_Formats.md] terrain and danger columns, hazard, passage and ship config keys
 - [04_Roadmap.md] P5 done
 - [systems/SYS_MERCHANTS.md] Drafts for trip choice, home continent, upkeep and bankruptcy, aggregate flows, capacities; implementation notes
 - [02_Data_Formats.md] Merchant capacity, upkeep, bankruptcy and flow keys

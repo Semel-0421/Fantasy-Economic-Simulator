@@ -71,7 +71,11 @@ namespace FES.World
             return table;
         }
 
-        public static RouteTable BuildRoutes(MapDef map, NodeTable nodes)
+        /// <summary>
+        /// With <paramref name="config"/>, hard terrain adds its travel turns and scales the route's fees
+        /// (DEC-025); without it the map's numbers are used as they are.
+        /// </summary>
+        public static RouteTable BuildRoutes(MapDef map, NodeTable nodes, SimulationConfig config = null)
         {
             // Resolve and validate everything before allocating native memory, so bad data cannot leak it.
             int routeCount = map.Routes.Count;
@@ -93,9 +97,12 @@ namespace FES.World
             {
                 routes.From[i] = from[i];
                 routes.To[i] = to[i];
-                routes.TravelTurns[i] = map.Routes[i].TravelTurns;
-                routes.CostPerUnit[i] = map.Routes[i].CostPerUnit;
-                routes.BaseFee[i] = map.Routes[i].BaseFee;
+                int terrain = (int)map.Routes[i].Terrain;
+                routes.Terrain[i] = (byte)terrain;
+                routes.TravelTurns[i] = map.Routes[i].TravelTurns + (config?.TerrainExtraTurns[terrain] ?? 0);
+                var cost = config?.TerrainCostMultiplier[terrain] ?? Fx.One;
+                routes.CostPerUnit[i] = (int)cost.MulInt(map.Routes[i].CostPerUnit);
+                routes.BaseFee[i] = (int)cost.MulInt(map.Routes[i].BaseFee);
             }
             BuildCsr(from, routes.OutStart, routes.OutCount, routes.RouteIndex);
             return routes;
@@ -151,12 +158,13 @@ namespace FES.World
         public void Register(SimBuilder builder)
         {
             var map = builder.Services.Get<MapDef>();
-            var nodes = builder.World.Add(WorldBuilder.BuildNodes(map));
-            builder.World.Add(WorldBuilder.BuildRoutes(map, nodes));
             var db = builder.Services.Get<GameDatabase>();
+            var nodes = builder.World.Add(WorldBuilder.BuildNodes(map));
+            var routes = builder.World.Add(WorldBuilder.BuildRoutes(map, nodes, db.Config));
             builder.World.Add(new NodeSpecialties(map, nodes, db));
             builder.World.Add(new NodeTolls(map, nodes, db.Config));
             builder.World.Add(new NodeBanks(map, nodes));
+            builder.World.Add(new RouteHazards(map, nodes, routes, db.Config));
         }
     }
 }

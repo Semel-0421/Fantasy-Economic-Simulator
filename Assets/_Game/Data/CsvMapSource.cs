@@ -28,6 +28,7 @@ namespace FES.Data
                     TariffPermille = nodes.GetIntOr(r, "tariff_permille", -1),
                     SpecialtySurchargePermille = nodes.GetIntOr(r, "specialty_surcharge_permille", -1),
                     InternationalBank = nodes.GetIntOr(r, "international_bank", 0) != 0,
+                    DangerPermille = nodes.GetIntOr(r, "danger_permille", -1),
                 });
             }
             if (_source.Exists(RoutesFile))
@@ -42,6 +43,9 @@ namespace FES.Data
                         TravelTurns = routes.GetInt(r, "travel_turns"),
                         CostPerUnit = routes.GetInt(r, "cost_per_unit"),
                         BaseFee = routes.GetIntOr(r, "base_fee", 0),
+                        Terrain = routes.GetStringOr(r, "terrain", string.Empty).Length == 0
+                            ? RouteTerrain.Road
+                            : routes.GetEnum<RouteTerrain>(r, "terrain"),
                     });
                 }
             }

@@ -144,7 +144,15 @@ namespace FES.Simulation
         /// The fee and toll of travelling from the player's node to <paramref name="destination"/> with the
         /// current cart; false when no route leads there.
         /// </summary>
-        public bool TryQuoteTrip(NodeId destination, out TripQuote quote) => PlayerTrip.TryQuote(_world, Database, destination, out quote);
+        public bool TryQuoteTrip(NodeId destination, out TripQuote quote) =>
+            PlayerTrip.TryQuote(_world, Database, destination, TripOptions.None, out quote);
+
+        /// <summary>The same with guards and/or guild insurance bought for the trip.</summary>
+        public bool TryQuoteTrip(NodeId destination, bool guards, bool insurance, out TripQuote quote) =>
+            PlayerTrip.TryQuote(_world, Database, destination, new TripOptions(guards, insurance, false), out quote);
+
+        public bool OwnsShip => _world.Get<PlayerShip>().Owned;
+        public long ShipPrice => Database.Config.ShipPrice;
 
         public void GetRoutesFrom(NodeId node, List<RouteInfo> into)
         {
@@ -263,7 +271,11 @@ namespace FES.Simulation
 
         internal PlayerActions(CommandQueue queue) => _queue = queue;
 
-        public void Travel(NodeId destination) => _queue.Enqueue(new TravelCommand(destination));
+        public void Travel(NodeId destination, bool guards = false, bool insurance = false) =>
+            _queue.Enqueue(new TravelCommand(destination, guards, insurance));
+
+        /// <summary>Buys a ship in a city: it replaces passage on water routes and carries more there.</summary>
+        public void BuyShip() => _queue.Enqueue(new BuyShipCommand());
 
         /// <summary>Buys at the player's market; fills partially when stock, cart room or coins run short.</summary>
         public void BuyGoods(GoodId good, int quantity, bool payFromDeposit = false) =>

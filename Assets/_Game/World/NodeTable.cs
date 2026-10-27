@@ -120,6 +120,7 @@ namespace FES.World
         public NativeArray<int> TravelTurns;
         public NativeArray<int> CostPerUnit;
         public NativeArray<int> BaseFee;
+        public NativeArray<byte> Terrain;
         /// <summary>CSR outgoing routes: routes of node n are RouteIndex[OutStart[n] .. OutStart[n] + OutCount[n]).</summary>
         public NativeArray<int> OutStart;
         public NativeArray<int> OutCount;
@@ -133,6 +134,7 @@ namespace FES.World
             TravelTurns = new NativeArray<int>(routeCount, Allocator.Persistent);
             CostPerUnit = new NativeArray<int>(routeCount, Allocator.Persistent);
             BaseFee = new NativeArray<int>(routeCount, Allocator.Persistent);
+            Terrain = new NativeArray<byte>(routeCount, Allocator.Persistent);
             OutStart = new NativeArray<int>(nodeCount, Allocator.Persistent);
             OutCount = new NativeArray<int>(nodeCount, Allocator.Persistent);
             RouteIndex = new NativeArray<int>(routeCount, Allocator.Persistent);
@@ -145,6 +147,7 @@ namespace FES.World
             TravelTurns.DisposeIfCreated();
             CostPerUnit.DisposeIfCreated();
             BaseFee.DisposeIfCreated();
+            Terrain.DisposeIfCreated();
             OutStart.DisposeIfCreated();
             OutCount.DisposeIfCreated();
             RouteIndex.DisposeIfCreated();

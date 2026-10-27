@@ -39,7 +39,7 @@ without scripting. Their counts per node are already in config (`merchants.<leve
     `merchants.bankrupt_weeks`); aggregate groups pay none.
   - Aggregate flows move a share of the origin's stock (50%, `merchants.flow_permille`) times the margin
     over the destination price, within the node's pooled capacity, and arrive the same week, with no base
-    fee and no encounter loss until P8.
+    fee; they lose the route's expected encounter share (P8).
   - Capacity per group: weight 4,000 / 4,000 / 2,000 / 1,000 / 400 and size 3,200 / 3,200 / 1,600 /
     800 / 300 per level (`merchants.<level>.max_weight`, `max_size`).
   - Merchant loans wait for P9b.

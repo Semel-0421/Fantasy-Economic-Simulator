@@ -222,6 +222,7 @@ namespace FES.Agents
         WarehouseCargo = 1,
         CartCargo = 2,
         Facility = 3,
+        Ship = 4,
     }
 
     /// <summary>Collateral the bank took for an overdue loan; <see cref="Value"/> is in the lending bank's coin.</summary>
@@ -274,6 +275,7 @@ namespace FES.Agents
         readonly FacilityTable _facilities;
         readonly CargoTable _cargo;
         readonly PlayerState _player;
+        readonly PlayerShip _ship;
         readonly MarketStore _markets;
         readonly MarketFlows _flows;
         readonly CurrencyState _currency;
@@ -289,6 +291,7 @@ namespace FES.Agents
             _facilities = world.Get<FacilityTable>();
             _cargo = world.Get<CargoTable>();
             _player = world.Get<PlayerState>();
+            _ship = world.Get<PlayerShip>();
             _markets = world.Get<MarketStore>();
             _flows = world.Get<MarketFlows>();
             _currency = world.Get<CurrencyState>();
@@ -308,6 +311,7 @@ namespace FES.Agents
                 value += Convert(CargoValue(CargoHolders.Warehouse(new FacilityId(f)), at), _nodes.Continent[at], continent);
             }
             value += Convert(CargoValue(CargoHolders.PlayerCart, _player.Node), _player.LocalContinent, continent);
+            if (_ship.Owned) value += Convert(_db.Config.ShipPrice, _ship.BoughtContinent, continent);
             return value;
         }
 
@@ -355,6 +359,7 @@ namespace FES.Agents
         LoanTable _loans;
         AuctionTable _auctions;
         PlayerState _player;
+        PlayerShip _ship;
         FacilityTable _facilities;
         CargoTable _cargo;
         MarketStore _markets;
@@ -376,6 +381,7 @@ namespace FES.Agents
             _loans = ctx.World.Get<LoanTable>();
             _auctions = ctx.World.Get<AuctionTable>();
             _player = ctx.World.Get<PlayerState>();
+            _ship = ctx.World.Get<PlayerShip>();
             _facilities = ctx.World.Get<FacilityTable>();
             _cargo = ctx.World.Get<CargoTable>();
             _markets = ctx.World.Get<MarketStore>();
@@ -466,8 +472,8 @@ namespace FES.Agents
 
         /// <summary>
         /// Takes collateral until the whole balance is covered: deposits, then warehouse cargo, then the cart
-        /// when the player is at a branch of the lending nation, then facilities, which go to auction
-        /// ([Draft] order, Claude's proposal).
+        /// when the player is at a branch of the lending nation, then the ship, then facilities, which go to
+        /// auction ([Draft] order, Claude's proposal).
         /// </summary>
         void Seize(SimContext ctx, int r)
         {
@@ -502,6 +508,17 @@ namespace FES.Agents
             {
                 long value = SellCargo(r, CargoHolders.PlayerCart, _player.Node);
                 if (value > 0) ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.CartCargo, FacilityId.None, value, ctx.Turn));
+            }
+
+            // A ship is sold to the bank at the auction share of its price ([Draft]).
+            if (Owed(r) > 0 && _ship.Owned)
+            {
+                long value = _sheet.Convert(_db.Config.AuctionReserveShare.MulInt(_db.Config.ShipPrice), _ship.BoughtContinent, continent);
+                _ship.Owned = false;
+                long paid = Math.Min(value, Owed(r));
+                Repay(r, paid);
+                _bank.Reserve[nation] += value - paid;
+                ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.Ship, FacilityId.None, value, ctx.Turn));
             }
 
             for (int f = 0; f < _facilities.Count && Owed(r) - PendingAuctions(nation, continent) > 0; f++)

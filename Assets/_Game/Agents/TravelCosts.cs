@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using FES.Core;
 using FES.Data;
 using FES.Economy;
@@ -7,22 +8,31 @@ using FES.World;
 namespace FES.Agents
 {
     /// <summary>
-    /// What one trip along a route costs (SYS-TRAVEL-COSTS). Fees are paid in the departure node's coin,
-    /// the toll in the coin of the node it is paid to; with no automatic exchange (DEC-031) the two can
-    /// differ on a route between continents.
+    /// What one trip along a route costs and risks (SYS-TRAVEL-COSTS, SYS-ROUTE-HAZARDS). Everything is paid
+    /// in the departure node's coin except the toll, paid in the coin of the node it is paid to; with no
+    /// automatic exchange (DEC-031) the two can differ on a route between continents.
     /// </summary>
     public readonly struct TripQuote
     {
         public readonly int Route;
-        /// <summary>Base fee plus the per-unit charge (DEC-007, DEC-017).</summary>
+        /// <summary>Base fee plus the per-unit charge, scaled by the terrain (DEC-007, DEC-017, DEC-025).</summary>
         public readonly long Fee;
         public readonly int FeeContinent;
         /// <summary>Toll of the entered node on the cargo's value there (DEC-014, DEC-027).</summary>
         public readonly long Toll;
         public readonly int TollContinent;
         public readonly int CargoUnits;
+        /// <summary>Fare on a water route without an own ship (DEC-034); 0 otherwise.</summary>
+        public readonly long Passage;
+        public readonly long Guards;
+        public readonly long Insurance;
+        /// <summary>The cargo's value at the destination's prices, in the toll's coin.</summary>
+        public readonly long CargoValue;
+        /// <summary>Chance of an encounter on this trip (DEC-026).</summary>
+        public readonly Fx EncounterChance;
 
-        public TripQuote(int route, long fee, int feeContinent, long toll, int tollContinent, int cargoUnits)
+        public TripQuote(int route, long fee, int feeContinent, long toll, int tollContinent, int cargoUnits,
+            long passage, long guards, long insurance, long cargoValue, Fx encounterChance)
         {
             Route = route;
             Fee = fee;
@@ -30,18 +40,44 @@ namespace FES.Agents
             Toll = toll;
             TollContinent = tollContinent;
             CargoUnits = cargoUnits;
+            Passage = passage;
+            Guards = guards;
+            Insurance = insurance;
+            CargoValue = cargoValue;
+            EncounterChance = encounterChance;
         }
 
-        /// <summary>Whether coins per continent cover the fee and the toll together.</summary>
+        /// <summary>Everything paid in the departure coin.</summary>
+        public long DepartureCost => Fee + Passage + Guards + Insurance;
+
+        /// <summary>Whether coins per continent cover the departure costs and the toll together.</summary>
         public bool AffordableWith(long[] coins) =>
             FeeContinent == TollContinent
-                ? coins[FeeContinent] >= Fee + Toll
-                : coins[FeeContinent] >= Fee && coins[TollContinent] >= Toll;
+                ? coins[FeeContinent] >= DepartureCost + Toll
+                : coins[FeeContinent] >= DepartureCost && coins[TollContinent] >= Toll;
+    }
+
+    /// <summary>Countermeasures bought with a trip (DEC-026).</summary>
+    public readonly struct TripOptions
+    {
+        public static readonly TripOptions None = default;
+
+        public readonly bool Guards;
+        public readonly bool Insurance;
+        /// <summary>The traveller owns a ship, so a water route needs no passage.</summary>
+        public readonly bool OwnShip;
+
+        public TripOptions(bool guards, bool insurance, bool ownShip)
+        {
+            Guards = guards;
+            Insurance = insurance;
+            OwnShip = ownShip;
+        }
     }
 
     /// <summary>
-    /// The one trip cost function shared by the player and, later, merchants (DEC-015). A route is one edge,
-    /// so a trip enters one node, its destination.
+    /// The one trip cost function shared by the player and merchants (DEC-015). A route is one edge, so a trip
+    /// enters one node, its destination.
     /// </summary>
     public sealed class TravelCosts
     {
@@ -50,8 +86,10 @@ namespace FES.Agents
         readonly RouteTable _routes;
         readonly NodeTolls _tolls;
         readonly NodeSpecialties _specialties;
+        readonly RouteHazards _hazards;
         readonly MarketStore _markets;
         readonly MarketFlows _flows;
+        readonly CurrencyState _currency;
 
         public TravelCosts(WorldState world, GameDatabase db)
         {
@@ -60,8 +98,10 @@ namespace FES.Agents
             _routes = world.Get<RouteTable>();
             _tolls = world.Get<NodeTolls>();
             _specialties = world.Get<NodeSpecialties>();
+            _hazards = world.Get<RouteHazards>();
             _markets = world.Get<MarketStore>();
             _flows = world.Get<MarketFlows>();
+            _currency = world.Get<CurrencyState>();
         }
 
         /// <summary>The route from <paramref name="from"/> to <paramref name="to"/>, or -1.</summary>
@@ -73,22 +113,46 @@ namespace FES.Agents
             return -1;
         }
 
-        public TripQuote Quote(int route, IReadOnlyList<CargoItem> cargo)
+        public bool IsWater(int route) => ((RouteTerrain)_routes.Terrain[route]).IsWater();
+
+        public TripQuote Quote(int route, IReadOnlyList<CargoItem> cargo) => Quote(route, cargo, TripOptions.None);
+
+        public TripQuote Quote(int route, IReadOnlyList<CargoItem> cargo, TripOptions options)
         {
+            var config = _db.Config;
             int to = _routes.To[route];
-            long units = 0, toll = 0;
+            int fromContinent = _nodes.Continent[_routes.From[route]], toContinent = _nodes.Continent[to];
+            long units = 0, toll = 0, value = 0;
             foreach (var item in cargo)
             {
                 units += item.Quantity;
                 // Valued where it enters, or at the nearest ancestor trading it; no market prices it at zero.
                 if (!_flows.TryFindNearestMarket(to, item.Good, out _, out int cell)) continue;
+                long itemValue = (long)item.Quantity * _markets.Price[cell];
                 long rate = _tolls.Tariff[to];
                 if (IsSpecialtyCategory(to, _db.Good(item.Good).CategoryIndex)) rate += _tolls.SpecialtySurcharge[to];
-                toll += Fx.FromRaw(rate).MulInt((long)item.Quantity * _markets.Price[cell]);
+                toll += Fx.FromRaw(rate).MulInt(itemValue);
+                value += itemValue;
             }
             long fee = _routes.BaseFee[route] + units * _routes.CostPerUnit[route];
-            return new TripQuote(route, fee, _nodes.Continent[_routes.From[route]], toll, _nodes.Continent[to],
-                (int)System.Math.Min(units, int.MaxValue));
+            long passage = IsWater(route) && !options.OwnShip ? config.PassageBaseFee + units * config.PassagePerUnit : 0;
+            long valueHere = _currency.Convert(value, toContinent, fromContinent);
+            long guards = options.Guards ? config.GuardBaseCost + config.GuardCostShare.MulInt(valueHere) : 0;
+            long insurance = options.Insurance ? config.InsurancePremium.MulInt(valueHere) : 0;
+            return new TripQuote(route, fee, fromContinent, toll, toContinent, (int)System.Math.Min(units, int.MaxValue),
+                passage, guards, insurance, value, EncounterChance(route, value, options.Guards));
+        }
+
+        /// <summary>
+        /// Terrain and region danger, growing linearly with the cargo's value and cut by guards; at most 1
+        /// (DEC-026).
+        /// </summary>
+        public Fx EncounterChance(int route, long cargoValue, bool guards)
+        {
+            var config = _db.Config;
+            var chance = Fx.FromRaw(_hazards.BaseDanger[route]) * (Fx.One + Fx.FromRatio(cargoValue, config.DangerValueScale));
+            if (guards) chance *= Fx.One - config.GuardReduction;
+            return chance.Raw > Fx.OneRaw ? Fx.One : chance.Raw < 0 ? Fx.Zero : chance;
         }
 
         /// <summary>A category is protected at a node when one of the node's specialty goods is in it.</summary>
@@ -98,6 +162,88 @@ namespace FES.Agents
             for (int k = _specialties.Start[node]; k < end; k++)
                 if (_db.Goods[GoodId.From(_specialties.BaseGood[k], QualityGrade.Low).Value].CategoryIndex == category) return true;
             return false;
+        }
+    }
+
+    public enum EncounterLoss : byte
+    {
+        None = 0,
+        Cash = 1,
+        Cargo = 2,
+    }
+
+    /// <summary>One roll per trip (DEC-026): whether an encounter happens and whether it takes cash or cargo.</summary>
+    public static class Encounters
+    {
+        static readonly uint Stream = DetHash.Of("agents.encounters");
+
+        /// <param name="salt">Separates travellers that share an entity index (player 0, merchants 1).</param>
+        public static EncounterLoss Roll(ulong seed, int turn, int entity, uint salt, Fx chance)
+        {
+            var rng = DetRandom.For(seed, turn, Stream, entity, salt);
+            if (rng.NextFx01().Raw >= chance.Raw) return EncounterLoss.None;
+            return rng.NextInt(2) == 0 ? EncounterLoss.Cash : EncounterLoss.Cargo;
+        }
+
+        /// <summary>Takes the loss share of every carried good from a holder; returns what was lost.</summary>
+        public static void TakeCargo(CargoTable cargo, int holder, Fx share, List<CargoItem> lost)
+        {
+            lost.Clear();
+            cargo.Collect(holder, lost);
+            for (int i = 0; i < lost.Count; i++)
+            {
+                int quantity = (int)share.MulInt(lost[i].Quantity);
+                cargo.Change(holder, lost[i].Good, -quantity);
+                lost[i] = new CargoItem(lost[i].Good, quantity);
+            }
+            lost.RemoveAll(item => item.Quantity == 0);
+        }
+    }
+
+    /// <summary>The player's own ship (DEC-034): on water routes it replaces passage and carries more than the cart.</summary>
+    public sealed class PlayerShip : IPersistentComponent
+    {
+        public bool Owned;
+        /// <summary>Continent whose coins paid for it; its collateral value is counted in them.</summary>
+        public int BoughtContinent;
+
+        public string Key => "agents.ship";
+        public int Version => 1;
+
+        public void Write(BinaryWriter writer)
+        {
+            writer.Write(Owned);
+            writer.Write(BoughtContinent);
+        }
+
+        public void Read(BinaryReader reader)
+        {
+            Owned = reader.ReadBoolean();
+            BoughtContinent = reader.ReadInt32();
+        }
+    }
+
+    /// <summary>Buys a ship at a node of city level or above, for local coins ([Draft]: no ports yet).</summary>
+    public sealed class BuyShipCommand : ICommand
+    {
+        public CommandResult Validate(SimContext ctx)
+        {
+            var player = ctx.World.Get<PlayerState>();
+            if (ctx.World.Get<PlayerShip>().Owned) return CommandResult.Fail("The player already owns a ship.");
+            if (player.IsTravelling || ctx.World.Get<NodeTable>().LevelOf(player.Node) > WorldLevel.City)
+                return CommandResult.Fail("Ships are sold in cities.");
+            return player.LocalCoins >= ctx.Services.Get<GameDatabase>().Config.ShipPrice
+                ? CommandResult.Success
+                : CommandResult.Fail("Not enough cash.");
+        }
+
+        public void Apply(SimContext ctx)
+        {
+            var player = ctx.World.Get<PlayerState>();
+            var ship = ctx.World.Get<PlayerShip>();
+            player.LocalCoins -= ctx.Services.Get<GameDatabase>().Config.ShipPrice;
+            ship.Owned = true;
+            ship.BoughtContinent = player.LocalContinent;
         }
     }
 }

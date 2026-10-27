@@ -27,6 +27,7 @@ namespace FES.Agents
             player.LocalCoins = db.Config.PlayerStartCash;
             builder.World.Add(new CargoTable());
             builder.World.Add(new LicenseTable());
+            builder.World.Add(new PlayerShip());
             var banks = builder.World.Get<NodeBanks>();
             var bank = builder.World.Add(new BankState(banks.NationCount, nodes.ContinentCount));
             BankSystem.SetUpReserves(bank, banks, nodes, builder.World.Get<CurrencyState>(), db.Config);

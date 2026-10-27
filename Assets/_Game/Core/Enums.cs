@@ -1,6 +1,22 @@
 namespace FES.Core
 {
     /// <summary>World hierarchy level. Lower value = larger scope.</summary>
+    /// <summary>What a route crosses (DEC-022, DEC-025). River and sea routes are water: the player needs passage or a ship.</summary>
+    public enum RouteTerrain : byte
+    {
+        Road = 0,
+        Mountain = 1,
+        River = 2,
+        Sea = 3,
+    }
+
+    public static class RouteTerrains
+    {
+        public const int Count = 4;
+
+        public static bool IsWater(this RouteTerrain terrain) => terrain == RouteTerrain.River || terrain == RouteTerrain.Sea;
+    }
+
     public enum WorldLevel : byte
     {
         Continent = 0,

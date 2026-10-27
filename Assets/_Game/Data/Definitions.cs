@@ -187,6 +187,8 @@ namespace FES.Data
         public int SpecialtySurchargePermille = -1;
         /// <summary>The continent's international bank sits here (DEC-036); one per continent at most.</summary>
         public bool InternationalBank;
+        /// <summary>Road danger of a region, in permille of the normal level; -1 = config default (DEC-026).</summary>
+        public int DangerPermille = -1;
     }
 
     public sealed class RouteDef
@@ -197,6 +199,7 @@ namespace FES.Data
         public int CostPerUnit;
         /// <summary>Paid once per trip, whatever the cargo (DEC-017).</summary>
         public int BaseFee;
+        public RouteTerrain Terrain;
     }
 
     /// <summary>World layout. Produced by a handcrafted source today, by a procedural generator later.</summary>
@@ -215,10 +218,11 @@ namespace FES.Data
                 foreach (var tag in n.Tags) h = DetHash.Combine(h, DetHash.Of(tag));
                 h = DetHash.Combine(h, DetHash.Combine((ulong)(uint)n.TariffPermille, (ulong)(uint)n.SpecialtySurchargePermille));
                 if (n.InternationalBank) h = DetHash.Combine(h, DetHash.Of("international_bank"));
+                h = DetHash.Combine(h, (ulong)(uint)n.DangerPermille);
             }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),
-                    DetHash.Combine((ulong)(uint)r.TravelTurns, DetHash.Combine((ulong)(uint)r.CostPerUnit, (ulong)(uint)r.BaseFee)))));
+                    DetHash.Combine((ulong)(uint)r.TravelTurns, DetHash.Combine((ulong)(uint)r.CostPerUnit, DetHash.Combine((ulong)(uint)r.BaseFee, (ulong)r.Terrain))))));
             return h;
         }
     }

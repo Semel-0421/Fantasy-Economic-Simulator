@@ -66,6 +66,7 @@ namespace FES.Agents
 
         NativeArray<long> _nodeCapacity;
         NativeArray<long> _routeBudget;
+        NativeArray<long> _routeExpectedLoss;
         NativeArray<byte> _nodeCategorySpecialty;
         NativeArray<byte> _goodLicensed;
 
@@ -88,6 +89,12 @@ namespace FES.Agents
             int categories = _flows.CategoryCount;
             _nodeCapacity = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _routeBudget = new NativeArray<long>(_routes.Count, Allocator.Persistent);
+            // Far regions apply the expected loss (DEC-026): the encounter chance (without the value term),
+            // half of which hits cargo, times the cargo loss share.
+            _routeExpectedLoss = new NativeArray<long>(_routes.Count, Allocator.Persistent);
+            var hazards = ctx.World.Get<RouteHazards>();
+            for (int r = 0; r < _routes.Count; r++)
+                _routeExpectedLoss[r] = (Fx.FromRaw(hazards.BaseDanger[r]) * _db.Config.EncounterCargoLoss).Raw / 2;
             _nodeCategorySpecialty = new NativeArray<byte>(_nodes.Count * categories, Allocator.Persistent);
             var specialties = ctx.World.Get<NodeSpecialties>();
             for (int n = 0; n < _nodes.Count; n++)
@@ -180,10 +187,15 @@ namespace FES.Agents
             _agents.Cash[a] -= bestQuantity * _markets.Price[bestCell];
             _cargo.Change(holder, goodId, (int)bestQuantity);
             _cargo.Collect(holder, _items);
-            var quote = _costs.Quote(bestRoute, _items);
-            _agents.Cash[a] -= quote.Fee + quote.Toll; // same continent: one coin (DEC-015)
+            var quote = _costs.Quote(bestRoute, _items, new TripOptions(false, false, true)); // merchants need no ship (DEC-034)
+            _agents.Cash[a] -= quote.DepartureCost + quote.Toll; // same continent: one coin (DEC-015)
             _agents.Destination[a] = _routes.To[bestRoute];
             _agents.ArrivalTurn[a] = ctx.Turn + _routes.TravelTurns[bestRoute];
+
+            // Detailed merchants roll encounters like the player, without guards or insurance ([Draft]).
+            var loss = Encounters.Roll(ctx.Seed, ctx.Turn, a, 1, quote.EncounterChance);
+            if (loss == EncounterLoss.Cash) _agents.Cash[a] -= _db.Config.EncounterCashLoss.MulInt(Math.Max(0, _agents.Cash[a]));
+            else if (loss == EncounterLoss.Cargo) Encounters.TakeCargo(_cargo, holder, _db.Config.EncounterCargoLoss, _items);
         }
 
         long TollRate(int node, int good)
@@ -241,6 +253,7 @@ namespace FES.Agents
                 RouteTurns = _routes.TravelTurns,
                 RouteCostPerUnit = _routes.CostPerUnit,
                 RouteBudget = _routeBudget,
+                RouteExpectedLoss = _routeExpectedLoss,
                 MarketCellStart = _markets.MarketCellStart,
                 MarketCellCount = _markets.MarketCellCount,
                 CellGood = _markets.CellGood,
@@ -260,6 +273,7 @@ namespace FES.Agents
         {
             _nodeCapacity.DisposeIfCreated();
             _routeBudget.DisposeIfCreated();
+            _routeExpectedLoss.DisposeIfCreated();
             _nodeCategorySpecialty.DisposeIfCreated();
             _goodLicensed.DisposeIfCreated();
         }
@@ -271,8 +285,8 @@ namespace FES.Agents
     /// per-unit charge and toll. The amount is a share of the origin's stock proportional to the margin,
     /// licensed goods scaled by the licensed share, all within the node's pooled cargo capacity spread over
     /// its routes and their travel turns, goods taken in cell order. The units leave the origin's stock (through its supply into its
-    /// demand, like a purchase) and reach the destination's supply the same week ([Draft]: no transit time,
-    /// no base fee, no encounter loss yet). Nodes run in order, so results are independent of Burst.
+    /// demand, like a purchase) and reach the destination's supply the same week, less the route's expected
+    /// encounter loss ([Draft]: no transit time, no base fee). Nodes run in order, so results are independent of Burst.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct MerchantFlowJob : IJob
@@ -295,6 +309,8 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> RouteCostPerUnit;
         /// <summary>Scratch, per route: weight the node's merchants can still move along it this week.</summary>
         public NativeArray<long> RouteBudget;
+        /// <summary>Per route: expected share of the goods lost on the way (raw Fx).</summary>
+        [ReadOnly] public NativeArray<long> RouteExpectedLoss;
         [ReadOnly] public NativeArray<int> MarketCellStart;
         [ReadOnly] public NativeArray<int> MarketCellCount;
         [ReadOnly] public NativeArray<int> CellGood;
@@ -337,7 +353,7 @@ namespace FES.Agents
                         int toCell = FindCell(to, CellGood[c]);
                         if (toCell < 0) continue;
                         long budget = RouteBudget[r];
-                        Move(c, toCell, CellGood[c], to, RouteCostPerUnit[r], ref budget);
+                        Move(c, toCell, CellGood[c], to, RouteCostPerUnit[r], RouteExpectedLoss[r], ref budget);
                         RouteBudget[r] = budget;
                     }
                 }
@@ -358,7 +374,7 @@ namespace FES.Agents
             return -1;
         }
 
-        void Move(int fromCell, int toCell, int good, int to, long perUnit, ref long budget)
+        void Move(int fromCell, int toCell, int good, int to, long perUnit, long expectedLossRaw, ref long budget)
         {
             long sell = Price[toCell];
             long rate = Tariff[to];
@@ -375,7 +391,7 @@ namespace FES.Agents
             Stock[fromCell] -= (int)quantity;
             Supply[fromCell] = MarketStore.ClampToNonNegativeInt(Supply[fromCell] + quantity);
             Demand[fromCell] = MarketStore.ClampToNonNegativeInt(Demand[fromCell] + quantity);
-            Supply[toCell] = MarketStore.ClampToNonNegativeInt(Supply[toCell] + quantity);
+            Supply[toCell] = MarketStore.ClampToNonNegativeInt(Supply[toCell] + quantity - Fx.MulIntRaw(quantity, expectedLossRaw));
         }
     }
 

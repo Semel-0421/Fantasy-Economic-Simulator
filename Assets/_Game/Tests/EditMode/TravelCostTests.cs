@@ -118,7 +118,10 @@ namespace FES.Tests
             sim.Actions.Travel(abroad);
             sim.AdvanceTurn();
             Assert.IsTrue(sim.View.IsTravelling);
-            Assert.AreEqual(homeCoins - quote.Fee, player.Coins[home]);
+            Assert.Greater(quote.Passage, 0); // a sea route without an own ship
+            var encounter = sim.LastTurnEvents.OfType<TripEncounter>().SingleOrDefault();
+            long cashLost = encounter != null && encounter.Loss == EncounterLoss.Cash ? encounter.LossValue : 0;
+            Assert.AreEqual(homeCoins - quote.DepartureCost - cashLost, player.Coins[home]);
             Assert.AreEqual(1000 - quote.Toll, player.Coins[away]);
         }
 

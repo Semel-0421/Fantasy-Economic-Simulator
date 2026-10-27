@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P9b done; P12b ready; P10 must stop the price runaway
+- [systems/SYS_BANKING.md] Drafts for money totals, reserve ratio, loan rates, NPC loans, records, statistics and financial events; implementation notes
+- [systems/SYS_MERCHANTS.md, systems/SYS_PRODUCTION.md] NPC loans built
+- [02_Data_Formats.md] bank and finance config keys
+- [03_Decisions.md] Q-036 (Claude added): when measured money totals drive the price index
+- [systems/SYS_MARKETS.md] Price runaway noted under open questions
 - [04_Roadmap.md] P12a done
 - [systems/SYS_INTEREST_GROUPS.md] Drafts for starting groups, owners, ownership changes, guild fees, discounts and halls; implementation notes
 - [02_Data_Formats.md] facilities.csv state_owned, group and guild config keys

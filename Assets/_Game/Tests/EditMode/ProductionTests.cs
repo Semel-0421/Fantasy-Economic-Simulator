@@ -95,7 +95,9 @@ namespace FES.Tests
         [Test]
         public void FacilityBelowZeroCash_GoesBankruptAfterTheGraceWeeks()
         {
-            using var sim = TestWorlds.BuildSample();
+            // Without NPC loans, which would cover the shortfall.
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
+                "key,value\nbank.npc_max_reserve_share_permille,0\n"), 42).Build();
             var facilities = sim.World.Get<FacilityTable>();
             var bakeries = FacilitiesOf(sim, IndustryTier.Tertiary).ToList();
             foreach (int f in bakeries) facilities.Cash[f] = 0; // cannot buy inputs, so upkeep keeps it below zero

@@ -48,6 +48,59 @@ namespace FES.Simulation
         }
     }
 
+    /// <summary>One quarter's financial record of a nation (DEC-043), in its continent's coin.</summary>
+    public readonly struct FinanceRecordInfo
+    {
+        public readonly int Turn;
+        public readonly long Total;
+        public readonly long Cash;
+        public readonly long Reserve;
+        public readonly long Deposits;
+        /// <summary>Loan balances owed to the nation's bank.</summary>
+        public readonly long Lent;
+
+        public FinanceRecordInfo(int turn, long total, long cash, long reserve, long deposits, long lent)
+        {
+            Turn = turn;
+            Total = total;
+            Cash = cash;
+            Reserve = reserve;
+            Deposits = deposits;
+            Lent = lent;
+        }
+    }
+
+    /// <summary>A nation's figures in the yearly published statistics.</summary>
+    public readonly struct PublishedNationStats
+    {
+        public readonly long Total;
+        public readonly Fx ReserveRatio;
+        public readonly Fx LoanRate;
+
+        public PublishedNationStats(long total, Fx reserveRatio, Fx loanRate)
+        {
+            Total = total;
+            ReserveRatio = reserveRatio;
+            LoanRate = loanRate;
+        }
+    }
+
+    /// <summary>A continent's figures in the yearly published statistics.</summary>
+    public readonly struct PublishedContinentStats
+    {
+        public readonly long Total;
+        public readonly Fx PriceIndex;
+        /// <summary>The price index's change over the year (0.05 = 5%).</summary>
+        public readonly Fx Inflation;
+
+        public PublishedContinentStats(long total, Fx priceIndex, Fx inflation)
+        {
+            Total = total;
+            PriceIndex = priceIndex;
+            Inflation = inflation;
+        }
+    }
+
     public readonly struct FacilityInfo
     {
         public readonly FacilityId Id;
@@ -114,6 +167,8 @@ namespace FES.Simulation
         readonly BankState _bank;
         readonly LoanTable _loans;
         readonly AuctionTable _auctions;
+        readonly FinanceState _finance;
+        readonly MoneyTotals _totals;
 
         public readonly GameDatabase Database;
 
@@ -136,6 +191,8 @@ namespace FES.Simulation
             _bank = world.Get<BankState>();
             _loans = world.Get<LoanTable>();
             _auctions = world.Get<AuctionTable>();
+            _finance = world.Get<FinanceState>();
+            _totals = world.Get<MoneyTotals>();
         }
 
         // Clock
@@ -320,6 +377,47 @@ namespace FES.Simulation
         public long CreditLimit => new PlayerBalanceSheet(_world, Database).CreditLimit(_player.LocalContinent);
         /// <summary>Everything the player could pledge, in the coin of the continent they are in.</summary>
         public long CollateralValue => new PlayerBalanceSheet(_world, Database).CollateralValue(_player.LocalContinent);
+        /// <summary>The bank's yearly loan rate for new loans, set each quarter.</summary>
+        public Fx LoanRate(NodeId nation) => Fx.FromRaw(_finance.LoanRate[_banks.NationIndex(nation.Value)]);
+        public FinancialEventKind FinancialEvent(NodeId nation) => _finance.EventOf(_banks.NationIndex(nation.Value));
+
+        // Money totals and statistics (DEC-042, DEC-043)
+
+        /// <summary>Money in the nation now: cash held there and its bank's reserve.</summary>
+        public long NationMoneyTotal(NodeId nation) => Totals.NationTotal(_banks.NationIndex(nation.Value));
+        public long ContinentMoneyTotal(int continent) => Totals.ContinentTotal[continent];
+
+        MoneyTotals Totals
+        {
+            get
+            {
+                _totals.Refresh(_world);
+                return _totals;
+            }
+        }
+
+        /// <summary>The nation's quarterly records, oldest first.</summary>
+        public void GetFinanceRecords(NodeId nation, List<FinanceRecordInfo> into)
+        {
+            into.Clear();
+            int n = _banks.NationIndex(nation.Value);
+            foreach (var r in _finance.Records)
+                into.Add(new FinanceRecordInfo(r.Turn, r.NationTotal[n], r.NationCash[n], r.NationReserve[n], r.NationDeposits[n], r.NationLent[n]));
+        }
+
+        /// <summary>The year the published statistics cover, or -1 before the first new year.</summary>
+        public int PublishedYear => _finance.PublishedYear;
+
+        public PublishedNationStats PublishedNation(NodeId nation)
+        {
+            int n = _banks.NationIndex(nation.Value);
+            return new PublishedNationStats(_finance.PublishedNationTotal[n], Fx.FromRaw(_finance.PublishedReserveRatio[n]),
+                Fx.FromRaw(_finance.PublishedLoanRate[n]));
+        }
+
+        public PublishedContinentStats PublishedContinent(int continent) => new PublishedContinentStats(
+            _finance.PublishedContinentTotal[continent], Fx.FromRaw(_finance.PublishedPriceIndex[continent]),
+            Fx.FromRaw(_finance.PublishedInflation[continent]));
 
         // Currency (per continent)
 

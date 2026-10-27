@@ -10,6 +10,19 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
+### Q-036 [open] When measured money totals drive the price index
+- Registered: 2026-10-27 (Claude added)
+- Context: DEC-042 makes the continent total drive inflation. P9b measures the totals, but in the sample
+  world they grow about twentyfold every half year: where demand goes unmet a market price rises up to
+  15% a week while the pull back to the anchor is 2%, so some prices reach the integer limit within three
+  years, and markets pay sellers without limit. Fed into the price index, that would make inflation run
+  away. P9b keeps the index on the minted coin supply.
+- Options: A) keep the coin supply as the index's money measure; totals are published only  B) switch the
+  index to the published continent total over the first year's total once P10 bounds prices and demand
+  C) a mix of both
+- Claude's recommendation: B, after P10 (price elasticity and household demand) stops the runaway
+- Impact: SYS-BANKING, SYS-MARKETS
+
 ### Q-035 [resolved] What each kind of interest group wants
 - Registered: 2026-10-27 (Claude added)
 - Context: groups push policy each year (DEC-058), but nothing says which way each kind pushes.

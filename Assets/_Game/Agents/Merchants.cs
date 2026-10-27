@@ -214,6 +214,7 @@ namespace FES.Agents
                 return;
             }
             if (++_agents.NegativeCashWeeks[a] < _db.Config.MerchantBankruptWeeks) return;
+            ctx.World.Get<NpcLoanTable>().WriteOff(NpcBorrowers.Merchant(a)); // the bank loses what is still owed
             _cargo.Clear(CargoHolders.Merchant(new AgentId(a)));
             _agents.Node[a] = _agents.Home[a];
             _agents.Destination[a] = -1;

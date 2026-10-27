@@ -76,6 +76,12 @@ namespace FES.Core
         public void Read(BinaryReader reader)
         {
             foreach (var c in _columns) c.Read(reader);
+            OnRead();
+        }
+
+        /// <summary>Called after loading, for tables that keep a lookup over their rows.</summary>
+        protected virtual void OnRead()
+        {
         }
 
         public void Dispose()

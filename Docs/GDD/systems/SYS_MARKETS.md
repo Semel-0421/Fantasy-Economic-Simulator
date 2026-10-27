@@ -37,4 +37,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   copied into a native array like `GoodBaseDemand`.
 
 ## Open questions
+- Q-036: prices where demand goes unmet rise up to 15% a week against a 2% pull to the anchor, so they
+  run away (P9b measured the sample world's prices reaching the integer limit within three years). P10's
+  elasticity should bound them before money totals drive the price index.
 Q-030 (deferred)

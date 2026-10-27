@@ -42,7 +42,8 @@ without scripting. Their counts per node are already in config (`merchants.<leve
     fee; they lose the route's expected encounter share (P8).
   - Capacity per group: weight 4,000 / 4,000 / 2,000 / 1,000 / 400 and size 3,200 / 3,200 / 1,600 /
     800 / 300 per level (`merchants.<level>.max_weight`, `max_size`).
-  - Merchant loans wait for P9b.
+  - Since P9b, an NPC group whose cash ended a week below zero borrows against the cargo it carries
+    (SYS-BANKING); a group going bankrupt leaves its loan unpaid.
 
 ## Arbitrage value
 ```

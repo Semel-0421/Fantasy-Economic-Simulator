@@ -516,6 +516,14 @@ namespace FES.Agents
         {
             var facilities = ctx.World.Get<FacilityTable>();
             ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) -= Price;
+            // [Draft] The seller repays its bank loan from the price; the bank writes off the rest.
+            var loans = ctx.World.Get<NpcLoanTable>();
+            int loan = loans.Find(NpcBorrowers.Facility(Facility.Value));
+            if (loan >= 0)
+            {
+                ctx.World.Get<BankState>().Reserve[loans.Nation[loan]] += Math.Min(Price, loans.Balance[loan]);
+                loans.RemoveRow(loan);
+            }
             facilities.Owner[Facility.Value] = OwnerIds.Player;
             facilities.Mode[Facility.Value] = (byte)ControlMode.Manual;
             facilities.WarehouseClaimUntil[Facility.Value] = -1; // a lost warehouse bought back is the player's again

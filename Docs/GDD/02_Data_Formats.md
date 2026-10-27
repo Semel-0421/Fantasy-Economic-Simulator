@@ -99,6 +99,11 @@ changing a default in code does.
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
 | bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |
+| bank.target_reserve_permille, bank.max_rate_multiplier_permille | 500, 3000 | reserve ratio below which loan rates rise, and the cap on that rise ([Draft]) |
+| bank.npc_loan_term_weeks, bank.npc_buffer_weeks, bank.npc_max_reserve_share_permille | 26, 8, 100 | NPC loans: term, weeks of upkeep borrowed beyond the shortfall, largest share of a reserve one loan takes (0 turns NPC lending off) ([Draft]) |
+| finance.history_quarters | 20 | quarterly records kept (at least 4) |
+| finance.event_chance_permille, finance.event_end_reserve_permille | 20, 500 | chance of a financial event per nation and quarter; reserve ratio that ends one ([Draft]) |
+| finance.bank_run_drain_permille, finance.bank_run_withdraw_permille, finance.rate_spike_permille | 200, 100, 2000 | event effects: reserve drained by a run, deposit share the player may withdraw weekly during a run, rate multiplier of a spike ([Draft]) |
 | facility.<tier>.value | 3000/8000/5000 | collateral value of a level-1 facility (times its level) |
 | license.price_permille, license.merchant_share_permille | 20000, 200 | license price (x Mid base price), share of licensed merchant groups ([Draft]) |
 | guidance.weight.buy_license_permille | 2000 | Trade signal of buying a license |

@@ -120,9 +120,12 @@ namespace FES.Agents
         public readonly NativeColumn<long> ReservePrice;
         /// <summary>The player's bid, or 0.</summary>
         public readonly NativeColumn<long> PlayerBid;
+        /// <summary>1 when the sale repays the player's loan; 0 for a facility seized from an NPC, whose loan is already closed.</summary>
+        public readonly NativeColumn<byte> ForPlayerLoan;
 
-        public override string Key => "agents.auctions";
-        public override int Version => 1;
+        public const string SectionKey = "agents.auctions";
+        public override string Key => SectionKey;
+        public override int Version => 2;
 
         public AuctionTable()
         {
@@ -131,6 +134,7 @@ namespace FES.Agents
             ClosesTurn = Column<int>();
             ReservePrice = Column<long>();
             PlayerBid = Column<long>();
+            ForPlayerLoan = Column<byte>();
         }
 
         public int Find(FacilityId facility)
@@ -140,16 +144,37 @@ namespace FES.Agents
             return -1;
         }
 
-        public void Add(int facility, int nation, int closesTurn, long reservePrice)
+        public void Add(int facility, int nation, int closesTurn, long reservePrice, bool forPlayerLoan = true)
         {
             Facility.Add(facility);
             Nation.Add(nation);
             ClosesTurn.Add(closesTurn);
             ReservePrice.Add(reservePrice);
             PlayerBid.Add(0);
+            ForPlayerLoan.Add((byte)(forPlayerLoan ? 1 : 0));
         }
 
         internal void RemoveRow(int row) => RemoveRowSwapBack(row);
+    }
+
+    /// <summary>Version 1 auctioned only the player's facilities.</summary>
+    public sealed class AuctionTableV1Migration : ISaveMigration
+    {
+        public string SectionKey => AuctionTable.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write((byte)1);
+            }
+            return output.ToArray();
+        }
     }
 
     public readonly struct LoanInfo
@@ -337,8 +362,7 @@ namespace FES.Agents
         public long CreditLimit(int continent) =>
             Math.Max(0, _db.Config.LoanToValue.MulInt(CollateralValue(continent)) - Debt(continent));
 
-        public long FacilityValue(int f) =>
-            _db.Config.FacilityValue[(int)_db.Facilities[_facilities.DefIndex[f]].Tier] * _facilities.Level[f];
+        public long FacilityValue(int f) => NpcLending.FacilityValue(_db, _facilities, f);
 
         /// <summary>Cargo of a holder at the prices of the market nearest to <paramref name="node"/>; goods nobody trades count zero.</summary>
         public long CargoValue(int holder, int node)
@@ -358,7 +382,7 @@ namespace FES.Agents
     /// <summary>
     /// Weekly banking (Finance phase, after the currency): hands newly minted coins from each international
     /// bank to its nations' banks (DEC-042), credits deposit interest, collects loan instalments, seizes
-    /// collateral after the grace period and closes auctions.
+    /// collateral after the grace period, lends to NPCs short of cash and closes auctions.
     /// </summary>
     public sealed class BankSystem : ISimSystem
     {
@@ -378,6 +402,8 @@ namespace FES.Agents
         PlayerBalanceSheet _sheet;
         GroupDirectory _groups;
         GroupTable _groupTable;
+        NpcLoanTable _npcLoans;
+        AgentTable _agents;
         readonly List<CargoItem> _items = new List<CargoItem>();
         readonly List<int> _holders = new List<int>();
 
@@ -403,6 +429,8 @@ namespace FES.Agents
             _sheet = new PlayerBalanceSheet(ctx.World, _db);
             _groupTable = ctx.World.Get<GroupTable>();
             _groups = new GroupDirectory(_groupTable, _nodes);
+            _npcLoans = ctx.World.Get<NpcLoanTable>();
+            _agents = ctx.World.Get<AgentTable>();
         }
 
         /// <summary>Starting reserves: a config share of each continent's coin supply, split evenly over its nations.</summary>
@@ -430,6 +458,8 @@ namespace FES.Agents
                 _bank.PlayerDeposit[n] += _db.Config.DepositInterestPerYear.MulInt(_bank.PlayerDeposit[n]) / SimClock.WeeksPerYear;
 
             for (int r = _loans.Count - 1; r >= 0; r--) Service(ctx, r);
+            for (int r = _npcLoans.Count - 1; r >= 0; r--) ServiceNpc(ctx, r);
+            LendToNpcs(ctx);
             for (int a = _auctions.Count - 1; a >= 0; a--)
                 if (ctx.Turn >= _auctions.ClosesTurn[a]) Close(ctx, a);
         }
@@ -559,6 +589,81 @@ namespace FES.Agents
 
         long Owed(int r) => _loans.Balance[r];
 
+        // Instalments come out of the borrower's cash; after the grace period the bank takes the facility, or
+        // a merchant group's cargo, and writes off what that does not cover (DEC-037, DEC-038).
+        void ServiceNpc(SimContext ctx, int r)
+        {
+            int borrower = _npcLoans.Borrower[r];
+            bool merchant = NpcBorrowers.IsMerchant(borrower, out int a);
+            long cash = merchant ? _agents.Cash[a] : _facilities.Cash[borrower];
+            _npcLoans.Due[r] = Math.Min(_npcLoans.Balance[r], _npcLoans.Due[r] + _npcLoans.WeeklyPayment[r]);
+            long paid = Math.Min(_npcLoans.Due[r], Math.Max(0, cash));
+            if (merchant) _agents.Cash[a] -= paid;
+            else _facilities.Cash[borrower] -= paid;
+            _npcLoans.Balance[r] -= paid;
+            _npcLoans.Due[r] -= paid;
+            _bank.Reserve[_npcLoans.Nation[r]] += paid;
+            if (_npcLoans.Balance[r] == 0)
+            {
+                _npcLoans.RemoveRow(r);
+                return;
+            }
+            _npcLoans.OverdueWeeks[r] = _npcLoans.Due[r] > 0 ? _npcLoans.OverdueWeeks[r] + 1 : 0;
+            if (_npcLoans.OverdueWeeks[r] <= _db.Config.LoanGraceWeeks) return;
+            if (!merchant)
+            {
+                NpcLending.SeizeFacility(ctx, borrower);
+                return;
+            }
+
+            int nation = _npcLoans.Nation[r];
+            int holder = CargoHolders.Merchant(new AgentId(a));
+            _cargo.Collect(holder, _items);
+            foreach (var item in _items)
+            {
+                if (!_flows.TryFindNearestMarket(_agents.Node[a], item.Good, out _, out int cell)) continue;
+                _cargo.Change(holder, item.Good, -item.Quantity);
+                _flows.Sell(cell, item.Quantity);
+                // Proceeds beyond the debt go to the bank too (DEC-039).
+                _bank.Reserve[nation] += (long)item.Quantity * _markets.Price[cell];
+            }
+            _npcLoans.RemoveRow(r);
+            ctx.Events.Publish(new NpcLoanDefaulted(FacilityId.None, new AgentId(a), new NodeId(_banks.NationNode(nation)), ctx.Turn));
+        }
+
+        // NPCs whose cash ran out borrow the shortfall plus a few weeks of upkeep, up to the loan-to-value share
+        // of their collateral: a facility's value, or the cargo a merchant group carries (DEC-037, DEC-038).
+        void LendToNpcs(SimContext ctx)
+        {
+            var config = _db.Config;
+            if (config.NpcLoanMaxReserveShare.Raw <= 0) return;
+            for (int f = 0; f < _facilities.Count; f++)
+            {
+                if (_facilities.Cash[f] >= 0 || _facilities.Owner[f] != OwnerIds.Npc) continue;
+                int nation = NationOf(_facilities.Node[f]);
+                if (nation < 0 || _npcLoans.Find(NpcBorrowers.Facility(f)) >= 0) continue;
+                long need = -_facilities.Cash[f] + config.NpcLoanBufferWeeks * NpcLending.FacilityUpkeep(_db, _facilities, f);
+                long limit = config.LoanToValue.MulInt(NpcLending.FacilityValue(_db, _facilities, f));
+                _facilities.Cash[f] += NpcLending.Lend(ctx.World, config, NpcBorrowers.Facility(f), nation, Math.Min(need, limit));
+            }
+            for (int a = 0; a < _agents.Count; a++)
+            {
+                if (_agents.Cash[a] >= 0 || _agents.Owner[a] != OwnerIds.Npc) continue;
+                int node = _agents.Node[a];
+                int nation = NationOf(node);
+                if (nation < 0 || _npcLoans.Find(NpcBorrowers.Merchant(a)) >= 0) continue;
+                long need = -_agents.Cash[a] + config.NpcLoanBufferWeeks * config.MerchantUpkeep[_agents.Scale[a]];
+                long limit = config.LoanToValue.MulInt(_sheet.CargoValue(CargoHolders.Merchant(new AgentId(a)), node));
+                _agents.Cash[a] += NpcLending.Lend(ctx.World, config, NpcBorrowers.Merchant(a), nation, Math.Min(need, limit));
+            }
+        }
+
+        int NationOf(int node)
+        {
+            int nationNode = _nodes.AncestorAt(node, WorldLevel.Nation);
+            return nationNode < 0 ? -1 : _banks.NationIndex(nationNode);
+        }
+
         long PendingAuctions(int nation, int continent)
         {
             long sum = 0;
@@ -607,6 +712,7 @@ namespace FES.Agents
         {
             int f = _auctions.Facility[a];
             int nation = _auctions.Nation[a];
+            bool forPlayerLoan = _auctions.ForPlayerLoan[a] != 0;
             int facilityContinent = _nodes.Continent[_facilities.Node[f]];
             long bid = _auctions.PlayerBid[a];
             bool won = bid >= _auctions.ReservePrice[a] && bid > 0 && Pay(facilityContinent, bid);
@@ -624,7 +730,7 @@ namespace FES.Agents
             }
 
             long value = _sheet.Convert(price, facilityContinent, _sheet.NationContinent(nation));
-            int r = _loans.Find(nation);
+            int r = forPlayerLoan ? _loans.Find(nation) : -1;
             long paid = r < 0 ? 0 : Math.Min(value, _loans.Balance[r]);
             if (paid > 0) Repay(r, paid);
             _bank.Reserve[nation] += value - paid;
@@ -705,6 +811,14 @@ namespace FES.Agents
             var bank = ctx.World.Get<BankState>();
             if (Amount > 0) return ctx.World.Get<PlayerState>().LocalCoins >= Amount ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
             if (bank.PlayerDeposit[nation] < -Amount) return CommandResult.Fail("The account does not hold that much.");
+            var finance = ctx.World.Get<FinanceState>();
+            if (finance.EventOf(nation) == FinancialEventKind.BankRun)
+            {
+                // During a run the bank pays out a share of the deposit, once a week (DEC-044).
+                if (finance.LastWithdrawTurn[nation] == ctx.Turn) return CommandResult.Fail("During a bank run, one withdrawal a week.");
+                long cap = ctx.Services.Get<GameDatabase>().Config.BankRunWithdrawShare.MulInt(bank.PlayerDeposit[nation]);
+                if (-Amount > cap) return CommandResult.Fail($"During a bank run, at most {cap} can be withdrawn.");
+            }
             return bank.Reserve[nation] >= -Amount ? CommandResult.Success : CommandResult.Fail("The bank cannot pay that out now.");
         }
 
@@ -715,6 +829,7 @@ namespace FES.Agents
             ctx.World.Get<PlayerState>().LocalCoins -= Amount;
             bank.PlayerDeposit[nation] += Amount;
             bank.Reserve[nation] += Amount;
+            if (Amount < 0) ctx.World.Get<FinanceState>().LastWithdrawTurn[nation] = ctx.Turn;
         }
     }
 
@@ -789,8 +904,9 @@ namespace FES.Agents
 
     /// <summary>
     /// Borrows from the bank whose branch the player is at, in local coins: up to the credit limit on the
-    /// collateral and the bank's reserve (DEC-037, DEC-046). Interest for the term is added up front and the
-    /// whole is repaid in equal weekly instalments. One loan per bank at a time.
+    /// collateral and the bank's reserve (DEC-037, DEC-046), unless a credit crunch stops lending. Interest at
+    /// the bank's current rate for the term is added up front and the whole is repaid in equal weekly
+    /// instalments. One loan per bank at a time.
     /// </summary>
     public sealed class TakeLoanCommand : ICommand
     {
@@ -804,6 +920,8 @@ namespace FES.Agents
             int nation = PlayerBank.Branch(ctx, out var error);
             if (error != null) return CommandResult.Fail(error);
             if (ctx.World.Get<LoanTable>().Find(nation) >= 0) return CommandResult.Fail("This bank's loan is not repaid yet.");
+            if (ctx.World.Get<FinanceState>().EventOf(nation) == FinancialEventKind.CreditCrunch)
+                return CommandResult.Fail("A credit crunch: the bank makes no new loans.");
             if (ctx.World.Get<BankState>().Reserve[nation] < Amount) return CommandResult.Fail("The bank has no coins left to lend.");
             var sheet = new PlayerBalanceSheet(ctx.World, ctx.Services.Get<GameDatabase>());
             return sheet.CreditLimit(ctx.World.Get<PlayerState>().LocalContinent) >= Amount
@@ -815,7 +933,8 @@ namespace FES.Agents
         {
             int nation = PlayerBank.Branch(ctx, out _);
             var config = ctx.Services.Get<GameDatabase>().Config;
-            long interest = config.LoanInterestPerYear.MulInt(Amount) * config.LoanTermWeeks / SimClock.WeeksPerYear;
+            var rate = Fx.FromRaw(ctx.World.Get<FinanceState>().LoanRate[nation]);
+            long interest = FinanceRules.Interest(rate, Amount, config.LoanTermWeeks);
             long balance = Amount + interest;
             long weekly = (balance + config.LoanTermWeeks - 1) / config.LoanTermWeeks;
             ctx.World.Get<BankState>().Reserve[nation] -= Amount;

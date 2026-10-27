@@ -33,6 +33,9 @@ namespace FES.Agents
             BankSystem.SetUpReserves(bank, banks, nodes, builder.World.Get<CurrencyState>(), db.Config);
             builder.World.Add(new LoanTable());
             builder.World.Add(new AuctionTable());
+            builder.World.Add(new NpcLoanTable());
+            builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
+            builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
 
             var facilities = builder.World.Add(new FacilityTable());
             SpawnFacilities(facilities, nodes, db, seed);
@@ -53,6 +56,7 @@ namespace FES.Agents
             builder.AddMigration(new FacilityTableV1Migration());
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
+            builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
             builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
 
@@ -63,6 +67,7 @@ namespace FES.Agents
             builder.AddSystem(new GuidanceSystem());
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
+            builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new RoadSystem());
             builder.AddSystem(new GroupSystem());
         }

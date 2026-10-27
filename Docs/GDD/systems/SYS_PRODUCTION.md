@@ -56,7 +56,8 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - A facility that can afford only part of its inputs: counts as short (all or nothing).
 
 ## Unity implementation notes
-Cash, inputs, income, bankruptcy and player output (P4) and specialties (P6) are implemented; loans are not.
+Cash, inputs, income, bankruptcy and player output (P4), specialties (P6) and NPC loans (P9b, see
+SYS-BANKING) are implemented.
 - `ProductionJob` (single-threaded Burst) runs two passes per facility in facility order: check every
   input's stock and the total cost, then buy (stock out, through supply into demand, like
   `MarketFlows.Buy`), pay, and produce. An input with no market anywhere means the facility never produces.

@@ -15,8 +15,9 @@ namespace FES.Tests
         const string City = "aur_n1_r1_c1"; // a branch of aur_n1 and Aurelia's international bank
 
         // Nations pay their paved roads' upkeep from bank reserves; these tests follow reserves exactly.
-        static GameSimulation Build(ulong seed = 42) => SimulationBuilder.FromData(
-            TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nroad.upkeep,0\n"), seed).Build();
+        // Without road upkeep, NPC loans or financial events, reserves move only by what a test does.
+        static GameSimulation Build(ulong seed = 42) => SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
+            "key,value\nroad.upkeep,0\nbank.npc_max_reserve_share_permille,0\nfinance.event_chance_permille,0\n"), seed).Build();
 
         static NodeId Node(GameSimulation sim, string key)
         {

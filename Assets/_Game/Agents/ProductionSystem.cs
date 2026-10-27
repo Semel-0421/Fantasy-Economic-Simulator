@@ -228,6 +228,12 @@ namespace FES.Agents
         void GoBankrupt(SimContext ctx, int f)
         {
             bool wasPlayer = _facilities.Owner[f] == OwnerIds.Player;
+            // A bankrupt NPC facility with a bank loan goes to the bank's auction instead (DEC-037).
+            if (!wasPlayer && ctx.World.Get<NpcLoanTable>().Find(NpcBorrowers.Facility(f)) >= 0)
+            {
+                NpcLending.SeizeFacility(ctx, f);
+                return;
+            }
             int claimUntil = wasPlayer ? ctx.Turn + _db.Config.LostWarehouseWeeks : -1;
             _facilities.Owner[f] = OwnerIds.Npc;
             _facilities.Mode[f] = (byte)ControlMode.Automated;

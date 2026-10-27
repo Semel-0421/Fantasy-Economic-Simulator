@@ -6,6 +6,7 @@ namespace FES.Core
     public sealed class SimClock : IPersistentComponent
     {
         public const int WeeksPerYear = 52;
+        public const int WeeksPerQuarter = 13;
 
         public int Turn { get; private set; }
         public ulong Seed { get; private set; }
@@ -13,6 +14,8 @@ namespace FES.Core
         public int Year => Turn / WeeksPerYear;
         public int Week => Turn % WeeksPerYear;
         public bool IsNewYear => Week == 0;
+        /// <summary>The last week of a quarter, when the quarter's financial record is taken (DEC-043).</summary>
+        public bool IsQuarterEnd => Turn % WeeksPerQuarter == WeeksPerQuarter - 1;
 
         public SimClock(ulong seed) => Seed = seed;
 

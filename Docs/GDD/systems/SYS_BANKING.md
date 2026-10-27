@@ -74,7 +74,38 @@ faster than its cash at the risk of losing what it owns.
     exceeds the debt goes to the bank. Debt left after all assets stays owed.
   - A winning bid is paid when the auction closes, from the coins and then the deposits of the
     facility's continent; without a winning bid an NPC buys at the reserve price.
-  - Only the player borrows for now; NPC loans come with P9b.
+- [Draft] Claude's proposals, built in P9b:
+  - A nation's money total is the positive cash held at its nodes (player, merchant groups, facilities,
+    interest groups) plus its bank's reserve; deposits sit in the reserve and are not added again. Coins
+    held outside any nation (carried abroad, or at continent-level nodes) count only toward their
+    continent's total, as does the international bank's reserve.
+  - Reserve ratio = reserve / (reserve + loan balances owed to the bank, the player's and NPCs'). It is
+    1.0 for a bank that has lent nothing.
+  - Loan rate = base rate (10%) times target ratio / reserve ratio when the ratio is below the target
+    (50%), capped at 3 times the base; taken at each quarter's end and used for all new loans
+    (`bank.target_reserve_permille`, `bank.max_rate_multiplier_permille`).
+  - NPC facilities and merchant groups whose cash ended a week below zero borrow the shortfall plus 8
+    weeks of upkeep from their nation's bank, up to 50% of their collateral: the facility's value, or the
+    cargo a merchant group carries at nearest-market prices (an idle, empty group gets nothing). One loan
+    per borrower, at most 10% of the bank's reserve each, repaid over 26 weeks
+    (`bank.npc_buffer_weeks`, `bank.npc_max_reserve_share_permille`, `bank.npc_loan_term_weeks`).
+  - NPC instalments come out of the borrower's cash. After the grace period a facility is seized and
+    auctioned (the player may bid; the proceeds go to the bank); a merchant group's cargo is sold at the
+    nearest market and the rest is written off. An NPC facility going bankrupt with a loan is seized the
+    same way; a merchant group going bankrupt leaves its loan unpaid. Buying an NPC facility repays its
+    loan from the price; the bank writes off what the price does not cover.
+  - Quarters are 13 weeks; a record is taken in the last week of each quarter (turns 12, 25, 38, 51 of a
+    year), and the last 20 records are kept (`finance.history_quarters`). Each new year publishes, from the
+    last record, every nation's total, reserve ratio and loan rate and every continent's total, price
+    index and inflation (change of the price index since the previous publication).
+  - Financial events: 2% chance per nation and quarter (`finance.event_chance_permille`), one of bank run,
+    credit crunch and rate spike with equal chance. A bank run takes 20% of the reserve out at once (the
+    public's withdrawals) and lets the player withdraw at most 10% of the deposit, once a week; a credit
+    crunch stops new loans to the player and NPCs; a rate spike doubles the loan rate. An event ends at a
+    quarter's end at least 13 weeks after it began once the reserve ratio is 50% or more
+    (`finance.bank_run_drain_permille`, `finance.bank_run_withdraw_permille`, `finance.rate_spike_permille`,
+    `finance.event_end_reserve_permille`).
+  - The price index still follows the minted coin supply; measured totals do not drive it yet (Q-036).
 
 ## Flow (loan)
 ```mermaid
@@ -94,7 +125,7 @@ stateDiagram-v2
   sell goods for local coins.
 
 ## Unity implementation notes
-P9 built the player's banking; P9b adds NPC loans, money totals, records, statistics and financial events.
+P9 built the player's banking; P9b added NPC loans, money totals, records, statistics and financial events.
 - `NodeBanks` (world component): branches are the nodes from nation down to city level; the international
   bank is the `international_bank` flag in `map_nodes.csv` (Claude-chosen name, [Draft]), at most one per
   continent, on a branch.
@@ -105,10 +136,14 @@ P9 built the player's banking; P9b adds NPC loans, money totals, records, statis
   `RepayLoanCommand`, `BidCommand`; `BuyGoodsCommand` can pay from the deposit at a branch.
   `PlayerBalanceSheet` values collateral and debt for limits and seizure. A seized facility belongs to
   `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility.
-- NPC loans at full scale (8,500 facilities, 9,250 merchant groups) belong in a Burst job over a loan
-  table, not per-entity managed code.
-- A persistent `BankTable` holds accounts per (holder, nation) and loans per (holder, bank); exchange reads
-  `CurrencyState.ExchangeRate`, which already follows the price index.
+- `NpcLoanTable` (persistent, with a borrower lookup) holds NPC loans; `BankSystem` services them and lends
+  to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the
+  shared lending and seizure steps; `AuctionTable` (version 2) marks whether a sale repays the player's
+  loan.
+- `MoneyTotals` (not saved) computes the totals at each quarter's end, and on demand for the view.
+  `FinanceState` (persistent) holds each nation's loan rate and event, the quarterly `FinanceRecord`s and
+  the published statistics; `FinanceSystem` runs after `BankSystem` (about 0.7 ms per full-scale turn on
+  average). The view exposes totals, rates, events, records and published statistics.
 - Seizing cart cargo happens when the borrower is next at a node with a branch of the lending nation
   ([Draft], Claude's proposal; a moving cart has no fixed place).
 - Loan servicing runs in the Finance phase next to `CurrencySystem`; seizure changes facility ownership

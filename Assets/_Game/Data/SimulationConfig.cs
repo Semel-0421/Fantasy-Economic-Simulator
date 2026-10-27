@@ -147,6 +147,28 @@ namespace FES.Data
         public Fx AuctionReserveShare = Fx.FromPermille(800);
         /// <summary>Value of a level-1 facility as collateral, per industry tier; scales with level.</summary>
         public readonly long[] FacilityValue = { 3000, 8000, 5000 };
+        /// <summary>Reserve ratio (reserve over reserve plus loans owed) below which loan rates rise (DEC-042).</summary>
+        public Fx TargetReserveRatio = Fx.FromPermille(500);
+        /// <summary>Cap on the loan rate's rise from low reserves, as a multiple of the base rate.</summary>
+        public Fx MaxLoanRateMultiplier = Fx.FromInt(3);
+        /// <summary>Term of NPC loans (DEC-037).</summary>
+        public int NpcLoanTermWeeks = 26;
+        /// <summary>An NPC borrowing to cover a shortfall also borrows this many weeks of its upkeep.</summary>
+        public int NpcLoanBufferWeeks = 8;
+        /// <summary>One NPC loan takes at most this share of the lending bank's reserve; 0 turns NPC lending off.</summary>
+        public Fx NpcLoanMaxReserveShare = Fx.FromPermille(100);
+        /// <summary>Quarterly records kept (DEC-043).</summary>
+        public int FinanceHistoryQuarters = 20;
+        /// <summary>Chance per nation and quarter that a financial event starts (DEC-044).</summary>
+        public int FinancialEventChancePermille = 20;
+        /// <summary>An event ends once the reserve ratio is back above this, after at least a quarter (DEC-047).</summary>
+        public Fx FinancialEventEndReserveRatio = Fx.FromPermille(500);
+        /// <summary>Share of the reserve the public withdraws when a bank run starts.</summary>
+        public Fx BankRunDrain = Fx.FromPermille(200);
+        /// <summary>During a bank run the player may withdraw at most this share of the deposit, once a week.</summary>
+        public Fx BankRunWithdrawShare = Fx.FromPermille(100);
+        /// <summary>Loan rates are multiplied by this during a rate spike.</summary>
+        public Fx RateSpikeMultiplier = Fx.FromInt(2);
 
         /// <summary>A license costs this times the good's Mid base price (DEC-024).</summary>
         public Fx LicensePriceMultiplier = Fx.FromInt(20);
@@ -331,6 +353,20 @@ namespace FES.Data
             AuctionWeeks = Int(v, "bank.auction_weeks", AuctionWeeks);
             if (AuctionWeeks < 1) throw new FormatException("config.csv: bank.auction_weeks must be >= 1.");
             AuctionReserveShare = Permille(v, "bank.auction_reserve_permille", AuctionReserveShare);
+            TargetReserveRatio = Permille(v, "bank.target_reserve_permille", TargetReserveRatio);
+            MaxLoanRateMultiplier = Permille(v, "bank.max_rate_multiplier_permille", MaxLoanRateMultiplier);
+            if (MaxLoanRateMultiplier.Raw < Fx.One.Raw) throw new FormatException("config.csv: bank.max_rate_multiplier_permille must be >= 1000.");
+            NpcLoanTermWeeks = Int(v, "bank.npc_loan_term_weeks", NpcLoanTermWeeks);
+            if (NpcLoanTermWeeks < 1) throw new FormatException("config.csv: bank.npc_loan_term_weeks must be >= 1.");
+            NpcLoanBufferWeeks = Int(v, "bank.npc_buffer_weeks", NpcLoanBufferWeeks);
+            NpcLoanMaxReserveShare = Permille(v, "bank.npc_max_reserve_share_permille", NpcLoanMaxReserveShare);
+            FinanceHistoryQuarters = Int(v, "finance.history_quarters", FinanceHistoryQuarters);
+            if (FinanceHistoryQuarters < 4) throw new FormatException("config.csv: finance.history_quarters must be >= 4.");
+            FinancialEventChancePermille = Int(v, "finance.event_chance_permille", FinancialEventChancePermille);
+            FinancialEventEndReserveRatio = Permille(v, "finance.event_end_reserve_permille", FinancialEventEndReserveRatio);
+            BankRunDrain = Permille(v, "finance.bank_run_drain_permille", BankRunDrain);
+            BankRunWithdrawShare = Permille(v, "finance.bank_run_withdraw_permille", BankRunWithdrawShare);
+            RateSpikeMultiplier = Permille(v, "finance.rate_spike_permille", RateSpikeMultiplier);
             LicensePriceMultiplier = Permille(v, "license.price_permille", LicensePriceMultiplier);
             LicensedMerchantPermille = Int(v, "license.merchant_share_permille", LicensedMerchantPermille);
             TollRate = Permille(v, "toll.tariff_permille", TollRate);

@@ -14,6 +14,10 @@ namespace FES.Tests
     {
         const string City = "aur_n1_r1_c1"; // a branch of aur_n1 and Aurelia's international bank
 
+        // Nations pay their paved roads' upkeep from bank reserves; these tests follow reserves exactly.
+        static GameSimulation Build(ulong seed = 42) => SimulationBuilder.FromData(
+            TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nroad.upkeep,0\n"), seed).Build();
+
         static NodeId Node(GameSimulation sim, string key)
         {
             Assert.IsTrue(sim.View.TryFindNode(key, out var node), key);
@@ -47,7 +51,7 @@ namespace FES.Tests
         [Test]
         public void Branches_AreCitiesAndAbove_InternationalBanksAreMarked()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var view = sim.View;
             Assert.IsTrue(view.IsBankBranch(Node(sim, City)));
             Assert.IsTrue(view.IsBankBranch(Node(sim, "aur_n1_r1")));
@@ -66,7 +70,7 @@ namespace FES.Tests
         [Test]
         public void Reserves_StartAsAShareOfCoinSupply_AndReceiveMintedCoins()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var currency = sim.World.Get<CurrencyState>();
             var nation = NationOf(sim, City);
             int continent = sim.View.ContinentOf(nation);
@@ -82,7 +86,7 @@ namespace FES.Tests
         [Test]
         public void Deposits_AreMadeAtBranches_AndEarnInterest()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var player = PlaceAt(sim, City, 200_000);
             var nation = NationOf(sim, City);
             long reserve = sim.View.BankReserve(nation);
@@ -109,7 +113,7 @@ namespace FES.Tests
         [Test]
         public void Purchases_AtABranch_CanBePaidFromTheDeposit()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             for (int t = 0; t < 3; t++) sim.AdvanceTurn();
             var player = PlaceAt(sim, City, 5_000);
             var nation = NationOf(sim, City);
@@ -134,7 +138,7 @@ namespace FES.Tests
         [Test]
         public void Exchange_HappensAtTheInternationalBank_WithAFee()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var player = PlaceAt(sim, City, 10_000);
             int home = player.LocalContinent, away = 1 - home;
             var currency = sim.World.Get<CurrencyState>();
@@ -157,7 +161,7 @@ namespace FES.Tests
         [Test]
         public void Loans_AreLimitedByCollateral_AndTheReserve()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var player = PlaceAt(sim, City, 0);
             var nation = NationOf(sim, City);
             Assert.AreEqual(0, sim.View.CreditLimit);
@@ -202,7 +206,7 @@ namespace FES.Tests
         [Test]
         public void UnpaidLoan_LeadsToSeizure_AndAuctionToAnNpc()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var player = PlaceAt(sim, City, 0);
             var nation = NationOf(sim, City);
             int f = OwnCityFacility(sim);
@@ -249,7 +253,7 @@ namespace FES.Tests
         [Test]
         public void Seizure_TakesDepositsFirst_AndThePlayerCanBuyBackAtAuction()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             var player = PlaceAt(sim, City, 0);
             int f = OwnCityFacility(sim);
             sim.Actions.TakeLoan(3_000);
@@ -293,7 +297,7 @@ namespace FES.Tests
         [Test]
         public void BankState_SurvivesSaveAndLoad()
         {
-            using var sim = TestWorlds.BuildSample();
+            using var sim = Build();
             PlaceAt(sim, City, 5_000);
             OwnCityFacility(sim);
             sim.Actions.Deposit(1_000);
@@ -301,7 +305,7 @@ namespace FES.Tests
             sim.AdvanceTurn();
             using var buffer = new System.IO.MemoryStream();
             sim.Save(buffer);
-            using var copy = TestWorlds.BuildSample(seed: 5);
+            using var copy = Build(seed: 5);
             buffer.Position = 0;
             copy.Load(buffer);
             Assert.AreEqual(sim.ComputeHash(), copy.ComputeHash());

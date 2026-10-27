@@ -29,6 +29,7 @@ namespace FES.Data
                     SpecialtySurchargePermille = nodes.GetIntOr(r, "specialty_surcharge_permille", -1),
                     InternationalBank = nodes.GetIntOr(r, "international_bank", 0) != 0,
                     DangerPermille = nodes.GetIntOr(r, "danger_permille", -1),
+                    Port = nodes.GetIntOr(r, "port", 0) != 0,
                 });
             }
             if (_source.Exists(RoutesFile))
@@ -46,6 +47,7 @@ namespace FES.Data
                         Terrain = routes.GetStringOr(r, "terrain", string.Empty).Length == 0
                             ? RouteTerrain.Road
                             : routes.GetEnum<RouteTerrain>(r, "terrain"),
+                        Paved = routes.GetIntOr(r, "paved", 0) != 0,
                     });
                 }
             }

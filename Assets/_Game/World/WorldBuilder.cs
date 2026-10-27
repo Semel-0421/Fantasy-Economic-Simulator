@@ -165,6 +165,8 @@ namespace FES.World
             builder.World.Add(new NodeTolls(map, nodes, db.Config));
             builder.World.Add(new NodeBanks(map, nodes));
             builder.World.Add(new RouteHazards(map, nodes, routes, db.Config));
+            builder.World.Add(new NodePorts(map, nodes, routes));
+            builder.World.Add(new RoadState(map, routes, builder.World.Get<NodeBanks>(), nodes));
         }
     }
 }

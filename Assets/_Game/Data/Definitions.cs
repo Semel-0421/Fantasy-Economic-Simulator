@@ -189,6 +189,8 @@ namespace FES.Data
         public bool InternationalBank;
         /// <summary>Road danger of a region, in permille of the normal level; -1 = config default (DEC-026).</summary>
         public int DangerPermille = -1;
+        /// <summary>Ships are traded here and water routes may start and end here (DEC-053).</summary>
+        public bool Port;
     }
 
     public sealed class RouteDef
@@ -200,6 +202,8 @@ namespace FES.Data
         /// <summary>Paid once per trip, whatever the cargo (DEC-017).</summary>
         public int BaseFee;
         public RouteTerrain Terrain;
+        /// <summary>Paved from the start (DEC-054).</summary>
+        public bool Paved;
     }
 
     /// <summary>World layout. Produced by a handcrafted source today, by a procedural generator later.</summary>
@@ -219,10 +223,11 @@ namespace FES.Data
                 h = DetHash.Combine(h, DetHash.Combine((ulong)(uint)n.TariffPermille, (ulong)(uint)n.SpecialtySurchargePermille));
                 if (n.InternationalBank) h = DetHash.Combine(h, DetHash.Of("international_bank"));
                 h = DetHash.Combine(h, (ulong)(uint)n.DangerPermille);
+                if (n.Port) h = DetHash.Combine(h, DetHash.Of("port"));
             }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),
-                    DetHash.Combine((ulong)(uint)r.TravelTurns, DetHash.Combine((ulong)(uint)r.CostPerUnit, DetHash.Combine((ulong)(uint)r.BaseFee, (ulong)r.Terrain))))));
+                    DetHash.Combine((ulong)(uint)r.TravelTurns, DetHash.Combine((ulong)(uint)r.CostPerUnit, DetHash.Combine((ulong)(uint)r.BaseFee, DetHash.Combine((ulong)r.Terrain, r.Paved ? 1UL : 0UL)))))));
             return h;
         }
     }

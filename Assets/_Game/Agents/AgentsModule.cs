@@ -46,6 +46,7 @@ namespace FES.Agents
             builder.AddMigration(new PlayerStateV2Migration());
             builder.AddMigration(new FacilityTableV1Migration());
             builder.AddMigration(new AgentTableV1Migration());
+            builder.AddMigration(new PlayerShipV1Migration());
 
             builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());
@@ -54,6 +55,7 @@ namespace FES.Agents
             builder.AddSystem(new GuidanceSystem());
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
+            builder.AddSystem(new RoadSystem());
         }
 
         /// <summary>A random village from the world seed (DEC-040), unless config names a start node.</summary>

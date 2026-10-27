@@ -151,16 +151,16 @@ namespace FES.Tests
         }
 
         [Test]
-        public void Ship_IsBoughtInCities_AndCountsAsCollateral()
+        public void Ship_IsBoughtAtPorts_AndCountsAsCollateral()
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
-            PlaceAt(sim, "aur_n1_r1_c1_v1", config.ShipPrice);
+            PlaceAt(sim, "aur_n1_r1_c1", config.ShipPrice);
             sim.Actions.BuyShip();
             sim.AdvanceTurn();
-            Assert.IsFalse(sim.View.OwnsShip); // villages sell no ships
+            Assert.IsFalse(sim.View.OwnsShip); // a city, but not a port
 
-            PlaceAt(sim, "aur_n1_r1_c1", config.ShipPrice);
+            PlaceAt(sim, "aur_n1_r2", config.ShipPrice);
             sim.Actions.BuyShip();
             sim.Actions.BuyShip();
             sim.AdvanceTurn();

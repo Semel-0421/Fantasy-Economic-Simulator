@@ -3,12 +3,30 @@ doc: DECISIONS
 title: Decision log and open questions
 status: draft
 updated: 2026-10-27
-related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, SYS-PLAYER-START, ROADMAP]
+related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, SYS-PLAYER-START, SYS-INFRASTRUCTURE, SYS-INTEREST-GROUPS, ROADMAP]
 ---
 
 # Decision log and open questions
 
 ## Open questions
+
+### Q-034 [open] How interest groups influence policy
+- Registered: 2026-10-27 (Claude added)
+- Context: groups are political forces too (DEC-055), but nothing says what they can change or how.
+- Open: which policies move (tariff and surcharge rates, which goods need licenses, license prices, road
+  building, minting) · where influence comes from (assets, cash spent on lobbying, guild membership) · how
+  a nation decides (strongest group wins, weighted vote, yearly review) · whether the player can lobby
+- Impact: SYS-INTEREST-GROUPS, SYS-TRAVEL-COSTS, SYS-LICENSES
+
+### Q-033 [open] How the player relates to interest groups
+- Registered: 2026-10-27
+- Context: asked in the interest group form without a recommendation; the user accepted only the
+  recommended answers, so this stays open.
+- Options (several can apply): A) found a company (the existing command becomes the player's company)
+  B) join guilds for a fee, for their benefits  C) buy and sell company shares  D) bid when state
+  enterprises are privatized
+- Claude's recommendation: A and B first; C and D later
+- Impact: SYS-INTEREST-GROUPS
 
 ### Q-032 [resolved] When a facility counts as out of cash, and what happens to its warehouse
 - Registered: 2026-10-27 (Claude added)
@@ -259,6 +277,39 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ## Decision log
+
+### DEC-055 Economic interest groups
+- Date: 2026-10-27
+- Decision: interest groups are both asset owners and political forces. Companies run facilities and
+  merchant groups across regions (the player's company is one); guilds are city and trade associations
+  with membership, running insurance, guild halls and license recommendations; state enterprises belong
+  to nations (the state banks, monopolies on strategic goods); private enterprises are small personal or
+  family businesses. At the start every NPC facility and merchant group belongs to a group.
+- Reason: user requirement (memo: companies, guilds, state and private enterprises); details from the
+  decision form's recommendations
+- Alternatives: asset owners only (rejected) · political forces only (rejected) · some NPC businesses left
+  independent (rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md); open: Q-033, Q-034
+
+### DEC-054 Paved roads
+- Date: 2026-10-27
+- Decision: paving lowers a route's per-unit charge and its encounter chance. Some roads are paved in the
+  map data from the start; the player and interest groups can pay to build more. A road whose upkeep is
+  not paid slowly decays.
+- Reason: user requirement (memo: paved roads); details from the decision form's recommendations
+- Alternatives: fewer travel turns (rejected) · easing mountain penalties (rejected) · nations building
+  over time (rejected) · permanent roads (rejected) · builders charging tolls (rejected)
+- Impact: [SYS-INFRASTRUCTURE](systems/SYS_INFRASTRUCTURE.md), SYS-TRAVEL-COSTS, SYS-ROUTE-HAZARDS
+
+### DEC-053 Ports
+- Date: 2026-10-27
+- Decision: the map data marks ports. Ships are bought and sold only at ports, water routes connect ports
+  only, and a ship stays docked at the port where the player lands.
+- Reason: user requirement (memo: ports); details from the decision form's recommendations
+- Alternatives: ports from a coast tag (rejected) · every end of a water route (rejected) · harbour dues
+  (rejected) · port market bonus (rejected)
+- Previous: ships bought in any city and travelling with the player (P8 draft, replaced)
+- Impact: [SYS-INFRASTRUCTURE](systems/SYS_INFRASTRUCTURE.md), [SYS-ROUTE-HAZARDS](systems/SYS_ROUTE_HAZARDS.md)
 
 ### DEC-052 A lost facility's warehouse can be emptied for a while
 - Date: 2026-10-27

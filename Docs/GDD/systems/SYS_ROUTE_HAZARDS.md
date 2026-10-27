@@ -44,7 +44,8 @@ Choosing a route trades speed and cost against risk.
   - A cash loss takes from the departure coins left after paying; the insurance refund is paid in them.
   - The region of a route is the destination's region.
   - Ships are sold in any node of city level or above (no ports yet); the ship travels with the player,
-    is used only on water routes, and on land the cart's limits still apply.
+    is used only on water routes, and on land the cart's limits still apply. (Replaced by DEC-053: ships
+    are bought at ports and stay docked where the player lands; see SYS-INFRASTRUCTURE.)
   - The ship is collateral at its price and is seized after the cart, before facilities, at the auction
     share of its price.
   - Detailed merchants roll without guards or insurance; aggregate flows lose the expected share

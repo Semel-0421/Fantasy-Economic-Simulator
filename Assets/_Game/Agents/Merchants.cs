@@ -67,6 +67,7 @@ namespace FES.Agents
         NativeArray<long> _nodeCapacity;
         NativeArray<long> _routeBudget;
         NativeArray<long> _routeExpectedLoss;
+        NativeArray<long> _routeCostPerUnit;
         NativeArray<byte> _nodeCategorySpecialty;
         NativeArray<byte> _goodLicensed;
 
@@ -89,12 +90,8 @@ namespace FES.Agents
             int categories = _flows.CategoryCount;
             _nodeCapacity = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _routeBudget = new NativeArray<long>(_routes.Count, Allocator.Persistent);
-            // Far regions apply the expected loss (DEC-026): the encounter chance (without the value term),
-            // half of which hits cargo, times the cargo loss share.
             _routeExpectedLoss = new NativeArray<long>(_routes.Count, Allocator.Persistent);
-            var hazards = ctx.World.Get<RouteHazards>();
-            for (int r = 0; r < _routes.Count; r++)
-                _routeExpectedLoss[r] = (Fx.FromRaw(hazards.BaseDanger[r]) * _db.Config.EncounterCargoLoss).Raw / 2;
+            _routeCostPerUnit = new NativeArray<long>(_routes.Count, Allocator.Persistent);
             _nodeCategorySpecialty = new NativeArray<byte>(_nodes.Count * categories, Allocator.Persistent);
             var specialties = ctx.World.Get<NodeSpecialties>();
             for (int n = 0; n < _nodes.Count; n++)
@@ -166,13 +163,15 @@ namespace FES.Agents
                     int r = _routes.RouteIndex[k];
                     int to = _routes.To[r];
                     if (_nodes.Continent[to] != _nodes.Continent[node] || !_markets.TryFindCell(to, good, out int toCell)) continue;
-                    long baseFee = _routes.BaseFee[r], perUnit = _routes.CostPerUnit[r];
+                    long baseFee = _routes.BaseFee[r];
+                    var perUnit = _costs.PerUnitCharge(r);
                     long sell = _markets.Price[toCell];
                     long toll = Fx.FromRaw(TollRate(to, good.Value)).MulInt(sell);
-                    long margin = sell - buy - perUnit - toll;
-                    if (margin <= 0) continue;
-                    long quantity = Math.Min(quantityCap, (cash - baseFee) / (buy + perUnit + toll));
-                    long profit = quantity * margin - baseFee;
+                    var margin = Fx.FromInt(sell - buy - toll) - perUnit;
+                    if (margin.Raw <= 0) continue;
+                    long unitCost = Math.Max(1, buy + toll + perUnit.MulInt(1));
+                    long quantity = Math.Min(quantityCap, (cash - baseFee) / unitCost);
+                    long profit = margin.MulInt(quantity) - baseFee;
                     if (quantity <= 0 || profit <= bestProfit) continue;
                     bestRoute = r;
                     bestCell = cell;
@@ -235,6 +234,14 @@ namespace FES.Agents
                 _nodeCapacity[n] += _db.Config.MerchantMaxWeight[_agents.Scale[a]];
             }
 
+            // Roads change week to week (paving, decay). Far regions apply the expected loss (DEC-026): the
+            // route's danger (without the value term), half of which hits cargo, times the cargo loss share.
+            for (int r = 0; r < _routes.Count; r++)
+            {
+                _routeCostPerUnit[r] = _costs.PerUnitCharge(r).Raw;
+                _routeExpectedLoss[r] = (_costs.RouteDanger(r) * _db.Config.EncounterCargoLoss).Raw / 2;
+            }
+
             var job = new MerchantFlowJob
             {
                 CategoryCount = _flows.CategoryCount,
@@ -251,7 +258,7 @@ namespace FES.Agents
                 RouteIndex = _routes.RouteIndex,
                 RouteTo = _routes.To,
                 RouteTurns = _routes.TravelTurns,
-                RouteCostPerUnit = _routes.CostPerUnit,
+                RouteCostPerUnitRaw = _routeCostPerUnit,
                 RouteBudget = _routeBudget,
                 RouteExpectedLoss = _routeExpectedLoss,
                 MarketCellStart = _markets.MarketCellStart,
@@ -274,6 +281,7 @@ namespace FES.Agents
             _nodeCapacity.DisposeIfCreated();
             _routeBudget.DisposeIfCreated();
             _routeExpectedLoss.DisposeIfCreated();
+            _routeCostPerUnit.DisposeIfCreated();
             _nodeCategorySpecialty.DisposeIfCreated();
             _goodLicensed.DisposeIfCreated();
         }
@@ -306,7 +314,8 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> RouteIndex;
         [ReadOnly] public NativeArray<int> RouteTo;
         [ReadOnly] public NativeArray<int> RouteTurns;
-        [ReadOnly] public NativeArray<int> RouteCostPerUnit;
+        /// <summary>Per route: charge per cargo unit after paving (raw Fx).</summary>
+        [ReadOnly] public NativeArray<long> RouteCostPerUnitRaw;
         /// <summary>Scratch, per route: weight the node's merchants can still move along it this week.</summary>
         public NativeArray<long> RouteBudget;
         /// <summary>Per route: expected share of the goods lost on the way (raw Fx).</summary>
@@ -353,7 +362,7 @@ namespace FES.Agents
                         int toCell = FindCell(to, CellGood[c]);
                         if (toCell < 0) continue;
                         long budget = RouteBudget[r];
-                        Move(c, toCell, CellGood[c], to, RouteCostPerUnit[r], RouteExpectedLoss[r], ref budget);
+                        Move(c, toCell, CellGood[c], to, RouteCostPerUnitRaw[r], RouteExpectedLoss[r], ref budget);
                         RouteBudget[r] = budget;
                     }
                 }
@@ -374,15 +383,15 @@ namespace FES.Agents
             return -1;
         }
 
-        void Move(int fromCell, int toCell, int good, int to, long perUnit, long expectedLossRaw, ref long budget)
+        void Move(int fromCell, int toCell, int good, int to, long perUnitRaw, long expectedLossRaw, ref long budget)
         {
             long sell = Price[toCell];
             long rate = Tariff[to];
             if (NodeCategorySpecialty[to * CategoryCount + GoodCategory[good]] != 0) rate += SpecialtySurcharge[to];
-            long margin = sell - Price[fromCell] - perUnit - Fx.MulIntRaw(sell, rate);
-            if (margin <= 0 || Stock[fromCell] <= 0) return;
+            long marginRaw = ((sell - Price[fromCell] - Fx.MulIntRaw(sell, rate)) << Fx.FractionBits) - perUnitRaw;
+            if (marginRaw <= 0 || Stock[fromCell] <= 0) return;
 
-            long quantity = Fx.MulIntRaw(Stock[fromCell], FlowShareRaw) * margin / sell;
+            long quantity = Fx.MulIntRaw(Stock[fromCell], FlowShareRaw) * marginRaw / (sell << Fx.FractionBits);
             if (GoodLicensed[good] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
             if (quantity <= 0) return;

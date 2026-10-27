@@ -30,13 +30,21 @@ namespace FES.Simulation
         public readonly int TravelTurns;
         public readonly int CostPerUnit;
         public readonly int BaseFee;
+        public readonly RouteTerrain Terrain;
+        /// <summary>Paving condition in permille (0 = unpaved).</summary>
+        public readonly int RoadCondition;
+        public readonly bool RoadUnderConstruction;
 
-        public RouteInfo(NodeId to, int travelTurns, int costPerUnit, int baseFee)
+        public RouteInfo(NodeId to, int travelTurns, int costPerUnit, int baseFee, RouteTerrain terrain, int roadCondition,
+            bool roadUnderConstruction)
         {
             To = to;
             TravelTurns = travelTurns;
             CostPerUnit = costPerUnit;
             BaseFee = baseFee;
+            Terrain = terrain;
+            RoadCondition = roadCondition;
+            RoadUnderConstruction = roadUnderConstruction;
         }
     }
 
@@ -152,6 +160,9 @@ namespace FES.Simulation
             PlayerTrip.TryQuote(_world, Database, destination, new TripOptions(guards, insurance, false), out quote);
 
         public bool OwnsShip => _world.Get<PlayerShip>().Owned;
+        /// <summary>The port where the ship waits, or <see cref="NodeId.None"/>.</summary>
+        public NodeId ShipDockedAt => new NodeId(OwnsShip ? _world.Get<PlayerShip>().DockedAt : -1);
+        public bool IsPort(NodeId node) => _world.Get<NodePorts>().Contains(node.Value);
         public long ShipPrice => Database.Config.ShipPrice;
 
         public void GetRoutesFrom(NodeId node, List<RouteInfo> into)
@@ -161,7 +172,9 @@ namespace FES.Simulation
             for (int k = start; k < start + _routes.OutCount[node.Value]; k++)
             {
                 int r = _routes.RouteIndex[k];
-                into.Add(new RouteInfo(new NodeId(_routes.To[r]), _routes.TravelTurns[r], _routes.CostPerUnit[r], _routes.BaseFee[r]));
+                var roads = _world.Get<RoadState>();
+                into.Add(new RouteInfo(new NodeId(_routes.To[r]), _routes.TravelTurns[r], _routes.CostPerUnit[r], _routes.BaseFee[r],
+                    (RouteTerrain)_routes.Terrain[r], roads.Condition[r], roads.BuildDoneTurn[r] >= 0));
             }
         }
 
@@ -276,6 +289,12 @@ namespace FES.Simulation
 
         /// <summary>Buys a ship in a city: it replaces passage on water routes and carries more there.</summary>
         public void BuyShip() => _queue.Enqueue(new BuyShipCommand());
+
+        /// <summary>Sells the ship at the port where it is docked.</summary>
+        public void SellShip() => _queue.Enqueue(new SellShipCommand());
+
+        /// <summary>Pays to pave the land route to <paramref name="destination"/> and back; the road is the player's to maintain.</summary>
+        public void BuildRoad(NodeId destination) => _queue.Enqueue(new BuildRoadCommand(destination));
 
         /// <summary>Buys at the player's market; fills partially when stock, cart room or coins run short.</summary>
         public void BuyGoods(GoodId good, int quantity, bool payFromDeposit = false) =>

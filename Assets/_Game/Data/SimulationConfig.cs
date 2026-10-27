@@ -102,6 +102,19 @@ namespace FES.Data
         public long ShipPrice = 5000;
         public long ShipMaxWeight = 3000;
         public long ShipMaxSize = 2400;
+        /// <summary>Share of the ship's price paid back when it is sold at a port.</summary>
+        public Fx ShipResaleShare = Fx.FromPermille(700);
+
+        /// <summary>A fully paved road's cut of the per-unit charge and of the encounter chance (DEC-054).</summary>
+        public Fx RoadCostReduction = Fx.FromPermille(400);
+        public Fx RoadDangerReduction = Fx.FromPermille(500);
+        /// <summary>Weekly upkeep of one paved route (each direction counts), in its maintainer's coin.</summary>
+        public long RoadUpkeep = 5;
+        /// <summary>Condition lost per week while the upkeep is unpaid, in permille.</summary>
+        public int RoadDecayPermille = 5;
+        /// <summary>Building a road costs this per travel turn of the route and takes this many weeks.</summary>
+        public long RoadBuildCostPerTurn = 300;
+        public int RoadBuildWeeks = 8;
 
         /// <summary>Share of each continent's starting coin supply its national banks hold as reserves, split evenly.</summary>
         public Fx BankInitialReserveShare = Fx.FromPermille(100);
@@ -278,6 +291,14 @@ namespace FES.Data
             ShipPrice = Long(v, "ship.price", ShipPrice);
             ShipMaxWeight = Long(v, "ship.max_weight", ShipMaxWeight);
             ShipMaxSize = Long(v, "ship.max_size", ShipMaxSize);
+            ShipResaleShare = Permille(v, "ship.resale_permille", ShipResaleShare);
+            RoadCostReduction = Permille(v, "road.cost_reduction_permille", RoadCostReduction);
+            RoadDangerReduction = Permille(v, "road.danger_reduction_permille", RoadDangerReduction);
+            RoadUpkeep = Long(v, "road.upkeep", RoadUpkeep);
+            RoadDecayPermille = Int(v, "road.decay_permille", RoadDecayPermille);
+            RoadBuildCostPerTurn = Long(v, "road.build_cost_per_turn", RoadBuildCostPerTurn);
+            RoadBuildWeeks = Int(v, "road.build_weeks", RoadBuildWeeks);
+            if (RoadBuildWeeks < 1) throw new FormatException("config.csv: road.build_weeks must be >= 1.");
             BankInitialReserveShare = Permille(v, "bank.initial_reserve_permille", BankInitialReserveShare);
             DepositInterestPerYear = Permille(v, "bank.deposit_interest_permille", DepositInterestPerYear);
             ExchangeFee = Permille(v, "bank.exchange_fee_permille", ExchangeFee);

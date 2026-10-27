@@ -51,10 +51,11 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
   `specialty_surcharge_permille` (optional, empty = config default) set the node's toll rates.
   `international_bank` (optional, 1) marks the continent's international bank: at most one per continent,
   at city level or above. `danger_permille` (optional, region nodes only) is the region's road danger
-  factor.
+  factor. `port` (optional, 1) marks a port; water routes must run between ports.
 - Routes: `from,to,travel_turns,cost_per_unit,base_fee` (directed; add both directions for two-way
   travel). `base_fee` is optional (default 0) and paid once per trip. `terrain` (optional) is `Road`,
-  `Mountain`, `River` or `Sea`; river and sea routes are water.
+  `Mountain`, `River` or `Sea`; river and sea routes are water. `paved` (optional, 1) paves a land route
+  from the start.
 
 ## specialties.csv
 
@@ -86,7 +87,10 @@ changing a default in code does.
 | guard.base_cost, guard.cost_permille, guard.reduction_permille | 10, 20, 700 | guards ([Draft]) |
 | insurance.premium_permille, insurance.refund_permille | 30, 800 | guild insurance ([Draft]) |
 | passage.base_fee, passage.per_unit | 20, 2 | passage on water routes without a ship |
-| ship.price, ship.max_weight, ship.max_size | 5000, 3000, 2400 | the player's ship |
+| ship.price, ship.max_weight, ship.max_size, ship.resale_permille | 5000, 3000, 2400, 700 | the player's ship |
+| road.cost_reduction_permille, road.danger_reduction_permille | 400, 500 | effect of a fully paved road ([Draft]) |
+| road.upkeep, road.decay_permille | 5, 5 | weekly upkeep per paved route; condition lost per unpaid week |
+| road.build_cost_per_turn, road.build_weeks | 300, 8 | building a road ([Draft]) |
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
 | bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |

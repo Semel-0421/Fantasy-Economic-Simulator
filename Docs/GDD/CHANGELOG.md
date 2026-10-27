@@ -1,6 +1,14 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P11 done
+- [systems/SYS_INFRASTRUCTURE.md] Implementation notes and placeholder numbers
+- [02_Data_Formats.md] port and paved columns, ship resale and road config keys
+- [03_Decisions.md] DEC-053 (ports), DEC-054 (paved roads), DEC-055 (interest groups) from the user's memo and the form's recommendations; Q-033 and Q-034 (Claude added) registered
+- [systems/SYS_INFRASTRUCTURE.md] New: ports and paved roads
+- [systems/SYS_INTEREST_GROUPS.md] New: companies, guilds, state and private enterprises
+- [systems/SYS_ROUTE_HAZARDS.md] P8 ship draft replaced by DEC-053
+- [04_Roadmap.md] P11 ports and paved roads, P12 interest groups
 - [04_Roadmap.md] P8 done
 - [systems/SYS_ROUTE_HAZARDS.md] Placeholders and Claude's proposals for terrain, encounters, guards, insurance, passage and ships; implementation notes
 - [systems/SYS_MERCHANTS.md] Aggregate flows lose the expected encounter share

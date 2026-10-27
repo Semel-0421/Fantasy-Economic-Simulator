@@ -135,7 +135,7 @@ namespace FES.Tests
             using var routeIndex = new NativeArray<int>(new[] { 0 }, Allocator.Temp);
             using var routeTo = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
             using var routeTurns = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
-            using var routeCost = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
+            using var routeCost = new NativeArray<long>(new[] { Fx.One.Raw }, Allocator.Temp);
             using var routeBudget = new NativeArray<long>(1, Allocator.Temp);
             using var routeLoss = new NativeArray<long>(new[] { Fx.FromPermille(100).Raw }, Allocator.Temp);
             using var cellStart = new NativeArray<int>(new[] { 0, 1 }, Allocator.Temp);
@@ -156,7 +156,7 @@ namespace FES.Tests
                 NodeDetail = detail, NodeContinent = continent, NodeCapacity = capacity, NodeCategorySpecialty = specialty,
                 Tariff = rates, SpecialtySurcharge = rates,
                 OutStart = outStart, OutCount = outCount, RouteIndex = routeIndex, RouteTo = routeTo,
-                RouteTurns = routeTurns, RouteCostPerUnit = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
+                RouteTurns = routeTurns, RouteCostPerUnitRaw = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
                 MarketCellStart = cellStart, MarketCellCount = cellCount, CellGood = cellGood,
                 GoodCategory = goodZero, GoodWeight = goodWeight, GoodLicensed = licensed,
                 Price = price, Stock = stock, Supply = supply, Demand = demand,

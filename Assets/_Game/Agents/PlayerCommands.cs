@@ -43,6 +43,9 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             player.Coins[quote.FeeContinent] -= quote.DepartureCost;
             player.Coins[quote.TollContinent] -= quote.Toll;
+            // A ship that sails lands with the player and docks at the destination port (DEC-053).
+            var ship = ctx.World.Get<PlayerShip>();
+            if (quote.Passage == 0 && ((RouteTerrain)ctx.World.Get<RouteTable>().Terrain[quote.Route]).IsWater()) ship.DockedAt = Destination.Value;
             player.TravelDestination = Destination.Value;
             player.ArrivalTurn = ctx.Turn + ctx.World.Get<RouteTable>().TravelTurns[quote.Route];
             ctx.Events.Publish(new TripStarted(Destination, player.ArrivalTurn, quote, ctx.Turn));
@@ -112,7 +115,8 @@ namespace FES.Agents
             }
             var cart = new System.Collections.Generic.List<CargoItem>();
             world.Get<CargoTable>().Collect(CargoHolders.PlayerCart, cart);
-            quote = costs.Quote(route, cart, new TripOptions(options.Guards, options.Insurance, world.Get<PlayerShip>().Owned));
+            var ship = world.Get<PlayerShip>().AvailableAt(world.Get<PlayerState>().Node);
+            quote = costs.Quote(route, cart, new TripOptions(options.Guards, options.Insurance, ship));
             return true;
         }
 
@@ -120,7 +124,8 @@ namespace FES.Agents
         public static CargoCapacity Carrier(WorldState world, GameDatabase db, int route)
         {
             var config = db.Config;
-            bool ship = ((RouteTerrain)world.Get<RouteTable>().Terrain[route]).IsWater() && world.Get<PlayerShip>().Owned;
+            bool ship = ((RouteTerrain)world.Get<RouteTable>().Terrain[route]).IsWater()
+                        && world.Get<PlayerShip>().AvailableAt(world.Get<PlayerState>().Node);
             return ship ? new CargoCapacity(config.ShipMaxWeight, config.ShipMaxSize) : new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
         }
 

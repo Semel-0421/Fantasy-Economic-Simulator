@@ -38,6 +38,8 @@ updated: 2026-10-27
 | [systems/SYS_INVENTORY.md](systems/SYS_INVENTORY.md) | Item weight and size, cart, warehouses, player trading |
 | [systems/SYS_TRAVEL_COSTS.md](systems/SYS_TRAVEL_COSTS.md) | Travel fees and protective tolls |
 | [systems/SYS_BANKING.md](systems/SYS_BANKING.md) | Banks, currency exchange, loans and seizure |
+| [systems/SYS_INFRASTRUCTURE.md](systems/SYS_INFRASTRUCTURE.md) | Ports and paved roads |
+| [systems/SYS_INTEREST_GROUPS.md](systems/SYS_INTEREST_GROUPS.md) | Companies, guilds, state and private enterprises |
 | [systems/SYS_LICENSES.md](systems/SYS_LICENSES.md) | Licenses for special goods |
 | [systems/SYS_ROUTE_HAZARDS.md](systems/SYS_ROUTE_HAZARDS.md) | Hard terrain and random encounters |
 | [systems/SYS_MARKETS.md](systems/SYS_MARKETS.md) | Demand, necessity/luxury elasticity |
@@ -50,6 +52,8 @@ Detail: [03_Decisions.md](03_Decisions.md)
 
 | ID | Question | Blocks |
 |---|---|---|
+| Q-033 | How the player relates to interest groups | P12 |
+| Q-034 | How interest groups influence policy (Claude added) | P12 |
 | Q-030 | Basic price index basket (deferred by the user) | Later |
 
 ## Recent changes

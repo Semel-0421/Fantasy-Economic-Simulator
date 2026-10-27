@@ -16,6 +16,7 @@ except `config.csv`, which is hashed by its effective values (see below).
 | base_demand | weekly demand of a village market (scaled by level weight) |
 | weight | weight of one unit, shared by all grades (optional, default 1) |
 | size | size (volume) of one unit, shared by all grades (optional, default 1) |
+| requires_license | 1 if selling needs a license of the nation (optional, default 0) |
 
 Each row expands to 4 items (`key@low`, `@mid`, `@high`, `@best`) with prices scaled by
 `grade.<grade>.price_permille` (defaults 600 / 1000 / 1800 / 3500).
@@ -72,6 +73,8 @@ changing a default in code does.
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
+| license.price_permille, license.merchant_share_permille | 20000, 200 | license price (x Mid base price), share of licensed merchant groups ([Draft]) |
+| guidance.weight.buy_license_permille | 2000 | Trade signal of buying a license |
 | toll.tariff_permille, toll.specialty_surcharge_permille | 30, 70 | default toll rates on entering a node ([Draft]) |
 | specialty.output_permille, specialty.grade_up_permille, specialty.price_permille | 1250, 200, 800 | specialty output bonus, share one grade higher, local anchor price ([Draft]) |
 | facility.<tier>.upkeep | 50/100/50 | weekly upkeep of a level-1 facility (times its level) |

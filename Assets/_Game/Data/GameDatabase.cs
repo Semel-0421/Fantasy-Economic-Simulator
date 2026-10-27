@@ -111,12 +111,14 @@ namespace FES.Data
                 int baseDemand = t.GetIntOr(r, "base_demand", 0);
                 int weight = t.GetIntOr(r, "weight", 1);
                 int size = t.GetIntOr(r, "size", 1);
+                int license = t.GetIntOr(r, "requires_license", 0);
+                if (license != 0 && license != 1) throw new FormatException($"goods.csv row {r + 1}: requires_license must be 0 or 1.");
                 if (weight < 0 || size < 0) throw new FormatException($"goods.csv row {r + 1}: weight and size must not be negative.");
                 for (int g = 0; g < QualityGrades.Count; g++)
                 {
                     long price = Math.Max(1, Config.GradePriceMultiplier[g].MulInt(basePrice));
                     Goods.Add(new GoodDef(GoodId.From(baseIndex, (QualityGrade)g), key, categoryIndex,
-                        (int)Math.Min(int.MaxValue, price), baseDemand, weight, size));
+                        (int)Math.Min(int.MaxValue, price), baseDemand, weight, size, license == 1));
                 }
             }
         }

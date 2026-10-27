@@ -77,6 +77,7 @@ namespace FES.Simulation
         readonly FacilityTable _facilities;
         readonly CargoTable _cargo;
         readonly NodeSpecialties _specialties;
+        readonly LicenseTable _licenses;
 
         public readonly GameDatabase Database;
 
@@ -94,6 +95,7 @@ namespace FES.Simulation
             _facilities = world.Get<FacilityTable>();
             _cargo = world.Get<CargoTable>();
             _specialties = world.Get<NodeSpecialties>();
+            _licenses = world.Get<LicenseTable>();
         }
 
         // Clock
@@ -202,6 +204,15 @@ namespace FES.Simulation
         public long PlayerCash => _player.LocalCoins;
         public long PlayerCoins(int continent) => _player.Coins[continent];
 
+        /// <summary>The player's licenses; each covers every grade of a base good inside one nation.</summary>
+        public void GetLicenses(List<LicenseInfo> into) => LicenseSystem.Collect(_licenses, into);
+
+        /// <summary>What a license for the good costs, in the coin of the nation that issues it.</summary>
+        public long LicensePrice(GoodId good) => LicenseRules.Price(Database, good.BaseIndex);
+
+        /// <summary>Whether the player may sell the good at their node now (no license needed, or a valid one held).</summary>
+        public bool MaySell(GoodId good) => LicenseRules.PlayerMaySell(_world, Database, good, _player.Node, _clock.Turn);
+
         /// <summary>The cart's contents, sorted by good id.</summary>
         public void GetCart(List<CargoItem> into) => _cargo.Collect(CargoHolders.PlayerCart, into);
         public CargoLoad CartLoad => _cargo.LoadOf(CargoHolders.PlayerCart, _markets.GoodWeight, _markets.GoodSize);
@@ -232,7 +243,11 @@ namespace FES.Simulation
         /// <summary>Buys at the player's market; fills partially when stock, cart room or coins run short.</summary>
         public void BuyGoods(GoodId good, int quantity) => _queue.Enqueue(new BuyGoodsCommand(good, quantity));
 
+        /// <summary>Sells from the cart; licensed goods need the license of the nation the player is in.</summary>
         public void SellGoods(GoodId good, int quantity) => _queue.Enqueue(new SellGoodsCommand(good, quantity));
+
+        /// <summary>Buys, or renews for a year, the license for a good from the nation the player is in.</summary>
+        public void BuyLicense(GoodId good) => _queue.Enqueue(new BuyLicenseCommand(good));
 
         public void BuyFacility(FacilityId facility, long price, GuidanceAxis axis) =>
             _queue.Enqueue(new BuyFacilityCommand(facility, price, axis));

@@ -25,6 +25,7 @@ namespace FES.Agents
             player.Node = ResolveStartNode(db.Config, nodes, seed);
             player.LocalCoins = db.Config.PlayerStartCash;
             builder.World.Add(new CargoTable());
+            builder.World.Add(new LicenseTable());
 
             SpawnFacilities(builder.World.Add(new FacilityTable()), nodes, db, seed);
             SpawnMerchants(builder.World.Add(new AgentTable()), nodes, db.Config);
@@ -43,6 +44,7 @@ namespace FES.Agents
             builder.AddSystem(new ProductionSystem());
             builder.AddSystem(new MerchantSystem());
             builder.AddSystem(new GuidanceSystem());
+            builder.AddSystem(new LicenseSystem());
         }
 
         /// <summary>A random village from the world seed (DEC-040), unless config names a start node.</summary>

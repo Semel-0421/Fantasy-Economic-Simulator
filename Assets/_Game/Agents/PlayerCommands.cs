@@ -198,6 +198,8 @@ namespace FES.Agents
         {
             var error = PlayerTrade.Check(ctx, Good, Quantity, out _);
             if (error != null) return CommandResult.Fail(error);
+            if (!LicenseRules.PlayerMaySell(ctx.World, ctx.Services.Get<GameDatabase>(), Good, ctx.World.Get<PlayerState>().Node, ctx.Turn))
+                return CommandResult.Fail("Selling this good here needs this nation's license.");
             return Fill(ctx) > 0 ? CommandResult.Success : CommandResult.Fail("The cart holds none of this good.");
         }
 

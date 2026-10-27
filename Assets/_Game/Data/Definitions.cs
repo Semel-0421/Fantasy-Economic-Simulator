@@ -32,8 +32,11 @@ namespace FES.Data
         public readonly int Weight;
         /// <summary>Size (volume) of one unit; set per base good, so every grade shares it.</summary>
         public readonly int Size;
+        /// <summary>Selling it needs a license of the nation it is sold in (DEC-021, DEC-024); per base good.</summary>
+        public readonly bool RequiresLicense;
 
-        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size)
+        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size,
+            bool requiresLicense)
         {
             Id = id;
             BaseKey = baseKey;
@@ -42,6 +45,7 @@ namespace FES.Data
             BaseDemand = baseDemand;
             Weight = weight;
             Size = size;
+            RequiresLicense = requiresLicense;
         }
 
         public QualityGrade Grade => Id.Grade;

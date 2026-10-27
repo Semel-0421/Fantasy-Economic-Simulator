@@ -60,6 +60,12 @@ namespace FES.Data
         /// <summary>Anchor price multiplier for a node's specialties in its own market.</summary>
         public Fx SpecialtyPriceMultiplier = Fx.FromPermille(800);
 
+        /// <summary>A license costs this times the good's Mid base price (DEC-024).</summary>
+        public Fx LicensePriceMultiplier = Fx.FromInt(20);
+
+        /// <summary>Share of merchant groups that hold licenses, in permille (DEC-024).</summary>
+        public int LicensedMerchantPermille = 200;
+
         /// <summary>Toll on entering a node, as a share of the cargo's value, unless the map sets the node's own.</summary>
         public Fx TollRate = Fx.FromPermille(30);
 
@@ -93,6 +99,7 @@ namespace FES.Data
         public Fx GuidanceDecayPerTurn = Fx.FromPermille(10);
         public Fx GuidanceWeightBuyFacility = Fx.One;
         public Fx GuidanceWeightFoundCompany = Fx.FromInt(5);
+        public Fx GuidanceWeightBuyLicense = Fx.FromInt(2);
 
         /// <summary>The default LOD policy simulates the player's ancestor at this level (and its subtree) in detail.</summary>
         public WorldLevel LodFocusLevel = WorldLevel.Region;
@@ -178,6 +185,8 @@ namespace FES.Data
                 FacilityStartCash[t] = Long(v, $"facility.{tier}.start_cash", FacilityStartCash[t]);
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
             }
+            LicensePriceMultiplier = Permille(v, "license.price_permille", LicensePriceMultiplier);
+            LicensedMerchantPermille = Int(v, "license.merchant_share_permille", LicensedMerchantPermille);
             TollRate = Permille(v, "toll.tariff_permille", TollRate);
             TollSpecialtySurcharge = Permille(v, "toll.specialty_surcharge_permille", TollSpecialtySurcharge);
             SpecialtyOutputMultiplier = Permille(v, "specialty.output_permille", SpecialtyOutputMultiplier);
@@ -204,6 +213,7 @@ namespace FES.Data
             GuidanceDecayPerTurn = Permille(v, "guidance.decay_permille", GuidanceDecayPerTurn);
             GuidanceWeightBuyFacility = Permille(v, "guidance.weight.buy_facility_permille", GuidanceWeightBuyFacility);
             GuidanceWeightFoundCompany = Permille(v, "guidance.weight.found_company_permille", GuidanceWeightFoundCompany);
+            GuidanceWeightBuyLicense = Permille(v, "guidance.weight.buy_license_permille", GuidanceWeightBuyLicense);
             if (v.TryGetValue("lod.focus_level", out var focus))
                 LodFocusLevel = CsvTable.TryParseEnumName(focus, out WorldLevel level)
                     ? level

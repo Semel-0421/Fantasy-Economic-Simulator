@@ -10,7 +10,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
-### Q-035 [open] What each kind of interest group wants
+### Q-035 [resolved] What each kind of interest group wants
 - Registered: 2026-10-27 (Claude added)
 - Context: groups push policy each year (DEC-058), but nothing says which way each kind pushes.
 - Open: per kind (company, guild, state enterprise, private enterprise) and per policy (tolls and
@@ -20,6 +20,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   dearer licenses); companies for open trade (the opposite); state enterprises for more minting; private
   enterprises follow their own trade (protection where they produce, open trade where they buy)
 - Impact: SYS-INTEREST-GROUPS
+- Resolved: DEC-059
 
 ### Q-034 [resolved] How interest groups influence policy
 - Registered: 2026-10-27 (Claude added)
@@ -290,6 +291,19 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ## Decision log
+
+### DEC-059 Interest groups' stances
+- Date: 2026-10-27
+- Decision: guilds, companies and private enterprises decide tolls and licenses from their own trade: they
+  push for protection where they produce and for open trade where they buy, and for licenses they hold to
+  be protected and licenses they lack to be relaxed. None of them takes a side on minting. State
+  enterprises push tolls up, licenses wider and dearer to protect their monopolies, and minting up.
+  Stances change with each group's business: a group losing money leans toward protection.
+- Alternatives: guilds always protectionist and companies always for open trade (recommended, rejected) ·
+  state enterprises staying out of tolls (recommended, rejected) · stances fixed per kind (recommended,
+  rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md)
+- Resolves: Q-035
 
 ### DEC-058 Policy influence: yearly weighted review
 - Date: 2026-10-27

@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-035 resolved by DEC-059 (stances from own trade, state enterprises protect and mint, stances shift with business)
+- [systems/SYS_INTEREST_GROUPS.md] Stance rules and table; draft for measuring "own trade"
+- [04_Roadmap.md] P12b no longer waits on Q-035
 - [03_Decisions.md] Q-033 resolved by DEC-056 and DEC-057, Q-034 by DEC-058; Q-035 (Claude added) registered
 - [systems/SYS_INTEREST_GROUPS.md] Player relations, guild benefits, influence and yearly policy review
 - [04_Roadmap.md] P12 split into P12a (groups, company, guilds), P12b (influence, policy), P12c (shares, privatization)

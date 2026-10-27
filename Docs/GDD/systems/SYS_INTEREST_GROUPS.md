@@ -3,7 +3,7 @@ doc: SYS-INTEREST-GROUPS
 title: Economic interest groups
 status: draft
 updated: 2026-10-27
-related: [SYS-PRODUCTION, SYS-MERCHANTS, SYS-BANKING, SYS-LICENSES, SYS-TRAVEL-COSTS, SYS-INFRASTRUCTURE, SYS-ROUTE-HAZARDS, SYS-INVENTORY, DEC-041, DEC-055, DEC-056, DEC-057, DEC-058]
+related: [SYS-PRODUCTION, SYS-MERCHANTS, SYS-BANKING, SYS-LICENSES, SYS-TRAVEL-COSTS, SYS-INFRASTRUCTURE, SYS-ROUTE-HAZARDS, SYS-INVENTORY, DEC-041, DEC-055, DEC-056, DEC-057, DEC-058, DEC-059]
 ---
 
 # Economic interest groups
@@ -37,7 +37,25 @@ player meets rivals and allies instead of an anonymous market.
 - [Confirmed] Each nation reviews policy once a year and moves each policy one step, weighted by
   influence (DEC-058).
 - [Confirmed] The player can lobby in their company's name (DEC-058).
-- [TBD] Which way each kind of group pushes each policy (Q-035).
+- [Confirmed] Guilds, companies and private enterprises take their stance on tolls and licenses from their
+  own trade: protection where they produce, open trade where they buy; protection for licenses they hold,
+  relief for licenses they lack (DEC-059).
+- [Confirmed] Of all groups only state enterprises take a side on minting: they push it up (DEC-059).
+- [Confirmed] State enterprises push tolls up and licenses wider and dearer, protecting their monopolies
+  (DEC-059).
+- [Confirmed] Stances change with a group's business: a group losing money leans toward protection
+  (DEC-059).
+
+## Stances
+| Kind | Tolls and surcharges | Licensed goods and prices | Minting |
+|---|---|---|---|
+| Guild | Own trade | Own trade | No side |
+| Company | Own trade | Own trade | No side |
+| State enterprise | Up | Wider and dearer | Up |
+| Private enterprise | Own trade | Own trade | No side |
+
+"Own trade": up where the group produces, down where it buys; protect licenses it holds, relax licenses
+it lacks. Losses tilt every group with an "own trade" stance toward protection.
 
 ## Flow (yearly policy review)
 ```mermaid
@@ -50,7 +68,10 @@ flowchart LR
 
 ## Unity implementation notes
 Planned as P12a (groups, ownership, company, guild membership and benefits), P12b (influence and the
-yearly policy review, after Q-035) and P12c (shares, privatization).
+yearly policy review) and P12c (shares, privatization).
+- [Draft] (Claude's proposal) "Where it produces" and "where it buys" are a nation's markets where the
+  group's facilities sell output and buy inputs; a stance is the signed balance of those volumes per
+  policy. The loss tilt grows with the share of the group's cash lost over the last year.
 - A persistent `GroupTable` (kind, home node, nation, cash, influence) and an owner group column on
   `FacilityTable` and `AgentTable`, replacing the plain NPC owner; `OwnerIds.Player` stays the player.
 - Existing per-entity cash stays where it is; group cash funds expansion, road building and lobbying.

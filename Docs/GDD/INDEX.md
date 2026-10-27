@@ -52,7 +52,6 @@ Detail: [03_Decisions.md](03_Decisions.md)
 
 | ID | Question | Blocks |
 |---|---|---|
-| Q-035 | What each kind of interest group wants (Claude added) | P12b |
 | Q-030 | Basic price index basket (deferred by the user) | Later |
 
 ## Recent changes

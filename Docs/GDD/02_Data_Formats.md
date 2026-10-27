@@ -49,6 +49,8 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
   up, except villages, which may hang off a city or a region. `tags` (optional) lists terrain tags
   separated by `|`; every tag must appear in `specialties.csv`. `tariff_permille` and
   `specialty_surcharge_permille` (optional, empty = config default) set the node's toll rates.
+  `international_bank` (optional, 1) marks the continent's international bank: at most one per continent,
+  at city level or above.
 - Routes: `from,to,travel_turns,cost_per_unit,base_fee` (directed; add both directions for two-way
   travel). `base_fee` is optional (default 0) and paid once per trip.
 
@@ -73,6 +75,10 @@ changing a default in code does.
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
+| bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
+| bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
+| bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |
+| facility.<tier>.value | 3000/8000/5000 | collateral value of a level-1 facility (times its level) |
 | license.price_permille, license.merchant_share_permille | 20000, 200 | license price (x Mid base price), share of licensed merchant groups ([Draft]) |
 | guidance.weight.buy_license_permille | 2000 | Trade signal of buying a license |
 | toll.tariff_permille, toll.specialty_surcharge_permille | 30, 70 | default toll rates on entering a node ([Draft]) |

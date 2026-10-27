@@ -70,5 +70,7 @@ namespace FES.Core
     {
         public const int Npc = -1;
         public const int Player = 0;
+        /// <summary>A state bank holding a seized facility until its auction closes.</summary>
+        public const int Bank = -2;
     }
 }

@@ -156,6 +156,7 @@ namespace FES.World
             var db = builder.Services.Get<GameDatabase>();
             builder.World.Add(new NodeSpecialties(map, nodes, db));
             builder.World.Add(new NodeTolls(map, nodes, db.Config));
+            builder.World.Add(new NodeBanks(map, nodes));
         }
     }
 }

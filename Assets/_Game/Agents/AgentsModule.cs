@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FES.Core;
 using FES.Data;
+using FES.Economy;
 using FES.World;
 
 namespace FES.Agents
@@ -26,6 +27,11 @@ namespace FES.Agents
             player.LocalCoins = db.Config.PlayerStartCash;
             builder.World.Add(new CargoTable());
             builder.World.Add(new LicenseTable());
+            var banks = builder.World.Get<NodeBanks>();
+            var bank = builder.World.Add(new BankState(banks.NationCount, nodes.ContinentCount));
+            BankSystem.SetUpReserves(bank, banks, nodes, builder.World.Get<CurrencyState>(), db.Config);
+            builder.World.Add(new LoanTable());
+            builder.World.Add(new AuctionTable());
 
             SpawnFacilities(builder.World.Add(new FacilityTable()), nodes, db, seed);
             SpawnMerchants(builder.World.Add(new AgentTable()), nodes, db.Config);
@@ -45,6 +51,7 @@ namespace FES.Agents
             builder.AddSystem(new MerchantSystem());
             builder.AddSystem(new GuidanceSystem());
             builder.AddSystem(new LicenseSystem());
+            builder.AddSystem(new BankSystem());
         }
 
         /// <summary>A random village from the world seed (DEC-040), unless config names a start node.</summary>

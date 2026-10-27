@@ -56,6 +56,26 @@ faster than its cash at the risk of losing what it owns.
 - [Confirmed] An event ends when the reserve ratio returns above a config threshold, after at least one
   quarter (DEC-047).
 
+- [Draft] Placeholders: starting reserves 10% of each continent's coin supply split over its nations;
+  deposit interest 2% a year; exchange fee 3%; loan interest 10% a year, 52-week term, loan-to-value 50%;
+  grace 4 weeks; auction 2 weeks with a reserve price of 80% of the facility's value; facility values
+  3,000 / 8,000 / 5,000 per tier and level (`bank.*`, `facility.<tier>.value`).
+- [Draft] Claude's proposals, built in P9:
+  - Deposits sit in the bank's reserve, so a withdrawal needs both the balance and the bank's coins.
+  - Minted coins are split evenly over the continent's nations; the remainder stays with the
+    international bank, which also keeps exchange fees.
+  - An international bank changes its own continent's coin into another's and back.
+  - Loan interest for the whole term is added up front, repaid in equal weekly instalments; one loan per
+    bank at a time; early repayment is allowed at a branch.
+  - Instalments are taken automatically, from the deposit with the lender first, then from the coins of
+    that continent the player carries, wherever they are.
+  - Seizure takes deposits (any bank), then warehouse cargo, then the cart (at one of the lender's
+    branches), then facilities, until the debt is covered. Cargo is sold at the nearest market; what
+    exceeds the debt goes to the bank. Debt left after all assets stays owed.
+  - A winning bid is paid when the auction closes, from the coins and then the deposits of the
+    facility's continent; without a winning bid an NPC buys at the reserve price.
+  - Only the player borrows for now; NPC loans come with P9b.
+
 ## Flow (loan)
 ```mermaid
 stateDiagram-v2
@@ -74,9 +94,17 @@ stateDiagram-v2
   sell goods for local coins.
 
 ## Unity implementation notes
-- Branches need no new map data: every node of city level and above has one; the nation is
-  `NodeTable.AncestorAt(node, Nation)`. The international bank city is a `map_nodes.csv` flag
-  (Claude-chosen name `international_bank`, [Draft]).
+P9 built the player's banking; P9b adds NPC loans, money totals, records, statistics and financial events.
+- `NodeBanks` (world component): branches are the nodes from nation down to city level; the international
+  bank is the `international_bank` flag in `map_nodes.csv` (Claude-chosen name, [Draft]), at most one per
+  continent, on a branch.
+- Persistent `BankState` (reserves and player deposits per nation, international reserves, coin supply
+  already distributed), `LoanTable` and `AuctionTable`. `BankSystem` runs Late in the Finance phase:
+  minted-coin distribution, deposit interest, instalments, seizure, auction close.
+- Commands: `BankTransferCommand` (deposit / withdraw), `ExchangeCommand`, `TakeLoanCommand`,
+  `RepayLoanCommand`, `BidCommand`; `BuyGoodsCommand` can pay from the deposit at a branch.
+  `PlayerBalanceSheet` values collateral and debt for limits and seizure. A seized facility belongs to
+  `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility.
 - NPC loans at full scale (8,500 facilities, 9,250 merchant groups) belong in a Burst job over a loan
   table, not per-entity managed code.
 - A persistent `BankTable` holds accounts per (holder, nation) and loans per (holder, bank); exchange reads

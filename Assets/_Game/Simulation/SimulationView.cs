@@ -78,6 +78,10 @@ namespace FES.Simulation
         readonly CargoTable _cargo;
         readonly NodeSpecialties _specialties;
         readonly LicenseTable _licenses;
+        readonly NodeBanks _banks;
+        readonly BankState _bank;
+        readonly LoanTable _loans;
+        readonly AuctionTable _auctions;
 
         public readonly GameDatabase Database;
 
@@ -96,6 +100,10 @@ namespace FES.Simulation
             _cargo = world.Get<CargoTable>();
             _specialties = world.Get<NodeSpecialties>();
             _licenses = world.Get<LicenseTable>();
+            _banks = world.Get<NodeBanks>();
+            _bank = world.Get<BankState>();
+            _loans = world.Get<LoanTable>();
+            _auctions = world.Get<AuctionTable>();
         }
 
         // Clock
@@ -220,6 +228,23 @@ namespace FES.Simulation
         public GuidanceAxis DominantGuidance => _guidance.Dominant;
         public Fx GuidanceWeight(GuidanceAxis axis) => _guidance[axis];
 
+        // Banks (a nation is given by its node)
+
+        /// <summary>Whether the node has a branch of its nation's bank (city level and above).</summary>
+        public bool IsBankBranch(NodeId node) => _banks.IsBranch(node.Value) && _banks.BranchNation(node.Value) >= 0;
+        public bool IsInternationalBank(NodeId node) => _banks.IsInternationalBank(node.Value);
+        /// <summary>The continent's international bank, or <see cref="NodeId.None"/>.</summary>
+        public NodeId InternationalBankOf(int continent) => new NodeId(_banks.InternationalBankOf(continent));
+        public long PlayerDeposit(NodeId nation) => _bank.PlayerDeposit[_banks.NationIndex(nation.Value)];
+        public long BankReserve(NodeId nation) => _bank.Reserve[_banks.NationIndex(nation.Value)];
+        public void GetLoans(List<LoanInfo> into) => BankSystem.CollectLoans(_loans, _banks, into);
+        public void GetAuctions(List<AuctionInfo> into) => BankSystem.CollectAuctions(_auctions, _banks, into);
+
+        /// <summary>What the player may still borrow, in the coin of the continent they are in.</summary>
+        public long CreditLimit => new PlayerBalanceSheet(_world, Database).CreditLimit(_player.LocalContinent);
+        /// <summary>Everything the player could pledge, in the coin of the continent they are in.</summary>
+        public long CollateralValue => new PlayerBalanceSheet(_world, Database).CollateralValue(_player.LocalContinent);
+
         // Currency (per continent)
 
         public int ContinentCount => _currency.ContinentCount;
@@ -241,10 +266,28 @@ namespace FES.Simulation
         public void Travel(NodeId destination) => _queue.Enqueue(new TravelCommand(destination));
 
         /// <summary>Buys at the player's market; fills partially when stock, cart room or coins run short.</summary>
-        public void BuyGoods(GoodId good, int quantity) => _queue.Enqueue(new BuyGoodsCommand(good, quantity));
+        public void BuyGoods(GoodId good, int quantity, bool payFromDeposit = false) =>
+            _queue.Enqueue(new BuyGoodsCommand(good, quantity, payFromDeposit));
 
         /// <summary>Sells from the cart; licensed goods need the license of the nation the player is in.</summary>
         public void SellGoods(GoodId good, int quantity) => _queue.Enqueue(new SellGoodsCommand(good, quantity));
+
+        /// <summary>Pays local coins into the account with the bank of the branch the player is at.</summary>
+        public void Deposit(long amount) => _queue.Enqueue(new BankTransferCommand(amount));
+
+        public void Withdraw(long amount) => _queue.Enqueue(new BankTransferCommand(-amount));
+
+        /// <summary>Changes coins at the international bank the player is at; one side must be its own continent's coin.</summary>
+        public void Exchange(int fromContinent, int toContinent, long amount) =>
+            _queue.Enqueue(new ExchangeCommand(fromContinent, toContinent, amount));
+
+        /// <summary>Borrows from the bank of the branch the player is at, against everything they own.</summary>
+        public void TakeLoan(long amount) => _queue.Enqueue(new TakeLoanCommand(amount));
+
+        public void RepayLoan(long amount) => _queue.Enqueue(new RepayLoanCommand(amount));
+
+        /// <summary>Bids for a seized facility; paid when the auction closes.</summary>
+        public void Bid(FacilityId facility, long amount) => _queue.Enqueue(new BidCommand(facility, amount));
 
         /// <summary>Buys, or renews for a year, the license for a good from the nation the player is in.</summary>
         public void BuyLicense(GoodId good) => _queue.Enqueue(new BuyLicenseCommand(good));

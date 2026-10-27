@@ -24,6 +24,7 @@ flowchart LR
     P3 --> P5[P5 NPC merchant arbitrage]
     P4 --> P5
     P9 --> P5
+    P9 --> P9b[P9b Money totals, NPC loans, events]
 ```
 
 | Phase | Scope | Systems | Ready? |
@@ -37,7 +38,8 @@ flowchart LR
 | P7 | Per-good licenses issued by nations, yearly renewal, sell check, NPC holders | SYS-LICENSES | Done |
 | P8 | Route terrain (turns, cost), encounter roll per trip, guards and insurance, passage and owned ships | SYS-ROUTE-HAZARDS | Ready |
 | P10 | Elasticity classes, demand weights (size, wealth, population), Pareto households, basic price index later | SYS-MARKETS | Ready; basket deferred (Q-030) |
-| P9 | State-owned national and international banks, exchange with fee, deposits with interest and payment, loans for all holders on any collateral, weekly repayment, seizure and auction | SYS-BANKING | Ready; money totals wait on Q-025 |
+| P9 | State-owned national and international banks, exchange with fee, deposits with interest and payment, player loans on any collateral, weekly repayment, seizure and auction, finite reserves | SYS-BANKING | Done |
+| P9b | NPC loans (facilities, merchant groups), money totals per nation and continent, reserve-driven loan rates, quarterly records and yearly statistics, financial events | SYS-BANKING | Ready |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -48,7 +50,6 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1, P2, P3, P4, P6 and P7 are done. Next: P8 (terrain and encounters) or P9 (banks); P5 (merchants)
-  needs P9.
+- P1 to P4, P6, P7 and P9 are done. Next: P5 (merchants), P8 (terrain and encounters) or P9b.
 - Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,
   so smithies stay idle until P5.

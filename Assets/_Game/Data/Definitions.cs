@@ -185,6 +185,8 @@ namespace FES.Data
         public int TariffPermille = -1;
         /// <summary>Extra toll on goods in the node's specialty categories, in permille; -1 = config default.</summary>
         public int SpecialtySurchargePermille = -1;
+        /// <summary>The continent's international bank sits here (DEC-036); one per continent at most.</summary>
+        public bool InternationalBank;
     }
 
     public sealed class RouteDef
@@ -212,6 +214,7 @@ namespace FES.Data
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(n.Key), DetHash.Combine((ulong)n.Level, DetHash.Of(n.ParentKey ?? string.Empty))));
                 foreach (var tag in n.Tags) h = DetHash.Combine(h, DetHash.Of(tag));
                 h = DetHash.Combine(h, DetHash.Combine((ulong)(uint)n.TariffPermille, (ulong)(uint)n.SpecialtySurchargePermille));
+                if (n.InternationalBank) h = DetHash.Combine(h, DetHash.Of("international_bank"));
             }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),

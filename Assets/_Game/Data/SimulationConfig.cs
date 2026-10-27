@@ -60,6 +60,26 @@ namespace FES.Data
         /// <summary>Anchor price multiplier for a node's specialties in its own market.</summary>
         public Fx SpecialtyPriceMultiplier = Fx.FromPermille(800);
 
+        /// <summary>Share of each continent's starting coin supply its national banks hold as reserves, split evenly.</summary>
+        public Fx BankInitialReserveShare = Fx.FromPermille(100);
+        /// <summary>Yearly interest on deposits, credited weekly (DEC-036).</summary>
+        public Fx DepositInterestPerYear = Fx.FromPermille(20);
+        /// <summary>Share of the exchanged amount the international bank keeps as its fee (DEC-036).</summary>
+        public Fx ExchangeFee = Fx.FromPermille(30);
+        /// <summary>Yearly interest on loans, added to the debt when the loan is taken (DEC-037).</summary>
+        public Fx LoanInterestPerYear = Fx.FromPermille(100);
+        public int LoanTermWeeks = 52;
+        /// <summary>Credit limit as a share of the collateral's value.</summary>
+        public Fx LoanToValue = Fx.FromPermille(500);
+        /// <summary>Weeks a payment may stay overdue before the collateral is seized (DEC-037).</summary>
+        public int LoanGraceWeeks = 4;
+        /// <summary>Weeks a seized facility stays up for auction (DEC-039).</summary>
+        public int AuctionWeeks = 2;
+        /// <summary>An auction's reserve price, as a share of the facility's value; an NPC buys at it without a winning bid.</summary>
+        public Fx AuctionReserveShare = Fx.FromPermille(800);
+        /// <summary>Value of a level-1 facility as collateral, per industry tier; scales with level.</summary>
+        public readonly long[] FacilityValue = { 3000, 8000, 5000 };
+
         /// <summary>A license costs this times the good's Mid base price (DEC-024).</summary>
         public Fx LicensePriceMultiplier = Fx.FromInt(20);
 
@@ -184,7 +204,19 @@ namespace FES.Data
                 string tier = ((IndustryTier)t).ToString().ToLowerInvariant();
                 FacilityStartCash[t] = Long(v, $"facility.{tier}.start_cash", FacilityStartCash[t]);
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
+                FacilityValue[t] = Long(v, $"facility.{tier}.value", FacilityValue[t]);
             }
+            BankInitialReserveShare = Permille(v, "bank.initial_reserve_permille", BankInitialReserveShare);
+            DepositInterestPerYear = Permille(v, "bank.deposit_interest_permille", DepositInterestPerYear);
+            ExchangeFee = Permille(v, "bank.exchange_fee_permille", ExchangeFee);
+            LoanInterestPerYear = Permille(v, "bank.loan_interest_permille", LoanInterestPerYear);
+            LoanTermWeeks = Int(v, "bank.loan_term_weeks", LoanTermWeeks);
+            if (LoanTermWeeks < 1) throw new FormatException("config.csv: bank.loan_term_weeks must be >= 1.");
+            LoanToValue = Permille(v, "bank.loan_to_value_permille", LoanToValue);
+            LoanGraceWeeks = Int(v, "bank.grace_weeks", LoanGraceWeeks);
+            AuctionWeeks = Int(v, "bank.auction_weeks", AuctionWeeks);
+            if (AuctionWeeks < 1) throw new FormatException("config.csv: bank.auction_weeks must be >= 1.");
+            AuctionReserveShare = Permille(v, "bank.auction_reserve_permille", AuctionReserveShare);
             LicensePriceMultiplier = Permille(v, "license.price_permille", LicensePriceMultiplier);
             LicensedMerchantPermille = Int(v, "license.merchant_share_permille", LicensedMerchantPermille);
             TollRate = Permille(v, "toll.tariff_permille", TollRate);

@@ -27,6 +27,7 @@ namespace FES.Data
                     Tags = ParseTags(nodes.GetStringOr(r, "tags", string.Empty)),
                     TariffPermille = nodes.GetIntOr(r, "tariff_permille", -1),
                     SpecialtySurchargePermille = nodes.GetIntOr(r, "specialty_surcharge_permille", -1),
+                    InternationalBank = nodes.GetIntOr(r, "international_bank", 0) != 0,
                 });
             }
             if (_source.Exists(RoutesFile))

@@ -144,11 +144,14 @@ namespace FES.Agents
     {
         public readonly GoodId Good;
         public readonly int Quantity;
+        /// <summary>At a bank branch, what the coins carried do not cover comes out of the deposit there (DEC-036).</summary>
+        public readonly bool PayFromDeposit;
 
-        public BuyGoodsCommand(GoodId good, int quantity)
+        public BuyGoodsCommand(GoodId good, int quantity, bool payFromDeposit = false)
         {
             Good = good;
             Quantity = quantity;
+            PayFromDeposit = payFromDeposit;
         }
 
         public CommandResult Validate(SimContext ctx)
@@ -164,7 +167,16 @@ namespace FES.Agents
             int filled = Fill(ctx, cell);
             var player = ctx.World.Get<PlayerState>();
             int price = ctx.World.Get<MarketStore>().Price[cell];
-            player.LocalCoins -= (long)filled * price;
+            long cost = (long)filled * price;
+            long fromCoins = Math.Min(cost, player.LocalCoins);
+            player.LocalCoins -= fromCoins;
+            if (cost > fromCoins)
+            {
+                var bank = ctx.World.Get<BankState>();
+                int nation = ctx.World.Get<NodeBanks>().BranchNation(player.Node);
+                bank.PlayerDeposit[nation] -= cost - fromCoins;
+                bank.Reserve[nation] -= cost - fromCoins;
+            }
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, filled);
             ctx.World.Get<MarketFlows>().Buy(cell, filled);
             ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, true, Quantity, filled, price, ctx.Turn));
@@ -177,8 +189,18 @@ namespace FES.Agents
             long fill = Math.Min(Quantity, markets.Stock[cell]);
             fill = Math.Min(fill, PlayerTrade.CartCapacity(ctx)
                 .MaxAdditional(load, markets.GoodWeight[Good.Value], markets.GoodSize[Good.Value]));
-            fill = Math.Min(fill, ctx.World.Get<PlayerState>().LocalCoins / markets.Price[cell]);
+            fill = Math.Min(fill, Funds(ctx) / markets.Price[cell]);
             return (int)Math.Max(0, fill);
+        }
+
+        long Funds(SimContext ctx)
+        {
+            var player = ctx.World.Get<PlayerState>();
+            long funds = player.LocalCoins;
+            int nation = PayFromDeposit ? ctx.World.Get<NodeBanks>().BranchNation(player.Node) : -1;
+            if (nation < 0) return funds;
+            var bank = ctx.World.Get<BankState>();
+            return funds + Math.Min(bank.PlayerDeposit[nation], bank.Reserve[nation]);
         }
     }
 

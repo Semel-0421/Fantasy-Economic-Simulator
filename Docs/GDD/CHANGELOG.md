@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P9 done (player banking); P9b added for NPC loans, money totals, statistics and events
+- [systems/SYS_BANKING.md] Placeholders and Claude's proposals for reserves, deposits, exchange, loans, seizure and auctions; implementation notes
+- [02_Data_Formats.md] international_bank column, bank config keys, facility values
 - [04_Roadmap.md] P7 done
 - [systems/SYS_LICENSES.md] Implementation notes; drafts for base-good scope, purchase and renewal, facility sales, NPC holders
 - [02_Data_Formats.md] requires_license column, license and guidance config keys

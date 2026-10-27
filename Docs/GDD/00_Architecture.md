@@ -101,7 +101,7 @@ Phases run in order; within a phase systems run by `(Order, Id)`; events dispatc
 | Lod | `agents.lod` — `ILodPolicy` marks nodes Detailed / Aggregate |
 | Environment | `economy.world_events` (Default) — expire/roll modifiers; `economy.modifier_fold` (Late) — refold `MarketFlows` |
 | Production | `economy.consumption` (Early, Burst), `agents.production` (Default, Burst) |
-| Agents | `agents.merchants` — `IMerchantBehavior` (placeholder: idle) |
+| Agents | `agents.merchants` — `IMerchantBehavior` (default: `ArbitrageMerchantBehavior`) |
 | Markets | `economy.pricing` (Late, Burst) — only levels due per `TierSchedule` |
 | Finance | `economy.currency` — yearly minting, price index, exchange rates (pricing sees it next turn) |
 | Guidance | `agents.guidance` — decay, then add signals of this turn's applied commands |
@@ -126,7 +126,8 @@ simulation hash unchanged (`Production_BurstJob_MatchesManagedExecution` guards 
 service, which is the single authority: systems only ask `IsDetailed(node)`. Default: the subtree of the
 player's ancestor at `lod.focus_level` (Region) plus every node hosting a player-owned facility or
 merchant is Detailed. Systems branch per entity: Detailed facilities roll weekly efficiency variance,
-Aggregate ones use the expected value; merchants call `RunDetailed` per group or `RunAggregate` per node.
+Aggregate ones use the expected value; merchants call `RunDetailed` per group (and for every group on a trip) and `RunAggregate` once for all
+aggregate nodes.
 
 ## Pricing
 
@@ -165,9 +166,7 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 
 ## Known gaps (intentional for the skeleton)
 
-- Merchant trading is a placeholder (`IdleMerchantBehavior`); no inter-market trade flows yet.
-- Production does not gate on input availability; player-owned output goes to markets, not inventory.
-- Travel takes the route's turns but costs nothing (route cost is per cargo unit; the player has no cargo yet).
+- Merchants trade only within their home continent and do not borrow yet (P9b).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
 - Saves reject changed data instead of remapping ids by key.
 - Sections missing from an older save keep the freshly built state.

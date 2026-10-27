@@ -30,6 +30,19 @@ without scripting. Their counts per node are already in config (`merchants.<leve
 - [Confirmed] Merchants need no ship for sea and river routes (DEC-034).
 - [Confirmed] Merchant groups can borrow from banks (DEC-037).
 - [Confirmed] A merchant group pledges deposits, warehouse cargo and cart cargo as collateral (DEC-038).
+- [Draft] Claude's proposals, built in P5:
+  - A detailed group carries one good per trip along one route out of its node, choosing the most
+    profitable load after the base fee, per-unit charge and toll; it sells the whole load on arrival.
+  - Groups stay on their home continent: their cash is one continent's coin and they do not exchange yet.
+  - Like facilities (DEC-051), a detailed group pays a weekly upkeep (50 / 40 / 30 / 20 / 10 per level of
+    its home) and goes bankrupt after 5 weeks below zero (`merchants.<level>.upkeep`,
+    `merchants.bankrupt_weeks`); aggregate groups pay none.
+  - Aggregate flows move a share of the origin's stock (50%, `merchants.flow_permille`) times the margin
+    over the destination price, within the node's pooled capacity, and arrive the same week, with no base
+    fee and no encounter loss until P8.
+  - Capacity per group: weight 4,000 / 4,000 / 2,000 / 1,000 / 400 and size 3,200 / 3,200 / 1,600 /
+    800 / 300 per level (`merchants.<level>.max_weight`, `max_size`).
+  - Merchant loans wait for P9b.
 
 ## Arbitrage value
 ```
@@ -57,11 +70,16 @@ stateDiagram-v2
 - Partial fill at purchase: the merchant travels with what it got if the trip is still profitable.
 
 ## Unity implementation notes
-- Replace `IdleMerchantBehavior` behind the existing `IMerchantBehavior` service; `MerchantSystem`
-  already splits detailed merchants (`RunDetailed`) from aggregate nodes (`RunAggregate`).
-- `AgentTable` gains trip state (destination, arrival turn) and a cargo reference; cargo storage is shared
-  with SYS-INVENTORY. Replacement after bankruptcy reuses the row, so ids stay stable.
-- Tolls on every entered node make multi-hop route search expensive: limit candidates to one or two hops
-  and precompute per-route toll multipliers once per turn.
-- The aggregate pass should be a Burst job from the start (9,250 groups at full scale).
+Implemented in P5.
+- `ArbitrageMerchantBehavior` is the default `IMerchantBehavior`. `MerchantSystem` calls `RunDetailed` for
+  every group of a detailed node and every group on a trip, then `RunAggregate` once.
+- `AgentTable` (section version 2, `AgentTableV1Migration`) has `Home`, `Destination`, `ArrivalTurn` and
+  `NegativeCashWeeks`; loads are `CargoHolders.Merchant(agent)` rows in `CargoTable`. Replacement after
+  bankruptcy reuses the row (`MerchantBankrupt` event), so ids stay stable.
+- Trip costs come from `TravelCosts.Quote`, the player's function (DEC-015); licensed goods follow
+  `LicenseRules.MerchantHoldsLicenses`.
+- Both passes scan only the stocked cells of the origin market and binary-search the destination's cell:
+  most cells hold no stock. `MerchantFlowJob` (Burst, single-threaded, nodes in order) is the aggregate
+  pass; at full scale merchants take about 7.6 ms of a 14.7 ms turn (aggregate 4.2 ms, 155 detailed
+  groups 2.6 ms).
 

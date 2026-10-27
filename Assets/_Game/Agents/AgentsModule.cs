@@ -39,11 +39,12 @@ namespace FES.Agents
             builder.World.Add(new LodState(nodes.Count));
 
             builder.Services.SetDefault<ILodPolicy>(new DefaultLodPolicy());
-            builder.Services.SetDefault<IMerchantBehavior>(new IdleMerchantBehavior());
+            builder.Services.SetDefault<IMerchantBehavior>(new ArbitrageMerchantBehavior());
 
             builder.AddMigration(new PlayerStateV1Migration());
             builder.AddMigration(new PlayerStateV2Migration());
             builder.AddMigration(new FacilityTableV1Migration());
+            builder.AddMigration(new AgentTableV1Migration());
 
             builder.AddSystem(new TravelSystem());
             builder.AddSystem(new LodSystem());

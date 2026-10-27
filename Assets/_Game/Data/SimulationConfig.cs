@@ -42,6 +42,22 @@ namespace FES.Data
         /// <summary>Starting cash of one merchant group, per level of its home node.</summary>
         public readonly long[] MerchantStartCash = { 5000, 4000, 3000, 2000, 1000 };
 
+        /// <summary>Cargo limits of one merchant group, per level of its home node (DEC-013).</summary>
+        public readonly long[] MerchantMaxWeight = { 4000, 4000, 2000, 1000, 400 };
+        public readonly long[] MerchantMaxSize = { 3200, 3200, 1600, 800, 300 };
+
+        /// <summary>Weekly running cost of a detailed merchant group, per level of its home node.</summary>
+        public readonly long[] MerchantUpkeep = { 50, 40, 30, 20, 10 };
+
+        /// <summary>A detailed merchant group goes bankrupt after this many weeks in a row with cash below zero.</summary>
+        public int MerchantBankruptWeeks = 5;
+
+        /// <summary>
+        /// Aggregate trade: share of the origin's stock moved per week along a route, per unit of margin over
+        /// the destination price (DEC-003).
+        /// </summary>
+        public Fx MerchantFlowShare = Fx.FromPermille(500);
+
         /// <summary>[level, industry tier] producer groups spawned per node.</summary>
         public readonly int[,] ProducersPerNode = new int[WorldLevels.Count, IndustryTiers.Count];
 
@@ -187,6 +203,9 @@ namespace FES.Data
                 LevelDemandWeight[l] = Permille(v, $"demand.{level}.weight_permille", LevelDemandWeight[l]);
                 MerchantsPerNode[l] = Int(v, $"merchants.{level}", MerchantsPerNode[l]);
                 MerchantStartCash[l] = Long(v, $"merchants.{level}.start_cash", MerchantStartCash[l]);
+                MerchantMaxWeight[l] = Long(v, $"merchants.{level}.max_weight", MerchantMaxWeight[l]);
+                MerchantMaxSize[l] = Long(v, $"merchants.{level}.max_size", MerchantMaxSize[l]);
+                MerchantUpkeep[l] = Long(v, $"merchants.{level}.upkeep", MerchantUpkeep[l]);
                 for (int t = 0; t < IndustryTiers.Count; t++)
                 {
                     string tier = ((IndustryTier)t).ToString().ToLowerInvariant();
@@ -199,6 +218,9 @@ namespace FES.Data
                 GradePriceMultiplier[g] = Permille(v, $"grade.{grade}.price_permille", GradePriceMultiplier[g]);
             }
             ProductionVariancePermille = Int(v, "production.variance_permille", ProductionVariancePermille);
+            MerchantBankruptWeeks = Int(v, "merchants.bankrupt_weeks", MerchantBankruptWeeks);
+            if (MerchantBankruptWeeks < 1) throw new FormatException("config.csv: merchants.bankrupt_weeks must be >= 1.");
+            MerchantFlowShare = Permille(v, "merchants.flow_permille", MerchantFlowShare);
             for (int t = 0; t < IndustryTiers.Count; t++)
             {
                 string tier = ((IndustryTier)t).ToString().ToLowerInvariant();

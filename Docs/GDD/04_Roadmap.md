@@ -33,7 +33,7 @@ flowchart LR
 | P2 | `CargoTable` (cart, warehouses), cash per continent coin, buy/sell commands at current price, partial fills, placeholder capacities, random village start, save migrations | SYS-INVENTORY, SYS-PLAYER-START | Done (cart only; warehouses come with P4, license check with P7) |
 | P3 | Base fee per trip, per-unit charge, toll on every entered node valued at local prices | SYS-TRAVEL-COSTS | Done |
 | P4 | Facility cash, input purchase from stock, all-or-nothing, income at current price, bankruptcy (player facilities too), player output to warehouse with overflow sale | SYS-PRODUCTION | Done |
-| P5 | Detailed arbitrage merchants with cargo, trips, costs, licenses, bankruptcy, loans; aggregate node-to-node flows with expected encounter loss | SYS-MERCHANTS | After P3, P4, P9 |
+| P5 | Detailed arbitrage merchants with cargo, trips, costs, licenses, bankruptcy, loans; aggregate node-to-node flows with expected encounter loss | SYS-MERCHANTS | Done (loans with P9b, encounter loss with P8) |
 | P6 | Terrain tags on nodes, tag-to-specialty table, four specialty effects | SYS-PRODUCTION | Done (placeholder data) |
 | P7 | Per-good licenses issued by nations, yearly renewal, sell check, NPC holders | SYS-LICENSES | Done |
 | P8 | Route terrain (turns, cost), encounter roll per trip, guards and insurance, passage and owned ships | SYS-ROUTE-HAZARDS | Ready |
@@ -50,6 +50,9 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P4, P6, P7 and P9 are done. Next: P5 (merchants), P8 (terrain and encounters) or P9b.
+- P1 to P7 and P9 are done. Next: P8 (terrain and encounters), P9b (money totals, NPC loans, events) or
+  P10 (market demand).
+- With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
+  tier cadence would cut it if mobile needs it.
 - Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,
   so smithies stay idle until P5.

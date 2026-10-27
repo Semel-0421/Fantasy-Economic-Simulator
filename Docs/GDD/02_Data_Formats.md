@@ -73,6 +73,9 @@ changing a default in code does.
 | demand.<level>.weight_permille | continent 40000 ... village 1000 | base demand weight |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
+| merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |
+| merchants.<level>.upkeep, merchants.bankrupt_weeks | 50/40/30/20/10, 5 | weekly upkeep of a detailed group, weeks below zero before bankruptcy ([Draft]) |
+| merchants.flow_permille | 500 | aggregate trade: share of stock moved per unit of margin ([Draft]) |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |

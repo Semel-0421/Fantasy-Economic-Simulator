@@ -44,7 +44,7 @@ SimulationBuilder.FromData(source, seed)
     .Build();
 ```
 
-Replaceable today: `ILodPolicy`, `IMerchantBehavior`, `ICurrencyModel`.
+Replaceable today: `ILodPolicy`, `IMerchantBehavior` (`IdleMerchantBehavior` turns trade off), `ICurrencyModel`.
 
 Any single system can also be replaced or dropped by id, without editing its module:
 

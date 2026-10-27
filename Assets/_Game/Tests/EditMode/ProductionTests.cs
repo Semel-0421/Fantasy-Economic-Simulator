@@ -63,8 +63,9 @@ namespace FES.Tests
         [Test]
         public void FacilityWithoutInputStock_ProducesNothing_ButPaysUpkeep()
         {
-            // Smithies sit in cities, which no mine supplies with ore until merchants carry it (P5).
-            using var sim = TestWorlds.BuildSample();
+            // Smithies sit in cities, which no mine supplies with ore while merchants stay idle.
+            using var sim = SimulationBuilder.FromData(TestWorlds.Sample(), 42)
+                .ConfigureServices(s => s.Set<IMerchantBehavior>(new IdleMerchantBehavior())).Build();
             var facilities = sim.World.Get<FacilityTable>();
             var smithies = FacilitiesOf(sim, IndustryTier.Secondary).ToList();
             Assume.That(smithies, Is.Not.Empty);

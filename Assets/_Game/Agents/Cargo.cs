@@ -15,6 +15,11 @@ namespace FES.Agents
 
         /// <summary>The warehouse at a facility; it holds goods while the player owns the facility.</summary>
         public static int Warehouse(FacilityId facility) => WarehouseBase + facility.Value;
+
+        const int MerchantBase = 2 << 28;
+
+        /// <summary>The load of a merchant group on a trip.</summary>
+        public static int Merchant(AgentId merchant) => MerchantBase + merchant.Value;
     }
 
     public readonly struct CargoItem

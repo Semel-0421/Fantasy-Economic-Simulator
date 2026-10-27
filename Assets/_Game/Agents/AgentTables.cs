@@ -10,14 +10,25 @@ namespace FES.Agents
     /// </summary>
     public sealed class AgentTable : NativeTable
     {
+        public const string SectionKey = "agents.merchants";
+
+        /// <summary>Where the group is; while travelling, the node it left.</summary>
         public readonly NativeColumn<int> Node;
         public readonly NativeColumn<int> Owner;
         public readonly NativeColumn<byte> Scale;
         public readonly NativeColumn<byte> Mode;
+        /// <summary>Coins of the continent the group trades in (it stays on its home continent).</summary>
         public readonly NativeColumn<long> Cash;
+        /// <summary>Where the group was founded; a replacement after bankruptcy starts here.</summary>
+        public readonly NativeColumn<int> Home;
+        /// <summary>Node the group is travelling to, or -1.</summary>
+        public readonly NativeColumn<int> Destination;
+        public readonly NativeColumn<int> ArrivalTurn;
+        /// <summary>Consecutive weeks that ended with cash below zero.</summary>
+        public readonly NativeColumn<int> NegativeCashWeeks;
 
-        public override string Key => "agents.merchants";
-        public override int Version => 1;
+        public override string Key => SectionKey;
+        public override int Version => 2;
 
         public AgentTable()
         {
@@ -26,6 +37,10 @@ namespace FES.Agents
             Scale = Column<byte>();
             Mode = Column<byte>();
             Cash = Column<long>();
+            Home = Column<int>();
+            Destination = Column<int>();
+            ArrivalTurn = Column<int>();
+            NegativeCashWeeks = Column<int>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -35,7 +50,43 @@ namespace FES.Agents
             Scale.Add((byte)scale);
             Mode.Add((byte)mode);
             Cash.Add(cash);
+            Home.Add(node);
+            Destination.Add(-1);
+            ArrivalTurn.Add(-1);
+            NegativeCashWeeks.Add(0);
             return new AgentId(Count - 1);
+        }
+
+        public bool IsTravelling(int agent) => Destination[agent] >= 0;
+    }
+
+    /// <summary>Version 1 had no trip state: every group was at home and idle.</summary>
+    public sealed class AgentTableV1Migration : ISaveMigration
+    {
+        public string SectionKey => AgentTable.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            var reader = new BinaryReader(new MemoryStream(section));
+            int rows = reader.ReadInt32();
+            var nodes = new int[rows];
+            for (int r = 0; r < rows; r++) nodes[r] = reader.ReadInt32();
+
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                foreach (int node in nodes) writer.Write(node); // Home
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(-1); // Destination
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(-1); // ArrivalTurn
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0); // NegativeCashWeeks
+            }
+            return output.ToArray();
         }
     }
 

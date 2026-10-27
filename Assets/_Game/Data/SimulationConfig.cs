@@ -60,6 +60,12 @@ namespace FES.Data
         /// <summary>Anchor price multiplier for a node's specialties in its own market.</summary>
         public Fx SpecialtyPriceMultiplier = Fx.FromPermille(800);
 
+        /// <summary>Toll on entering a node, as a share of the cargo's value, unless the map sets the node's own.</summary>
+        public Fx TollRate = Fx.FromPermille(30);
+
+        /// <summary>Extra toll on goods in the entered node's specialty categories, unless the map sets it.</summary>
+        public Fx TollSpecialtySurcharge = Fx.FromPermille(70);
+
         /// <summary>Weekly running cost (wages) of a level-1 facility, per industry tier; scales with level.</summary>
         public readonly long[] FacilityUpkeep = { 50, 100, 50 };
 
@@ -172,6 +178,8 @@ namespace FES.Data
                 FacilityStartCash[t] = Long(v, $"facility.{tier}.start_cash", FacilityStartCash[t]);
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
             }
+            TollRate = Permille(v, "toll.tariff_permille", TollRate);
+            TollSpecialtySurcharge = Permille(v, "toll.specialty_surcharge_permille", TollSpecialtySurcharge);
             SpecialtyOutputMultiplier = Permille(v, "specialty.output_permille", SpecialtyOutputMultiplier);
             SpecialtyGradeUpChance = Permille(v, "specialty.grade_up_permille", SpecialtyGradeUpChance);
             SpecialtyPriceMultiplier = Permille(v, "specialty.price_permille", SpecialtyPriceMultiplier);

@@ -25,6 +25,8 @@ namespace FES.Data
                     Level = nodes.GetEnum<WorldLevel>(r, "level"),
                     ParentKey = nodes.GetString(r, "parent"),
                     Tags = ParseTags(nodes.GetStringOr(r, "tags", string.Empty)),
+                    TariffPermille = nodes.GetIntOr(r, "tariff_permille", -1),
+                    SpecialtySurchargePermille = nodes.GetIntOr(r, "specialty_surcharge_permille", -1),
                 });
             }
             if (_source.Exists(RoutesFile))
@@ -38,6 +40,7 @@ namespace FES.Data
                         ToKey = routes.GetString(r, "to"),
                         TravelTurns = routes.GetInt(r, "travel_turns"),
                         CostPerUnit = routes.GetInt(r, "cost_per_unit"),
+                        BaseFee = routes.GetIntOr(r, "base_fee", 0),
                     });
                 }
             }

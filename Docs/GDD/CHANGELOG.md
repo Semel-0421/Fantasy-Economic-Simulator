@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P3 done
+- [systems/SYS_TRAVEL_COSTS.md] Implementation notes; drafts for which coin pays fees and tolls, where the money goes, sample rates
+- [02_Data_Formats.md] base_fee, node toll columns, toll config keys
 - [04_Roadmap.md] P6 done
 - [systems/SYS_PRODUCTION.md] Specialty implementation notes: tags, always carried, lower anchor, output bonus, grade-up
 - [02_Data_Formats.md] map_nodes.csv tags, specialties.csv, specialty config keys

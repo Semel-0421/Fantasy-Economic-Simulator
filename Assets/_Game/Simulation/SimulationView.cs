@@ -29,12 +29,14 @@ namespace FES.Simulation
         public readonly NodeId To;
         public readonly int TravelTurns;
         public readonly int CostPerUnit;
+        public readonly int BaseFee;
 
-        public RouteInfo(NodeId to, int travelTurns, int costPerUnit)
+        public RouteInfo(NodeId to, int travelTurns, int costPerUnit, int baseFee)
         {
             To = to;
             TravelTurns = travelTurns;
             CostPerUnit = costPerUnit;
+            BaseFee = baseFee;
         }
     }
 
@@ -64,6 +66,7 @@ namespace FES.Simulation
     /// </summary>
     public sealed class SimulationView
     {
+        readonly WorldState _world;
         readonly SimClock _clock;
         readonly NodeTable _nodes;
         readonly RouteTable _routes;
@@ -80,6 +83,7 @@ namespace FES.Simulation
         internal SimulationView(WorldState world, GameDatabase database)
         {
             Database = database;
+            _world = world;
             _clock = world.Get<SimClock>();
             _nodes = world.Get<NodeTable>();
             _routes = world.Get<RouteTable>();
@@ -126,6 +130,12 @@ namespace FES.Simulation
 
         public bool IsSpecialty(NodeId node, GoodId good) => _specialties.IsSpecialty(node.Value, good.BaseIndex);
 
+        /// <summary>
+        /// The fee and toll of travelling from the player's node to <paramref name="destination"/> with the
+        /// current cart; false when no route leads there.
+        /// </summary>
+        public bool TryQuoteTrip(NodeId destination, out TripQuote quote) => PlayerTrip.TryQuote(_world, Database, destination, out quote);
+
         public void GetRoutesFrom(NodeId node, List<RouteInfo> into)
         {
             into.Clear();
@@ -133,7 +143,7 @@ namespace FES.Simulation
             for (int k = start; k < start + _routes.OutCount[node.Value]; k++)
             {
                 int r = _routes.RouteIndex[k];
-                into.Add(new RouteInfo(new NodeId(_routes.To[r]), _routes.TravelTurns[r], _routes.CostPerUnit[r]));
+                into.Add(new RouteInfo(new NodeId(_routes.To[r]), _routes.TravelTurns[r], _routes.CostPerUnit[r], _routes.BaseFee[r]));
             }
         }
 

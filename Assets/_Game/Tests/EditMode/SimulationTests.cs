@@ -188,10 +188,12 @@ namespace FES.Tests
             view.GetRoutesFrom(view.PlayerNode, routes);
             Assert.Greater(routes.Count, 0);
             long cash = view.PlayerCash;
+            Assert.IsTrue(view.TryQuoteTrip(routes[0].To, out var trip));
+            Assert.AreEqual(routes[0].BaseFee, trip.Fee); // empty cart: no per-unit charge, no toll
             sim.Actions.FoundCompany(view.PlayerNode, GuidanceAxis.Guild, 100);
             sim.Actions.Travel(routes[0].To);
             sim.AdvanceTurn();
-            Assert.AreEqual(cash - 100, view.PlayerCash);
+            Assert.AreEqual(cash - 100 - trip.Fee, view.PlayerCash);
             Assert.AreEqual(GuidanceAxis.Guild, view.DominantGuidance);
             Assert.IsTrue(view.IsTravelling);
             Assert.AreEqual(routes[0].To, view.TravelDestination);

@@ -7,8 +7,9 @@ using FES.World;
 namespace FES.Agents
 {
     /// <summary>
-    /// Sets the player off along a route from their current node. The trip takes the route's travel
-    /// turns; <see cref="TravelSystem"/> moves the player on arrival.
+    /// Sets the player off along a route from their current node, paying the trip's fee and toll up front
+    /// (<see cref="TravelCosts"/>). The trip takes the route's travel turns; <see cref="TravelSystem"/>
+    /// moves the player on arrival.
     /// </summary>
     public sealed class TravelCommand : ICommand
     {
@@ -22,24 +23,57 @@ namespace FES.Agents
             if (!Destination.IsValid || Destination.Value >= nodes.Count) return CommandResult.Fail("Unknown destination.");
             var player = ctx.World.Get<PlayerState>();
             if (player.IsTravelling) return CommandResult.Fail("Already travelling.");
-            return FindRoute(ctx, player.Node) >= 0 ? CommandResult.Success : CommandResult.Fail("No route to destination.");
+            if (!TryQuote(ctx, out var quote)) return CommandResult.Fail("No route to destination.");
+            return quote.AffordableWith(player.Coins) ? CommandResult.Success : CommandResult.Fail("Not enough coins for fees and tolls.");
         }
 
-        // TODO: charge the route's transport cost once the player carries cargo.
         public void Apply(SimContext ctx)
         {
+            TryQuote(ctx, out var quote);
             var player = ctx.World.Get<PlayerState>();
+            player.Coins[quote.FeeContinent] -= quote.Fee;
+            player.Coins[quote.TollContinent] -= quote.Toll;
             player.TravelDestination = Destination.Value;
-            player.ArrivalTurn = ctx.Turn + ctx.World.Get<RouteTable>().TravelTurns[FindRoute(ctx, player.Node)];
+            player.ArrivalTurn = ctx.Turn + ctx.World.Get<RouteTable>().TravelTurns[quote.Route];
+            ctx.Events.Publish(new TripStarted(Destination, player.ArrivalTurn, quote, ctx.Turn));
         }
 
-        int FindRoute(SimContext ctx, int from)
+        bool TryQuote(SimContext ctx, out TripQuote quote) =>
+            PlayerTrip.TryQuote(ctx.World, ctx.Services.Get<GameDatabase>(), Destination, out quote);
+    }
+
+    public static class PlayerTrip
+    {
+        /// <summary>What travelling from the player's node to <paramref name="destination"/> with the cart costs now.</summary>
+        public static bool TryQuote(WorldState world, GameDatabase db, NodeId destination, out TripQuote quote)
         {
-            var routes = ctx.World.Get<RouteTable>();
-            int start = routes.OutStart[from];
-            for (int k = start; k < start + routes.OutCount[from]; k++)
-                if (routes.To[routes.RouteIndex[k]] == Destination.Value) return routes.RouteIndex[k];
-            return -1;
+            var costs = new TravelCosts(world, db);
+            int route = costs.FindRoute(world.Get<PlayerState>().Node, destination.Value);
+            if (route < 0)
+            {
+                quote = default;
+                return false;
+            }
+            var cart = new System.Collections.Generic.List<CargoItem>();
+            world.Get<CargoTable>().Collect(CargoHolders.PlayerCart, cart);
+            quote = costs.Quote(route, cart);
+            return true;
+        }
+    }
+
+    public sealed class TripStarted : ISimEvent
+    {
+        public readonly NodeId Destination;
+        public readonly int ArrivalTurn;
+        public readonly TripQuote Paid;
+        public readonly int Turn;
+
+        public TripStarted(NodeId destination, int arrivalTurn, TripQuote paid, int turn)
+        {
+            Destination = destination;
+            ArrivalTurn = arrivalTurn;
+            Paid = paid;
+            Turn = turn;
         }
     }
 

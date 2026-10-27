@@ -177,6 +177,10 @@ namespace FES.Data
         public string ParentKey;
         /// <summary>Terrain tags (coast, mountain, ...); specialties follow from them (DEC-016).</summary>
         public string[] Tags = System.Array.Empty<string>();
+        /// <summary>Toll on entering the node, in permille of the cargo's value; -1 = config default.</summary>
+        public int TariffPermille = -1;
+        /// <summary>Extra toll on goods in the node's specialty categories, in permille; -1 = config default.</summary>
+        public int SpecialtySurchargePermille = -1;
     }
 
     public sealed class RouteDef
@@ -185,6 +189,8 @@ namespace FES.Data
         public string ToKey;
         public int TravelTurns;
         public int CostPerUnit;
+        /// <summary>Paid once per trip, whatever the cargo (DEC-017).</summary>
+        public int BaseFee;
     }
 
     /// <summary>World layout. Produced by a handcrafted source today, by a procedural generator later.</summary>
@@ -201,10 +207,11 @@ namespace FES.Data
             {
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(n.Key), DetHash.Combine((ulong)n.Level, DetHash.Of(n.ParentKey ?? string.Empty))));
                 foreach (var tag in n.Tags) h = DetHash.Combine(h, DetHash.Of(tag));
+                h = DetHash.Combine(h, DetHash.Combine((ulong)(uint)n.TariffPermille, (ulong)(uint)n.SpecialtySurchargePermille));
             }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),
-                    DetHash.Combine((ulong)(uint)r.TravelTurns, (ulong)(uint)r.CostPerUnit))));
+                    DetHash.Combine((ulong)(uint)r.TravelTurns, DetHash.Combine((ulong)(uint)r.CostPerUnit, (ulong)(uint)r.BaseFee)))));
             return h;
         }
     }

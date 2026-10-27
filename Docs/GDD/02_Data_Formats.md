@@ -46,8 +46,10 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
 
 - Nodes: `key,name,level,parent,tags`. Continents have an empty parent. A node's parent must be one level
   up, except villages, which may hang off a city or a region. `tags` (optional) lists terrain tags
-  separated by `|`; every tag must appear in `specialties.csv`.
-- Routes: `from,to,travel_turns,cost_per_unit` (directed; add both directions for two-way travel).
+  separated by `|`; every tag must appear in `specialties.csv`. `tariff_permille` and
+  `specialty_surcharge_permille` (optional, empty = config default) set the node's toll rates.
+- Routes: `from,to,travel_turns,cost_per_unit,base_fee` (directed; add both directions for two-way
+  travel). `base_fee` is optional (default 0) and paid once per trip.
 
 ## specialties.csv
 
@@ -70,6 +72,7 @@ changing a default in code does.
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |
+| toll.tariff_permille, toll.specialty_surcharge_permille | 30, 70 | default toll rates on entering a node ([Draft]) |
 | specialty.output_permille, specialty.grade_up_permille, specialty.price_permille | 1250, 200, 800 | specialty output bonus, share one grade higher, local anchor price ([Draft]) |
 | facility.<tier>.upkeep | 50/100/50 | weekly upkeep of a level-1 facility (times its level) |
 | facility.bankrupt_weeks | 5 | consecutive weeks with cash below zero before bankruptcy |

@@ -32,15 +32,26 @@ trip_cost = base_fee + cargo_units * route.cost_per_unit
 value_n(cargo) = sum(qty * market_price(n or nearest ancestor trading the good))
 ```
 
+- [Draft] The base fee and per-unit charge are paid in the departure node's coin, the toll in the entered
+  node's coin (Claude's proposal, following DEC-031). Crossing to another continent with cargo therefore
+  needs that continent's coins; with an empty cart the toll is zero.
+- [Draft] Fees and tolls leave the economy until money totals exist (P9).
+- [Draft] Sample rates: toll 30 permille and specialty surcharge 70 permille by default, cities 50 / 100;
+  base fee 2 (village routes), 5 (city routes), 20 (between continents).
+
 ## Edge cases
-- Not enough local coins for fees or tolls at departure: the trip cannot start.
+- Not enough coins for fees or tolls at departure: the trip cannot start.
 - No market up the hierarchy trades a carried good: [Draft] valued at zero (cannot be priced).
 
 ## Unity implementation notes
-- `map_routes.csv` gains a `base_fee` column; `map_nodes.csv` gains `tariff_permille` and
-  `specialty_surcharge_permille` (Claude-chosen names, [Draft]).
-- Each route is one edge today, so a trip enters one node; tolls are charged when the trip starts, valued
-  at the destination's prices.
-- Arbitrage (SYS-MERCHANTS) and the player's trip planning share one cost function.
+Implemented in P3.
+- `map_routes.csv` has an optional `base_fee` column (default 0); `map_nodes.csv` has optional
+  `tariff_permille` and `specialty_surcharge_permille` columns, empty meaning the config defaults
+  `toll.tariff_permille` / `toll.specialty_surcharge_permille` (Claude-chosen names, [Draft]).
+  `NodeTolls` (world component, not saved) holds the effective rates.
+- Each route is one edge today, so a trip enters one node, its destination; fee and toll are paid when the
+  trip starts, the toll valued at the destination's prices (or the nearest ancestor trading the good).
+- `TravelCosts.Quote(route, cargo)` is the one cost function, for the player now and merchants in P5.
+  `TravelCommand` pays it up front and publishes `TripStarted`; `SimulationView.TryQuoteTrip` shows it.
 - The surcharge's specialty categories come from `NodeSpecialties` (P6): a category counts when one of the
   node's specialty base goods is in it.

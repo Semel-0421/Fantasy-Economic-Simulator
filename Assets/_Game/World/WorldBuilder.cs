@@ -95,6 +95,7 @@ namespace FES.World
                 routes.To[i] = to[i];
                 routes.TravelTurns[i] = map.Routes[i].TravelTurns;
                 routes.CostPerUnit[i] = map.Routes[i].CostPerUnit;
+                routes.BaseFee[i] = map.Routes[i].BaseFee;
             }
             BuildCsr(from, routes.OutStart, routes.OutCount, routes.RouteIndex);
             return routes;
@@ -152,7 +153,9 @@ namespace FES.World
             var map = builder.Services.Get<MapDef>();
             var nodes = builder.World.Add(WorldBuilder.BuildNodes(map));
             builder.World.Add(WorldBuilder.BuildRoutes(map, nodes));
-            builder.World.Add(new NodeSpecialties(map, nodes, builder.Services.Get<GameDatabase>()));
+            var db = builder.Services.Get<GameDatabase>();
+            builder.World.Add(new NodeSpecialties(map, nodes, db));
+            builder.World.Add(new NodeTolls(map, nodes, db.Config));
         }
     }
 }

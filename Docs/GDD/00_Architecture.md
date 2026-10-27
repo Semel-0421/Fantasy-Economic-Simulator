@@ -100,9 +100,9 @@ Phases run in order; within a phase systems run by `(Order, Id)`; events dispatc
 | Commands | `core.commands` — validate + apply queued player commands; records `Commands.AppliedThisTurn`; `agents.travel` (Late) — completes trips due this turn |
 | Lod | `agents.lod` — `ILodPolicy` marks nodes Detailed / Aggregate |
 | Environment | `economy.world_events` (Default) — expire/roll modifiers; `economy.modifier_fold` (Late) — refold `MarketFlows` |
-| Production | `economy.consumption` (Early, Burst), `agents.production` (Default, Burst) |
+| Production | `agents.production` (Default, Burst) |
 | Agents | `agents.merchants` — `IMerchantBehavior` (default: `ArbitrageMerchantBehavior`) |
-| Markets | `economy.pricing` (Late, Burst) — only levels due per `TierSchedule` |
+| Markets | `economy.pricing` (Late, Burst) — household consumption (per turn for slow levels, inline for every-turn levels), then reprices levels due per `TierSchedule` |
 | Finance | `economy.currency` — yearly minting, price index, exchange rates (pricing sees it next turn) |
 | Guidance | `agents.guidance` — decay, then add signals of this turn's applied commands |
 | Cleanup | (reserved) |

@@ -34,9 +34,11 @@ namespace FES.Data
         public readonly int Size;
         /// <summary>Selling it needs a license of the nation it is sold in (DEC-021, DEC-024); per base good.</summary>
         public readonly bool RequiresLicense;
+        /// <summary>The base good is a luxury rather than a necessity (DEC-045, DEC-048).</summary>
+        public readonly bool IsLuxury;
 
         public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size,
-            bool requiresLicense)
+            bool requiresLicense, bool isLuxury = false)
         {
             Id = id;
             BaseKey = baseKey;
@@ -46,6 +48,7 @@ namespace FES.Data
             Weight = weight;
             Size = size;
             RequiresLicense = requiresLicense;
+            IsLuxury = isLuxury;
         }
 
         public QualityGrade Grade => Id.Grade;
@@ -194,6 +197,8 @@ namespace FES.Data
         public int DangerPermille = -1;
         /// <summary>Ships are traded here and water routes may start and end here (DEC-053).</summary>
         public bool Port;
+        /// <summary>Starting population; -1 = the config default for the node's level (DEC-050).</summary>
+        public int Population = -1;
     }
 
     public sealed class RouteDef
@@ -227,6 +232,7 @@ namespace FES.Data
                 if (n.InternationalBank) h = DetHash.Combine(h, DetHash.Of("international_bank"));
                 h = DetHash.Combine(h, (ulong)(uint)n.DangerPermille);
                 if (n.Port) h = DetHash.Combine(h, DetHash.Of("port"));
+                if (n.Population >= 0) h = DetHash.Combine(h, DetHash.Combine(DetHash.Of("population"), (ulong)n.Population));
             }
             foreach (var r in Routes)
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(r.FromKey), DetHash.Combine(DetHash.Of(r.ToKey),

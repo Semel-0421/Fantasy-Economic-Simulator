@@ -425,6 +425,12 @@ namespace FES.Simulation
         public Fx PriceIndex(int continent) => _currency.PriceIndex[continent];
         public Fx ExchangeRate(int continent) => _currency.ExchangeRate[continent];
         public long CoinSupply(int continent) => _currency.CoinSupply[continent];
+
+        // Households (DEC-049, DEC-050)
+
+        public long Population(NodeId node) => _world.Get<HouseholdState>().Population[node.Value];
+        /// <summary>Weekly income per head, in the node's continent coin.</summary>
+        public Fx IncomePerHead(NodeId node) => Fx.FromRaw(_world.Get<HouseholdState>().IncomePerHead[node.Value]);
     }
 
     /// <summary>

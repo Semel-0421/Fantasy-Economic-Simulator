@@ -42,7 +42,7 @@ flowchart LR
 | P6 | Terrain tags on nodes, tag-to-specialty table, four specialty effects | SYS-PRODUCTION | Done (placeholder data) |
 | P7 | Per-good licenses issued by nations, yearly renewal, sell check, NPC holders | SYS-LICENSES | Done |
 | P8 | Route terrain (turns, cost), encounter roll per trip, guards and insurance, passage and owned ships | SYS-ROUTE-HAZARDS | Done |
-| P10 | Elasticity classes, demand weights (size, wealth, population), Pareto households, basic price index later; must stop the price runaway (Q-036) | SYS-MARKETS | Ready; basket deferred (Q-030) |
+| P10 | Elasticity classes, demand weights (size, wealth, population), Pareto households, basic price index later; must stop the price runaway (Q-036) | SYS-MARKETS | Done (basket deferred, Q-030) |
 | P9 | State-owned national and international banks, exchange with fee, deposits with interest and payment, player loans on any collateral, weekly repayment, seizure and auction, finite reserves | SYS-BANKING | Done |
 | P9b | NPC loans (facilities, merchant groups), money totals per nation and continent, reserve-driven loan rates, quarterly records and yearly statistics, financial events | SYS-BANKING | Done (price index still on coin supply, Q-036) |
 | P11 | Ports (ship trade, port-only water routes, docked ships), paved roads (condition, cheaper and safer travel, map roads, player building, upkeep and decay) | SYS-INFRASTRUCTURE | Done |
@@ -59,10 +59,10 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P9, P9b, P11 and P12a are done. Next: P10 (market demand) or P12b (influence and policy).
-  P10 first is recommended: prices where demand goes unmet run away (Q-036), which inflates facility
-  cash and money totals without bound.
-- With P9b a full-scale turn takes about 14.8 ms (14.0 ms before).
+- P1 to P12a are done except P12b and P12c. Next: P12b (influence and policy). Money still enters
+  through market sales without limit (Q-036); a later phase could pay facility wages to households and
+  cap their purchases by income.
+- With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.
 - Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,

@@ -1,10 +1,10 @@
-# Base goods. Each row becomes 4 items (low/mid/high/best); base_price is the mid-grade price in coins. weight/size are per unit, shared by all grades. requires_license=1: selling needs a license ([Draft]).
-key,category,base_price,base_demand,weight,size,requires_license
-wheat,grain,10,40,5,4,0
-barley,grain,8,25,5,4,0
-iron_ore,ore,20,10,12,3,0
-copper_ore,ore,18,8,12,3,0
-wool,textile,15,12,3,6,0
-linen,textile,22,8,2,3,0
-iron_tools,tools,90,4,6,4,1
-bread,provisions,14,30,2,3,0
+# Base goods. Each row becomes 4 items (low/mid/high/best); base_price is the mid-grade price in coins. weight/size are per unit, shared by all grades. requires_license=1: selling needs a license ([Draft]). class: necessity (default) or luxury ([Draft]).
+key,category,base_price,base_demand,weight,size,requires_license,class
+wheat,grain,10,40,5,4,0,necessity
+barley,grain,8,25,5,4,0,necessity
+iron_ore,ore,20,10,12,3,0,necessity
+copper_ore,ore,18,8,12,3,0,necessity
+wool,textile,15,12,3,6,0,necessity
+linen,textile,22,8,2,3,0,luxury
+iron_tools,tools,90,4,6,4,1,luxury
+bread,provisions,14,30,2,3,0,necessity

@@ -36,6 +36,30 @@ namespace FES.Data
             Fx.FromInt(40), Fx.FromInt(20), Fx.FromInt(8), Fx.FromInt(4), Fx.One,
         };
 
+        /// <summary>Price elasticity of necessities and of luxuries: the share of demand lost per 100% above the anchor (DEC-048).</summary>
+        public Fx NecessityElasticity = Fx.FromPermille(500);
+        public Fx LuxuryElasticity = Fx.FromPermille(1500);
+        /// <summary>Per grade: how far a necessity is bought like a luxury (higher grades lean toward luxury, DEC-048).</summary>
+        public readonly Fx[] GradeLuxuryShare = { Fx.Zero, Fx.Zero, Fx.FromPermille(500), Fx.One };
+        /// <summary>Demand below the anchor price grows with elasticity up to this multiple.</summary>
+        public Fx MaxCheapDemand = Fx.FromInt(2);
+        /// <summary>Share of household income per quintile, poorest first (Pareto, DEC-049); sums to 1.</summary>
+        public readonly Fx[] QuintileIncomeShare =
+        {
+            Fx.FromPermille(20), Fx.FromPermille(30), Fx.FromPermille(50), Fx.FromPermille(100), Fx.FromPermille(800),
+        };
+        /// <summary>Starting population per node level, unless the map sets it (DEC-050).</summary>
+        public readonly long[] DefaultPopulation = { 20000, 10000, 4000, 2000, 500 };
+        /// <summary>Starting weekly income per head, in coins, per node level.</summary>
+        public readonly long[] DefaultIncomePerHead = { 4, 4, 3, 3, 2 };
+        /// <summary>Yearly population change: the base rate, plus this share of how far necessities were afforded above or below need.</summary>
+        public Fx PopulationBaseGrowth = Fx.FromPermille(5);
+        public Fx PopulationGrowthResponse = Fx.FromPermille(50);
+        public Fx PopulationMaxChange = Fx.FromPermille(30);
+        /// <summary>Yearly income change: this share of the nation's real money growth per head, capped (DEC-048, DEC-050).</summary>
+        public Fx IncomeResponse = Fx.FromPermille(500);
+        public Fx IncomeMaxChange = Fx.FromPermille(50);
+
         /// <summary>Merchant groups spawned per node of each level.</summary>
         public readonly int[] MerchantsPerNode = { 50, 50, 30, 10, 3 };
 
@@ -275,6 +299,10 @@ namespace FES.Data
                     Int(v, $"tier.{level}.period", TierCadences[l].Period),
                     Int(v, $"tier.{level}.offset", TierCadences[l].Offset));
                 LevelDemandWeight[l] = Permille(v, $"demand.{level}.weight_permille", LevelDemandWeight[l]);
+                DefaultPopulation[l] = Long(v, $"households.{level}.population", DefaultPopulation[l]);
+                DefaultIncomePerHead[l] = Long(v, $"households.{level}.income", DefaultIncomePerHead[l]);
+                if (DefaultPopulation[l] <= 0 || DefaultIncomePerHead[l] <= 0)
+                    throw new FormatException($"config.csv: households.{level}.population and income must be positive.");
                 MerchantsPerNode[l] = Int(v, $"merchants.{level}", MerchantsPerNode[l]);
                 MerchantStartCash[l] = Long(v, $"merchants.{level}.start_cash", MerchantStartCash[l]);
                 MerchantMaxWeight[l] = Long(v, $"merchants.{level}.max_weight", MerchantMaxWeight[l]);
@@ -353,6 +381,26 @@ namespace FES.Data
             AuctionWeeks = Int(v, "bank.auction_weeks", AuctionWeeks);
             if (AuctionWeeks < 1) throw new FormatException("config.csv: bank.auction_weeks must be >= 1.");
             AuctionReserveShare = Permille(v, "bank.auction_reserve_permille", AuctionReserveShare);
+            NecessityElasticity = Permille(v, "demand.necessity_elasticity_permille", NecessityElasticity);
+            LuxuryElasticity = Permille(v, "demand.luxury_elasticity_permille", LuxuryElasticity);
+            MaxCheapDemand = Permille(v, "demand.max_cheap_permille", MaxCheapDemand);
+            if (MaxCheapDemand.Raw < Fx.One.Raw) throw new FormatException("config.csv: demand.max_cheap_permille must be >= 1000.");
+            for (int g = 0; g < QualityGrades.Count; g++)
+                GradeLuxuryShare[g] = Permille(v, $"demand.{((QualityGrade)g).ToString().ToLowerInvariant()}.luxury_share_permille", GradeLuxuryShare[g]);
+            long shares = 0;
+            for (int q = 0; q < QuintileIncomeShare.Length; q++)
+            {
+                QuintileIncomeShare[q] = Permille(v, $"households.q{q + 1}.income_share_permille", QuintileIncomeShare[q]);
+                if (QuintileIncomeShare[q].Raw <= 0) throw new FormatException("config.csv: household income shares must be positive.");
+                shares += QuintileIncomeShare[q].Raw;
+            }
+            if (Math.Abs(shares - Fx.One.Raw) > QuintileIncomeShare.Length)
+                throw new FormatException("config.csv: households.q1..q5.income_share_permille must sum to 1000.");
+            PopulationBaseGrowth = Permille(v, "households.base_growth_permille", PopulationBaseGrowth);
+            PopulationGrowthResponse = Permille(v, "households.growth_response_permille", PopulationGrowthResponse);
+            PopulationMaxChange = Permille(v, "households.max_change_permille", PopulationMaxChange);
+            IncomeResponse = Permille(v, "households.income_response_permille", IncomeResponse);
+            IncomeMaxChange = Permille(v, "households.income_max_change_permille", IncomeMaxChange);
             TargetReserveRatio = Permille(v, "bank.target_reserve_permille", TargetReserveRatio);
             MaxLoanRateMultiplier = Permille(v, "bank.max_rate_multiplier_permille", MaxLoanRateMultiplier);
             if (MaxLoanRateMultiplier.Raw < Fx.One.Raw) throw new FormatException("config.csv: bank.max_rate_multiplier_permille must be >= 1000.");

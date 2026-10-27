@@ -17,6 +17,7 @@ except `config.csv`, which is hashed by its effective values (see below).
 | weight | weight of one unit, shared by all grades (optional, default 1) |
 | size | size (volume) of one unit, shared by all grades (optional, default 1) |
 | requires_license | 1 if selling needs a license of the nation (optional, default 0) |
+| class | `necessity` or `luxury` (optional, default necessity); sets the price elasticity ([Draft]) |
 
 Each row expands to 4 items (`key@low`, `@mid`, `@high`, `@best`) with prices scaled by
 `grade.<grade>.price_permille` (defaults 600 / 1000 / 1800 / 3500).
@@ -52,7 +53,8 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
   `specialty_surcharge_permille` (optional, empty = config default) set the node's toll rates.
   `international_bank` (optional, 1) marks the continent's international bank: at most one per continent,
   at city level or above. `danger_permille` (optional, region nodes only) is the region's road danger
-  factor. `port` (optional, 1) marks a port; water routes must run between ports.
+  factor. `port` (optional, 1) marks a port; water routes must run between ports. `population` (optional, empty = the
+  level's default) sets the node's starting population.
 - Routes: `from,to,travel_turns,cost_per_unit,base_fee` (directed; add both directions for two-way
   travel). `base_fee` is optional (default 0) and paid once per trip. `terrain` (optional) is `Road`,
   `Mountain`, `River` or `Sea`; river and sea routes are water. `paved` (optional, 1) paves a land route
@@ -75,6 +77,12 @@ changing a default in code does.
 |---|---|---|
 | tier.<level>.period / .offset | see 00_Architecture | price-update cadence |
 | demand.<level>.weight_permille | continent 40000 ... village 1000 | base demand weight |
+| demand.necessity_elasticity_permille, demand.luxury_elasticity_permille, demand.max_cheap_permille | 500, 1500, 2000 | demand curve ([Draft]) |
+| demand.<grade>.luxury_share_permille | 0 / 0 / 500 / 1000 | how far each grade of a necessity is bought like a luxury ([Draft]) |
+| households.<level>.population, households.<level>.income | continent 20000 / 4 ... village 500 / 2 | default population and weekly income per head ([Draft]) |
+| households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
+| households.base_growth_permille, households.growth_response_permille, households.max_change_permille | 5, 50, 30 | yearly population change ([Draft]) |
+| households.income_response_permille, households.income_max_change_permille | 500, 50 | yearly income change ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |

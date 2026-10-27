@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-10-27
+- [04_Roadmap.md] P10 done; P12b next
+- [systems/SYS_MARKETS.md] Drafts for goods classes, the demand curve, elasticities, quintiles, population, income and yearly change; implementation notes
+- [02_Data_Formats.md] goods.csv class, map_nodes.csv population, demand and household config keys
+- [00_Architecture.md] Consumption moved into pricing
+- [03_Decisions.md] Q-036 updated: the runaway is fixed, unlimited market payments remain
 - [04_Roadmap.md] P9b done; P12b ready; P10 must stop the price runaway
 - [systems/SYS_BANKING.md] Drafts for money totals, reserve ratio, loan rates, NPC loans, records, statistics and financial events; implementation notes
 - [systems/SYS_MERCHANTS.md, systems/SYS_PRODUCTION.md] NPC loans built

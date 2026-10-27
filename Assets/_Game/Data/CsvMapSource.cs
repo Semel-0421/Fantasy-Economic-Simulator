@@ -30,6 +30,7 @@ namespace FES.Data
                     InternationalBank = nodes.GetIntOr(r, "international_bank", 0) != 0,
                     DangerPermille = nodes.GetIntOr(r, "danger_permille", -1),
                     Port = nodes.GetIntOr(r, "port", 0) != 0,
+                    Population = nodes.GetIntOr(r, "population", -1),
                 });
             }
             if (_source.Exists(RoutesFile))

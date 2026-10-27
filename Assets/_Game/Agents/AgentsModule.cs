@@ -68,6 +68,7 @@ namespace FES.Agents
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
             builder.AddSystem(new FinanceSystem());
+            builder.AddSystem(new HouseholdGrowthSystem());
             builder.AddSystem(new RoadSystem());
             builder.AddSystem(new GroupSystem());
         }

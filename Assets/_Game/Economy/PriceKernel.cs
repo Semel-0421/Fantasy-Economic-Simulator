@@ -74,14 +74,22 @@ namespace FES.Economy
         }
     }
 
-    /// <summary>Steps every cell of every market whose level is due this turn.</summary>
+    /// <summary>
+    /// Steps every cell of every market whose level is due this turn. Markets that reprice every turn first
+    /// add this turn's household consumption here (<see cref="HouseholdDemand"/>), which saves a pass over
+    /// most cells; slower markets got theirs turn by turn from <see cref="ConsumptionJob"/>, so a short demand
+    /// event still reaches them.
+    /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct PriceUpdateJob : IJobParallelFor
     {
         public PriceParams Params;
+        public DemandParams Consumption;
         public int CategoryCount;
         /// <summary>Bit l set = markets of WorldLevel l are due.</summary>
         public int DueLevelMask;
+        /// <summary>Bit l set = markets of WorldLevel l reprice every turn and consume here.</summary>
+        public int InlineLevelMask;
         /// <summary>Anchor multiplier (raw Q16) for cells of a node's specialties.</summary>
         public long SpecialtyAnchorMulRaw;
 
@@ -96,8 +104,19 @@ namespace FES.Economy
         [ReadOnly] public NativeArray<byte> CellSpecialty;
         [ReadOnly] public NativeArray<int> GoodBasePrice;
         [ReadOnly] public NativeArray<int> GoodCategory;
-        /// <summary><see cref="MarketFlows.Multipliers"/>; only the Value target is read here.</summary>
+        /// <summary><see cref="MarketFlows.Multipliers"/>; the Value and Demand targets are read here.</summary>
         [ReadOnly] public NativeArray<long> ModifierMul;
+        [ReadOnly] public NativeArray<int> GoodBaseDemand;
+        /// <summary>Per good: how far it is bought like a luxury (raw Q16, 0..1).</summary>
+        [ReadOnly] public NativeArray<long> GoodLuxuryShare;
+        /// <summary>Per level demand weight (raw Q16).</summary>
+        [ReadOnly] public NativeArray<long> LevelWeight;
+        /// <summary>Per market: necessity and luxury weight of its households (raw Q16).</summary>
+        [ReadOnly] public NativeArray<long> MarketNecessityWeight;
+        [ReadOnly] public NativeArray<long> MarketLuxuryWeight;
+        /// <summary>Per market: necessity units wanted at the anchor, and demanded at the price met.</summary>
+        [NativeDisableParallelForRestriction] public NativeArray<long> NecessityWanted;
+        [NativeDisableParallelForRestriction] public NativeArray<long> NecessityMet;
 
         [NativeDisableParallelForRestriction] public NativeArray<int> Price;
         [NativeDisableParallelForRestriction] public NativeArray<int> PrevPrice;
@@ -114,13 +133,29 @@ namespace FES.Economy
             int start = MarketCellStart[market];
             int end = start + MarketCellCount[market];
             long anchorMul = MarketAnchorMul[market];
+            long levelWeight = LevelWeight[level];
+            long necessityWeight = MarketNecessityWeight[market];
+            long luxuryWeight = MarketLuxuryWeight[market];
+            long wanted = 0, met = 0;
+            bool inline = (InlineLevelMask & (1 << level)) != 0;
             int modifierBase = market * CategoryCount;
             for (int c = start; c < end; c++)
             {
                 int good = CellGood[c];
-                int m = (modifierBase + GoodCategory[good]) * ModifierTargets.Count + (int)ModifierTarget.Value;
-                long valueMul = Fx.RoundShift(ModifierMul[m] * anchorMul);
+                int k = (modifierBase + GoodCategory[good]) * ModifierTargets.Count;
+                long valueMul = Fx.RoundShift(ModifierMul[k + (int)ModifierTarget.Value] * anchorMul);
                 if (CellSpecialty[c] != 0) valueMul = Fx.RoundShift(valueMul * SpecialtyAnchorMulRaw);
+
+                if (inline)
+                {
+                    long weekly = HouseholdDemand.CellBase(GoodBaseDemand[good], GoodBasePrice[good], levelWeight,
+                        ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
+                    long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
+                        necessityWeight, luxuryWeight, out long cellWanted, out long cellMet);
+                    wanted += cellWanted;
+                    met += cellMet;
+                    Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
+                }
 
                 int price = Price[c], prev = PrevPrice[c], stock = Stock[c], supply = Supply[c], demand = Demand[c];
                 PriceKernel.Step(Params, GoodBasePrice[good], valueMul, elapsed,
@@ -131,41 +166,70 @@ namespace FES.Economy
                 Supply[c] = supply;
                 Demand[c] = demand;
             }
+            NecessityWanted[market] += wanted;
+            NecessityMet[market] += met;
         }
     }
 
-    /// <summary>Adds each market's weekly base consumption (scaled by demand modifiers) to its demand accumulators.</summary>
+    /// <summary>
+    /// Adds this turn's household consumption to the demand of markets that reprice less often than every
+    /// turn (<see cref="PriceUpdateJob"/> does the others), at the price they have held since their last update.
+    /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct ConsumptionJob : IJobParallelFor
     {
+        public DemandParams Consumption;
         public int CategoryCount;
+        /// <summary>Bit l set = markets of WorldLevel l consume here.</summary>
+        public int LevelMask;
+        public long SpecialtyAnchorMulRaw;
         [ReadOnly] public NativeArray<byte> MarketLevel;
         [ReadOnly] public NativeArray<int> MarketCellStart;
         [ReadOnly] public NativeArray<int> MarketCellCount;
+        [ReadOnly] public NativeArray<long> MarketAnchorMul;
+        [ReadOnly] public NativeArray<long> MarketNecessityWeight;
+        [ReadOnly] public NativeArray<long> MarketLuxuryWeight;
         [ReadOnly] public NativeArray<int> CellGood;
+        [ReadOnly] public NativeArray<byte> CellSpecialty;
+        [ReadOnly] public NativeArray<int> Price;
         [ReadOnly] public NativeArray<int> GoodBaseDemand;
+        [ReadOnly] public NativeArray<int> GoodBasePrice;
         [ReadOnly] public NativeArray<int> GoodCategory;
-        /// <summary>Per level demand weight (raw Q16).</summary>
+        [ReadOnly] public NativeArray<long> GoodLuxuryShare;
         [ReadOnly] public NativeArray<long> LevelWeight;
-        /// <summary><see cref="MarketFlows.Multipliers"/>; only the Demand target is read here.</summary>
         [ReadOnly] public NativeArray<long> ModifierMul;
 
         [NativeDisableParallelForRestriction] public NativeArray<int> Demand;
+        [NativeDisableParallelForRestriction] public NativeArray<long> NecessityWanted;
+        [NativeDisableParallelForRestriction] public NativeArray<long> NecessityMet;
 
         public void Execute(int market)
         {
-            long weight = LevelWeight[MarketLevel[market]];
+            int level = MarketLevel[market];
+            if ((LevelMask & (1 << level)) == 0) return;
+
+            long anchorMul = MarketAnchorMul[market];
+            long levelWeight = LevelWeight[level];
+            long wanted = 0, met = 0;
             int start = MarketCellStart[market];
             int end = start + MarketCellCount[market];
             int modifierBase = market * CategoryCount;
             for (int c = start; c < end; c++)
             {
                 int good = CellGood[c];
-                int m = (modifierBase + GoodCategory[good]) * ModifierTargets.Count + (int)ModifierTarget.Demand;
-                long weekly = Fx.RoundShift(Fx.RoundShift(GoodBaseDemand[good] * weight) * ModifierMul[m]);
-                long next = Demand[c] + weekly;
-                Demand[c] = next > int.MaxValue ? int.MaxValue : next < 0 ? 0 : (int)next;
+                int k = (modifierBase + GoodCategory[good]) * ModifierTargets.Count;
+                long valueMul = Fx.RoundShift(ModifierMul[k + (int)ModifierTarget.Value] * anchorMul);
+                if (CellSpecialty[c] != 0) valueMul = Fx.RoundShift(valueMul * SpecialtyAnchorMulRaw);
+                long weekly = HouseholdDemand.CellBase(GoodBaseDemand[good], GoodBasePrice[good], levelWeight,
+                    ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
+                long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
+                    MarketNecessityWeight[market], MarketLuxuryWeight[market], out long cellWanted, out long cellMet);
+                wanted += cellWanted;
+                met += cellMet;
+                Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
             }
+            NecessityWanted[market] += wanted;
+            NecessityMet[market] += met;
         }
     }
 }

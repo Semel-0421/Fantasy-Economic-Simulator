@@ -12,15 +12,16 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ### Q-036 [open] When measured money totals drive the price index
 - Registered: 2026-10-27 (Claude added)
-- Context: DEC-042 makes the continent total drive inflation. P9b measures the totals, but in the sample
-  world they grow about twentyfold every half year: where demand goes unmet a market price rises up to
-  15% a week while the pull back to the anchor is 2%, so some prices reach the integer limit within three
-  years, and markets pay sellers without limit. Fed into the price index, that would make inflation run
-  away. P9b keeps the index on the minted coin supply.
+- Context: DEC-042 makes the continent total drive inflation. P9b measured the totals growing about
+  twentyfold every half year because unmet demand drove prices without bound. P10's demand curve stopped
+  that: prices now stay bounded. But markets still pay every seller at the current price, whatever
+  households can afford, so facility cash and the totals still grow by roughly the starting total each
+  year in the sample world (the coin supply grows under 10% a year). Fed into the price index, that growth would
+  read as heavy inflation. The index stays on the minted coin supply.
 - Options: A) keep the coin supply as the index's money measure; totals are published only  B) switch the
-  index to the published continent total over the first year's total once P10 bounds prices and demand
-  C) a mix of both
-- Claude's recommendation: B, after P10 (price elasticity and household demand) stops the runaway
+  index to the published continent total once household spending is limited by income (wages from
+  facility upkeep paid to households, purchases capped by their budget)  C) a mix of both
+- Claude's recommendation: B, after a phase that closes the money loop between households and markets
 - Impact: SYS-BANKING, SYS-MARKETS
 
 ### Q-035 [resolved] What each kind of interest group wants

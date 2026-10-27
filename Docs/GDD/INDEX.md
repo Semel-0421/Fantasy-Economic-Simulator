@@ -52,7 +52,7 @@ Detail: [03_Decisions.md](03_Decisions.md)
 
 | ID | Question | Blocks |
 |---|---|---|
-| Q-036 | When measured money totals drive the price index (Claude added) | P10 |
+| Q-036 | When measured money totals drive the price index (Claude added) | Household budgets |
 | Q-030 | Basic price index basket (deferred by the user) | Later |
 
 ## Recent changes

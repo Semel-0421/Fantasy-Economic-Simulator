@@ -8,51 +8,10 @@ using Unity.Jobs;
 
 namespace FES.Economy
 {
-    /// <summary>Adds every market's weekly base consumption to demand (all levels, every turn).</summary>
-    public sealed class ConsumptionSystem : ISimSystem, IDisposable
-    {
-        NodeTable _nodes;
-        MarketStore _markets;
-        MarketFlows _flows;
-        NativeArray<long> _levelWeight;
-
-        public string Id => "economy.consumption";
-        public SimPhase Phase => SimPhase.Production;
-        public int Order => SimOrder.Early;
-
-        public void Initialize(SimContext ctx)
-        {
-            _nodes = ctx.World.Get<NodeTable>();
-            _markets = ctx.World.Get<MarketStore>();
-            _flows = ctx.World.Get<MarketFlows>();
-            var config = ctx.Services.Get<GameDatabase>().Config;
-            _levelWeight = new NativeArray<long>(WorldLevels.Count, Allocator.Persistent);
-            for (int l = 0; l < WorldLevels.Count; l++) _levelWeight[l] = config.LevelDemandWeight[l].Raw;
-        }
-
-        public void Execute(SimContext ctx)
-        {
-            new ConsumptionJob
-            {
-                CategoryCount = _flows.CategoryCount,
-                MarketLevel = _nodes.Level,
-                MarketCellStart = _markets.MarketCellStart,
-                MarketCellCount = _markets.MarketCellCount,
-                CellGood = _markets.CellGood,
-                GoodBaseDemand = _markets.GoodBaseDemand,
-                GoodCategory = _markets.GoodCategory,
-                LevelWeight = _levelWeight,
-                ModifierMul = _flows.Multipliers,
-                Demand = _markets.Demand,
-            }.Schedule(_markets.MarketCount, 8).Complete();
-        }
-
-        public void Dispose() => _levelWeight.DisposeIfCreated();
-    }
-
     /// <summary>
     /// Reprices every market whose level is due this turn (see <see cref="TierSchedule"/>), consuming the
-    /// supply and demand accumulated since its previous update. Rates scale with the elapsed turns.
+    /// supply and demand accumulated since its previous update, households' consumption included. Rates scale
+    /// with the elapsed turns.
     /// Runs Late in the Markets phase so every flow of the turn is in.
     /// </summary>
     public sealed class PricingSystem : ISimSystem, IDisposable
@@ -61,9 +20,16 @@ namespace FES.Economy
         MarketStore _markets;
         MarketFlows _flows;
         CurrencyState _currency;
+        HouseholdState _households;
+        SimulationConfig _config;
         PriceParams _params;
+        DemandParams _demand;
         NativeArray<long> _anchorMul;
         NativeArray<int> _levelElapsed;
+        NativeArray<long> _levelWeight;
+        NativeArray<long> _necessityWeight;
+        NativeArray<long> _luxuryWeight;
+        NativeArray<long> _goodLuxuryShare;
         long _specialtyAnchorMulRaw;
 
         public string Id => "economy.pricing";
@@ -79,14 +45,40 @@ namespace FES.Economy
             _markets = ctx.World.Get<MarketStore>();
             _flows = ctx.World.Get<MarketFlows>();
             _currency = ctx.World.Get<CurrencyState>();
-            _params = PriceParams.From(ctx.Services.Get<GameDatabase>().Config);
-            _specialtyAnchorMulRaw = ctx.Services.Get<GameDatabase>().Config.SpecialtyPriceMultiplier.Raw;
+            _households = ctx.World.Get<HouseholdState>();
+            var db = ctx.Services.Get<GameDatabase>();
+            _config = db.Config;
+            _params = PriceParams.From(_config);
+            _demand = DemandParams.From(_config);
+            _specialtyAnchorMulRaw = _config.SpecialtyPriceMultiplier.Raw;
             _anchorMul = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _levelElapsed = new NativeArray<int>(WorldLevels.Count, Allocator.Persistent);
+            _levelWeight = new NativeArray<long>(WorldLevels.Count, Allocator.Persistent);
+            for (int l = 0; l < WorldLevels.Count; l++) _levelWeight[l] = _config.LevelDemandWeight[l].Raw;
+            _necessityWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _luxuryWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _goodLuxuryShare = new NativeArray<long>(db.GoodCount, Allocator.Persistent);
+            for (int g = 0; g < db.GoodCount; g++)
+                _goodLuxuryShare[g] = db.Goods[g].IsLuxury ? Fx.One.Raw : _config.GradeLuxuryShare[(int)db.Goods[g].Grade].Raw;
         }
 
         public void Execute(SimContext ctx)
         {
+            // Population and income change yearly; refresh their weights here so loads need no hook.
+            for (int n = 0; n < _nodes.Count; n++)
+            {
+                int level = _nodes.Level[n];
+                _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
+                _necessityWeight[n] = _households.NecessityWeight(n, level, _config).Raw;
+                _luxuryWeight[n] = _households.LuxuryWeight(n, level, _config).Raw;
+            }
+
+            int inlineMask = 0;
+            for (int l = 0; l < WorldLevels.Count; l++)
+                if (ctx.Schedule[(WorldLevel)l].Period == 1) inlineMask |= 1 << l;
+            int slowMask = ((1 << WorldLevels.Count) - 1) & ~inlineMask;
+            if (slowMask != 0) Consume(slowMask);
+
             int dueMask = 0;
             for (int l = 0; l < WorldLevels.Count; l++)
             {
@@ -97,13 +89,13 @@ namespace FES.Economy
             }
             if (dueMask == 0) return;
 
-            for (int n = 0; n < _nodes.Count; n++) _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
-
             var job = new PriceUpdateJob
             {
                 Params = _params,
+                Consumption = _demand,
                 CategoryCount = _flows.CategoryCount,
                 DueLevelMask = dueMask,
+                InlineLevelMask = inlineMask,
                 SpecialtyAnchorMulRaw = _specialtyAnchorMulRaw,
                 LevelElapsed = _levelElapsed,
                 MarketLevel = _nodes.Level,
@@ -115,6 +107,13 @@ namespace FES.Economy
                 GoodBasePrice = _markets.GoodBasePrice,
                 GoodCategory = _markets.GoodCategory,
                 ModifierMul = _flows.Multipliers,
+                GoodBaseDemand = _markets.GoodBaseDemand,
+                GoodLuxuryShare = _goodLuxuryShare,
+                LevelWeight = _levelWeight,
+                MarketNecessityWeight = _necessityWeight,
+                MarketLuxuryWeight = _luxuryWeight,
+                NecessityWanted = _households.NecessityWanted,
+                NecessityMet = _households.NecessityMet,
                 Price = _markets.Price,
                 PrevPrice = _markets.PrevPrice,
                 Stock = _markets.Stock,
@@ -129,10 +128,50 @@ namespace FES.Economy
             job.Schedule(_markets.MarketCount, 4).Complete();
         }
 
+        // Household consumption for markets that reprice less often than every turn.
+        void Consume(int levelMask)
+        {
+            var job = new ConsumptionJob
+            {
+                Consumption = _demand,
+                CategoryCount = _flows.CategoryCount,
+                LevelMask = levelMask,
+                SpecialtyAnchorMulRaw = _specialtyAnchorMulRaw,
+                MarketLevel = _nodes.Level,
+                MarketCellStart = _markets.MarketCellStart,
+                MarketCellCount = _markets.MarketCellCount,
+                MarketAnchorMul = _anchorMul,
+                MarketNecessityWeight = _necessityWeight,
+                MarketLuxuryWeight = _luxuryWeight,
+                CellGood = _markets.CellGood,
+                CellSpecialty = _markets.CellSpecialty,
+                Price = _markets.Price,
+                GoodBaseDemand = _markets.GoodBaseDemand,
+                GoodBasePrice = _markets.GoodBasePrice,
+                GoodCategory = _markets.GoodCategory,
+                GoodLuxuryShare = _goodLuxuryShare,
+                LevelWeight = _levelWeight,
+                ModifierMul = _flows.Multipliers,
+                Demand = _markets.Demand,
+                NecessityWanted = _households.NecessityWanted,
+                NecessityMet = _households.NecessityMet,
+            };
+            if (ForceManaged)
+            {
+                for (int m = 0; m < _markets.MarketCount; m++) job.Execute(m);
+                return;
+            }
+            job.Schedule(_markets.MarketCount, 4).Complete();
+        }
+
         public void Dispose()
         {
             _anchorMul.DisposeIfCreated();
             _levelElapsed.DisposeIfCreated();
+            _levelWeight.DisposeIfCreated();
+            _necessityWeight.DisposeIfCreated();
+            _luxuryWeight.DisposeIfCreated();
+            _goodLuxuryShare.DisposeIfCreated();
         }
     }
 
@@ -157,10 +196,10 @@ namespace FES.Economy
             builder.Services.SetDefault<ICurrencyModel>(new GoldStandardCurrencyModel());
             var currency = builder.World.Add(new CurrencyState(nodes.ContinentCount));
             builder.Services.Get<ICurrencyModel>().Initialize(currency, db.Config, clock.Seed);
+            builder.World.Add(new HouseholdState(nodes, builder.Services.Get<MapDef>(), db.Config));
 
             builder.AddSystem(new WorldEventSystem());
             builder.AddSystem(new ModifierFoldSystem());
-            builder.AddSystem(new ConsumptionSystem());
             builder.AddSystem(new PricingSystem());
             builder.AddSystem(new CurrencySystem());
         }

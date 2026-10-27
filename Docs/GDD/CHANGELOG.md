@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-033 resolved by DEC-056 and DEC-057, Q-034 by DEC-058; Q-035 (Claude added) registered
+- [systems/SYS_INTEREST_GROUPS.md] Player relations, guild benefits, influence and yearly policy review
+- [04_Roadmap.md] P12 split into P12a (groups, company, guilds), P12b (influence, policy), P12c (shares, privatization)
 - [04_Roadmap.md] P11 done
 - [systems/SYS_INFRASTRUCTURE.md] Implementation notes and placeholder numbers
 - [02_Data_Formats.md] port and paved columns, ship resale and road config keys

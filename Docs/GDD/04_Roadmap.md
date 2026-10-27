@@ -26,8 +26,10 @@ flowchart LR
     P9 --> P5
     P9 --> P9b[P9b Money totals, NPC loans, events]
     P8 --> P11[P11 Ports and paved roads]
-    P9b --> P12[P12 Interest groups]
-    P11 --> P12
+    P11 --> P12a[P12a Groups, company, guilds]
+    P12a --> P12b[P12b Influence and policy]
+    P9b --> P12b
+    P12b --> P12c[P12c Shares, privatization]
 ```
 
 | Phase | Scope | Systems | Ready? |
@@ -44,7 +46,9 @@ flowchart LR
 | P9 | State-owned national and international banks, exchange with fee, deposits with interest and payment, player loans on any collateral, weekly repayment, seizure and auction, finite reserves | SYS-BANKING | Done |
 | P9b | NPC loans (facilities, merchant groups), money totals per nation and continent, reserve-driven loan rates, quarterly records and yearly statistics, financial events | SYS-BANKING | Ready |
 | P11 | Ports (ship trade, port-only water routes, docked ships), paved roads (condition, cheaper and safer travel, map roads, player building, upkeep and decay) | SYS-INFRASTRUCTURE | Done |
-| P12 | Interest groups owning facilities and merchant groups, guilds, state enterprises, political influence | SYS-INTEREST-GROUPS | After Q-033, Q-034 |
+| P12a | Interest groups owning facilities and merchant groups, the player's company, guild membership with cheaper insurance, guild hall warehouses and cheaper licenses | SYS-INTEREST-GROUPS | Ready |
+| P12b | Influence (assets, lobbying, members and jobs), yearly weighted policy review of tolls, licenses and minting, player lobbying | SYS-INTEREST-GROUPS | After Q-035 and P9b |
+| P12c | Company shares, privatization of state enterprises | SYS-INTEREST-GROUPS | Later (DEC-056) |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -55,8 +59,8 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P9 and P11 are done. Next: P9b (money totals, NPC loans, events), P10 (market demand), or P12
-  (interest groups) once Q-033 and Q-034 are answered.
+- P1 to P9 and P11 are done. Next: P9b (money totals, NPC loans, events), P10 (market demand) or P12a
+  (interest groups); P12b waits for Q-035 and P9b.
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.
 - Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,

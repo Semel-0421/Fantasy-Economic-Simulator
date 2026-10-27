@@ -10,15 +10,27 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
-### Q-034 [open] How interest groups influence policy
+### Q-035 [open] What each kind of interest group wants
+- Registered: 2026-10-27 (Claude added)
+- Context: groups push policy each year (DEC-058), but nothing says which way each kind pushes.
+- Open: per kind (company, guild, state enterprise, private enterprise) and per policy (tolls and
+  surcharges, licensed goods and license prices, minting rate), whether it pushes up or down, or decides
+  case by case from its own trade
+- Claude's recommendation: guilds push for protection (higher tolls and surcharges, more licensed goods,
+  dearer licenses); companies for open trade (the opposite); state enterprises for more minting; private
+  enterprises follow their own trade (protection where they produce, open trade where they buy)
+- Impact: SYS-INTEREST-GROUPS
+
+### Q-034 [resolved] How interest groups influence policy
 - Registered: 2026-10-27 (Claude added)
 - Context: groups are political forces too (DEC-055), but nothing says what they can change or how.
 - Open: which policies move (tariff and surcharge rates, which goods need licenses, license prices, road
   building, minting) · where influence comes from (assets, cash spent on lobbying, guild membership) · how
   a nation decides (strongest group wins, weighted vote, yearly review) · whether the player can lobby
 - Impact: SYS-INTEREST-GROUPS, SYS-TRAVEL-COSTS, SYS-LICENSES
+- Resolved: DEC-058
 
-### Q-033 [open] How the player relates to interest groups
+### Q-033 [resolved] How the player relates to interest groups
 - Registered: 2026-10-27
 - Context: asked in the interest group form without a recommendation; the user accepted only the
   recommended answers, so this stays open.
@@ -27,6 +39,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   enterprises are privatized
 - Claude's recommendation: A and B first; C and D later
 - Impact: SYS-INTEREST-GROUPS
+- Resolved: DEC-056, DEC-057
 
 ### Q-032 [resolved] When a facility counts as out of cash, and what happens to its warehouse
 - Registered: 2026-10-27 (Claude added)
@@ -277,6 +290,35 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ## Decision log
+
+### DEC-058 Policy influence: yearly weighted review
+- Date: 2026-10-27
+- Decision: interest groups can move toll and specialty surcharge rates, which goods need licenses and
+  license prices, and the minting rate. Influence comes from the value of a group's assets, its lobbying
+  spending, and its membership and employment. Each nation reviews policy once a year and moves each
+  policy one step, weighted by influence. The player can lobby in their company's name.
+- Alternatives: nation road building as a policy (rejected) · the strongest group's demand wins (rejected)
+  · quarterly reviews (rejected) · lobbying only through guilds, or not at all (rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md), SYS-TRAVEL-COSTS, SYS-LICENSES,
+  SYS-BANKING (minting); open: Q-035
+- Resolves: Q-034
+
+### DEC-057 Guild membership benefits
+- Date: 2026-10-27
+- Decision: guild members get cheaper insurance, use of the guild hall warehouse in that city, and the
+  guild's recommendation for licenses in its trade, which makes them cheaper.
+- Alternatives: price information from other cities (rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md), SYS-ROUTE-HAZARDS (insurance),
+  SYS-INVENTORY (warehouses), SYS-LICENSES
+- Resolves: Q-033
+
+### DEC-056 How the player relates to interest groups
+- Date: 2026-10-27
+- Decision: the player founds a company (the existing command becomes the player's company) and can join
+  guilds for a fee. Trading company shares and bidding when state enterprises are privatized come in a
+  later phase.
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md)
+- Resolves: Q-033
 
 ### DEC-055 Economic interest groups
 - Date: 2026-10-27

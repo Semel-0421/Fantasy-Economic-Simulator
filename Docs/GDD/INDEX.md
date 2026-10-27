@@ -52,8 +52,7 @@ Detail: [03_Decisions.md](03_Decisions.md)
 
 | ID | Question | Blocks |
 |---|---|---|
-| Q-033 | How the player relates to interest groups | P12 |
-| Q-034 | How interest groups influence policy (Claude added) | P12 |
+| Q-035 | What each kind of interest group wants (Claude added) | P12b |
 | Q-030 | Basic price index basket (deferred by the user) | Later |
 
 ## Recent changes

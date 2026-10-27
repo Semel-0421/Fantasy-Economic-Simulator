@@ -30,6 +30,12 @@ without scripting. Their counts per node are already in config (`merchants.<leve
 - [Confirmed] Merchants need no ship for sea and river routes (DEC-034).
 - [Confirmed] Merchant groups can borrow from banks (DEC-037).
 - [Confirmed] A merchant group pledges deposits, warehouse cargo and cart cargo as collateral (DEC-038).
+- [Confirmed] Large merchant groups trade between continents, changing coins at international banks;
+  flows on routes between continents run at 65% of the normal flow share (DEC-066).
+- [Draft] (Claude's reading of DEC-066) "Large" means groups based at nation or continent level; aggregate
+  flows also cross continents at 65%, the margin taken after the exchange rate and fee. Until built (P17)
+  groups stay on their home continent.
+- [Confirmed] The player can hire merchant groups (DEC-064, SYS-AUTOMATION).
 - [Draft] Claude's proposals, built in P5:
   - A detailed group carries one good per trip along one route out of its node, choosing the most
     profitable load after the base fee, per-unit charge and toll; it sells the whole load on arrival.

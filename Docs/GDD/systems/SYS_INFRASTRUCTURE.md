@@ -25,6 +25,7 @@ paved roads make the busiest land routes cheaper and safer, and are worth invest
 - [Confirmed] Some roads are paved in the map data from the start; the player and interest groups can pay to
   build more (DEC-054).
 - [Confirmed] A road whose upkeep is not paid slowly decays (DEC-054).
+- [Confirmed] Road paving is one of the projects interest groups invest in (DEC-065).
 
 ## Unity implementation notes
 Implemented in P11; the numbers below are [Draft] placeholders and the mechanics Claude's proposals.

@@ -10,6 +10,45 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
+### Q-042 [resolved] Cross-continent trade by NPC merchants
+- Registered: 2026-10-27 (Claude added, from the design review)
+- Context: merchant groups hold one continent's coin and never cross continents; only the player trades
+  between them.
+- Options: A) large groups trade directly, exchanging coins  B) aggregate flows only  C) the player only
+- Claude's recommendation: B at 25% of the normal flow share
+- Impact: SYS-MERCHANTS, SYS-BANKING
+- Resolved: DEC-066
+
+### Q-041 [resolved] Growth of the NPC economy
+- Registered: 2026-10-27 (Claude added, from the design review)
+- Context: the 8,500 starting facilities are never built, upgraded or closed; group cash only lobbies.
+- Options: A) groups invest  B) upgrades only  C) demand-driven spawning · who invests in what · closing
+  unprofitable facilities
+- Claude's recommendation: A; companies anything, state enterprises roads and strategic goods, private
+  enterprises local facilities, guilds none; close after two losing years
+- Impact: SYS-INTEREST-GROUPS, SYS-PRODUCTION, SYS-INFRASTRUCTURE
+- Resolved: DEC-065
+
+### Q-040 [resolved] Automation as the business grows
+- Registered: 2026-10-27 (Claude added, from the design review)
+- Context: player facility output always goes to the warehouse and must be hauled by the player; there is
+  no way to hire merchant groups.
+- Options: managers, hired merchant groups, regional agencies, contracts · a company treasury or cash
+  per asset · arbitrage or standing orders · wages
+- Claude's recommendation: managers and hired groups, agencies later; a company treasury; both modes,
+  arbitrage first; wages a share of upkeep
+- Impact: SYS-AUTOMATION, SYS-PRODUCTION, SYS-MERCHANTS
+- Resolved: DEC-064
+
+### Q-039 [resolved] The game's goal, progression and failure
+- Registered: 2026-10-27 (Claude added, from the design review)
+- Context: nothing ends the game, measures progress or defines losing.
+- Options: A) sandbox with ranks  B) scenarios  C) dynasty · F1) ruin and restart  F2) game over  F3) no
+  failure · rank measures
+- Claude's recommendation: A, F1, reach and influence first
+- Impact: OVERVIEW, SYS-PROGRESSION
+- Resolved: DEC-063
+
 ### Q-038 [resolved] How the money loop closes
 - Registered: 2026-10-27 (Claude added, from the design review)
 - Context: money enters when markets pay any seller and through auctions nobody pays for; fees, tolls,
@@ -329,6 +368,49 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ## Decision log
+
+### DEC-066 Large merchant groups trade across continents
+- Date: 2026-10-27
+- Decision: large NPC merchant groups also trade between continents, changing coins at international
+  banks. Flows on routes between continents run at 65% of the normal flow share.
+- Alternatives: aggregate flows only (recommended, rejected) · the player only (rejected) · 25% share
+  (recommended, rejected)
+- Impact: [SYS-MERCHANTS](systems/SYS_MERCHANTS.md), [SYS-BANKING](systems/SYS_BANKING.md)
+- Resolves: Q-042
+
+### DEC-065 Interest groups invest; losing facilities close
+- Date: 2026-10-27
+- Decision: interest groups invest the cash they receive (DEC-061): new facilities, level-ups and road
+  paving, at most one project per group a year. Every kind of group may invest in anything. A facility
+  that loses money two years in a row closes.
+- Alternatives: upgrades only (rejected) · demand-driven spawning (rejected) · no growth (rejected) ·
+  investment rights per kind (recommended, rejected) · no closures (rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md), [SYS-PRODUCTION](systems/SYS_PRODUCTION.md),
+  [SYS-INFRASTRUCTURE](systems/SYS_INFRASTRUCTURE.md)
+- Resolves: Q-041
+
+### DEC-064 Delegation: managers and hired merchant groups, each with its own cash
+- Date: 2026-10-27
+- Decision: the player can put managers on facilities and hire merchant groups; regional agencies for
+  distant continents come later. Each delegated asset keeps its own cash (no company treasury). Hired
+  groups trade by free arbitrage and by standing orders, arbitrage first. Wages are a share of the
+  asset's upkeep ([Draft] +20%).
+- Alternatives: managers only (rejected) · agencies only (rejected) · contracts with NPC groups
+  (rejected) · a company treasury (recommended, rejected) · one trading mode only (rejected) · fixed wages
+  (rejected)
+- Impact: [SYS-AUTOMATION](systems/SYS_AUTOMATION.md), [SYS-PRODUCTION](systems/SYS_PRODUCTION.md),
+  [SYS-MERCHANTS](systems/SYS_MERCHANTS.md)
+- Resolves: Q-040
+
+### DEC-063 An endless sandbox with seven ranks; ruin ends the game
+- Date: 2026-10-27
+- Decision: the game has no victory or fixed end. Seven ranks mark the player's standing and unlock
+  nothing; they are measured by reach and influence first, net worth once the economy is balanced. Ruin
+  ends the game.
+- Alternatives: scenarios with win conditions (rejected) · a dynasty (rejected) · ruin and restart as a
+  peddler (recommended, rejected) · no failure (rejected) · net worth, reach or influence alone (rejected)
+- Impact: [OVERVIEW](01_Overview.md), [SYS-PROGRESSION](systems/SYS_PROGRESSION.md)
+- Resolves: Q-039
 
 ### DEC-062 The price index follows published money totals once households spend
 - Date: 2026-10-27

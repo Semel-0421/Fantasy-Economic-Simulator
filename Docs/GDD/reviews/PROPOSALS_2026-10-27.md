@@ -117,6 +117,8 @@ Item 4 (NPC growth) depends on question 3: dividends give groups the cash they i
 
 ## 2. The game's goal, core loop, progression and failure
 
+Decided (2026-10-27): DEC-063: A; failure F2 (game over), not the recommended F1; ranks by reach and influence first.
+
 ### Facts
 - The pitch: a peddler in one kingdom grows into a five-continent trading power while lower tiers
   automate. The player starts in a random village with starting cash and no bank (DEC-040).
@@ -159,6 +161,8 @@ A with F1, and B later as an optional challenge mode once balance is stable.
 
 ## 3. Automation as the business grows
 
+Decided (2026-10-27): DEC-064: managers and hired groups, agencies later; cash per asset, not the recommended treasury; both modes, arbitrage first; wages a share of upkeep.
+
 ### Facts
 - Facilities have a Manual/Automated mode (`SetFacilityControlCommand`), but production ignores it:
   player-owned output always goes to the site's warehouse (DEC-005), overflow is sold.
@@ -193,6 +197,8 @@ A now, B later for distant continents.
 
 ## 4. Growth of the NPC economy
 
+Decided (2026-10-27): DEC-065: A; every kind of group may invest in anything (not the recommended rights per kind); closure after two losing years.
+
 ### Facts
 - 8,500 facilities are spawned at the start; none are ever built, upgraded (all level 1) or closed;
   bankruptcy only replaces the operator or sends the facility to auction.
@@ -225,6 +231,8 @@ A, after the money loop decision (the loop decides how much cash groups have to 
 - Closure of unprofitable facilities? (recommended yes, after two losing years)
 
 ## 5. Cross-continent trade by NPC merchants
+
+Decided (2026-10-27): DEC-066: A, large groups trade directly (not the recommended B); share 65% (not 25%).
 
 ### Facts
 - Merchant groups hold one continent's coin; both the detailed pass and the aggregate flows skip routes

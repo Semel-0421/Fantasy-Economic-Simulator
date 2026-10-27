@@ -23,7 +23,7 @@ updated: 2026-10-27
 | Start | A random village, no bank access (DEC-040) |
 | World | 5 continents, 25 nations, 50 regions, 250 cities, 1,250 villages |
 | Goods | 20 categories x 50 goods x 4 grades = 4,000 items |
-| Stage | Core simulation skeleton done; economy rules being designed |
+| Stage | Economy simulation built (P1 to P12b); money loop (P13), ranks, delegation and NPC growth designed next |
 
 ## Document map
 | Document | Contents |
@@ -44,8 +44,12 @@ updated: 2026-10-27
 | [systems/SYS_ROUTE_HAZARDS.md](systems/SYS_ROUTE_HAZARDS.md) | Hard terrain and random encounters |
 | [systems/SYS_MARKETS.md](systems/SYS_MARKETS.md) | Demand, necessity/luxury elasticity |
 | [systems/SYS_PLAYER_START.md](systems/SYS_PLAYER_START.md) | Random village start |
+| [01_Overview.md](01_Overview.md) | Goal, core loop, ranks at a glance |
+| [systems/SYS_PROGRESSION.md](systems/SYS_PROGRESSION.md) | Ranks and ruin |
+| [systems/SYS_AUTOMATION.md](systems/SYS_AUTOMATION.md) | Facility managers and hired merchant groups |
 
-Documents 00 to 02 describe the built code; `systems/` describes agreed rules not yet built.
+Documents 00 and 02 describe the built code; `systems/` holds each system's rules, with implementation
+notes saying what is built.
 
 ## Open questions
 Detail: [03_Decisions.md](03_Decisions.md)

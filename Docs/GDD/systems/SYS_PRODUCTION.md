@@ -46,6 +46,10 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - [Confirmed] Upkeep is paid as wages to the households of the facility's node (DEC-061; until P13a it
   still leaves the economy).
 - [Confirmed] Profit above 26 weeks of costs is paid out at 10% a week to the owning group (DEC-061).
+- [Confirmed] Interest groups build new facilities and raise levels (DEC-065); a facility that loses money
+  two years in a row closes (DEC-065).
+- [Confirmed] A facility with a manager sells its output and buys its inputs on its own (DEC-064,
+  SYS-AUTOMATION).
 - [Draft] Claim period on a lost warehouse: 8 weeks (`cargo.lost_warehouse_weeks`); during it the player
   may only take goods out. Buying the facility back ends the claim, the goods staying the player's.
 - [Draft] Starting cash per tier: primary 500, secondary 2,000, tertiary 1,000 (`facility.<tier>.start_cash`).

@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-039 to Q-042 (Claude added) resolved by DEC-063 (sandbox, seven ranks, ruin ends the game), DEC-064 (managers and hired groups, cash per asset), DEC-065 (group investment, closures), DEC-066 (large groups trade across continents, 65%)
+- [01_Overview.md] New: goal, core loop, ranks at a glance
+- [systems/SYS_PROGRESSION.md, systems/SYS_AUTOMATION.md] New
+- [systems/SYS_MERCHANTS.md, SYS_INTEREST_GROUPS.md, SYS_PRODUCTION.md, SYS_INFRASTRUCTURE.md] Rules from DEC-064 to DEC-066
+- [04_Roadmap.md] P14 to P17 added
+- [INDEX.md] Stage, document map
 - [03_Decisions.md] Q-038 (Claude added) resolved by DEC-061 (closed money loop); Q-036 resolved by DEC-062 (index from published totals after P13b); DEC-042 changed by both
 - [systems/SYS_MARKETS.md, SYS_BANKING.md, SYS_PRODUCTION.md, SYS_TRAVEL_COSTS.md, SYS_INTEREST_GROUPS.md] Money loop rules
 - [04_Roadmap.md] P13a to P13d added

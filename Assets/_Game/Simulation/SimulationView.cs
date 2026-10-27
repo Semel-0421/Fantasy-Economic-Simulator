@@ -426,6 +426,16 @@ namespace FES.Simulation
         public Fx ExchangeRate(int continent) => _currency.ExchangeRate[continent];
         public long CoinSupply(int continent) => _currency.CoinSupply[continent];
 
+        // Policy (DEC-058)
+
+        public int TollStep(NodeId nation) => _world.Get<PolicyState>().TollStep[_banks.NationIndex(nation.Value)];
+        public int LicensePriceStep(NodeId nation) => _world.Get<PolicyState>().LicensePriceStep[_banks.NationIndex(nation.Value)];
+        public int MintStep(int continent) => _world.Get<PolicyState>().MintStep[continent];
+        /// <summary>Whether selling the base good in the nation needs a license now.</summary>
+        public bool IsLicensed(NodeId nation, int baseGood) => _world.Get<PolicyState>().Requires(_banks.NationIndex(nation.Value), baseGood);
+        /// <summary>The nation's total influence at the last review.</summary>
+        public long PolicyInfluence(NodeId nation) => _world.Get<PolicyState>().LastInfluence[_banks.NationIndex(nation.Value)];
+
         // Households (DEC-049, DEC-050)
 
         public long Population(NodeId node) => _world.Get<HouseholdState>().Population[node.Value];
@@ -473,6 +483,10 @@ namespace FES.Simulation
 
         /// <summary>Borrows from the bank of the branch the player is at, against everything they own.</summary>
         public void TakeLoan(long amount) => _queue.Enqueue(new TakeLoanCommand(amount));
+
+        /// <summary>Lobbies a nation's policy in the company's name (+1 up, -1 down); <paramref name="baseGood"/> only for licensing.</summary>
+        public void Lobby(NodeId nation, PolicyKind policy, int direction, long amount, int baseGood = -1) =>
+            _queue.Enqueue(new LobbyCommand(nation, policy, direction, amount, baseGood));
 
         public void RepayLoan(long amount) => _queue.Enqueue(new RepayLoanCommand(amount));
 

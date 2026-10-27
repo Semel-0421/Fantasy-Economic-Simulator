@@ -202,6 +202,7 @@ namespace FES.Economy
             builder.AddSystem(new ModifierFoldSystem());
             builder.AddSystem(new PricingSystem());
             builder.AddSystem(new CurrencySystem());
+            builder.AddMigration(new CurrencyStateV1Migration());
         }
     }
 }

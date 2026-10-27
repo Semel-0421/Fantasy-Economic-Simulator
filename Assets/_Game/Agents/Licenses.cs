@@ -82,22 +82,24 @@ namespace FES.Agents
             db.Config.LicensePriceMultiplier.MulInt(db.Good(GoodId.From(baseGood, QualityGrade.Mid)).BasePrice);
 
         /// <summary>
-        /// What the player pays in <paramref name="nationNode"/>: members of a guild of the good's trade in that
-        /// nation get its recommendation and a discount (DEC-057).
+        /// What the player pays in <paramref name="nationNode"/>: the price at the nation's license price policy
+        /// (DEC-058); members of a guild of the good's trade in that nation get its recommendation and a
+        /// discount (DEC-057).
         /// </summary>
         public static long PlayerPrice(WorldState world, GameDatabase db, int baseGood, int nationNode, int turn)
         {
-            long price = Price(db, baseGood);
+            int nation = world.Get<NodeBanks>().NationIndex(nationNode);
+            long price = PolicyRules.Scale(db.Config, world.Get<PolicyState>().LicensePriceStep[nation]).MulInt(Price(db, baseGood));
             int category = db.Good(GoodId.From(baseGood, QualityGrade.Mid)).CategoryIndex;
             return GuildBenefits.MemberOfTrade(world, db, nationNode, category, turn)
                 ? price - db.Config.GuildLicenseDiscount.MulInt(price)
                 : price;
         }
 
-        /// <summary>Whether the player may sell <paramref name="good"/> at <paramref name="node"/> this turn (DEC-024).</summary>
+        /// <summary>Whether the player may sell <paramref name="good"/> at <paramref name="node"/> this turn (DEC-024, DEC-058).</summary>
         public static bool PlayerMaySell(WorldState world, GameDatabase db, GoodId good, int node, int turn)
         {
-            if (!db.Good(good).RequiresLicense) return true;
+            if (!PolicyRules.NeedsLicense(world, good, node)) return true;
             int nation = world.Get<NodeTable>().AncestorAt(node, WorldLevel.Nation);
             return nation >= 0 && world.Get<LicenseTable>().IsValid(good.BaseIndex, nation, turn);
         }
@@ -154,10 +156,10 @@ namespace FES.Agents
         {
             var db = ctx.Services.Get<GameDatabase>();
             if (!Good.IsValid || Good.Value >= db.GoodCount) return CommandResult.Fail("Unknown good.");
-            if (!db.Good(Good).RequiresLicense) return CommandResult.Fail("This good needs no license.");
             var player = ctx.World.Get<PlayerState>();
             if (player.IsTravelling) return CommandResult.Fail("Licenses are bought in a nation, not on the road.");
             if (Nation(ctx) < 0) return CommandResult.Fail("No nation issues licenses here.");
+            if (!PolicyRules.NeedsLicense(ctx.World, Good, player.Node)) return CommandResult.Fail("This good needs no license here.");
             return player.LocalCoins >= Price(ctx) ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }
 

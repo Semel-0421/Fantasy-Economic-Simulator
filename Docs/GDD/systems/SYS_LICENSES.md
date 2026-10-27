@@ -35,7 +35,8 @@ lever nations hold.
 - A licensed good in a foreign nation: needs that nation's license.
 
 ## Unity implementation notes
-Implemented in P7.
+Implemented in P7. Since P12b each nation keeps its own list of licensed goods and its license price
+step, moved by the yearly policy review (SYS-INTEREST-GROUPS); `requires_license` is the starting list.
 - `goods.csv` has an optional `requires_license` column (0/1, per base good; Claude-chosen name, [Draft]).
 - The persistent `LicenseTable` holds the player's licenses as (base good, nation node, expiry turn);
   `LicenseSystem` (Cleanup phase) drops expired rows and publishes `LicenseExpired`.

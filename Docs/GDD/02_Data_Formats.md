@@ -124,6 +124,12 @@ changing a default in code does.
 | grade.<grade>.price_permille | 600/1000/1800/3500 | grade price multipliers |
 | price.adjust_permille / max_step_permille / anchor_permille / stock_pressure_permille / min | 250 / 150 / 20 / 250 / 1 | pricing |
 | currency.mint_permille, gold_reserve, silver_reserve, coin_supply, coins_per_gold, coins_per_silver | 30, 1e6, 1e7, 5e6, 10, 1 | currency |
+| policy.step_permille, policy.max_steps | 100, 5 | one policy step and the limit either way ([Draft]) |
+| policy.move_threshold_permille, policy.resistance_permille | 100, 1000 | share of influence a policy needs to move, and the status-quo bias per step already taken ([Draft]) |
+| policy.asset_weight_permille, policy.lobby_weight_permille, policy.influence_per_job | 1000, 3000, 50 | influence per coin of assets, per coin lobbied, per job ([Draft]) |
+| policy.jobs_per_facility_level, policy.jobs_per_merchant_group | 20, 10 | jobs counted for influence ([Draft]) |
+| policy.npc_lobby_share_permille, policy.loss_tilt_permille | 50, 2000 | NPC groups' yearly lobbying share of cash; lean toward protection per share of worth lost ([Draft]) |
+| policy.inflation_opposition_permille | 100 | published yearly inflation at which groups other than state enterprises fully oppose minting ([Draft]) |
 | currency.endowment_spread_permille | 300 | +- variation of continents' starting reserves |
 | guidance.decay_permille | 10 | weekly guidance decay |
 | guidance.weight.buy_facility_permille, guidance.weight.found_company_permille | 1000, 5000 | guidance signal weights |

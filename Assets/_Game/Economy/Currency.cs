@@ -21,9 +21,12 @@ namespace FES.Economy
         public readonly Fx[] PriceIndex;
         /// <summary>Value of one local coin in reference units (world-average purchasing power = 1.0).</summary>
         public readonly Fx[] ExchangeRate;
+        /// <summary>Multiplier on the config minting rate, set by the nations' policy reviews (DEC-058).</summary>
+        public readonly Fx[] MintRateMultiplier;
 
-        public string Key => "economy.currency";
-        public int Version => 1;
+        public const string SectionKey = "economy.currency";
+        public string Key => SectionKey;
+        public int Version => 2;
 
         public CurrencyState(int continentCount)
         {
@@ -34,10 +37,12 @@ namespace FES.Economy
             BaselineCoinSupply = new long[continentCount];
             PriceIndex = new Fx[continentCount];
             ExchangeRate = new Fx[continentCount];
+            MintRateMultiplier = new Fx[continentCount];
             for (int c = 0; c < continentCount; c++)
             {
                 PriceIndex[c] = Fx.One;
                 ExchangeRate[c] = Fx.One;
+                MintRateMultiplier[c] = Fx.One;
             }
         }
 
@@ -57,6 +62,7 @@ namespace FES.Economy
                 writer.Write(PriceIndex[c].Raw);
                 writer.Write(ExchangeRate[c].Raw);
             }
+            for (int c = 0; c < ContinentCount; c++) writer.Write(MintRateMultiplier[c].Raw);
         }
 
         public void Read(BinaryReader reader)
@@ -72,6 +78,26 @@ namespace FES.Economy
                 PriceIndex[c] = Fx.FromRaw(reader.ReadInt64());
                 ExchangeRate[c] = Fx.FromRaw(reader.ReadInt64());
             }
+            for (int c = 0; c < count; c++) MintRateMultiplier[c] = Fx.FromRaw(reader.ReadInt64());
+        }
+    }
+
+    /// <summary>Version 1 had no minting policy: every continent minted at the config rate.</summary>
+    public sealed class CurrencyStateV1Migration : ISaveMigration
+    {
+        public string SectionKey => CurrencyState.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int continents = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                for (int c = 0; c < continents; c++) writer.Write(Fx.One.Raw);
+            }
+            return output.ToArray();
         }
     }
 
@@ -110,8 +136,9 @@ namespace FES.Economy
 
         public void MintYear(CurrencyState state, int continent, SimulationConfig config)
         {
-            long gold = config.MintRatePerYear.MulInt(state.GoldReserve[continent]);
-            long silver = config.MintRatePerYear.MulInt(state.SilverReserve[continent]);
+            var rate = config.MintRatePerYear * state.MintRateMultiplier[continent];
+            long gold = rate.MulInt(state.GoldReserve[continent]);
+            long silver = rate.MulInt(state.SilverReserve[continent]);
             state.GoldReserve[continent] -= gold;
             state.SilverReserve[continent] -= silver;
             state.CoinSupply[continent] += gold * config.CoinsPerGoldUnit + silver * config.CoinsPerSilverUnit;

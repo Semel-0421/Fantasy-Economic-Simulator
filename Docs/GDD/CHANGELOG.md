@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-10-27
+- [03_Decisions.md] Q-037 (Claude added) resolved by DEC-060: status-quo bias +100% per step; inflation turns groups other than state enterprises against minting (changes DEC-059)
+- [systems/SYS_INTEREST_GROUPS.md] Minting stances, status-quo bias rule, sample results
+- [02_Data_Formats.md] policy.inflation_opposition_permille
+- [04_Roadmap.md] P12b done
+- [systems/SYS_INTEREST_GROUPS.md] Drafts for policy steps, influence, stances, the move rule with status-quo bias and player lobbying; implementation notes
+- [systems/SYS_LICENSES.md, systems/SYS_TRAVEL_COSTS.md] Licensed goods, license prices and tolls follow nation policy
+- [02_Data_Formats.md] policy config keys
 - [04_Roadmap.md] P10 done; P12b next
 - [systems/SYS_MARKETS.md] Drafts for goods classes, the demand curve, elasticities, quintiles, population, income and yearly change; implementation notes
 - [02_Data_Formats.md] goods.csv class, map_nodes.csv population, demand and household config keys

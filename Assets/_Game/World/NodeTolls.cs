@@ -7,13 +7,16 @@ namespace FES.World
 {
     /// <summary>
     /// Toll rates of every node (DEC-014): a share of the value of cargo entering it, plus a surcharge on
-    /// goods in its specialty categories. From the map, with config defaults; static, so not saved.
+    /// goods in its specialty categories. From the map, with config defaults; not saved. The rates in force
+    /// are the map's times the nation's toll policy (DEC-058), which its owner reapplies after loading.
     /// </summary>
     public sealed class NodeTolls : IWorldComponent, IDisposable
     {
-        /// <summary>Raw Fx shares of the cargo value.</summary>
+        /// <summary>Raw Fx shares of the cargo value, in force.</summary>
         public NativeArray<long> Tariff;
         public NativeArray<long> SpecialtySurcharge;
+        readonly long[] _baseTariff;
+        readonly long[] _baseSurcharge;
 
         public NodeTolls(MapDef map, NodeTable nodes, SimulationConfig config)
         {
@@ -28,6 +31,19 @@ namespace FES.World
                 SpecialtySurcharge[node.Value] = (def.SpecialtySurchargePermille < 0
                     ? config.TollSpecialtySurcharge
                     : Fx.FromPermille(def.SpecialtySurchargePermille)).Raw;
+            }
+            _baseTariff = Tariff.ToArray();
+            _baseSurcharge = SpecialtySurcharge.ToArray();
+        }
+
+        /// <summary>Sets the rates of every node inside <paramref name="nationNode"/> to the map's times <paramref name="scale"/>.</summary>
+        public void ScaleNation(NodeTable nodes, int nationNode, Fx scale)
+        {
+            for (int n = 0; n < nodes.Count; n++)
+            {
+                if (nodes.AncestorAt(n, WorldLevel.Nation) != nationNode) continue;
+                Tariff[n] = scale.MulInt(_baseTariff[n]);
+                SpecialtySurcharge[n] = scale.MulInt(_baseSurcharge[n]);
             }
         }
 

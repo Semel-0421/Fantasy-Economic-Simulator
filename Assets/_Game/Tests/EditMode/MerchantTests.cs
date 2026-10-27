@@ -143,6 +143,7 @@ namespace FES.Tests
             using var cellGood = new NativeArray<int>(new[] { 0, 0 }, Allocator.Temp);
             using var goodZero = new NativeArray<int>(new[] { 0 }, Allocator.Temp);
             using var goodWeight = new NativeArray<int>(new[] { 1 }, Allocator.Temp);
+            using var licenseRow = new NativeArray<int>(new[] { 0, 0 }, Allocator.Temp);
             using var licensed = new NativeArray<byte>(new byte[] { 0 }, Allocator.Temp);
             using var price = new NativeArray<int>(new[] { 10, 30 }, Allocator.Temp);
             using var stock = new NativeArray<int>(new[] { 100, 0 }, Allocator.Temp);
@@ -158,7 +159,7 @@ namespace FES.Tests
                 OutStart = outStart, OutCount = outCount, RouteIndex = routeIndex, RouteTo = routeTo,
                 RouteTurns = routeTurns, RouteCostPerUnitRaw = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
                 MarketCellStart = cellStart, MarketCellCount = cellCount, CellGood = cellGood,
-                GoodCategory = goodZero, GoodWeight = goodWeight, GoodLicensed = licensed,
+                GoodCategory = goodZero, GoodWeight = goodWeight, NodeLicenseRow = licenseRow, Licensed = licensed, BaseGoodCount = 1,
                 Price = price, Stock = stock, Supply = supply, Demand = demand,
             }.Execute();
 

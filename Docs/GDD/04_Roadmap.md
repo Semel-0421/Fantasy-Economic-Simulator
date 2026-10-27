@@ -47,7 +47,7 @@ flowchart LR
 | P9b | NPC loans (facilities, merchant groups), money totals per nation and continent, reserve-driven loan rates, quarterly records and yearly statistics, financial events | SYS-BANKING | Done (price index still on coin supply, Q-036) |
 | P11 | Ports (ship trade, port-only water routes, docked ships), paved roads (condition, cheaper and safer travel, map roads, player building, upkeep and decay) | SYS-INFRASTRUCTURE | Done |
 | P12a | Interest groups owning facilities and merchant groups, the player's company, guild membership with cheaper insurance, guild hall warehouses and cheaper licenses | SYS-INTEREST-GROUPS | Done |
-| P12b | Influence (assets, lobbying, members and jobs), yearly weighted policy review of tolls, licenses and minting, player lobbying | SYS-INTEREST-GROUPS | Ready |
+| P12b | Influence (assets, lobbying, members and jobs), yearly weighted policy review of tolls, licenses and minting, player lobbying | SYS-INTEREST-GROUPS | Done |
 | P12c | Company shares, privatization of state enterprises | SYS-INTEREST-GROUPS | Later (DEC-056) |
 
 ## Notes
@@ -59,9 +59,9 @@ flowchart LR
   Burst job from the start.
 - Placeholder numbers (capacities, rates, effect sizes, loss ratios, prices) go to `config.csv` / data
   files marked [Draft]; they block balance, not code.
-- P1 to P12a are done except P12b and P12c. Next: P12b (influence and policy). Money still enters
-  through market sales without limit (Q-036); a later phase could pay facility wages to households and
-  cap their purchases by income.
+- P1 to P12b are done; P12c (shares, privatization) is later (DEC-056). Money still enters through
+  market sales without limit (Q-036); a later phase could pay facility wages to households and cap their
+  purchases by income.
 - With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.

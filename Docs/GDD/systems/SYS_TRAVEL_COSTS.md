@@ -44,7 +44,8 @@ value_n(cargo) = sum(qty * market_price(n or nearest ancestor trading the good))
 - No market up the hierarchy trades a carried good: [Draft] valued at zero (cannot be priced).
 
 ## Unity implementation notes
-Implemented in P3.
+Implemented in P3. Since P12b every rate in a nation is the map's rate times its toll policy step
+(SYS-INTEREST-GROUPS).
 - `map_routes.csv` has an optional `base_fee` column (default 0); `map_nodes.csv` has optional
   `tariff_permille` and `specialty_surcharge_permille` columns, empty meaning the config defaults
   `toll.tariff_permille` / `toll.specialty_surcharge_permille` (Claude-chosen names, [Draft]).

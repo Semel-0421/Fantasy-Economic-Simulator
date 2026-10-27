@@ -45,6 +45,7 @@ namespace FES.Agents
             GroupSetup.Found(groups, nodes, db, facilities);
             GroupSetup.AssignOwners(groups, nodes, db, facilities, merchants);
             builder.World.Add(new GuildMembershipTable());
+            builder.World.Add(new PolicyState(banks.NationCount, nodes.ContinentCount, db));
             builder.World.Add(new GuidanceState());
             builder.World.Add(new LodState(nodes.Count));
 
@@ -69,6 +70,7 @@ namespace FES.Agents
             builder.AddSystem(new BankSystem());
             builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new HouseholdGrowthSystem());
+            builder.AddSystem(new PolicySystem());
             builder.AddSystem(new RoadSystem());
             builder.AddSystem(new GroupSystem());
         }

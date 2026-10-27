@@ -10,6 +10,18 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Open questions
 
+### Q-037 [resolved] Status-quo bias in the policy review, and who opposes minting
+- Registered: 2026-10-27 (Claude added)
+- Context: with a fixed move threshold, P12b's sample world pushed every policy one way each year to its
+  limit within five years; minting could only rise, since only state enterprises take a side on it
+  (DEC-059).
+- Options: A) the threshold rises with every step a policy stands from its start  B) A, plus a step back
+  toward the start when pressure falls short  C) no bias · strength per step +50% / +100% / +200% ·
+  minting: the same bias only, or other groups opposing minting once prices rise
+- Claude's recommendation: A at +100%, minting under the same bias only
+- Impact: SYS-INTEREST-GROUPS
+- Resolved: DEC-060
+
 ### Q-036 [open] When measured money totals drive the price index
 - Registered: 2026-10-27 (Claude added)
 - Context: DEC-042 makes the continent total drive inflation. P9b measured the totals growing about
@@ -306,6 +318,16 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-060 Status-quo bias in the policy review; inflation turns groups against minting
+- Date: 2026-10-27
+- Decision: a policy needs more weight to move the further it already stands from its start: each step
+  away raises the move threshold by 100% of itself. Groups other than state enterprises oppose minting
+  once prices have risen over the published year (changes DEC-059, where none of them took a side).
+- Alternatives: also stepping back toward the start when pressure falls short (rejected) · no bias
+  (rejected) · +50% or +200% per step (rejected) · minting under the bias only (recommended, rejected)
+- Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md)
+- Resolves: Q-037
+
 ### DEC-059 Interest groups' stances
 - Date: 2026-10-27
 - Decision: guilds, companies and private enterprises decide tolls and licenses from their own trade: they
@@ -318,6 +340,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   rejected)
 - Impact: [SYS-INTEREST-GROUPS](systems/SYS_INTEREST_GROUPS.md)
 - Resolves: Q-035
+- Changed by: DEC-060 (groups other than state enterprises now oppose minting when prices rise)
 
 ### DEC-058 Policy influence: yearly weighted review
 - Date: 2026-10-27

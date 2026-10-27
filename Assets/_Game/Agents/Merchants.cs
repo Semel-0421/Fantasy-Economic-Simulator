@@ -69,7 +69,9 @@ namespace FES.Agents
         NativeArray<long> _routeExpectedLoss;
         NativeArray<long> _routeCostPerUnit;
         NativeArray<byte> _nodeCategorySpecialty;
-        NativeArray<byte> _goodLicensed;
+        /// <summary>Per node: its row in <see cref="PolicyState.Licensed"/>.</summary>
+        NativeArray<int> _nodeLicenseRow;
+        PolicyState _policy;
 
         /// <summary>When true the aggregate job runs as plain managed code (parity tests).</summary>
         public bool ForceManaged { get; set; }
@@ -97,8 +99,10 @@ namespace FES.Agents
             for (int n = 0; n < _nodes.Count; n++)
                 for (int k = specialties.Start[n]; k < specialties.Start[n] + specialties.Count[n]; k++)
                     _nodeCategorySpecialty[n * categories + _db.Good(GoodId.From(specialties.BaseGood[k], QualityGrade.Low)).CategoryIndex] = 1;
-            _goodLicensed = new NativeArray<byte>(_db.GoodCount, Allocator.Persistent);
-            for (int g = 0; g < _db.GoodCount; g++) _goodLicensed[g] = (byte)(_db.Goods[g].RequiresLicense ? 1 : 0);
+            _policy = ctx.World.Get<PolicyState>();
+            var banks = ctx.World.Get<NodeBanks>();
+            _nodeLicenseRow = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
+            for (int n = 0; n < _nodes.Count; n++) _nodeLicenseRow[n] = _policy.Row(PolicyRules.NationOf(_nodes, banks, n));
         }
 
         public void RunDetailed(SimContext ctx, AgentId merchant)
@@ -124,7 +128,7 @@ namespace FES.Agents
             _cargo.Collect(holder, _items);
             foreach (var item in _items)
             {
-                if (_db.Good(item.Good).RequiresLicense && !HoldsLicenses(ctx, a)) continue;
+                if (NeedsLicense(node, item.Good.Value) && !HoldsLicenses(ctx, a)) continue;
                 if (!_markets.TryFindCell(node, item.Good, out int cell)) continue;
                 _flows.Sell(cell, item.Quantity);
                 _agents.Cash[a] += (long)item.Quantity * _markets.Price[cell];
@@ -153,7 +157,6 @@ namespace FES.Agents
             {
                 if (_markets.Stock[cell] <= 0) continue;
                 var good = new GoodId(_markets.CellGood[cell]);
-                if (_goodLicensed[good.Value] != 0 && !licensed) continue;
                 long buy = _markets.Price[cell];
                 long quantityCap = Math.Min(_markets.Stock[cell],
                     capacity.MaxAdditional(load, _markets.GoodWeight[good.Value], _markets.GoodSize[good.Value]));
@@ -163,6 +166,7 @@ namespace FES.Agents
                     int r = _routes.RouteIndex[k];
                     int to = _routes.To[r];
                     if (_nodes.Continent[to] != _nodes.Continent[node] || !_markets.TryFindCell(to, good, out int toCell)) continue;
+                    if (!licensed && NeedsLicense(to, good.Value)) continue;
                     long baseFee = _routes.BaseFee[r];
                     var perUnit = _costs.PerUnitCharge(r);
                     long sell = _markets.Price[toCell];
@@ -196,6 +200,9 @@ namespace FES.Agents
             if (loss == EncounterLoss.Cash) _agents.Cash[a] -= _db.Config.EncounterCashLoss.MulInt(Math.Max(0, _agents.Cash[a]));
             else if (loss == EncounterLoss.Cargo) Encounters.TakeCargo(_cargo, holder, _db.Config.EncounterCargoLoss, _items);
         }
+
+        bool NeedsLicense(int node, int good) =>
+            _policy.Licensed[_nodeLicenseRow[node] * _policy.BaseGoodCount + good / QualityGrades.Count] != 0;
 
         long TollRate(int node, int good)
         {
@@ -267,7 +274,9 @@ namespace FES.Agents
                 CellGood = _markets.CellGood,
                 GoodCategory = _markets.GoodCategory,
                 GoodWeight = _markets.GoodWeight,
-                GoodLicensed = _goodLicensed,
+                NodeLicenseRow = _nodeLicenseRow,
+                Licensed = _policy.Licensed,
+                BaseGoodCount = _policy.BaseGoodCount,
                 Price = _markets.Price,
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
@@ -284,7 +293,7 @@ namespace FES.Agents
             _routeExpectedLoss.DisposeIfCreated();
             _routeCostPerUnit.DisposeIfCreated();
             _nodeCategorySpecialty.DisposeIfCreated();
-            _goodLicensed.DisposeIfCreated();
+            _nodeLicenseRow.DisposeIfCreated();
         }
     }
 
@@ -303,6 +312,7 @@ namespace FES.Agents
         public int CategoryCount;
         public long FlowShareRaw;
         public long LicensedShareRaw;
+        public int BaseGoodCount;
 
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> NodeContinent;
@@ -326,7 +336,9 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> CellGood;
         [ReadOnly] public NativeArray<int> GoodCategory;
         [ReadOnly] public NativeArray<int> GoodWeight;
-        [ReadOnly] public NativeArray<byte> GoodLicensed;
+        /// <summary>Per node: its licensing row; per (row, base good): 1 when selling needs a license (DEC-058).</summary>
+        [ReadOnly] public NativeArray<int> NodeLicenseRow;
+        [ReadOnly] public NativeArray<byte> Licensed;
         [ReadOnly] public NativeArray<int> Price;
 
         public NativeArray<int> Stock;
@@ -393,7 +405,7 @@ namespace FES.Agents
             if (marginRaw <= 0 || Stock[fromCell] <= 0) return;
 
             long quantity = Fx.MulIntRaw(Stock[fromCell], FlowShareRaw) * marginRaw / (sell << Fx.FractionBits);
-            if (GoodLicensed[good] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
+            if (Licensed[NodeLicenseRow[to] * BaseGoodCount + good / QualityGrades.Count] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
             if (quantity <= 0) return;
             budget -= quantity * GoodWeight[good];

@@ -60,6 +60,26 @@ namespace FES.Data
         public Fx IncomeResponse = Fx.FromPermille(500);
         public Fx IncomeMaxChange = Fx.FromPermille(50);
 
+        /// <summary>One policy step changes tolls, license prices or minting by this share; at most this many steps either way (DEC-058).</summary>
+        public Fx PolicyStep = Fx.FromPermille(100);
+        public int PolicyMaxSteps = 5;
+        /// <summary>A policy moves when the influence-weighted balance of stances reaches this share of the nation's influence.</summary>
+        public Fx PolicyMoveThreshold = Fx.FromPermille(100);
+        /// <summary>Status-quo bias: each step a policy already stands from its start raises the threshold by this share of itself.</summary>
+        public Fx PolicyResistance = Fx.One;
+        /// <summary>Influence per coin of assets, per coin lobbied, and per job (DEC-058).</summary>
+        public Fx InfluenceAssetWeight = Fx.One;
+        public Fx InfluenceLobbyWeight = Fx.FromInt(3);
+        public long InfluencePerJob = 50;
+        public int JobsPerFacilityLevel = 20;
+        public int JobsPerMerchantGroup = 10;
+        /// <summary>Share of its cash an NPC group spends lobbying each year.</summary>
+        public Fx NpcLobbyShare = Fx.FromPermille(50);
+        /// <summary>A group that lost this share of its worth over the year leans fully toward protection (as a multiplier on the share lost).</summary>
+        public Fx PolicyLossTilt = Fx.FromInt(2);
+        /// <summary>Published yearly inflation at which groups other than state enterprises fully oppose minting (DEC-060).</summary>
+        public Fx InflationOpposition = Fx.FromPermille(100);
+
         /// <summary>Merchant groups spawned per node of each level.</summary>
         public readonly int[] MerchantsPerNode = { 50, 50, 30, 10, 3 };
 
@@ -381,6 +401,20 @@ namespace FES.Data
             AuctionWeeks = Int(v, "bank.auction_weeks", AuctionWeeks);
             if (AuctionWeeks < 1) throw new FormatException("config.csv: bank.auction_weeks must be >= 1.");
             AuctionReserveShare = Permille(v, "bank.auction_reserve_permille", AuctionReserveShare);
+            PolicyStep = Permille(v, "policy.step_permille", PolicyStep);
+            PolicyMaxSteps = Int(v, "policy.max_steps", PolicyMaxSteps);
+            if (PolicyMaxSteps < 0 || PolicyStep.MulInt(PolicyMaxSteps * 1000L) >= 1000)
+                throw new FormatException("config.csv: policy.step_permille x policy.max_steps must stay below 1000.");
+            PolicyMoveThreshold = Permille(v, "policy.move_threshold_permille", PolicyMoveThreshold);
+            PolicyResistance = Permille(v, "policy.resistance_permille", PolicyResistance);
+            InfluenceAssetWeight = Permille(v, "policy.asset_weight_permille", InfluenceAssetWeight);
+            InfluenceLobbyWeight = Permille(v, "policy.lobby_weight_permille", InfluenceLobbyWeight);
+            InfluencePerJob = Long(v, "policy.influence_per_job", InfluencePerJob);
+            JobsPerFacilityLevel = Int(v, "policy.jobs_per_facility_level", JobsPerFacilityLevel);
+            JobsPerMerchantGroup = Int(v, "policy.jobs_per_merchant_group", JobsPerMerchantGroup);
+            NpcLobbyShare = Permille(v, "policy.npc_lobby_share_permille", NpcLobbyShare);
+            PolicyLossTilt = Permille(v, "policy.loss_tilt_permille", PolicyLossTilt);
+            InflationOpposition = Permille(v, "policy.inflation_opposition_permille", InflationOpposition);
             NecessityElasticity = Permille(v, "demand.necessity_elasticity_permille", NecessityElasticity);
             LuxuryElasticity = Permille(v, "demand.luxury_elasticity_permille", LuxuryElasticity);
             MaxCheapDemand = Permille(v, "demand.max_cheap_permille", MaxCheapDemand);

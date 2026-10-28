@@ -75,6 +75,15 @@ namespace FES.Agents
             var groups = world.Get<GroupTable>();
             AddCash(nodes, groups.Node.AsArray(), groups.Cash.AsArray());
 
+            // Households' and traders' purses are cash held there too (DEC-061).
+            var purses = world.Get<PurseState>();
+            for (int p = 0; p < purses.Count; p++)
+            {
+                if (purses.Purse[p] <= 0) continue;
+                if (p < NationCash.Length) NationCash[p] += purses.Purse[p];
+                else ContinentLoose[purses.ContinentOf(p)] += purses.Purse[p];
+            }
+
             Array.Copy(bank.Reserve, NationReserve, NationReserve.Length);
             Array.Copy(bank.PlayerDeposit, NationDeposits, NationDeposits.Length);
             for (int c = 0; c < ContinentTotal.Length; c++) ContinentTotal[c] = ContinentLoose[c] + bank.InternationalReserve[c];
@@ -499,7 +508,9 @@ namespace FES.Agents
             var facilities = ctx.World.Get<FacilityTable>();
             facilities.Owner[facility] = OwnerIds.Bank;
             facilities.Mode[facility] = (byte)ControlMode.Automated;
-            // The bank runs it until the sale without the old arrears, so it cannot go bankrupt meanwhile.
+            // The bank runs it until the sale without the old arrears, so it cannot go bankrupt meanwhile; the
+            // arrears are written off against the purse there (DEC-061).
+            if (facilities.Cash[facility] < 0) ctx.World.Get<PurseState>().Change(facilities.Node[facility], facilities.Cash[facility]);
             facilities.Cash[facility] = Math.Max(0, facilities.Cash[facility]);
             facilities.NegativeCashWeeks[facility] = 0;
             long reserve = db.Config.AuctionReserveShare.MulInt(FacilityValue(db, facilities, facility));
@@ -606,7 +617,13 @@ namespace FES.Agents
             _finance.Event[n] = (byte)kind;
             _finance.EventStart[n] = ctx.Turn;
             // [Draft] A run starts with the public taking a share of the bank's coins out.
-            if (kind == FinancialEventKind.BankRun) _bank.Reserve[n] -= _config.BankRunDrain.MulInt(Math.Max(0, _bank.Reserve[n]));
+            if (kind == FinancialEventKind.BankRun)
+            {
+                // The withdrawn coins go to the nation's households (DEC-061).
+                long drain = _config.BankRunDrain.MulInt(Math.Max(0, _bank.Reserve[n]));
+                _bank.Reserve[n] -= drain;
+                ctx.World.Get<PurseState>().Purse[n] += drain;
+            }
             ctx.Events.Publish(new FinancialEventStarted(nation, kind, ctx.Turn));
         }
 

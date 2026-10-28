@@ -29,7 +29,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 - [Confirmed] Markets pay sellers only from traders' floats; when a float runs short, payouts are capped
   (DEC-061).
 - [Confirmed] At the start, household cash makes each continent's money total equal its starting coin
-  supply (DEC-061).
+  supply (DEC-061). Built in P13a with one purse per nation; household cash per node comes with P13b.
 - [Draft] Default population per level, quintile shares and yearly change rates start as placeholder
   config values.
 - [Draft] Elasticity values per class start as placeholder config values.

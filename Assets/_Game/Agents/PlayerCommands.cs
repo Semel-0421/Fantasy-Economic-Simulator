@@ -43,6 +43,14 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             player.Coins[quote.FeeContinent] -= quote.DepartureCost;
             player.Coins[quote.TollContinent] -= quote.Toll;
+            // Fees, passage and guards are wages at the origin; insurance goes to a guild there; the toll to
+            // the entered nation (DEC-061).
+            var purses = ctx.World.Get<PurseState>();
+            purses.Change(player.Node, quote.Fee + quote.Passage + quote.Guards);
+            int guild = MoneyLedger.InsuranceGuild(ctx.World, player.Node);
+            if (guild >= 0) ctx.World.Get<GroupTable>().Cash[guild] += quote.Insurance;
+            else purses.Change(player.Node, quote.Insurance);
+            MoneyLedger.ToState(ctx.World, Destination.Value, quote.Toll);
             // A ship that sails lands with the player and docks at the destination port (DEC-053).
             var ship = ctx.World.Get<PlayerShip>();
             if (quote.Passage == 0 && ((RouteTerrain)ctx.World.Get<RouteTable>().Terrain[quote.Route]).IsWater()) ship.DockedAt = Destination.Value;
@@ -65,6 +73,7 @@ namespace FES.Agents
             {
                 value = config.EncounterCashLoss.MulInt(Math.Max(0, player.Coins[quote.FeeContinent]));
                 player.Coins[quote.FeeContinent] -= value;
+                ctx.World.Get<PurseState>().Change(player.Node, value); // [Draft] spent where the trip began
             }
             else
             {
@@ -75,6 +84,8 @@ namespace FES.Agents
             }
             long refund = Insurance ? config.InsuranceRefund.MulInt(value) : 0;
             player.Coins[quote.FeeContinent] += refund;
+            // [Draft] The insuring guild pays what its cash covers, the purse at the origin the rest.
+            MoneyLedger.PayFromGroup(ctx.World, MoneyLedger.InsuranceGuild(ctx.World, player.Node), player.Node, refund);
             ctx.Events.Publish(new TripEncounter(Destination, loss, value, refund, ctx.Turn));
         }
 
@@ -256,6 +267,7 @@ namespace FES.Agents
                 bank.PlayerDeposit[nation] -= cost - fromCoins;
                 bank.Reserve[nation] -= cost - fromCoins;
             }
+            ctx.World.Get<PurseState>().Change(player.Node, cost);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, filled);
             ctx.World.Get<MarketFlows>().Buy(cell, filled);
             ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, true, Quantity, filled, price, ctx.Turn));
@@ -311,6 +323,7 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             int price = ctx.World.Get<MarketStore>().Price[cell];
             player.LocalCoins += (long)filled * price;
+            ctx.World.Get<PurseState>().Change(player.Node, -(long)filled * price);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, -filled);
             ctx.World.Get<MarketFlows>().Sell(cell, filled);
             ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, false, Quantity, filled, price, ctx.Turn));
@@ -515,15 +528,23 @@ namespace FES.Agents
         public void Apply(SimContext ctx)
         {
             var facilities = ctx.World.Get<FacilityTable>();
-            ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) -= Price;
-            // [Draft] The seller repays its bank loan from the price; the bank writes off the rest.
+            int node = facilities.Node[Facility.Value];
+            ctx.World.Get<PlayerState>().CoinsAt(node) -= Price;
+            // [Draft] The seller repays its bank loan from the price; the bank writes off the rest. The seller's
+            // group gets what is left, or the purse there if it has none (DEC-061).
+            long proceeds = Price;
             var loans = ctx.World.Get<NpcLoanTable>();
             int loan = loans.Find(NpcBorrowers.Facility(Facility.Value));
             if (loan >= 0)
             {
-                ctx.World.Get<BankState>().Reserve[loans.Nation[loan]] += Math.Min(Price, loans.Balance[loan]);
+                long repaid = Math.Min(Price, loans.Balance[loan]);
+                ctx.World.Get<BankState>().Reserve[loans.Nation[loan]] += repaid;
+                proceeds -= repaid;
                 loans.RemoveRow(loan);
             }
+            int seller = facilities.Group[Facility.Value];
+            if (seller >= 0) ctx.World.Get<GroupTable>().Cash[seller] += proceeds;
+            else ctx.World.Get<PurseState>().Change(node, proceeds);
             facilities.Owner[Facility.Value] = OwnerIds.Player;
             facilities.Mode[Facility.Value] = (byte)ControlMode.Manual;
             facilities.WarehouseClaimUntil[Facility.Value] = -1; // a lost warehouse bought back is the player's again
@@ -563,7 +584,8 @@ namespace FES.Agents
         public void Apply(SimContext ctx)
         {
             ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) -= Cost;
-            int company = ctx.World.Get<GroupTable>().Add(GroupKind.Company, Headquarters.Value, -1, 0, player: true);
+            // The founding money is the company's starting capital (DEC-061).
+            int company = ctx.World.Get<GroupTable>().Add(GroupKind.Company, Headquarters.Value, -1, Cost, player: true);
             var facilities = ctx.World.Get<FacilityTable>();
             for (int f = 0; f < facilities.Count; f++)
                 if (facilities.Owner[f] == OwnerIds.Player) facilities.Group[f] = company;

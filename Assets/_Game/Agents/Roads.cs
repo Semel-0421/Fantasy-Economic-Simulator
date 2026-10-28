@@ -48,6 +48,7 @@ namespace FES.Agents
         RoadState _roads;
         BankState _bank;
         PlayerState _player;
+        PurseState _purses;
 
         public string Id => "agents.roads";
         public SimPhase Phase => SimPhase.Finance;
@@ -62,6 +63,7 @@ namespace FES.Agents
             _roads = ctx.World.Get<RoadState>();
             _bank = ctx.World.Get<BankState>();
             _player = ctx.World.Get<PlayerState>();
+            _purses = ctx.World.Get<PurseState>();
         }
 
         public void Execute(SimContext ctx)
@@ -85,7 +87,15 @@ namespace FES.Agents
             }
         }
 
+        // Upkeep is wages where the road starts (DEC-061).
         bool PayUpkeep(int r)
+        {
+            if (!TakeUpkeep(r)) return false;
+            _purses.Change(_routes.From[r], _db.Config.RoadUpkeep);
+            return true;
+        }
+
+        bool TakeUpkeep(int r)
         {
             long upkeep = _db.Config.RoadUpkeep;
             int owner = _roads.Owner[r];
@@ -143,6 +153,7 @@ namespace FES.Agents
             var costs = new TravelCosts(ctx.World, ctx.Services.Get<GameDatabase>());
             int route = costs.FindRoute(player.Node, Destination.Value);
             player.LocalCoins -= Cost(ctx, route);
+            ctx.World.Get<PurseState>().Change(player.Node, Cost(ctx, route)); // builders' wages (DEC-061)
             int done = ctx.Turn + ctx.Services.Get<GameDatabase>().Config.RoadBuildWeeks;
             var roads = ctx.World.Get<RoadState>();
             roads.BuildDoneTurn[route] = done;

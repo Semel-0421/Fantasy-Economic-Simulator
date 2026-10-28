@@ -404,6 +404,7 @@ namespace FES.Agents
         GroupTable _groupTable;
         NpcLoanTable _npcLoans;
         AgentTable _agents;
+        PurseState _purses;
         readonly List<CargoItem> _items = new List<CargoItem>();
         readonly List<int> _holders = new List<int>();
 
@@ -431,6 +432,7 @@ namespace FES.Agents
             _groups = new GroupDirectory(_groupTable, _nodes);
             _npcLoans = ctx.World.Get<NpcLoanTable>();
             _agents = ctx.World.Get<AgentTable>();
+            _purses = ctx.World.Get<PurseState>();
         }
 
         /// <summary>Starting reserves: a config share of each continent's coin supply, split evenly over its nations.</summary>
@@ -535,6 +537,7 @@ namespace FES.Agents
                 _bank.PlayerDeposit[n] -= take;
                 _bank.Reserve[n] -= take;
                 long value = _sheet.Convert(take, from, continent);
+                MoneyLedger.AcrossContinents(_bank, from, take, continent, value);
                 long paid = Math.Min(value, _loans.Balance[r]);
                 Repay(r, paid);
                 _bank.Reserve[nation] += value - paid;
@@ -569,6 +572,7 @@ namespace FES.Agents
             {
                 long value = _sheet.Convert(_db.Config.AuctionReserveShare.MulInt(_db.Config.ShipPrice), _ship.BoughtContinent, continent);
                 _ship.Owned = false;
+                _purses.Purse[nation] -= value; // [Draft] the lending nation's people buy it
                 long paid = Math.Min(value, Owed(r));
                 Repay(r, paid);
                 _bank.Reserve[nation] += value - paid;
@@ -626,6 +630,7 @@ namespace FES.Agents
                 _flows.Sell(cell, item.Quantity);
                 // Proceeds beyond the debt go to the bank too (DEC-039).
                 _bank.Reserve[nation] += (long)item.Quantity * _markets.Price[cell];
+                _purses.Change(_agents.Node[a], -(long)item.Quantity * _markets.Price[cell]);
             }
             _npcLoans.RemoveRow(r);
             ctx.Events.Publish(new NpcLoanDefaulted(FacilityId.None, new AgentId(a), new NodeId(_banks.NationNode(nation)), ctx.Turn));
@@ -697,7 +702,9 @@ namespace FES.Agents
                 int units = (int)Math.Min(item.Quantity, (needed + price - 1) / price);
                 _cargo.Change(holder, item.Good, -units);
                 _flows.Sell(cell, units);
+                _purses.Change(node, -(long)units * price);
                 long value = _sheet.Convert((long)units * price, _nodes.Continent[node], continent);
+                MoneyLedger.AcrossContinents(_bank, _nodes.Continent[node], (long)units * price, continent, value);
                 // Proceeds beyond the debt go to the bank, not the former owner (DEC-039).
                 long paid = Math.Min(value, Owed(r));
                 Repay(r, paid);
@@ -725,11 +732,15 @@ namespace FES.Agents
             _facilities.Group[f] = won ? _groupTable.PlayerCompany() : _groups.PrivateAt(_facilities.Node[f], _db.Config);
             if (!won)
             {
-                _facilities.Cash[f] = _db.Config.FacilityStartCash[(int)_db.Facilities[_facilities.DefIndex[f]].Tier];
+                // The buyer pays the price, and its new manager's starting cash, from its cash (DEC-061).
+                MoneyLedger.PayFromGroup(ctx.World, _facilities.Group[f], _facilities.Node[f], price);
+                _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f],
+                    _db.Config.FacilityStartCash[(int)_db.Facilities[_facilities.DefIndex[f]].Tier]);
                 _facilities.NegativeCashWeeks[f] = 0;
             }
 
             long value = _sheet.Convert(price, facilityContinent, _sheet.NationContinent(nation));
+            MoneyLedger.AcrossContinents(_bank, facilityContinent, price, _sheet.NationContinent(nation), value);
             int r = forPlayerLoan ? _loans.Find(nation) : -1;
             long paid = r < 0 ? 0 : Math.Min(value, _loans.Balance[r]);
             if (paid > 0) Repay(r, paid);
@@ -757,7 +768,7 @@ namespace FES.Agents
                 if (_sheet.NationContinent(n) != continent) continue;
                 long take = Math.Min(rest, _bank.PlayerDeposit[n]);
                 _bank.PlayerDeposit[n] -= take;
-                _bank.Reserve[n] -= Math.Min(take, _bank.Reserve[n]);
+                _bank.Reserve[n] -= take;
                 rest -= take;
             }
             return true;
@@ -880,17 +891,24 @@ namespace FES.Agents
             if (FromContinent != player.LocalContinent && ToContinent != player.LocalContinent)
                 return CommandResult.Fail("This bank changes only its own continent's coin.");
             if (player.Coins[FromContinent] < Amount) return CommandResult.Fail("Not enough coins.");
-            return Quote(ctx, out _) > 0 ? CommandResult.Success : CommandResult.Fail("The amount is too small to exchange.");
+            long received = Quote(ctx, out _);
+            if (received <= 0) return CommandResult.Fail("The amount is too small to exchange.");
+            return ctx.World.Get<BankState>().InternationalReserve[ToContinent] >= received
+                ? CommandResult.Success
+                : CommandResult.Fail("The international banks hold too few of those coins now.");
         }
 
+        // The coins handed in go to their continent's international bank and the coins handed out come from
+        // theirs, so no continent's money changes (DEC-061); the fee stays with the banks.
         public void Apply(SimContext ctx)
         {
             long received = Quote(ctx, out long fee);
             var player = ctx.World.Get<PlayerState>();
+            var bank = ctx.World.Get<BankState>();
             player.Coins[FromContinent] -= Amount;
+            bank.InternationalReserve[FromContinent] += Amount;
             player.Coins[ToContinent] += received;
-            ctx.World.Get<BankState>().InternationalReserve[player.LocalContinent] +=
-                ctx.World.Get<CurrencyState>().Convert(fee, ToContinent, player.LocalContinent);
+            bank.InternationalReserve[ToContinent] -= received;
             ctx.Events.Publish(new CoinsExchanged(FromContinent, ToContinent, Amount, received, fee));
         }
 

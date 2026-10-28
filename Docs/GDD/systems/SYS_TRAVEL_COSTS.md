@@ -36,8 +36,7 @@ value_n(cargo) = sum(qty * market_price(n or nearest ancestor trading the good))
   node's coin (Claude's proposal, following DEC-031). Crossing to another continent with cargo therefore
   needs that continent's coins; with an empty cart the toll is zero.
 - [Confirmed] Tolls go to the nation's bank reserve; base fees, per-unit charges, passage and guards are
-  wages at the trip's origin; insurance premiums go to the guild (DEC-061; until P13a they still leave
-  the economy).
+  wages at the trip's origin; insurance premiums go to the guild (DEC-061; built in P13a).
 - [Draft] Sample rates: toll 30 permille and specialty surcharge 70 permille by default, cities 50 / 100;
   base fee 2 (village routes), 5 (city routes), 20 (between continents).
 

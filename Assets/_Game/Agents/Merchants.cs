@@ -72,6 +72,8 @@ namespace FES.Agents
         /// <summary>Per node: its row in <see cref="PolicyState.Licensed"/>.</summary>
         NativeArray<int> _nodeLicenseRow;
         PolicyState _policy;
+        PurseState _purses;
+        WorldState _world;
 
         /// <summary>When true the aggregate job runs as plain managed code (parity tests).</summary>
         public bool ForceManaged { get; set; }
@@ -100,6 +102,8 @@ namespace FES.Agents
                 for (int k = specialties.Start[n]; k < specialties.Start[n] + specialties.Count[n]; k++)
                     _nodeCategorySpecialty[n * categories + _db.Good(GoodId.From(specialties.BaseGood[k], QualityGrade.Low)).CategoryIndex] = 1;
             _policy = ctx.World.Get<PolicyState>();
+            _purses = ctx.World.Get<PurseState>();
+            _world = ctx.World;
             var banks = ctx.World.Get<NodeBanks>();
             _nodeLicenseRow = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
             for (int n = 0; n < _nodes.Count; n++) _nodeLicenseRow[n] = _policy.Row(PolicyRules.NationOf(_nodes, banks, n));
@@ -132,6 +136,7 @@ namespace FES.Agents
                 if (!_markets.TryFindCell(node, item.Good, out int cell)) continue;
                 _flows.Sell(cell, item.Quantity);
                 _agents.Cash[a] += (long)item.Quantity * _markets.Price[cell];
+                _purses.Change(node, -(long)item.Quantity * _markets.Price[cell]);
                 _cargo.Change(holder, item.Good, -item.Quantity);
             }
         }
@@ -188,16 +193,25 @@ namespace FES.Agents
             var goodId = new GoodId(_markets.CellGood[bestCell]);
             _flows.Buy(bestCell, (int)bestQuantity);
             _agents.Cash[a] -= bestQuantity * _markets.Price[bestCell];
+            _purses.Change(node, bestQuantity * _markets.Price[bestCell]);
             _cargo.Change(holder, goodId, (int)bestQuantity);
             _cargo.Collect(holder, _items);
             var quote = _costs.Quote(bestRoute, _items, new TripOptions(false, false, true)); // merchants need no ship (DEC-034)
             _agents.Cash[a] -= quote.DepartureCost + quote.Toll; // same continent: one coin (DEC-015)
+            _purses.Change(node, quote.DepartureCost); // fees are wages at the origin (DEC-061)
+            MoneyLedger.ToState(_world, _routes.To[bestRoute], quote.Toll);
             _agents.Destination[a] = _routes.To[bestRoute];
             _agents.ArrivalTurn[a] = ctx.Turn + _routes.TravelTurns[bestRoute];
 
             // Detailed merchants roll encounters like the player, without guards or insurance ([Draft]).
             var loss = Encounters.Roll(ctx.Seed, ctx.Turn, a, 1, quote.EncounterChance);
-            if (loss == EncounterLoss.Cash) _agents.Cash[a] -= _db.Config.EncounterCashLoss.MulInt(Math.Max(0, _agents.Cash[a]));
+            if (loss == EncounterLoss.Cash)
+            {
+                // [Draft] Stolen coins end up spent where the trip began.
+                long stolen = _db.Config.EncounterCashLoss.MulInt(Math.Max(0, _agents.Cash[a]));
+                _agents.Cash[a] -= stolen;
+                _purses.Change(node, stolen);
+            }
             else if (loss == EncounterLoss.Cargo) Encounters.TakeCargo(_cargo, holder, _db.Config.EncounterCargoLoss, _items);
         }
 
@@ -215,6 +229,7 @@ namespace FES.Agents
         void PayUpkeep(SimContext ctx, int a)
         {
             _agents.Cash[a] -= _db.Config.MerchantUpkeep[_agents.Scale[a]];
+            _purses.Change(_agents.Node[a], _db.Config.MerchantUpkeep[_agents.Scale[a]]);
             if (_agents.Cash[a] >= 0)
             {
                 _agents.NegativeCashWeeks[a] = 0;
@@ -226,7 +241,8 @@ namespace FES.Agents
             _agents.Node[a] = _agents.Home[a];
             _agents.Destination[a] = -1;
             _agents.ArrivalTurn[a] = -1;
-            _agents.Cash[a] = _db.Config.MerchantStartCash[_agents.Scale[a]];
+            _agents.Cash[a] = MoneyLedger.FundNewOperator(ctx.World, _agents.Group[a], _agents.Home[a], _agents.Cash[a],
+                _db.Config.MerchantStartCash[_agents.Scale[a]]);
             _agents.NegativeCashWeeks[a] = 0;
             ctx.Events.Publish(new MerchantBankrupt(new AgentId(a), ctx.Turn));
         }

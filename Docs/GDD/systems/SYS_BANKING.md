@@ -51,6 +51,26 @@ faster than its cash at the risk of losing what it owns.
 - [Confirmed] Money is created only by minting (DEC-061). Tolls and license prices go to the nation's
   reserve; the state spends reserves above a target as public wages; auction buyers and new operators
   pay from their group's cash; withdrawals in a bank run go to the nation's households (DEC-061).
+- [Draft] Claude's proposals, built in P13a (money conservation):
+  - One purse per nation holds its households' and traders' money together; a continent's own purse
+    covers nodes above nation level. Markets pay sellers out of the purse where the seller stands and
+    buyers pay into it; wages and fees land in it. Purses may go below zero until P13b caps payouts.
+  - At the start, each international bank gets 2% of its continent's coin supply
+    (`bank.international_reserve_permille`) and the nations' purses the rest of the supply nobody holds,
+    split by population, so that each continent's money equals its coin supply.
+  - Exchange takes the coins handed in into their continent's international bank and pays the coins
+    handed out from theirs, and is refused when that bank lacks them. A payment that settles a debt in
+    another continent's coin (seized deposits, cargo sold for a foreign lender, an auction abroad) moves
+    the value through both international banks.
+  - A new operator's arrival settles the old operator's cash with the purse (arrears are written off
+    against it); the starting cash comes from the owning group, then the purse. A seized ship is bought by
+    the lending nation's purse. Robbed coins go to the purse where the trip began. Insurance premiums go to
+    the lowest-numbered guild of the origin city (else its purse); refunds come from that guild's cash,
+    then the purse. Facility sale proceeds go to the seller's group; the company's founding money becomes
+    its cash.
+  - Measured in the sample world: each continent's money equals its coin supply every turn. Without
+    dividends and state spending (P13c), money drains from the nations' purses into facility cash and
+    reserves; the purses fall below zero in the third year.
 - [Confirmed] Financial state is recorded quarterly; statistics are published yearly, and NPC agents use the
   same published statistics at the same time (DEC-043).
 - [Confirmed] Banks lend only from their reserves; a nation can run out of credit (DEC-046).
@@ -145,6 +165,9 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the
   shared lending and seizure steps; `AuctionTable` (version 2) marks whether a sale repays the player's
   loan.
+- `PurseState` (persistent, P13a) holds the purses and each node's purse; `MoneyLedger` routes the payments
+  above, seeds the purses and audits a continent's money (`ContinentMoney`), which `MoneyTests` checks
+  every turn against the coin supply. `MoneyTotals` counts purses as cash held in the nation.
 - `MoneyTotals` (not saved) computes the totals at each quarter's end, and on demand for the view.
   `FinanceState` (persistent) holds each nation's loan rate and event, the quarterly `FinanceRecord`s and
   the published statistics; `FinanceSystem` runs after `BankSystem` (about 0.7 ms per full-scale turn on

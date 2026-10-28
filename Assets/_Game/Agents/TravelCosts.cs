@@ -293,6 +293,7 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             var ship = ctx.World.Get<PlayerShip>();
             player.LocalCoins -= ctx.Services.Get<GameDatabase>().Config.ShipPrice;
+            ctx.World.Get<PurseState>().Change(player.Node, ctx.Services.Get<GameDatabase>().Config.ShipPrice); // to the port (DEC-061)
             ship.Owned = true;
             ship.BoughtContinent = player.LocalContinent;
             ship.DockedAt = player.Node;
@@ -314,7 +315,9 @@ namespace FES.Agents
         public void Apply(SimContext ctx)
         {
             var config = ctx.Services.Get<GameDatabase>().Config;
-            ctx.World.Get<PlayerState>().LocalCoins += config.ShipResaleShare.MulInt(config.ShipPrice);
+            var player = ctx.World.Get<PlayerState>();
+            player.LocalCoins += config.ShipResaleShare.MulInt(config.ShipPrice);
+            ctx.World.Get<PurseState>().Change(player.Node, -config.ShipResaleShare.MulInt(config.ShipPrice));
             var ship = ctx.World.Get<PlayerShip>();
             ship.Owned = false;
             ship.DockedAt = -1;

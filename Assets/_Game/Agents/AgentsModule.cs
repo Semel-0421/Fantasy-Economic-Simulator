@@ -34,6 +34,7 @@ namespace FES.Agents
             builder.World.Add(new LoanTable());
             builder.World.Add(new AuctionTable());
             builder.World.Add(new NpcLoanTable());
+            builder.World.Add(new PurseState(nodes, banks));
             builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
             builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
 
@@ -47,6 +48,7 @@ namespace FES.Agents
             builder.World.Add(new GuildMembershipTable());
             builder.World.Add(new PolicyState(banks.NationCount, nodes.ContinentCount, db));
             builder.World.Add(new GuidanceState());
+            MoneyLedger.Seed(builder.World, db.Config);
             builder.World.Add(new LodState(nodes.Count));
 
             builder.Services.SetDefault<ILodPolicy>(new DefaultLodPolicy());

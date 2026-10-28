@@ -43,8 +43,8 @@ raw materials propagate to finished goods, and each node's specialties give ever
   left afterwards is gone (DEC-052).
 - [Draft] Upkeep per level-1 facility: primary 50, secondary 100, tertiary 50, times the facility level
   (`facility.<tier>.upkeep`).
-- [Confirmed] Upkeep is paid as wages to the households of the facility's node (DEC-061; until P13a it
-  still leaves the economy).
+- [Confirmed] Upkeep is paid as wages to the households of the facility's node (DEC-061; built in P13a,
+  into the nation's purse).
 - [Confirmed] Profit above 26 weeks of costs is paid out at 10% a week to the owning group (DEC-061).
 - [Confirmed] Interest groups build new facilities and raise levels (DEC-065); a facility that loses money
   two years in a row closes (DEC-065).

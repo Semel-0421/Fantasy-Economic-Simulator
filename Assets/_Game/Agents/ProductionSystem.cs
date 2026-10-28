@@ -92,6 +92,7 @@ namespace FES.Agents
         NativeList<int> _playerOutputQuantity;
         NativeList<int> _bankrupt;
         NativeArray<long> _defUpkeep;
+        PurseState _purses;
 
         public string Id => SystemId;
         public SimPhase Phase => SimPhase.Production;
@@ -107,6 +108,7 @@ namespace FES.Agents
             _flows = ctx.World.Get<MarketFlows>();
             _facilities = ctx.World.Get<FacilityTable>();
             _cargo = ctx.World.Get<CargoTable>();
+            _purses = ctx.World.Get<PurseState>();
             _lod = ctx.World.Get<LodState>();
             _specialties = ctx.World.Get<NodeSpecialties>();
             _groups = new GroupDirectory(ctx.World.Get<GroupTable>(), ctx.World.Get<NodeTable>());
@@ -158,6 +160,8 @@ namespace FES.Agents
                 FacilityOwner = _facilities.Owner.AsArray(),
                 FacilityLevel = _facilities.Level.AsArray(),
                 FacilityEfficiency = _facilities.Efficiency.AsArray(),
+                NodePurse = _purses.NodePurse,
+                Purse = _purses.Purse,
                 FacilityCash = _facilities.Cash.AsArray(),
                 NodeDetail = _lod.Detail,
                 LineStart = _lineStart.AsArray(),
@@ -193,6 +197,9 @@ namespace FES.Agents
                 DefUpkeep = _defUpkeep,
                 FacilityCash = _facilities.Cash.AsArray(),
                 FacilityNegativeCashWeeks = _facilities.NegativeCashWeeks.AsArray(),
+                FacilityNode = _facilities.Node.AsArray(),
+                NodePurse = _purses.NodePurse,
+                Purse = _purses.Purse,
                 Bankrupt = _bankrupt,
             };
             if (ForceManaged) upkeep.Execute();
@@ -221,6 +228,7 @@ namespace FES.Agents
                 if (overflow == 0 || cell < 0) continue; // no market for the good: the overflow is lost
                 _flows.Sell(cell, overflow);
                 _facilities.Cash[f] += (long)overflow * _markets.Price[cell];
+                _purses.Change(_facilities.Node[f], -(long)overflow * _markets.Price[cell]);
             }
         }
 
@@ -237,11 +245,11 @@ namespace FES.Agents
             int claimUntil = wasPlayer ? ctx.Turn + _db.Config.LostWarehouseWeeks : -1;
             _facilities.Owner[f] = OwnerIds.Npc;
             _facilities.Mode[f] = (byte)ControlMode.Automated;
-            _facilities.Cash[f] = StartCash(f);
-            _facilities.NegativeCashWeeks[f] = 0;
-            _facilities.WarehouseClaimUntil[f] = claimUntil;
             // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.
             if (wasPlayer) _facilities.Group[f] = _groups.PrivateAt(_facilities.Node[f], _db.Config);
+            _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f], StartCash(f));
+            _facilities.NegativeCashWeeks[f] = 0;
+            _facilities.WarehouseClaimUntil[f] = claimUntil;
             ctx.Events.Publish(new FacilityBankrupt(new FacilityId(f), wasPlayer, claimUntil, ctx.Turn));
         }
 
@@ -361,6 +369,9 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> FacilityLevel;
         [ReadOnly] public NativeArray<long> FacilityEfficiency;
         public NativeArray<long> FacilityCash;
+        /// <summary>Per node: its purse; buyers pay into it and sellers are paid from it (DEC-061).</summary>
+        [ReadOnly] public NativeArray<int> NodePurse;
+        public NativeArray<long> Purse;
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> LineStart;
         [ReadOnly] public NativeArray<int> LineCell;
@@ -410,6 +421,7 @@ namespace FES.Agents
                 }
                 if (!inStock || cost > FacilityCash[f]) continue;
                 FacilityCash[f] -= cost;
+                Purse[NodePurse[FacilityNode[f]]] += cost;
 
                 bool playerOwned = FacilityOwner[f] == OwnerIds.Player;
                 for (int k = start; k < end; k++)
@@ -453,13 +465,15 @@ namespace FES.Agents
             {
                 Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
                 FacilityCash[f] += (long)clamped * Price[cell];
+                Purse[NodePurse[FacilityNode[f]]] -= (long)clamped * Price[cell];
             }
         }
     }
 
     /// <summary>
-    /// Weekly upkeep (wages) of every facility, scaled by its level; cash may go below zero. A facility whose
-    /// cash ended <see cref="BankruptWeeks"/> weeks in a row below zero is listed as bankrupt (DEC-051).
+    /// Weekly upkeep (wages) of every facility, scaled by its level, paid to the purse where it stands
+    /// (DEC-061); cash may go below zero. A facility whose cash ended <see cref="BankruptWeeks"/> weeks in a
+    /// row below zero is listed as bankrupt (DEC-051).
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct FacilityUpkeepJob : IJob
@@ -472,12 +486,17 @@ namespace FES.Agents
         public NativeArray<long> FacilityCash;
         public NativeArray<int> FacilityNegativeCashWeeks;
         public NativeList<int> Bankrupt;
+        [ReadOnly] public NativeArray<int> FacilityNode;
+        [ReadOnly] public NativeArray<int> NodePurse;
+        public NativeArray<long> Purse;
 
         public void Execute()
         {
             for (int f = 0; f < FacilityCash.Length; f++)
             {
-                FacilityCash[f] -= DefUpkeep[FacilityDefIndex[f]] * FacilityLevel[f];
+                long upkeep = DefUpkeep[FacilityDefIndex[f]] * FacilityLevel[f];
+                FacilityCash[f] -= upkeep;
+                Purse[NodePurse[FacilityNode[f]]] += upkeep;
                 if (FacilityCash[f] >= 0) FacilityNegativeCashWeeks[f] = 0;
                 else if (++FacilityNegativeCashWeeks[f] >= BankruptWeeks) Bankrupt.Add(f);
             }

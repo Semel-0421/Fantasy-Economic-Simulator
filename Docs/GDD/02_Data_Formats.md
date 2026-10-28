@@ -107,6 +107,7 @@ changing a default in code does.
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
 | bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |
+| bank.international_reserve_permille | 20 | share of a continent's starting coin supply its international bank holds for exchange ([Draft]) |
 | bank.target_reserve_permille, bank.max_rate_multiplier_permille | 500, 3000 | reserve ratio below which loan rates rise, and the cap on that rise ([Draft]) |
 | bank.npc_loan_term_weeks, bank.npc_buffer_weeks, bank.npc_max_reserve_share_permille | 26, 8, 100 | NPC loans: term, weeks of upkeep borrowed beyond the shortfall, largest share of a reserve one loan takes (0 turns NPC lending off) ([Draft]) |
 | finance.history_quarters | 20 | quarterly records kept (at least 4) |

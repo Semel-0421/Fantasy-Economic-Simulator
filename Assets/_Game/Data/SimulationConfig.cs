@@ -191,6 +191,8 @@ namespace FES.Data
         public Fx AuctionReserveShare = Fx.FromPermille(800);
         /// <summary>Value of a level-1 facility as collateral, per industry tier; scales with level.</summary>
         public readonly long[] FacilityValue = { 3000, 8000, 5000 };
+        /// <summary>Share of each continent's starting coin supply its international bank holds, to change coins with (P13a).</summary>
+        public Fx InternationalBankReserveShare = Fx.FromPermille(20);
         /// <summary>Reserve ratio (reserve over reserve plus loans owed) below which loan rates rise (DEC-042).</summary>
         public Fx TargetReserveRatio = Fx.FromPermille(500);
         /// <summary>Cap on the loan rate's rise from low reserves, as a multiple of the base rate.</summary>
@@ -435,6 +437,7 @@ namespace FES.Data
             PopulationMaxChange = Permille(v, "households.max_change_permille", PopulationMaxChange);
             IncomeResponse = Permille(v, "households.income_response_permille", IncomeResponse);
             IncomeMaxChange = Permille(v, "households.income_max_change_permille", IncomeMaxChange);
+            InternationalBankReserveShare = Permille(v, "bank.international_reserve_permille", InternationalBankReserveShare);
             TargetReserveRatio = Permille(v, "bank.target_reserve_permille", TargetReserveRatio);
             MaxLoanRateMultiplier = Permille(v, "bank.max_rate_multiplier_permille", MaxLoanRateMultiplier);
             if (MaxLoanRateMultiplier.Raw < Fx.One.Raw) throw new FormatException("config.csv: bank.max_rate_multiplier_permille must be >= 1000.");

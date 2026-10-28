@@ -169,6 +169,7 @@ namespace FES.Agents
             int nation = Nation(ctx);
             var licenses = ctx.World.Get<LicenseTable>();
             ctx.World.Get<PlayerState>().LocalCoins -= price;
+            MoneyLedger.ToState(ctx.World, nation, price); // license money goes to the nation (DEC-061)
             licenses.Extend(Good.BaseIndex, nation, ctx.Turn);
             int expires = licenses.ExpiresTurn[licenses.Find(Good.BaseIndex, nation)];
             ctx.Events.Publish(new LicenseBought(Good.BaseIndex, new NodeId(nation), expires, price));

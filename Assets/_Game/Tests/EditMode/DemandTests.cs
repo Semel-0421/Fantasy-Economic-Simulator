@@ -127,7 +127,7 @@ namespace FES.Tests
         }
 
         [Test]
-        public void Households_ChangeYearly_WithAffordability_AndRealMoneyGrowth()
+        public void Households_ChangeYearly_WithAffordability_AndMeasuredIncome()
         {
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
                 "key,value\nfinance.event_chance_permille,0\n"), 42).Build();
@@ -145,20 +145,25 @@ namespace FES.Tests
             households.NecessityWanted[fed] = 1L << 40;
             households.NecessityMet[fed] = 1L << 41;
 
-            var finance = sim.World.Get<FinanceState>();
-            var latest = finance.Records[finance.Records.Count - 1];
-            var before = finance.Records.First(r => r.Turn == latest.Turn - SimClock.WeeksPerYear);
-            int nation = sim.World.Get<NodeBanks>().NationIndex(sim.World.Get<NodeTable>().AncestorAt(city.Value, WorldLevel.Nation));
-            var real = Fx.FromRatio(latest.NationTotal[nation], before.NationTotal[nation])
-                / Fx.FromRatio(latest.PriceIndex[0], before.PriceIndex[0]) - Fx.One;
-            var change = Fx.Clamp(config.IncomeResponse * real, -config.IncomeMaxChange, config.IncomeMaxChange);
+            // The city's households measurably received nothing this year; the region's a great deal.
+            var cash = sim.World.Get<HouseholdCash>();
+            cash.CashYearStart[city.Value] = 1L << 40;
+            var region = Node(sim, "aur_n1_r1");
+            var regionIncome = sim.View.IncomePerHead(region);
+            cash.CashYearStart[region.Value] = -(1L << 40);
+            var limit = config.IncomeMaxChange * income;
+            var expected = income + Fx.Clamp(config.IncomeResponse * (Fx.Zero - income), -limit, limit);
 
             sim.AdvanceTurn();
             Assert.AreEqual(1, sim.LastTurnEvents.OfType<HouseholdsUpdated>().Count());
             Assert.AreEqual(starvedPop - config.PopulationMaxChange.MulInt(starvedPop), households.Population[starved]);
             Assert.AreEqual(fedPop + config.PopulationMaxChange.MulInt(fedPop), households.Population[fed]);
-            Assert.AreEqual(income + income * change, sim.View.IncomePerHead(city));
+            Assert.AreEqual(expected, sim.View.IncomePerHead(city));
+            Assert.Greater(sim.View.IncomePerHead(region).Raw, (regionIncome * Fx.FromInt(10)).Raw);
             Assert.AreEqual(0, households.NecessityWanted[starved]);
+            // A new year of measuring starts.
+            Assert.AreEqual(0, cash.SpentYear[city.Value]);
+            Assert.AreEqual(cash.Cash[city.Value], cash.CashYearStart[city.Value]);
         }
     }
 }

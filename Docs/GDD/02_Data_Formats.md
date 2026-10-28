@@ -82,7 +82,7 @@ changing a default in code does.
 | households.<level>.population, households.<level>.income | continent 20000 / 4 ... village 500 / 2 | default population and weekly income per head ([Draft]) |
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
 | households.base_growth_permille, households.growth_response_permille, households.max_change_permille | 5, 50, 30 | yearly population change ([Draft]) |
-| households.income_response_permille, households.income_max_change_permille | 500, 50 | yearly income change ([Draft]) |
+| households.income_response_permille, households.income_max_change_permille | 500, 500 | yearly income change toward measured income: share of the gap, cap as a share of the larger value ([Draft]; cap was 50) |
 | households.budget_weeks | 26 | households spend at most their cash over this many weeks a week ([Draft]) |
 | markets.trader_float_permille | 100 | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
@@ -109,6 +109,9 @@ changing a default in code does.
 | bank.initial_reserve_permille, bank.deposit_interest_permille, bank.exchange_fee_permille | 100, 20, 30 | starting reserves (share of coin supply), yearly deposit interest, exchange fee ([Draft]) |
 | bank.loan_interest_permille, bank.loan_term_weeks, bank.loan_to_value_permille, bank.grace_weeks | 100, 52, 500, 4 | loans ([Draft]) |
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |
+| bank.state_reserve_target_permille, bank.state_spending_permille | 2000, 20 | reserve target as a multiple of the nation's share of the initial reserve share of the coin supply; weekly share of the reserve above it spent as public wages ([Draft]) |
+| facility.dividend_buffer_weeks, facility.dividend_permille | 26, 100 | weeks of costs a facility keeps; weekly share of the cash above it paid as dividends ([Draft] values from DEC-061) |
+| groups.payout_permille | 800 | share of its dividends a group passes to its home node's households ([Draft]) |
 | bank.international_reserve_permille | 20 | share of a continent's starting coin supply its international bank holds for exchange ([Draft]) |
 | bank.target_reserve_permille, bank.max_rate_multiplier_permille | 500, 3000 | reserve ratio below which loan rates rise, and the cap on that rise ([Draft]) |
 | bank.npc_loan_term_weeks, bank.npc_buffer_weeks, bank.npc_max_reserve_share_permille | 26, 8, 100 | NPC loans: term, weeks of upkeep borrowed beyond the shortfall, largest share of a reserve one loan takes (0 turns NPC lending off) ([Draft]) |

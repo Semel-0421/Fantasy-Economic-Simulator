@@ -72,6 +72,7 @@ namespace FES.Agents
             builder.AddSystem(new GuidanceSystem());
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
+            builder.AddSystem(new StateSpendingSystem());
             builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new HouseholdGrowthSystem());
             builder.AddSystem(new PolicySystem());

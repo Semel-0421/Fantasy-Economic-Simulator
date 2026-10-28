@@ -208,6 +208,51 @@ namespace FES.Tests
         }
 
         [Test]
+        public void RichFacility_PaysDividends_ThatItsGroupPassesOn()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var groups = sim.World.Get<GroupTable>();
+            var households = sim.World.Get<HouseholdCash>();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc && facilities.Group[i] >= 0
+                && groups.KindOf(facilities.Group[i]) != GroupKind.StateEnterprise);
+            int g = facilities.Group[f], home = groups.Node[g];
+            // The households of the group's home hand the facility ten million coins of profit.
+            facilities.Cash[f] += 10_000_000;
+            households.Cash[home] -= 10_000_000;
+            long groupCash = groups.Cash[g], homeCash = households.Cash[home], facilityCash = facilities.Cash[f];
+            sim.AdvanceTurn();
+            AssertConserved(sim, "dividends");
+            long dividend = facilityCash - facilities.Cash[f];
+            Assert.That(dividend, Is.InRange(900_000, 1_100_000), "about 10% of the profit");
+            Assert.That(groups.Cash[g] - groupCash, Is.InRange(dividend / 5 - 10_000, dividend / 5 + 10_000), "the group keeps a fifth");
+            Assert.Greater(households.Cash[home] - homeCash, dividend / 2, "most goes to its home's households");
+        }
+
+        [Test]
+        public void State_SpendsReservesAboveItsTarget_AsPublicWages()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var bank = sim.World.Get<BankState>();
+            var households = sim.World.Get<HouseholdCash>();
+            var city = Node(sim, City);
+            int n = NationOf(sim, city);
+            // The nation's households hand the state ten million coins.
+            bank.Reserve[n] += 10_000_000;
+            households.Cash[city.Value] -= 10_000_000;
+            long reserve = bank.Reserve[n];
+            sim.AdvanceTurn();
+            AssertConserved(sim, "state spending");
+            Assert.That(reserve - bank.Reserve[n], Is.InRange(180_000, 230_000), "about 2% of the excess a week");
+
+            // The player's deposits are not the state's to spend.
+            bank.PlayerDeposit[n] = bank.Reserve[n];
+            reserve = bank.Reserve[n];
+            sim.AdvanceTurn();
+            Assert.Greater(bank.Reserve[n], reserve - 10_000);
+        }
+
+        [Test]
         public void Exchange_NeedsCoinsAtTheInternationalBanks()
         {
             using var sim = TestWorlds.BuildSample();

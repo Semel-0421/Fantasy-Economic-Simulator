@@ -52,10 +52,13 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
     village node, or the map's `population`; income per head at 4 / 4 / 3 / 3 / 2 coins a week
     (`households.<level>.population`, `households.<level>.income`).
   - Yearly, after the statistics: population changes by 0.5% plus 5% of how far the year's necessity
-    demand stood above or below the need at anchor prices, within +-3%; income per head in a nation
-    changes by half the nation's real money growth (money total over a year before, divided by the price
-    index's change), within +-5% (`households.base_growth_permille`, `growth_response_permille`,
-    `max_change_permille`, `income_response_permille`, `income_max_change_permille`).
+    demand stood above or below the need at anchor prices, within +-3% (`households.base_growth_permille`,
+    `growth_response_permille`, `max_change_permille`).
+  - Income per head (P13c, replacing the P10 rule that followed the nation's real money growth within
+    +-5%): every node's income per head moves half the way to what its households measurably received over
+    the year per head and week (cash at the year's end, less cash at its start, plus what they spent),
+    by at most 50% of the larger of the two (`households.income_response_permille`,
+    `income_max_change_permille`, 500 and 500; the cap was 50 before). Income is never below zero.
   - In the sample world over ten years, prices now stay within about 6 to 14 times their base price
     (the price index reaches 1.8); before P10 some reached the integer limit within three years.
 - [Draft] Claude's proposals, built in P13b (households pay):
@@ -92,8 +95,10 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   payments to the floats. At full scale pricing takes about 11.3 to 12.0 ms (8.7 before; about 1 ms is
   the budget and payment bookkeeping) while merchants fall from 7.4 to about 4.8 ms, since capped floats
   stop sales; a turn takes 18.4 to 19.3 ms (18.0 before).
-- `HouseholdGrowthSystem` (agents module, Finance phase after the statistics) applies the yearly change,
-  since it reads the nation records. The view exposes population and income per head.
+- `HouseholdGrowthSystem` (agents module, Finance phase after the statistics) applies the yearly change
+  and starts the next year's income measure (`HouseholdCash` version 2 adds the year's spending and the
+  cash at its start; a P13b save starts its year at the saved cash). The view exposes population and
+  income per head.
 - Burst jobs must use `Fx.OneRaw`, not `Fx.One`, inside helpers they call: the static field failed with a
   null reference in Burst.
 

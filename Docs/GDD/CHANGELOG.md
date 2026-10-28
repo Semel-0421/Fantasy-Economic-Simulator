@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-10-28
+- [04_Roadmap.md] P13c done; P13d and P16 ready
+- [systems/SYS_PRODUCTION.md, SYS_INTEREST_GROUPS.md] Dividend and group payout drafts (P13c)
+- [systems/SYS_BANKING.md] State spending draft; ten-year measurement and retuning list
+- [systems/SYS_MARKETS.md] Income per head derived from measured income (replaces the money-growth rule; cap 50 -> 500)
+- [02_Data_Formats.md] Dividend, payout and state spending keys; income keys' new meaning
 - [04_Roadmap.md] P13b done; P13c, P15 and P17 ready
 - [systems/SYS_MARKETS.md] Drafts for the household budget, payment for delivered units, payout caps, flows between floats and wages to households (P13b); implementation notes and cost
 - [systems/SYS_BANKING.md] Drafts updated for floats and household cash; eight-year measurement

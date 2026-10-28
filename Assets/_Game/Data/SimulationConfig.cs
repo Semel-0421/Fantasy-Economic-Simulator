@@ -56,9 +56,12 @@ namespace FES.Data
         public Fx PopulationBaseGrowth = Fx.FromPermille(5);
         public Fx PopulationGrowthResponse = Fx.FromPermille(50);
         public Fx PopulationMaxChange = Fx.FromPermille(30);
-        /// <summary>Yearly income change: this share of the nation's real money growth per head, capped (DEC-048, DEC-050).</summary>
+        /// <summary>
+        /// Yearly income change (DEC-050, P13c): income per head moves this share of the way to the income
+        /// households measurably received over the year, by at most the cap either way.
+        /// </summary>
         public Fx IncomeResponse = Fx.FromPermille(500);
-        public Fx IncomeMaxChange = Fx.FromPermille(50);
+        public Fx IncomeMaxChange = Fx.FromPermille(500);
         /// <summary>Households spend at most their cash over this many weeks a week; demand shrinks to fit (DEC-061, P13b).</summary>
         public int HouseholdBudgetWeeks = 26;
         /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
@@ -201,6 +204,13 @@ namespace FES.Data
         public Fx TargetReserveRatio = Fx.FromPermille(500);
         /// <summary>Cap on the loan rate's rise from low reserves, as a multiple of the base rate.</summary>
         public Fx MaxLoanRateMultiplier = Fx.FromInt(3);
+        /// <summary>
+        /// A nation's reserve target: this multiple of its share of the initial reserve share of the current
+        /// coin supply. The state spends reserves above it, beyond the player's deposits, as public wages (DEC-061).
+        /// </summary>
+        public Fx StateReserveTarget = Fx.FromInt(2);
+        /// <summary>Weekly share of the reserve above the target the state spends (DEC-061).</summary>
+        public Fx StateSpendingShare = Fx.FromPermille(20);
         /// <summary>Term of NPC loans (DEC-037).</summary>
         public int NpcLoanTermWeeks = 26;
         /// <summary>An NPC borrowing to cover a shortfall also borrows this many weeks of its upkeep.</summary>
@@ -237,6 +247,13 @@ namespace FES.Data
 
         /// <summary>A facility goes bankrupt after this many consecutive weeks with cash below zero (DEC-051).</summary>
         public int FacilityBankruptWeeks = 5;
+
+        /// <summary>An NPC facility keeps this many weeks of costs (upkeep and inputs at current prices); cash above it is profit (DEC-061).</summary>
+        public int DividendBufferWeeks = 26;
+        /// <summary>Weekly share of that profit paid to the owning group as dividends (DEC-061).</summary>
+        public Fx DividendShare = Fx.FromPermille(100);
+        /// <summary>Share of the dividends a group receives that it passes on to the households of its home node (DEC-061).</summary>
+        public Fx GroupPayoutShare = Fx.FromPermille(800);
 
         /// <summary>Weeks the player can still empty the warehouse of a facility lost to bankruptcy (DEC-052).</summary>
         public int LostWarehouseWeeks = 8;
@@ -469,6 +486,12 @@ namespace FES.Data
             if (SpecialtyGradeUpChance.Raw < 0 || SpecialtyGradeUpChance.Raw > Fx.One.Raw)
                 throw new FormatException("config.csv: specialty.grade_up_permille must be within 0..1000.");
             FacilityBankruptWeeks = Int(v, "facility.bankrupt_weeks", FacilityBankruptWeeks);
+            DividendBufferWeeks = Int(v, "facility.dividend_buffer_weeks", DividendBufferWeeks);
+            if (DividendBufferWeeks < 0) throw new FormatException("config.csv: facility.dividend_buffer_weeks must be >= 0.");
+            DividendShare = Permille(v, "facility.dividend_permille", DividendShare);
+            GroupPayoutShare = Permille(v, "groups.payout_permille", GroupPayoutShare);
+            StateReserveTarget = Permille(v, "bank.state_reserve_target_permille", StateReserveTarget);
+            StateSpendingShare = Permille(v, "bank.state_spending_permille", StateSpendingShare);
             if (FacilityBankruptWeeks < 1) throw new FormatException("config.csv: facility.bankrupt_weeks must be >= 1.");
             LostWarehouseWeeks = Int(v, "cargo.lost_warehouse_weeks", LostWarehouseWeeks);
             if (LostWarehouseWeeks < 0) throw new FormatException("config.csv: cargo.lost_warehouse_weeks must be >= 0.");

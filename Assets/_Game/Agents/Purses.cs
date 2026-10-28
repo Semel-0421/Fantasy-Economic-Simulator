@@ -110,8 +110,89 @@ namespace FES.Agents
             {
                 if (spent[node] == 0) continue;
                 _purses.Float[_purses.NodeFloat[node]] += spent[node];
+                _households.SpentYear[node] += spent[node];
                 spent[node] = 0;
             }
+        }
+    }
+
+    /// <summary>
+    /// The state spends a share of its reserve above the target as public wages, paid to the nation's
+    /// households by population (DEC-061, P13c), so minted coins and collected tolls return to the economy.
+    /// The player's deposits are never spent. Runs after the bank's week, before the quarterly records.
+    /// </summary>
+    public sealed class StateSpendingSystem : ISimSystem
+    {
+        SimulationConfig _config;
+        NodeTable _nodes;
+        NodeBanks _banks;
+        BankState _bank;
+        CurrencyState _currency;
+        HouseholdState _population;
+        HouseholdCash _households;
+        int[] _nationsOnContinent;
+        // Per nation: its nodes.
+        int[][] _nationNodes;
+
+        public string Id => "agents.state_spending";
+        public SimPhase Phase => SimPhase.Finance;
+        public int Order => SimOrder.Late + 5;
+
+        public void Initialize(SimContext ctx)
+        {
+            _config = ctx.Services.Get<GameDatabase>().Config;
+            _nodes = ctx.World.Get<NodeTable>();
+            _banks = ctx.World.Get<NodeBanks>();
+            _bank = ctx.World.Get<BankState>();
+            _currency = ctx.World.Get<CurrencyState>();
+            _population = ctx.World.Get<HouseholdState>();
+            _households = ctx.World.Get<HouseholdCash>();
+            var purses = ctx.World.Get<PurseState>();
+            _nationsOnContinent = new int[_nodes.ContinentCount];
+            var lists = new System.Collections.Generic.List<int>[_banks.NationCount];
+            for (int n = 0; n < _banks.NationCount; n++)
+            {
+                _nationsOnContinent[_nodes.Continent[_banks.NationNode(n)]]++;
+                lists[n] = new System.Collections.Generic.List<int>();
+            }
+            for (int node = 0; node < _nodes.Count; node++)
+                if (purses.NodeFloat[node] < _banks.NationCount) lists[purses.NodeFloat[node]].Add(node);
+            _nationNodes = new int[_banks.NationCount][];
+            for (int n = 0; n < _banks.NationCount; n++) _nationNodes[n] = lists[n].ToArray();
+        }
+
+        public void Execute(SimContext ctx)
+        {
+            for (int n = 0; n < _banks.NationCount; n++)
+            {
+                long spending = _config.StateSpendingShare.MulInt(Math.Max(0, Excess(n)));
+                if (spending > 0) PayWages(n, spending);
+            }
+        }
+
+        /// <summary>The reserve above the nation's target and the player's deposits.</summary>
+        public long Excess(int nation)
+        {
+            int continent = _nodes.Continent[_banks.NationNode(nation)];
+            long share = _config.BankInitialReserveShare.MulInt(_currency.CoinSupply[continent]) / Math.Max(1, _nationsOnContinent[continent]);
+            return _bank.Reserve[nation] - _bank.PlayerDeposit[nation] - _config.StateReserveTarget.MulInt(share);
+        }
+
+        void PayWages(int nation, long amount)
+        {
+            var nodes = _nationNodes[nation];
+            long people = 0;
+            foreach (int node in nodes) people += _population.Population[node];
+            if (people <= 0) return;
+            _bank.Reserve[nation] -= amount;
+            long given = 0;
+            foreach (int node in nodes)
+            {
+                long wage = amount * _population.Population[node] / people;
+                _households.Cash[node] += wage;
+                given += wage;
+            }
+            _households.Cash[_banks.NationNode(nation)] += amount - given;
         }
     }
 
@@ -182,6 +263,7 @@ namespace FES.Agents
                 Split(floats, purses.Count, p => purses.ContinentOf(p) == c ? floatPopulation[p] : 0, purses.Float);
                 Split(rest - floats, nodes.Count, node => nodes.Continent[node] == c ? population[node] : 0, households.Cash);
             }
+            households.StartYear();
         }
 
         // Adds `amount` over the entries with weight, in proportion; the rounding remainder goes to the first.

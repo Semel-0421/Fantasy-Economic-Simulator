@@ -50,7 +50,8 @@ namespace FES.Agents
     /// sold to the nearest market at its current price; player-owned output goes to the facility's
     /// warehouse, and what does not fit is sold. Then every facility pays its weekly upkeep, which can push
     /// its cash below zero; after <see cref="SimulationConfig.FacilityBankruptWeeks"/> such weeks in a row it
-    /// goes bankrupt and gets a new NPC operator (DEC-051).
+    /// goes bankrupt and gets a new NPC operator (DEC-051). An NPC facility pays a share of its cash above
+    /// 26 weeks of costs to its group as dividends; the group passes most of them on (DEC-061).
     /// Facilities making one of their node's specialties produce more, partly one grade higher (DEC-016).
     /// Detailed facilities roll weekly efficiency variance; aggregate ones use the expected value.
     /// Runs as a single-threaded Burst job (facilities share stock, so order decides who is served first);
@@ -91,7 +92,11 @@ namespace FES.Agents
         NativeList<int> _playerOutputCell;
         NativeList<int> _playerOutputQuantity;
         NativeList<int> _bankrupt;
+        NativeList<long> _inputCost;
+        NativeList<long> _groupDividend;
         NativeArray<long> _defUpkeep;
+        GroupTable _groupTable;
+        WorldState _world;
         PurseState _purses;
         HouseholdCash _households;
 
@@ -129,6 +134,10 @@ namespace FES.Agents
             _playerOutputCell = new NativeList<int>(Allocator.Persistent);
             _playerOutputQuantity = new NativeList<int>(Allocator.Persistent);
             _bankrupt = new NativeList<int>(Allocator.Persistent);
+            _inputCost = new NativeList<long>(Allocator.Persistent);
+            _groupDividend = new NativeList<long>(Allocator.Persistent);
+            _groupTable = ctx.World.Get<GroupTable>();
+            _world = ctx.World;
             _defUpkeep = new NativeArray<long>(_db.Facilities.Count, Allocator.Persistent);
             for (int d = 0; d < _db.Facilities.Count; d++) _defUpkeep[d] = _db.Config.FacilityUpkeep[(int)_db.Facilities[d].Tier];
         }
@@ -149,6 +158,9 @@ namespace FES.Agents
             _playerOutputCell.Clear();
             _playerOutputQuantity.Clear();
             _bankrupt.Clear();
+            _inputCost.ResizeUninitialized(_facilities.Count);
+            _groupDividend.ResizeUninitialized(_groupTable.Count);
+            for (int g = 0; g < _groupDividend.Length; g++) _groupDividend[g] = 0;
 
             var job = new ProductionJob
             {
@@ -185,6 +197,7 @@ namespace FES.Agents
                 PlayerOutputGood = _playerOutputGood,
                 PlayerOutputCell = _playerOutputCell,
                 PlayerOutputQuantity = _playerOutputQuantity,
+                FacilityInputCost = _inputCost.AsArray(),
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
@@ -194,6 +207,8 @@ namespace FES.Agents
             var upkeep = new FacilityUpkeepJob
             {
                 BankruptWeeks = _db.Config.FacilityBankruptWeeks,
+                DividendBufferWeeks = _db.Config.DividendBufferWeeks,
+                DividendShareRaw = _db.Config.DividendShare.Raw,
                 FacilityDefIndex = _facilities.DefIndex.AsArray(),
                 FacilityLevel = _facilities.Level.AsArray(),
                 DefUpkeep = _defUpkeep,
@@ -202,9 +217,14 @@ namespace FES.Agents
                 FacilityNode = _facilities.Node.AsArray(),
                 HouseholdCash = _households.Cash,
                 Bankrupt = _bankrupt,
+                FacilityOwner = _facilities.Owner.AsArray(),
+                FacilityGroup = _facilities.Group.AsArray(),
+                FacilityInputCost = _inputCost.AsArray(),
+                GroupDividend = _groupDividend.AsArray(),
             };
             if (ForceManaged) upkeep.Execute();
             else upkeep.Schedule().Complete();
+            PassOnDividends();
 
             foreach (int f in _bankrupt) GoBankrupt(ctx, f);
             ExpireWarehouseClaims(ctx);
@@ -233,6 +253,22 @@ namespace FES.Agents
                 _flows.Sell(cell, overflow);
                 _facilities.Cash[f] += (long)overflow * _markets.Price[cell];
                 _purses.ChangeFloat(_facilities.Node[f], -(long)overflow * _markets.Price[cell]);
+            }
+        }
+
+        // A group keeps part of its dividends and passes the rest to the households of its home node; a state
+        // enterprise's go to the state (DEC-061; [Draft] household cash is one pot per node, not per quintile).
+        void PassOnDividends()
+        {
+            var share = _db.Config.GroupPayoutShare;
+            for (int g = 0; g < _groupDividend.Length; g++)
+            {
+                long dividend = _groupDividend[g];
+                if (dividend == 0) continue;
+                long passed = share.MulInt(dividend);
+                if (_groupTable.KindOf(g) == GroupKind.StateEnterprise) MoneyLedger.ToState(_world, _groupTable.Node[g], passed);
+                else _purses.PayHouseholds(_groupTable.Node[g], passed);
+                _groupTable.Cash[g] += dividend - passed;
             }
         }
 
@@ -346,6 +382,8 @@ namespace FES.Agents
             if (_playerOutputCell.IsCreated) _playerOutputCell.Dispose();
             if (_playerOutputQuantity.IsCreated) _playerOutputQuantity.Dispose();
             if (_bankrupt.IsCreated) _bankrupt.Dispose();
+            if (_inputCost.IsCreated) _inputCost.Dispose();
+            if (_groupDividend.IsCreated) _groupDividend.Dispose();
             _defUpkeep.DisposeIfCreated();
         }
     }
@@ -399,6 +437,8 @@ namespace FES.Agents
         public NativeList<int> PlayerOutputGood;
         public NativeList<int> PlayerOutputCell;
         public NativeList<int> PlayerOutputQuantity;
+        /// <summary>Per facility: this week's inputs at current prices, bought or not (the dividend buffer counts them).</summary>
+        public NativeArray<long> FacilityInputCost;
 
         public void Execute()
         {
@@ -410,6 +450,10 @@ namespace FES.Agents
                 // Aggregate: expected output, no per-facility randomness or decisions.
 
                 int start = LineStart[f], end = LineStart[f + 1];
+                long inputCost = 0;
+                for (int k = start; k < end && LineIsInput[k] != 0; k++)
+                    if (LineCell[k] >= 0) inputCost += Fx.MulIntRaw(LineQuantity[k], output.Raw) * Price[LineCell[k]];
+                FacilityInputCost[f] = inputCost;
                 bool inStock = true;
                 long cost = 0;
                 for (int k = start; k < end && LineIsInput[k] != 0; k++)
@@ -486,12 +530,16 @@ namespace FES.Agents
     /// <summary>
     /// Weekly upkeep (wages) of every facility, scaled by its level, paid to the households of its node
     /// (DEC-061); cash may go below zero. A facility whose cash ended <see cref="BankruptWeeks"/> weeks in a
-    /// row below zero is listed as bankrupt (DEC-051).
+    /// row below zero is listed as bankrupt (DEC-051). An NPC facility then pays a share of its cash above
+    /// <see cref="DividendBufferWeeks"/> weeks of costs (upkeep and inputs) to its group, or to the
+    /// households of its node without one (DEC-061).
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct FacilityUpkeepJob : IJob
     {
         public int BankruptWeeks;
+        public int DividendBufferWeeks;
+        public long DividendShareRaw;
 
         [ReadOnly] public NativeArray<int> FacilityDefIndex;
         [ReadOnly] public NativeArray<int> FacilityLevel;
@@ -502,6 +550,11 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> FacilityNode;
         /// <summary>Per node: <see cref="FES.Economy.HouseholdCash.Cash"/>.</summary>
         public NativeArray<long> HouseholdCash;
+        [ReadOnly] public NativeArray<int> FacilityOwner;
+        [ReadOnly] public NativeArray<int> FacilityGroup;
+        [ReadOnly] public NativeArray<long> FacilityInputCost;
+        /// <summary>Per group: dividends received this week.</summary>
+        public NativeArray<long> GroupDividend;
 
         public void Execute()
         {
@@ -510,6 +563,14 @@ namespace FES.Agents
                 long upkeep = DefUpkeep[FacilityDefIndex[f]] * FacilityLevel[f];
                 FacilityCash[f] -= upkeep;
                 HouseholdCash[FacilityNode[f]] += upkeep;
+                long buffer = (upkeep + FacilityInputCost[f]) * DividendBufferWeeks;
+                if (FacilityOwner[f] == OwnerIds.Npc && FacilityCash[f] > buffer)
+                {
+                    long dividend = Fx.MulIntRaw(FacilityCash[f] - buffer, DividendShareRaw);
+                    FacilityCash[f] -= dividend;
+                    if (FacilityGroup[f] >= 0) GroupDividend[FacilityGroup[f]] += dividend;
+                    else HouseholdCash[FacilityNode[f]] += dividend;
+                }
                 if (FacilityCash[f] >= 0) FacilityNegativeCashWeeks[f] = 0;
                 else if (++FacilityNegativeCashWeeks[f] >= BankruptWeeks) Bankrupt.Add(f);
             }

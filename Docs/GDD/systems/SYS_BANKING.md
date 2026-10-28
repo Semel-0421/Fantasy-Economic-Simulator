@@ -77,6 +77,18 @@ faster than its cash at the risk of losing what it owns.
     dry in the third year and then cap payouts, so facility cash (1.4M) and reserves (4.5M by year 8)
     hold what they collect. Prices sit at about 2 to 2.9 times their base price. Dividends and state
     spending (P13c) are what return that money to households.
+- [Draft] Claude's proposals, built in P13c (state spending):
+  - A nation's reserve target is twice its share of the initial reserve share of the current coin supply
+    (`bank.state_reserve_target_permille`, 2000; 10% of the supply split evenly over the continent's
+    nations). Each week the state spends 2% of its reserve above the target and the player's deposits
+    (`bank.state_spending_permille`) as public wages to the nation's households, by population.
+  - Measured in the sample world over ten years (continent 0) with dividends and state spending: money
+    circulates. Households fall from 3.1M to 2.2M in year 2 and recover to 4.0M by year 9; floats hold
+    0.33 to 0.6M; facility cash stays near 0.2M; groups grow from 0.15M to 0.55M; reserves settle near
+    2.2M against a target of about 1.7M. To retune in P13d: prices climb from 1.1 to 3.9 times their base
+    price (the coin supply index reaches 1.66); population falls about 2.7% a year (necessities priced
+    out in 7 of 18 populated nodes, whose budgets bind); derived income per head falls to about a tenth of
+    the starting parameter; NPC loan defaults run at 100 to 160 a year.
 - [Confirmed] Financial state is recorded quarterly; statistics are published yearly, and NPC agents use the
   same published statistics at the same time (DEC-043).
 - [Confirmed] Banks lend only from their reserves; a nation can run out of credit (DEC-046).

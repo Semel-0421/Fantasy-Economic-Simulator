@@ -17,17 +17,14 @@ namespace FES.Agents
     /// <summary>
     /// Population and income change once a year with economic conditions (DEC-050), after the year's
     /// statistics are published. Population grows by a base rate, faster where households could afford their
-    /// necessities and slower, or shrinking, where prices priced them out. Income per head follows the
-    /// nation's money per head in real terms, from the last two years' records (DEC-048, [Draft]).
+    /// necessities and slower, or shrinking, where prices priced them out. Income per head moves toward what
+    /// each node's households measurably received over the year (P13c): wages, dividends and public wages.
     /// </summary>
     public sealed class HouseholdGrowthSystem : ISimSystem
     {
         SimulationConfig _config;
-        NodeTable _nodes;
-        NodeBanks _banks;
         HouseholdState _households;
-        FinanceState _finance;
-        Fx[] _incomeChange;
+        HouseholdCash _cash;
 
         public string Id => "agents.households";
         public SimPhase Phase => SimPhase.Finance;
@@ -36,30 +33,22 @@ namespace FES.Agents
         public void Initialize(SimContext ctx)
         {
             _config = ctx.Services.Get<GameDatabase>().Config;
-            _nodes = ctx.World.Get<NodeTable>();
-            _banks = ctx.World.Get<NodeBanks>();
             _households = ctx.World.Get<HouseholdState>();
-            _finance = ctx.World.Get<FinanceState>();
-            _incomeChange = new Fx[_banks.NationCount];
+            _cash = ctx.World.Get<HouseholdCash>();
         }
 
         public void Execute(SimContext ctx)
         {
             if (!ctx.Clock.IsNewYear || ctx.Turn == 0) return;
 
-            for (int n = 0; n < _incomeChange.Length; n++) _incomeChange[n] = IncomeChange(n);
             for (int node = 0; node < _households.NodeCount; node++)
             {
+                _households.IncomePerHead[node] = Income(node).Raw;
                 _households.Population[node] += PopulationChange(node).MulInt(_households.Population[node]);
-                int nationNode = _nodes.AncestorAt(node, WorldLevel.Nation);
-                if (nationNode >= 0)
-                {
-                    var income = Fx.FromRaw(_households.IncomePerHead[node]);
-                    _households.IncomePerHead[node] = (income + income * _incomeChange[_banks.NationIndex(nationNode)]).Raw;
-                }
                 _households.NecessityWanted[node] = 0;
                 _households.NecessityMet[node] = 0;
             }
+            _cash.StartYear();
             ctx.Events.Publish(new HouseholdsUpdated(ctx.Clock.Year - 1));
         }
 
@@ -73,24 +62,16 @@ namespace FES.Agents
             return Clamp(change, _config.PopulationMaxChange);
         }
 
-        // The nation's money total over its value a year before, deflated by its continent's price index.
-        Fx IncomeChange(int nation)
+        // A share of the way from last year's income per head to the year's measured income per head and week,
+        // by at most the cap (of the larger of the two) either way. Nobody's income is below zero.
+        Fx Income(int node)
         {
-            var records = _finance.Records;
-            if (records.Count < 2) return Fx.Zero;
-            var latest = records[records.Count - 1];
-            var before = records[0];
-            for (int i = records.Count - 2; i >= 0; i--)
-            {
-                before = records[i];
-                if (records[i].Turn <= latest.Turn - SimClock.WeeksPerYear) break;
-            }
-            if (before.NationTotal[nation] <= 0) return Fx.Zero;
-            int continent = _nodes.Continent[_banks.NationNode(nation)];
-            var nominal = Fx.FromRatio(latest.NationTotal[nation], before.NationTotal[nation]);
-            var prices = Fx.FromRatio(latest.PriceIndex[continent], Math.Max(1, before.PriceIndex[continent]));
-            var real = nominal / prices - Fx.One;
-            return Clamp(_config.IncomeResponse * real, _config.IncomeMaxChange);
+            var income = Fx.FromRaw(_households.IncomePerHead[node]);
+            long people = _households.Population[node];
+            if (people <= 0) return income;
+            var measured = Fx.FromRatio(Math.Max(0, _cash.YearIncome(node)), people * SimClock.WeeksPerYear);
+            var limit = _config.IncomeMaxChange * Fx.Max(income, measured);
+            return income + Fx.Clamp(_config.IncomeResponse * (measured - income), -limit, limit);
         }
 
         static Fx Clamp(Fx value, Fx limit) => Fx.Clamp(value, -limit, limit);

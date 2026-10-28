@@ -167,7 +167,7 @@ namespace FES.Tests
         [Test]
         public void NpcFacility_ShortOfCash_BorrowsAndRepays()
         {
-            using var sim = BuildCalm();
+            using var sim = BuildCalm("facility.dividend_permille,0\n");
             var config = sim.Database.Config;
             int f = CityFacility(sim);
             int n = Nation(sim);

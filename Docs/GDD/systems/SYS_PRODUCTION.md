@@ -48,6 +48,10 @@ raw materials propagate to finished goods, and each node's specialties give ever
 - [Draft] NPC output is sold only as far as the traders' float there can pay; the rest is lost (P13b,
   SYS-MARKETS).
 - [Confirmed] Profit above 26 weeks of costs is paid out at 10% a week to the owning group (DEC-061).
+- [Draft] Built in P13c: costs are the week's upkeep plus its inputs at current prices, whether bought or
+  not (`facility.dividend_buffer_weeks`, `facility.dividend_permille`). Only NPC-run facilities pay;
+  the player's and those a bank holds before auction do not. A facility without a group pays the
+  households of its node.
 - [Confirmed] Interest groups build new facilities and raise levels (DEC-065); a facility that loses money
   two years in a row closes (DEC-065).
 - [Confirmed] A facility with a manager sells its output and buys its inputs on its own (DEC-064,

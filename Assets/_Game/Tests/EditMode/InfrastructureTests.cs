@@ -113,7 +113,9 @@ namespace FES.Tests
         [Test]
         public void NationRoads_AreKeptFromTheReserve_OrDecay()
         {
-            using var sim = TestWorlds.BuildSample();
+            // Without state spending or state enterprises' dividends the reserve moves only by road upkeep.
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
+                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\n"), 42).Build();
             var config = sim.Database.Config;
             var banks = sim.World.Get<NodeBanks>();
             var bank = sim.World.Get<BankState>();

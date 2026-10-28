@@ -104,9 +104,14 @@ namespace FES.Economy
         public NativeArray<long> Desired;
         /// <summary>Per cell: household units consumed since the market last repriced, not yet paid for.</summary>
         public NativeArray<int> PendingUnits;
+        /// <summary>Per node: paid for consumption since the year began (P13c).</summary>
+        public NativeArray<long> SpentYear;
+        /// <summary>Per node: cash when the year began; with <see cref="SpentYear"/> it gives the year's income.</summary>
+        public NativeArray<long> CashYearStart;
 
-        public string Key => "economy.household_cash";
-        public int Version => 1;
+        public const string SectionKey = "economy.household_cash";
+        public string Key => SectionKey;
+        public int Version => 2;
 
         public HouseholdCash(int nodeCount, int cellCount)
         {
@@ -114,6 +119,21 @@ namespace FES.Economy
             Spent = new NativeArray<long>(nodeCount, Allocator.Persistent);
             Desired = new NativeArray<long>(nodeCount, Allocator.Persistent);
             PendingUnits = new NativeArray<int>(cellCount, Allocator.Persistent);
+            SpentYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            CashYearStart = new NativeArray<long>(nodeCount, Allocator.Persistent);
+        }
+
+        /// <summary>What a node's households received since the year began: wages, dividends, public wages and the like.</summary>
+        public long YearIncome(int node) => Cash[node] + Spent[node] - CashYearStart[node] + SpentYear[node];
+
+        /// <summary>Starts measuring a new year's income.</summary>
+        public void StartYear()
+        {
+            for (int n = 0; n < Cash.Length; n++)
+            {
+                CashYearStart[n] = Cash[n] + Spent[n];
+                SpentYear[n] = 0;
+            }
         }
 
         /// <summary>
@@ -135,6 +155,8 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, Spent);
             NativeIO.WriteArray(writer, Desired);
             NativeIO.WriteArray(writer, PendingUnits);
+            NativeIO.WriteArray(writer, SpentYear);
+            NativeIO.WriteArray(writer, CashYearStart);
         }
 
         public void Read(BinaryReader reader)
@@ -143,6 +165,8 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, Spent);
             NativeIO.ReadArray(reader, Desired);
             NativeIO.ReadArray(reader, PendingUnits);
+            NativeIO.ReadArray(reader, SpentYear);
+            NativeIO.ReadArray(reader, CashYearStart);
         }
 
         public void Dispose()
@@ -151,6 +175,32 @@ namespace FES.Economy
             Spent.DisposeIfCreated();
             Desired.DisposeIfCreated();
             PendingUnits.DisposeIfCreated();
+            SpentYear.DisposeIfCreated();
+            CashYearStart.DisposeIfCreated();
+        }
+    }
+
+    /// <summary>Version 1 (P13b) did not measure income: the year starts at the saved cash.</summary>
+    public sealed class HouseholdCashV1Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            var reader = new BinaryReader(new MemoryStream(section));
+            int nodes = reader.ReadInt32();
+            var cash = reader.ReadBytes(nodes * sizeof(long));
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(nodes);
+                writer.Write(new byte[nodes * sizeof(long)]);
+                writer.Write(nodes);
+                writer.Write(cash);
+            }
+            return output.ToArray();
         }
     }
 

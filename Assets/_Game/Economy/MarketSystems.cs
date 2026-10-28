@@ -21,6 +21,7 @@ namespace FES.Economy
         MarketFlows _flows;
         CurrencyState _currency;
         HouseholdState _households;
+        HouseholdCash _cash;
         SimulationConfig _config;
         PriceParams _params;
         DemandParams _demand;
@@ -30,6 +31,7 @@ namespace FES.Economy
         NativeArray<long> _necessityWeight;
         NativeArray<long> _luxuryWeight;
         NativeArray<long> _goodLuxuryShare;
+        NativeArray<long> _budget;
         long _specialtyAnchorMulRaw;
 
         public string Id => "economy.pricing";
@@ -46,6 +48,7 @@ namespace FES.Economy
             _flows = ctx.World.Get<MarketFlows>();
             _currency = ctx.World.Get<CurrencyState>();
             _households = ctx.World.Get<HouseholdState>();
+            _cash = ctx.World.Get<HouseholdCash>();
             var db = ctx.Services.Get<GameDatabase>();
             _config = db.Config;
             _params = PriceParams.From(_config);
@@ -57,6 +60,7 @@ namespace FES.Economy
             for (int l = 0; l < WorldLevels.Count; l++) _levelWeight[l] = _config.LevelDemandWeight[l].Raw;
             _necessityWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _luxuryWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _budget = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _goodLuxuryShare = new NativeArray<long>(db.GoodCount, Allocator.Persistent);
             for (int g = 0; g < db.GoodCount; g++)
                 _goodLuxuryShare[g] = db.Goods[g].IsLuxury ? Fx.One.Raw : _config.GradeLuxuryShare[(int)db.Goods[g].Grade].Raw;
@@ -71,6 +75,7 @@ namespace FES.Economy
                 _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
                 _necessityWeight[n] = _households.NecessityWeight(n, level, _config).Raw;
                 _luxuryWeight[n] = _households.LuxuryWeight(n, level, _config).Raw;
+                _budget[n] = _cash.BudgetFactor(n, _config.HouseholdBudgetWeeks);
             }
 
             int inlineMask = 0;
@@ -114,6 +119,11 @@ namespace FES.Economy
                 MarketLuxuryWeight = _luxuryWeight,
                 NecessityWanted = _households.NecessityWanted,
                 NecessityMet = _households.NecessityMet,
+                MarketBudget = _budget,
+                Cash = _cash.Cash,
+                Spent = _cash.Spent,
+                Desired = _cash.Desired,
+                PendingUnits = _cash.PendingUnits,
                 Price = _markets.Price,
                 PrevPrice = _markets.PrevPrice,
                 Stock = _markets.Stock,
@@ -152,9 +162,14 @@ namespace FES.Economy
                 GoodLuxuryShare = _goodLuxuryShare,
                 LevelWeight = _levelWeight,
                 ModifierMul = _flows.Multipliers,
+                MarketBudget = _budget,
+                Supply = _markets.Supply,
+                Stock = _markets.Stock,
                 Demand = _markets.Demand,
                 NecessityWanted = _households.NecessityWanted,
                 NecessityMet = _households.NecessityMet,
+                Desired = _cash.Desired,
+                PendingUnits = _cash.PendingUnits,
             };
             if (ForceManaged)
             {
@@ -172,6 +187,7 @@ namespace FES.Economy
             _necessityWeight.DisposeIfCreated();
             _luxuryWeight.DisposeIfCreated();
             _goodLuxuryShare.DisposeIfCreated();
+            _budget.DisposeIfCreated();
         }
     }
 
@@ -197,6 +213,7 @@ namespace FES.Economy
             var currency = builder.World.Add(new CurrencyState(nodes.ContinentCount));
             builder.Services.Get<ICurrencyModel>().Initialize(currency, db.Config, clock.Seed);
             builder.World.Add(new HouseholdState(nodes, builder.Services.Get<MapDef>(), db.Config));
+            builder.World.Add(new HouseholdCash(nodes.Count, markets.CellCount));
 
             builder.AddSystem(new WorldEventSystem());
             builder.AddSystem(new ModifierFoldSystem());

@@ -75,14 +75,17 @@ namespace FES.Agents
             var groups = world.Get<GroupTable>();
             AddCash(nodes, groups.Node.AsArray(), groups.Cash.AsArray());
 
-            // Households' and traders' purses are cash held there too (DEC-061).
+            // Traders' floats and households' cash are cash held there too (DEC-061).
             var purses = world.Get<PurseState>();
             for (int p = 0; p < purses.Count; p++)
             {
-                if (purses.Purse[p] <= 0) continue;
-                if (p < NationCash.Length) NationCash[p] += purses.Purse[p];
-                else ContinentLoose[purses.ContinentOf(p)] += purses.Purse[p];
+                if (purses.Float[p] <= 0) continue;
+                if (p < NationCash.Length) NationCash[p] += purses.Float[p];
+                else ContinentLoose[purses.ContinentOf(p)] += purses.Float[p];
             }
+            var households = world.Get<HouseholdCash>();
+            for (int node = 0; node < nodes.Count; node++)
+                AddCash(nodes, node, nodes.Continent[node], households.Cash[node] + households.Spent[node]);
 
             Array.Copy(bank.Reserve, NationReserve, NationReserve.Length);
             Array.Copy(bank.PlayerDeposit, NationDeposits, NationDeposits.Length);
@@ -509,8 +512,8 @@ namespace FES.Agents
             facilities.Owner[facility] = OwnerIds.Bank;
             facilities.Mode[facility] = (byte)ControlMode.Automated;
             // The bank runs it until the sale without the old arrears, so it cannot go bankrupt meanwhile; the
-            // arrears are written off against the purse there (DEC-061).
-            if (facilities.Cash[facility] < 0) ctx.World.Get<PurseState>().Change(facilities.Node[facility], facilities.Cash[facility]);
+            // arrears are wages and bills the households there never get (DEC-061).
+            if (facilities.Cash[facility] < 0) ctx.World.Get<PurseState>().PayHouseholds(facilities.Node[facility], facilities.Cash[facility]);
             facilities.Cash[facility] = Math.Max(0, facilities.Cash[facility]);
             facilities.NegativeCashWeeks[facility] = 0;
             long reserve = db.Config.AuctionReserveShare.MulInt(FacilityValue(db, facilities, facility));
@@ -622,7 +625,7 @@ namespace FES.Agents
                 // The withdrawn coins go to the nation's households (DEC-061).
                 long drain = _config.BankRunDrain.MulInt(Math.Max(0, _bank.Reserve[n]));
                 _bank.Reserve[n] -= drain;
-                ctx.World.Get<PurseState>().Purse[n] += drain;
+                MoneyLedger.PayNationHouseholds(ctx.World, n, drain);
             }
             ctx.Events.Publish(new FinancialEventStarted(nation, kind, ctx.Turn));
         }

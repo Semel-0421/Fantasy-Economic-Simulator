@@ -59,6 +59,10 @@ namespace FES.Data
         /// <summary>Yearly income change: this share of the nation's real money growth per head, capped (DEC-048, DEC-050).</summary>
         public Fx IncomeResponse = Fx.FromPermille(500);
         public Fx IncomeMaxChange = Fx.FromPermille(50);
+        /// <summary>Households spend at most their cash over this many weeks a week; demand shrinks to fit (DEC-061, P13b).</summary>
+        public int HouseholdBudgetWeeks = 26;
+        /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
+        public Fx TraderFloatShare = Fx.FromPermille(100);
 
         /// <summary>One policy step changes tolls, license prices or minting by this share; at most this many steps either way (DEC-058).</summary>
         public Fx PolicyStep = Fx.FromPermille(100);
@@ -437,6 +441,9 @@ namespace FES.Data
             PopulationMaxChange = Permille(v, "households.max_change_permille", PopulationMaxChange);
             IncomeResponse = Permille(v, "households.income_response_permille", IncomeResponse);
             IncomeMaxChange = Permille(v, "households.income_max_change_permille", IncomeMaxChange);
+            HouseholdBudgetWeeks = Int(v, "households.budget_weeks", HouseholdBudgetWeeks);
+            if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
+            TraderFloatShare = Permille(v, "markets.trader_float_permille", TraderFloatShare);
             InternationalBankReserveShare = Permille(v, "bank.international_reserve_permille", InternationalBankReserveShare);
             TargetReserveRatio = Permille(v, "bank.target_reserve_permille", TargetReserveRatio);
             MaxLoanRateMultiplier = Permille(v, "bank.max_rate_multiplier_permille", MaxLoanRateMultiplier);

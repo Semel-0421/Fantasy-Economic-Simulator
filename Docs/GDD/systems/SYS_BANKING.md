@@ -51,26 +51,32 @@ faster than its cash at the risk of losing what it owns.
 - [Confirmed] Money is created only by minting (DEC-061). Tolls and license prices go to the nation's
   reserve; the state spends reserves above a target as public wages; auction buyers and new operators
   pay from their group's cash; withdrawals in a bank run go to the nation's households (DEC-061).
-- [Draft] Claude's proposals, built in P13a (money conservation):
-  - One purse per nation holds its households' and traders' money together; a continent's own purse
-    covers nodes above nation level. Markets pay sellers out of the purse where the seller stands and
-    buyers pay into it; wages and fees land in it. Purses may go below zero until P13b caps payouts.
+- [Draft] Claude's proposals, built in P13a (money conservation) and P13b (households and floats):
+  - Traders hold one float per nation; a continent's own float covers nodes above nation level. Markets
+    pay sellers out of the float where the seller stands, never more than it holds, and buyers pay into
+    it. Households hold cash per node; wages and fees go to them (SYS-MARKETS).
   - At the start, each international bank gets 2% of its continent's coin supply
-    (`bank.international_reserve_permille`) and the nations' purses the rest of the supply nobody holds,
-    split by population, so that each continent's money equals its coin supply.
+    (`bank.international_reserve_permille`); of the rest of the supply nobody holds, the nations' floats
+    get 10% (`markets.trader_float_permille`, split by the nations' population) and the households the
+    rest (by each node's population), so that each continent's money equals its coin supply.
   - Exchange takes the coins handed in into their continent's international bank and pays the coins
     handed out from theirs, and is refused when that bank lacks them. A payment that settles a debt in
     another continent's coin (seized deposits, cargo sold for a foreign lender, an auction abroad) moves
     the value through both international banks.
-  - A new operator's arrival settles the old operator's cash with the purse (arrears are written off
-    against it); the starting cash comes from the owning group, then the purse. A seized ship is bought by
-    the lending nation's purse. Robbed coins go to the purse where the trip began. Insurance premiums go to
-    the lowest-numbered guild of the origin city (else its purse); refunds come from that guild's cash,
-    then the purse. Facility sale proceeds go to the seller's group; the company's founding money becomes
-    its cash.
-  - Measured in the sample world: each continent's money equals its coin supply every turn. Without
-    dividends and state spending (P13c), money drains from the nations' purses into facility cash and
-    reserves; the purses fall below zero in the third year.
+  - A new operator's arrival settles the old operator's cash with the households of its node (arrears are
+    wages and bills they never get); the starting cash comes from the owning group, then those
+    households. A seized ship is bought by the lending nation's traders. Robbed coins go to the households
+    where the trip began. Insurance premiums go to the lowest-numbered guild of the origin city (else its
+    households); refunds come from that guild's cash, then the households. Facility sale proceeds go to
+    the seller's group; the company's founding money becomes its cash. A ship is bought from and sold back
+    to the port's households. Bank-run withdrawals go to the nation's households by population.
+  - Seized cargo and a defaulted merchant's cargo are sold only as far as the traders there can pay; the
+    rest stays where it was.
+  - Measured in the sample world over eight years (continent 0): each continent's money equals its coin
+    supply every turn. Households start with 3.1M and spend down to about 1.2M by year 4; the floats run
+    dry in the third year and then cap payouts, so facility cash (1.4M) and reserves (4.5M by year 8)
+    hold what they collect. Prices sit at about 2 to 2.9 times their base price. Dividends and state
+    spending (P13c) are what return that money to households.
 - [Confirmed] Financial state is recorded quarterly; statistics are published yearly, and NPC agents use the
   same published statistics at the same time (DEC-043).
 - [Confirmed] Banks lend only from their reserves; a nation can run out of credit (DEC-046).
@@ -165,9 +171,12 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the
   shared lending and seizure steps; `AuctionTable` (version 2) marks whether a sale repays the player's
   loan.
-- `PurseState` (persistent, P13a) holds the purses and each node's purse; `MoneyLedger` routes the payments
-  above, seeds the purses and audits a continent's money (`ContinentMoney`), which `MoneyTests` checks
-  every turn against the coin supply. `MoneyTotals` counts purses as cash held in the nation.
+- `PurseState` (persistent, version 2 since P13b) holds the traders' floats and each node's float, with
+  `Payable` and `Sellable` for capped payouts; `MoneyLedger` routes the payments above, seeds floats and
+  households and audits a continent's money (`ContinentMoney`), which `MoneyTests` checks every turn
+  against the coin supply. `MoneyTotals` counts floats and household cash as cash held in the nation.
+  [Draft] A P13a save keeps its purses as floats and gets the freshly seeded household cash of a new
+  game, so its money grows once.
 - `MoneyTotals` (not saved) computes the totals at each quarter's end, and on demand for the view.
   `FinanceState` (persistent) holds each nation's loan rate and event, the quarterly `FinanceRecord`s and
   the published statistics; `FinanceSystem` runs after `BankSystem` (about 0.7 ms per full-scale turn on

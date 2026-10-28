@@ -35,7 +35,7 @@ namespace FES.Tests
             AssertConserved(sim, what);
         }
 
-        /// <summary>Puts the player at <paramref name="node"/> with only these local coins; the purses absorb the difference.</summary>
+        /// <summary>Puts the player at <paramref name="node"/> with only these local coins; households absorb the difference.</summary>
         static void SetCoins(GameSimulation sim, NodeId node, long coins)
         {
             var player = sim.World.Get<PlayerState>();
@@ -44,12 +44,24 @@ namespace FES.Tests
             for (int c = 0; c < player.Coins.Length; c++)
             {
                 int anyNode = Enumerable.Range(0, nodes.Count).First(n => nodes.Continent[n] == c);
-                purses.Change(anyNode, player.Coins[c]);
+                purses.PayHouseholds(anyNode, player.Coins[c]);
                 player.Coins[c] = 0;
             }
             player.Node = node.Value;
             player.LocalCoins = coins;
-            purses.Change(node.Value, -coins);
+            purses.PayHouseholds(node.Value, -coins);
+        }
+
+        static int NationOf(GameSimulation sim, NodeId node) =>
+            sim.World.Get<PurseState>().NodeFloat[node.Value];
+
+        /// <summary>Moves a float's money to households of the same nation, so nothing is created.</summary>
+        static void EmptyFloat(GameSimulation sim, NodeId node)
+        {
+            var purses = sim.World.Get<PurseState>();
+            int p = NationOf(sim, node);
+            purses.PayHouseholds(node.Value, purses.Float[p]);
+            purses.Float[p] = 0;
         }
 
         [Test]
@@ -58,9 +70,15 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             AssertConserved(sim, "start");
             var purses = sim.World.Get<PurseState>();
-            for (int p = 0; p < purses.Count; p++) Assert.GreaterOrEqual(purses.Purse[p], 0);
+            for (int p = 0; p < purses.Count; p++) Assert.GreaterOrEqual(purses.Float[p], 0);
+            var households = sim.World.Get<HouseholdCash>();
+            var population = sim.World.Get<HouseholdState>().Population;
+            for (int n = 0; n < households.Cash.Length; n++)
+                if (population[n] > 0) Assert.Greater(households.Cash[n], 0, $"node {n}");
             var nation = new NodeId(sim.World.Get<NodeTable>().AncestorAt(Node(sim, City).Value, WorldLevel.Nation));
-            Assert.Greater(sim.View.NationPurse(nation), 0);
+            Assert.Greater(sim.View.TraderFloat(nation), 0);
+            // Households hold most of it: the floats get a tenth of the money nobody holds.
+            Assert.Greater(sim.View.HouseholdCash(Node(sim, City)), 0);
             Assert.Greater(sim.World.Get<BankState>().InternationalReserve[0], 0);
         }
 
@@ -71,12 +89,17 @@ namespace FES.Tests
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
                 "key,value\nfinance.event_chance_permille,500\n"), 7).Build();
             int defaults = 0, bankruptcies = 0;
+            var purses = sim.World.Get<PurseState>();
+            var households = sim.World.Get<HouseholdCash>();
             for (int t = 0; t < 3 * SimClock.WeeksPerYear + 2; t++)
             {
                 sim.AdvanceTurn();
                 defaults += sim.LastTurnEvents.OfType<NpcLoanDefaulted>().Count();
                 bankruptcies += sim.LastTurnEvents.OfType<FacilityBankrupt>().Count() + sim.LastTurnEvents.OfType<MerchantBankrupt>().Count();
                 AssertConserved(sim, $"turn {sim.Turn - 1}");
+                // Markets never pay out more than the traders hold, and spending is handed over every turn.
+                for (int p = 0; p < purses.Count; p++) Assert.GreaterOrEqual(purses.Float[p], 0, $"float {p}, turn {sim.Turn - 1}");
+                Assert.IsTrue(households.Spent.All(s => s == 0));
             }
             Assert.Greater(defaults + bankruptcies, 0, "the run should exercise defaults or bankruptcies");
         }
@@ -120,6 +143,68 @@ namespace FES.Tests
             sim.Actions.Travel(Node(sim, "aur_n1_r1"), guards: true, insurance: true);
             Step(sim, "travel");
             for (int t = 0; t < 12; t++) Step(sim, $"after, week {t}");
+        }
+
+        [Test]
+        public void Households_PayForWhatTheyConsume_IntoTheFloat()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var households = sim.World.Get<HouseholdCash>();
+            var city = Node(sim, City);
+            long cash = households.Cash.Sum();
+            for (int t = 0; t < 4; t++) sim.AdvanceTurn();
+            // They spend more than the wages they earn until dividends and state spending come (P13c).
+            Assert.Less(households.Cash.Sum(), cash);
+            Assert.Greater(households.Desired[city.Value], 0);
+            AssertConserved(sim, "after spending");
+        }
+
+        [Test]
+        public void Households_WithoutCash_BuyLess()
+        {
+            using var broke = TestWorlds.BuildSample();
+            using var paid = TestWorlds.BuildSample();
+            var city = Node(broke, City);
+            broke.AdvanceTurn();
+            paid.AdvanceTurn();
+            // The city's households hand all their coins to the traders; only this week's wages come back.
+            var households = broke.World.Get<HouseholdCash>();
+            broke.World.Get<PurseState>().ChangeFloat(city.Value, households.Cash[city.Value]);
+            households.Cash[city.Value] = 0;
+            long Met(GameSimulation sim) => sim.World.Get<HouseholdState>().NecessityMet[city.Value];
+            long brokeMet = Met(broke), paidMet = Met(paid);
+            broke.AdvanceTurn();
+            paid.AdvanceTurn();
+            Assert.Less(Met(broke) - brokeMet, Met(paid) - paidMet);
+            Assert.GreaterOrEqual(households.Cash[city.Value], 0);
+            AssertConserved(broke, "broke households");
+        }
+
+        [Test]
+        public void Selling_IsCappedByTheTradersFloat()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var city = Node(sim, City);
+            SetCoins(sim, city, 0);
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            sim.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, wheat, 10);
+            EmptyFloat(sim, city);
+            sim.Actions.SellGoods(wheat, 10);
+            sim.AdvanceTurn();
+            StringAssert.Contains("no money", sim.LastTurnEvents.OfType<CommandRejected>().Single().Reason);
+            Assert.AreEqual(10, sim.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, wheat));
+
+            // With coins for three units the traders buy three.
+            var purses = sim.World.Get<PurseState>();
+            Assert.IsTrue(sim.World.Get<MarketStore>().TryFindCell(city.Value, wheat, out int cell));
+            EmptyFloat(sim, city);
+            long price = sim.World.Get<MarketStore>().Price[cell];
+            purses.Float[NationOf(sim, city)] = 3 * price;
+            purses.PayHouseholds(city.Value, -3 * price);
+            new SellGoodsCommand(wheat, 10).Apply(sim.Context);
+            Assert.AreEqual(7, sim.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, wheat));
+            Assert.AreEqual(3 * price, sim.World.Get<PlayerState>().LocalCoins);
+            Assert.AreEqual(0, purses.Float[NationOf(sim, city)]);
         }
 
         [Test]

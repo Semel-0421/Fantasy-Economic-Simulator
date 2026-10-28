@@ -45,7 +45,10 @@ without scripting. Their counts per node are already in config (`merchants.<leve
     `merchants.bankrupt_weeks`); aggregate groups pay none.
   - Aggregate flows move a share of the origin's stock (50%, `merchants.flow_permille`) times the margin
     over the destination price, within the node's pooled capacity, and arrive the same week, with no base
-    fee; they lose the route's expected encounter share (P8).
+    fee; they lose the route's expected encounter share (P8). Between nations the destination's traders
+    pay the origin's for the goods at the origin price, within their float (P13b, DEC-061).
+  - A group arriving sells only as many units as the traders there can pay for; the rest stays on board
+    (P13b).
   - Capacity per group: weight 4,000 / 4,000 / 2,000 / 1,000 / 400 and size 3,200 / 3,200 / 1,600 /
     800 / 300 per level (`merchants.<level>.max_weight`, `max_size`).
   - Since P9b, an NPC group whose cash ended a week below zero borrows against the cargo it carries

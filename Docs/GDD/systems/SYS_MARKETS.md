@@ -29,7 +29,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 - [Confirmed] Markets pay sellers only from traders' floats; when a float runs short, payouts are capped
   (DEC-061).
 - [Confirmed] At the start, household cash makes each continent's money total equal its starting coin
-  supply (DEC-061). Built in P13a with one purse per nation; household cash per node comes with P13b.
+  supply (DEC-061). Built in P13a and P13b.
 - [Draft] Default population per level, quintile shares and yearly change rates start as placeholder
   config values.
 - [Draft] Elasticity values per class start as placeholder config values.
@@ -58,6 +58,22 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
     `max_change_permille`, `income_response_permille`, `income_max_change_permille`).
   - In the sample world over ten years, prices now stay within about 6 to 14 times their base price
     (the price index reaches 1.8); before P10 some reached the integer limit within three years.
+- [Draft] Claude's proposals, built in P13b (households pay):
+  - A household budget: each week a node's households spend at most their cash over 26 weeks
+    (`households.budget_weeks`). Their wished consumption is scaled by one share so that last week's
+    wished purchases the markets could have delivered (supply and stock left after other demand) fit
+    the budget; goods nobody sells do not count against it. The share is the same for every good and
+    quintile, and scales the necessity units met that drive population change.
+  - Households pay a market's price for the units it actually delivers to them, when it reprices: every
+    other unit of demand is a purchase already taken from the stock, so they get what supply and stock
+    leave. They never pay more than they hold. The payment goes to the traders' float of their nation.
+  - Payout caps: facilities, merchants, the player and the bank sell only as many units as the float where
+    they stand can pay for. NPC facilities keep no stock, so their unsold output is lost, like a player
+    warehouse's unsold overflow; merchants and the player keep theirs.
+  - Aggregate merchant flows between nations: the destination's traders pay the origin's for the units at
+    the origin price, and move no more than their float pays for.
+  - Wages go to the households of a node: facility, merchant and road upkeep, trip fees, passage and
+    guards, road building and ships.
 
 ## Unity implementation notes
 - `HouseholdState` (persistent, economy module): population and income per head per node, and the year's
@@ -68,6 +84,14 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   `ConsumptionJob` pass from `PricingSystem`, so a short demand event still reaches them. Pricing takes
   about 9 ms of an 18 ms full-scale turn (consumption and pricing took 5.4 ms before), mostly one more
   division per cell.
+- `HouseholdCash` (persistent, economy module, P13b) holds each node's cash, what it paid this turn, last
+  week's deliverable wish and each cell's household units awaiting payment. `PricingSystem` computes the
+  budget shares; the jobs scale consumption and settle payments per market (each market writes only its
+  own node, so the parallel job is safe); markets that reprice every turn settle the same turn without
+  the pending array. `HouseholdSpendingSystem` (agents module, Markets phase, Late + 1) hands the turn's
+  payments to the floats. At full scale pricing takes about 11.3 to 12.0 ms (8.7 before; about 1 ms is
+  the budget and payment bookkeeping) while merchants fall from 7.4 to about 4.8 ms, since capped floats
+  stop sales; a turn takes 18.4 to 19.3 ms (18.0 before).
 - `HouseholdGrowthSystem` (agents module, Finance phase after the statistics) applies the yearly change,
   since it reads the nation records. The view exposes population and income per head.
 - Burst jobs must use `Fx.OneRaw`, not `Fx.One`, inside helpers they call: the static field failed with a

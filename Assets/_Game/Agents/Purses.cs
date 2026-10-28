@@ -9,55 +9,109 @@ using Unity.Collections;
 namespace FES.Agents
 {
     /// <summary>
-    /// The money of each nation's households and traders taken together (DEC-061, P13a): one purse per
-    /// nation, in its continent's coin, plus one per continent for nodes outside any nation. Markets pay
-    /// sellers out of the purse where the seller is and buyers pay into it; wages, fees and spending land
-    /// in it. P13b splits it into household cash per node and traders' floats.
+    /// The traders' floats (DEC-061, P13b): one per nation, in its continent's coin, plus one per continent for
+    /// nodes outside any nation. Markets pay sellers only out of the float where the seller is, never more than
+    /// it holds, and buyers pay into it, households included. Wages and fees go to the households of a node
+    /// (<see cref="HouseholdCash"/>).
     /// </summary>
     public sealed class PurseState : IPersistentComponent, IDisposable
     {
         public readonly int NationCount;
         public readonly int ContinentCount;
-        /// <summary>Per purse: nations first, then one per continent. May go below zero until P13b caps payouts.</summary>
-        public NativeArray<long> Purse;
-        /// <summary>Per node: its purse. Static, rebuilt from the map.</summary>
-        public NativeArray<int> NodePurse;
-        readonly int[] _continentOfPurse;
+        /// <summary>Per float: nations first, then one per continent. Payouts never take it below zero; rare settlements may.</summary>
+        public NativeArray<long> Float;
+        /// <summary>Per node: its float. Static, rebuilt from the map.</summary>
+        public NativeArray<int> NodeFloat;
+        readonly int[] _continentOfFloat;
+        readonly HouseholdCash _households;
 
         public string Key => "agents.purses";
-        public int Version => 1;
+        public int Version => 2;
 
-        public PurseState(NodeTable nodes, NodeBanks banks)
+        public PurseState(NodeTable nodes, NodeBanks banks, HouseholdCash households)
         {
+            _households = households;
             NationCount = banks.NationCount;
             ContinentCount = nodes.ContinentCount;
-            Purse = new NativeArray<long>(NationCount + ContinentCount, Allocator.Persistent);
-            NodePurse = new NativeArray<int>(nodes.Count, Allocator.Persistent);
-            _continentOfPurse = new int[NationCount + ContinentCount];
-            for (int n = 0; n < NationCount; n++) _continentOfPurse[n] = nodes.Continent[banks.NationNode(n)];
-            for (int c = 0; c < ContinentCount; c++) _continentOfPurse[NationCount + c] = c;
+            Float = new NativeArray<long>(NationCount + ContinentCount, Allocator.Persistent);
+            NodeFloat = new NativeArray<int>(nodes.Count, Allocator.Persistent);
+            _continentOfFloat = new int[NationCount + ContinentCount];
+            for (int n = 0; n < NationCount; n++) _continentOfFloat[n] = nodes.Continent[banks.NationNode(n)];
+            for (int c = 0; c < ContinentCount; c++) _continentOfFloat[NationCount + c] = c;
             for (int node = 0; node < nodes.Count; node++)
             {
                 int nationNode = nodes.AncestorAt(node, WorldLevel.Nation);
-                NodePurse[node] = nationNode >= 0 ? banks.NationIndex(nationNode) : NationCount + nodes.Continent[node];
+                NodeFloat[node] = nationNode >= 0 ? banks.NationIndex(nationNode) : NationCount + nodes.Continent[node];
             }
         }
 
-        public int Count => Purse.Length;
+        public int Count => Float.Length;
 
-        public int ContinentOf(int purse) => _continentOfPurse[purse];
+        public int ContinentOf(int purse) => _continentOfFloat[purse];
 
-        /// <summary>Money paid into the purse of <paramref name="node"/> (negative: paid out of it).</summary>
-        public void Change(int node, long amount) => Purse[NodePurse[node]] += amount;
+        /// <summary>Money paid into the traders' float of <paramref name="node"/> (negative: paid out of it).</summary>
+        public void ChangeFloat(int node, long amount) => Float[NodeFloat[node]] += amount;
 
-        public void Write(BinaryWriter writer) => NativeIO.WriteArray(writer, Purse);
+        /// <summary>Wages, fees and other money paid to the households of <paramref name="node"/> (negative: paid by them).</summary>
+        public void PayHouseholds(int node, long amount) => _households.Cash[node] += amount;
 
-        public void Read(BinaryReader reader) => NativeIO.ReadArray(reader, Purse);
+        /// <summary>How much of <paramref name="value"/> the float of <paramref name="node"/> can pay a seller.</summary>
+        public long Payable(int node, long value) => Math.Min(value, Math.Max(0, Float[NodeFloat[node]]));
+
+        /// <summary>How many of <paramref name="quantity"/> units at <paramref name="price"/> the float of <paramref name="node"/> can pay for.</summary>
+        public int Sellable(int node, int quantity, long price) =>
+            price <= 0 ? quantity : (int)Math.Min(quantity, Math.Max(0, Float[NodeFloat[node]]) / price);
+
+        public void Write(BinaryWriter writer) => NativeIO.WriteArray(writer, Float);
+
+        public void Read(BinaryReader reader) => NativeIO.ReadArray(reader, Float);
 
         public void Dispose()
         {
-            Purse.DisposeIfCreated();
-            NodePurse.DisposeIfCreated();
+            Float.DisposeIfCreated();
+            NodeFloat.DisposeIfCreated();
+        }
+    }
+
+    /// <summary>
+    /// Version 1 (P13a) purses held households' and traders' money together; they become the traders' floats.
+    /// [Draft] Such a save gets the freshly seeded household cash of a new game, so its money grows once.
+    /// </summary>
+    public sealed class PurseStateV1Migration : ISaveMigration
+    {
+        public string SectionKey => "agents.purses";
+        public int FromVersion => 1;
+        public byte[] Migrate(byte[] section) => section;
+    }
+
+    /// <summary>
+    /// Hands what households paid for their consumption this turn to the traders' float of their nation
+    /// (DEC-061). Runs right after pricing, where the payments happen.
+    /// </summary>
+    public sealed class HouseholdSpendingSystem : ISimSystem
+    {
+        HouseholdCash _households;
+        PurseState _purses;
+
+        public string Id => "agents.household_spending";
+        public SimPhase Phase => SimPhase.Markets;
+        public int Order => SimOrder.Late + 1;
+
+        public void Initialize(SimContext ctx)
+        {
+            _households = ctx.World.Get<HouseholdCash>();
+            _purses = ctx.World.Get<PurseState>();
+        }
+
+        public void Execute(SimContext ctx)
+        {
+            var spent = _households.Spent;
+            for (int node = 0; node < spent.Length; node++)
+            {
+                if (spent[node] == 0) continue;
+                _purses.Float[_purses.NodeFloat[node]] += spent[node];
+                spent[node] = 0;
+            }
         }
     }
 
@@ -70,7 +124,7 @@ namespace FES.Agents
         /// <summary>
         /// Every coin of a continent, wherever it is, counting debts (negative cash) as they stand: the
         /// player's coins, facilities, merchant groups and interest groups on the continent, its bank
-        /// reserves (deposits sit inside them), its international bank and its purses.
+        /// reserves (deposits sit inside them), its international bank, its traders' floats and its households.
         /// </summary>
         public static long ContinentMoney(WorldState world, int continent)
         {
@@ -91,55 +145,77 @@ namespace FES.Agents
             for (int n = 0; n < banks.NationCount; n++)
                 if (nodes.Continent[banks.NationNode(n)] == continent) money += bank.Reserve[n];
             for (int p = 0; p < purses.Count; p++)
-                if (purses.ContinentOf(p) == continent) money += purses.Purse[p];
+                if (purses.ContinentOf(p) == continent) money += purses.Float[p];
+            var households = world.Get<HouseholdCash>();
+            for (int node = 0; node < nodes.Count; node++)
+                if (nodes.Continent[node] == continent) money += households.Cash[node] + households.Spent[node];
             return money;
         }
 
         /// <summary>
-        /// Gives each continent's international bank its starting share of the coin supply and its purses the
-        /// rest of the supply nobody else holds, split by population, so that the continent's money equals
-        /// its coin supply (DEC-061).
+        /// Gives each continent's international bank its starting share of the coin supply, and the rest of
+        /// the supply nobody else holds to its traders' floats (a share, split by the population of their
+        /// nations) and its households (by population), so that the continent's money equals its coin supply
+        /// (DEC-061).
         /// </summary>
         public static void Seed(WorldState world, SimulationConfig config)
         {
             var nodes = world.Get<NodeTable>();
             var purses = world.Get<PurseState>();
-            var households = world.Get<HouseholdState>();
+            var population = world.Get<HouseholdState>().Population;
+            var households = world.Get<HouseholdCash>();
             var currency = world.Get<CurrencyState>();
             var bank = world.Get<BankState>();
-            // Nations' people hold the money; a continent's own purse (nodes above nation level, where little
-            // changes hands) starts empty unless the continent has no nations.
-            var population = new long[purses.Count];
-            for (int node = 0; node < nodes.Count; node++) population[purses.NodePurse[node]] += households.Population[node];
+            // Traders work in nations; a continent's own float (nodes above nation level, where little changes
+            // hands) starts empty unless the continent has no nations.
+            var floatPopulation = new long[purses.Count];
+            for (int node = 0; node < nodes.Count; node++) floatPopulation[purses.NodeFloat[node]] += population[node];
             for (int p = purses.NationCount; p < purses.Count; p++)
-            {
-                int c = purses.ContinentOf(p);
                 for (int n = 0; n < purses.NationCount; n++)
-                    if (purses.ContinentOf(n) == c) population[p] = 0;
-            }
+                    if (purses.ContinentOf(n) == purses.ContinentOf(p)) floatPopulation[p] = 0;
+
             for (int c = 0; c < currency.ContinentCount; c++)
             {
                 bank.InternationalReserve[c] += config.InternationalBankReserveShare.MulInt(currency.CoinSupply[c]);
                 long rest = currency.CoinSupply[c] - ContinentMoney(world, c);
-                long people = 0;
-                int first = -1;
-                for (int p = 0; p < purses.Count; p++)
-                {
-                    if (purses.ContinentOf(p) != c) continue;
-                    people += population[p];
-                    if (first < 0) first = p;
-                }
-                if (first < 0) continue;
-                long given = 0;
-                for (int p = 0; p < purses.Count; p++)
-                {
-                    if (purses.ContinentOf(p) != c || people == 0) continue;
-                    long share = rest * population[p] / people;
-                    purses.Purse[p] += share;
-                    given += share;
-                }
-                purses.Purse[first] += rest - given;
+                long floats = config.TraderFloatShare.MulInt(rest);
+                Split(floats, purses.Count, p => purses.ContinentOf(p) == c ? floatPopulation[p] : 0, purses.Float);
+                Split(rest - floats, nodes.Count, node => nodes.Continent[node] == c ? population[node] : 0, households.Cash);
             }
+        }
+
+        // Adds `amount` over the entries with weight, in proportion; the rounding remainder goes to the first.
+        static void Split(long amount, int count, Func<int, long> weight, NativeArray<long> into)
+        {
+            long total = 0;
+            int first = -1;
+            for (int i = 0; i < count; i++)
+            {
+                long w = weight(i);
+                if (w <= 0) continue;
+                total += w;
+                if (first < 0) first = i;
+            }
+            if (first < 0) return;
+            long given = 0;
+            for (int i = 0; i < count; i++)
+            {
+                long w = weight(i);
+                if (w <= 0) continue;
+                long share = amount * w / total;
+                into[i] += share;
+                given += share;
+            }
+            into[first] += amount - given;
+        }
+
+        /// <summary>Money for a nation's households, split by the population of its nodes (DEC-061).</summary>
+        public static void PayNationHouseholds(WorldState world, int nation, long amount)
+        {
+            var purses = world.Get<PurseState>();
+            var population = world.Get<HouseholdState>().Population;
+            Split(amount, purses.NodeFloat.Length, node => purses.NodeFloat[node] == nation ? population[node] : 0,
+                world.Get<HouseholdCash>().Cash);
         }
 
         /// <summary>
@@ -169,18 +245,18 @@ namespace FES.Agents
 
         /// <summary>
         /// A new operator takes over an asset at <paramref name="node"/> with <paramref name="cash"/> (DEC-061):
-        /// the old operator's cash settles with the purse there ([Draft]: arrears are wages and bills the
-        /// households never get; anything left goes with the old operator to them), and the starting cash
-        /// comes from the owning group's cash, then from the purse.
+        /// the old operator's cash settles with the households there ([Draft]: arrears are wages and bills they
+        /// never get; anything left goes with the old operator to them), and the starting cash comes from the
+        /// owning group's cash, then from the households.
         /// </summary>
         public static long FundNewOperator(WorldState world, int group, int node, long oldCash, long cash)
         {
-            world.Get<PurseState>().Change(node, oldCash);
+            world.Get<PurseState>().PayHouseholds(node, oldCash);
             PayFromGroup(world, group, node, cash);
             return cash;
         }
 
-        /// <summary>A group pays <paramref name="amount"/> from its cash; what it lacks comes out of the purse at <paramref name="node"/>.</summary>
+        /// <summary>A group pays <paramref name="amount"/> from its cash; what it lacks comes from the households of <paramref name="node"/>.</summary>
         public static void PayFromGroup(WorldState world, int group, int node, long amount)
         {
             long fromGroup = 0;
@@ -190,12 +266,12 @@ namespace FES.Agents
                 fromGroup = Math.Min(amount, Math.Max(0, groups.Cash[group]));
                 groups.Cash[group] -= fromGroup;
             }
-            world.Get<PurseState>().Change(node, -(amount - fromGroup));
+            world.Get<PurseState>().PayHouseholds(node, -(amount - fromGroup));
         }
 
         /// <summary>
         /// Insurance premiums go to a guild of the trip's origin city (DEC-061): [Draft] the lowest-numbered
-        /// one, or the purse there when the city has none. Returns the guild, or -1.
+        /// one, or the households there when the city has none. Returns the guild, or -1.
         /// </summary>
         public static int InsuranceGuild(WorldState world, int originNode)
         {

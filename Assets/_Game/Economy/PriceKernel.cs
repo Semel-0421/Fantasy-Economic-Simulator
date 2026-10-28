@@ -78,7 +78,9 @@ namespace FES.Economy
     /// Steps every cell of every market whose level is due this turn. Markets that reprice every turn first
     /// add this turn's household consumption here (<see cref="HouseholdDemand"/>), which saves a pass over
     /// most cells; slower markets got theirs turn by turn from <see cref="ConsumptionJob"/>, so a short demand
-    /// event still reaches them.
+    /// event still reaches them. Consumption is scaled by the households' budget (DEC-061). Before a cell
+    /// steps, its households pay its price for the units the market delivers to them: every other unit of
+    /// demand is a purchase already taken from the stock, so they get what supply and stock leave.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct PriceUpdateJob : IJobParallelFor
@@ -118,11 +120,30 @@ namespace FES.Economy
         [NativeDisableParallelForRestriction] public NativeArray<long> NecessityWanted;
         [NativeDisableParallelForRestriction] public NativeArray<long> NecessityMet;
 
+        /// <summary>Per market: the share of their wished consumption its households can pay for (raw Q16).</summary>
+        [ReadOnly] public NativeArray<long> MarketBudget;
+        /// <summary>See <see cref="HouseholdCash"/>.</summary>
+        [NativeDisableParallelForRestriction] public NativeArray<long> Cash;
+        [NativeDisableParallelForRestriction] public NativeArray<long> Spent;
+        [NativeDisableParallelForRestriction] public NativeArray<long> Desired;
+        [NativeDisableParallelForRestriction] public NativeArray<int> PendingUnits;
+
         [NativeDisableParallelForRestriction] public NativeArray<int> Price;
         [NativeDisableParallelForRestriction] public NativeArray<int> PrevPrice;
         [NativeDisableParallelForRestriction] public NativeArray<int> Stock;
         [NativeDisableParallelForRestriction] public NativeArray<int> Supply;
         [NativeDisableParallelForRestriction] public NativeArray<int> Demand;
+
+        /// <summary>
+        /// Of <paramref name="wished"/> household units, how many the market could deliver now: supply and stock
+        /// left after the demand already in. Households budget against these, not against goods nobody sells.
+        /// </summary>
+        public static long Deliverable(long wished, int supply, int stock, int demand)
+        {
+            long left = (long)supply + stock - demand;
+            if (left < 0) return 0;
+            return left < wished ? left : wished;
+        }
 
         public void Execute(int market)
         {
@@ -136,7 +157,8 @@ namespace FES.Economy
             long levelWeight = LevelWeight[level];
             long necessityWeight = MarketNecessityWeight[market];
             long luxuryWeight = MarketLuxuryWeight[market];
-            long wanted = 0, met = 0;
+            long wanted = 0, met = 0, desired = 0, spent = 0;
+            long budget = MarketBudget[market];
             bool inline = (InlineLevelMask & (1 << level)) != 0;
             int modifierBase = market * CategoryCount;
             for (int c = start; c < end; c++)
@@ -146,15 +168,38 @@ namespace FES.Economy
                 long valueMul = Fx.RoundShift(ModifierMul[k + (int)ModifierTarget.Value] * anchorMul);
                 if (CellSpecialty[c] != 0) valueMul = Fx.RoundShift(valueMul * SpecialtyAnchorMulRaw);
 
+                int pending;
                 if (inline)
                 {
                     long weekly = HouseholdDemand.CellBase(GoodBaseDemand[good], GoodBasePrice[good], levelWeight,
                         ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
                     long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                         necessityWeight, luxuryWeight, out long cellWanted, out long cellMet);
+                    desired += Deliverable(consumed, Supply[c], Stock[c], Demand[c]) * Price[c];
+                    if (budget != Fx.OneRaw)
+                    {
+                        consumed = Fx.RoundShift(consumed * budget);
+                        cellMet = Fx.RoundShift(cellMet * budget);
+                    }
                     wanted += cellWanted;
                     met += cellMet;
                     Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
+                    // Markets that reprice every turn settle the same turn, so nothing waits in PendingUnits.
+                    pending = MarketStore.ClampToNonNegativeInt(consumed);
+                }
+                else
+                {
+                    pending = PendingUnits[c];
+                    if (pending > 0) PendingUnits[c] = 0;
+                }
+
+                if (pending > 0)
+                {
+                    long others = (long)Demand[c] - pending;
+                    if (others < 0) others = 0;
+                    long delivered = (long)Supply[c] + Stock[c] - others;
+                    if (delivered > pending) delivered = pending;
+                    if (delivered > 0) spent += delivered * Price[c];
                 }
 
                 int price = Price[c], prev = PrevPrice[c], stock = Stock[c], supply = Supply[c], demand = Demand[c];
@@ -168,12 +213,19 @@ namespace FES.Economy
             }
             NecessityWanted[market] += wanted;
             NecessityMet[market] += met;
+            if (inline) Desired[market] = desired;
+            // Households never pay more than they hold.
+            long cash = Cash[market];
+            if (spent > cash) spent = cash > 0 ? cash : 0;
+            Cash[market] = cash - spent;
+            Spent[market] += spent;
         }
     }
 
     /// <summary>
     /// Adds this turn's household consumption to the demand of markets that reprice less often than every
-    /// turn (<see cref="PriceUpdateJob"/> does the others), at the price they have held since their last update.
+    /// turn (<see cref="PriceUpdateJob"/> does the others), at the price they have held since their last update,
+    /// scaled by the households' budget. The units are paid for when the market reprices.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct ConsumptionJob : IJobParallelFor
@@ -199,9 +251,15 @@ namespace FES.Economy
         [ReadOnly] public NativeArray<long> LevelWeight;
         [ReadOnly] public NativeArray<long> ModifierMul;
 
+        [ReadOnly] public NativeArray<long> MarketBudget;
+        [ReadOnly] public NativeArray<int> Supply;
+        [ReadOnly] public NativeArray<int> Stock;
+
         [NativeDisableParallelForRestriction] public NativeArray<int> Demand;
         [NativeDisableParallelForRestriction] public NativeArray<long> NecessityWanted;
         [NativeDisableParallelForRestriction] public NativeArray<long> NecessityMet;
+        [NativeDisableParallelForRestriction] public NativeArray<long> Desired;
+        [NativeDisableParallelForRestriction] public NativeArray<int> PendingUnits;
 
         public void Execute(int market)
         {
@@ -210,7 +268,8 @@ namespace FES.Economy
 
             long anchorMul = MarketAnchorMul[market];
             long levelWeight = LevelWeight[level];
-            long wanted = 0, met = 0;
+            long budget = MarketBudget[market];
+            long wanted = 0, met = 0, desired = 0;
             int start = MarketCellStart[market];
             int end = start + MarketCellCount[market];
             int modifierBase = market * CategoryCount;
@@ -224,12 +283,20 @@ namespace FES.Economy
                     ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
                 long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                     MarketNecessityWeight[market], MarketLuxuryWeight[market], out long cellWanted, out long cellMet);
+                desired += PriceUpdateJob.Deliverable(consumed, Supply[c], Stock[c], Demand[c]) * Price[c];
+                if (budget != Fx.OneRaw)
+                {
+                    consumed = Fx.RoundShift(consumed * budget);
+                    cellMet = Fx.RoundShift(cellMet * budget);
+                }
                 wanted += cellWanted;
                 met += cellMet;
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
+                PendingUnits[c] = MarketStore.ClampToNonNegativeInt(PendingUnits[c] + consumed);
             }
             NecessityWanted[market] += wanted;
             NecessityMet[market] += met;
+            Desired[market] = desired;
         }
     }
 }

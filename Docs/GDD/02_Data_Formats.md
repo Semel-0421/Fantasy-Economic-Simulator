@@ -83,6 +83,8 @@ changing a default in code does.
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
 | households.base_growth_permille, households.growth_response_permille, households.max_change_permille | 5, 50, 30 | yearly population change ([Draft]) |
 | households.income_response_permille, households.income_max_change_permille | 500, 50 | yearly income change ([Draft]) |
+| households.budget_weeks | 26 | households spend at most their cash over this many weeks a week ([Draft]) |
+| markets.trader_float_permille | 100 | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |

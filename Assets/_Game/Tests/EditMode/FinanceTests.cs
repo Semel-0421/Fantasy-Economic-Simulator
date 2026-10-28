@@ -71,7 +71,8 @@ namespace FES.Tests
                 + Enumerable.Range(0, facilities.Count).Where(f => InNation(facilities.Node[f])).Sum(f => System.Math.Max(0, facilities.Cash[f]))
                 + Enumerable.Range(0, agents.Count).Where(a => InNation(agents.Node[a])).Sum(a => System.Math.Max(0, agents.Cash[a]))
                 + Enumerable.Range(0, groups.Count).Where(g => InNation(groups.Node[g])).Sum(g => System.Math.Max(0, groups.Cash[g]))
-                + System.Math.Max(0, sim.World.Get<PurseState>().Purse[n]); // households and traders (DEC-061)
+                + System.Math.Max(0, sim.World.Get<PurseState>().Float[n]) // traders (DEC-061)
+                + Enumerable.Range(0, nodes.Count).Where(InNation).Sum(node => System.Math.Max(0, sim.World.Get<HouseholdCash>().Cash[node]));
             Assert.AreEqual(cash, totals.NationCash[n]);
             Assert.AreEqual(cash + sim.World.Get<BankState>().Reserve[n], sim.View.NationMoneyTotal(NationNode(sim)));
 

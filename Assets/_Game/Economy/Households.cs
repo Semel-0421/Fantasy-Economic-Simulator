@@ -85,6 +85,75 @@ namespace FES.Economy
         }
     }
 
+    /// <summary>
+    /// Households' money (DEC-061, P13b): cash per node, spent on their consumption. A cell's household units
+    /// wait for its next repricing and are paid for at its price as far as the market delivers them; what a
+    /// market's households paid this turn waits in <see cref="Spent"/> until the agents module hands it to the
+    /// traders' float of their nation.
+    /// </summary>
+    public sealed class HouseholdCash : IPersistentComponent, IDisposable
+    {
+        /// <summary>Per node: the households' coins.</summary>
+        public NativeArray<long> Cash;
+        /// <summary>Per node: paid for consumption this turn, not yet handed to the traders.</summary>
+        public NativeArray<long> Spent;
+        /// <summary>
+        /// Per node: last turn's wished consumption the markets could deliver, at their prices, before the
+        /// budget; sets this turn's budget share.
+        /// </summary>
+        public NativeArray<long> Desired;
+        /// <summary>Per cell: household units consumed since the market last repriced, not yet paid for.</summary>
+        public NativeArray<int> PendingUnits;
+
+        public string Key => "economy.household_cash";
+        public int Version => 1;
+
+        public HouseholdCash(int nodeCount, int cellCount)
+        {
+            Cash = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            Spent = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            Desired = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            PendingUnits = new NativeArray<int>(cellCount, Allocator.Persistent);
+        }
+
+        /// <summary>
+        /// The share (raw Q16, at most 1) of their wished consumption a node's households can pay for this week:
+        /// they spend at most their cash over <paramref name="budgetWeeks"/> a week.
+        /// </summary>
+        public long BudgetFactor(int node, int budgetWeeks)
+        {
+            long budget = Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks);
+            if (budget <= 0) return 0;
+            long desired = Desired[node];
+            if (desired <= budget) return Fx.OneRaw;
+            return (budget << Fx.FractionBits) / desired;
+        }
+
+        public void Write(BinaryWriter writer)
+        {
+            NativeIO.WriteArray(writer, Cash);
+            NativeIO.WriteArray(writer, Spent);
+            NativeIO.WriteArray(writer, Desired);
+            NativeIO.WriteArray(writer, PendingUnits);
+        }
+
+        public void Read(BinaryReader reader)
+        {
+            NativeIO.ReadArray(reader, Cash);
+            NativeIO.ReadArray(reader, Spent);
+            NativeIO.ReadArray(reader, Desired);
+            NativeIO.ReadArray(reader, PendingUnits);
+        }
+
+        public void Dispose()
+        {
+            Cash.DisposeIfCreated();
+            Spent.DisposeIfCreated();
+            Desired.DisposeIfCreated();
+            PendingUnits.DisposeIfCreated();
+        }
+    }
+
     /// <summary>Household demand constants in raw Q16, passed by value into jobs.</summary>
     public struct DemandParams
     {

@@ -91,7 +91,7 @@ namespace FES.Agents
         bool PayUpkeep(int r)
         {
             if (!TakeUpkeep(r)) return false;
-            _purses.Change(_routes.From[r], _db.Config.RoadUpkeep);
+            _purses.PayHouseholds(_routes.From[r], _db.Config.RoadUpkeep);
             return true;
         }
 
@@ -153,7 +153,7 @@ namespace FES.Agents
             var costs = new TravelCosts(ctx.World, ctx.Services.Get<GameDatabase>());
             int route = costs.FindRoute(player.Node, Destination.Value);
             player.LocalCoins -= Cost(ctx, route);
-            ctx.World.Get<PurseState>().Change(player.Node, Cost(ctx, route)); // builders' wages (DEC-061)
+            ctx.World.Get<PurseState>().PayHouseholds(player.Node, Cost(ctx, route)); // builders' wages (DEC-061)
             int done = ctx.Turn + ctx.Services.Get<GameDatabase>().Config.RoadBuildWeeks;
             var roads = ctx.World.Get<RoadState>();
             roads.BuildDoneTurn[route] = done;

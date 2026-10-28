@@ -572,7 +572,7 @@ namespace FES.Agents
             {
                 long value = _sheet.Convert(_db.Config.AuctionReserveShare.MulInt(_db.Config.ShipPrice), _ship.BoughtContinent, continent);
                 _ship.Owned = false;
-                _purses.Purse[nation] -= value; // [Draft] the lending nation's people buy it
+                _purses.Float[nation] -= value; // [Draft] the lending nation's traders buy it
                 long paid = Math.Min(value, Owed(r));
                 Repay(r, paid);
                 _bank.Reserve[nation] += value - paid;
@@ -626,11 +626,14 @@ namespace FES.Agents
             foreach (var item in _items)
             {
                 if (!_flows.TryFindNearestMarket(_agents.Node[a], item.Good, out _, out int cell)) continue;
-                _cargo.Change(holder, item.Good, -item.Quantity);
-                _flows.Sell(cell, item.Quantity);
+                // Only what the traders there can pay for is sold; the rest stays on board (DEC-061).
+                int units = _purses.Sellable(_agents.Node[a], item.Quantity, _markets.Price[cell]);
+                if (units <= 0) continue;
+                _cargo.Change(holder, item.Good, -units);
+                _flows.Sell(cell, units);
                 // Proceeds beyond the debt go to the bank too (DEC-039).
-                _bank.Reserve[nation] += (long)item.Quantity * _markets.Price[cell];
-                _purses.Change(_agents.Node[a], -(long)item.Quantity * _markets.Price[cell]);
+                _bank.Reserve[nation] += (long)units * _markets.Price[cell];
+                _purses.ChangeFloat(_agents.Node[a], -(long)units * _markets.Price[cell]);
             }
             _npcLoans.RemoveRow(r);
             ctx.Events.Publish(new NpcLoanDefaulted(FacilityId.None, new AgentId(a), new NodeId(_banks.NationNode(nation)), ctx.Turn));
@@ -699,10 +702,11 @@ namespace FES.Agents
                 if (!_flows.TryFindNearestMarket(node, item.Good, out _, out int cell)) continue;
                 int price = _markets.Price[cell];
                 long needed = ToCover(Owed(r), _nodes.Continent[node], continent);
-                int units = (int)Math.Min(item.Quantity, (needed + price - 1) / price);
+                int units = _purses.Sellable(node, (int)Math.Min(item.Quantity, (needed + price - 1) / price), price);
+                if (units <= 0) continue;
                 _cargo.Change(holder, item.Good, -units);
                 _flows.Sell(cell, units);
-                _purses.Change(node, -(long)units * price);
+                _purses.ChangeFloat(node, -(long)units * price);
                 long value = _sheet.Convert((long)units * price, _nodes.Continent[node], continent);
                 MoneyLedger.AcrossContinents(_bank, _nodes.Continent[node], (long)units * price, continent, value);
                 // Proceeds beyond the debt go to the bank, not the former owner (DEC-039).

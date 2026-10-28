@@ -93,6 +93,7 @@ namespace FES.Agents
         NativeList<int> _bankrupt;
         NativeArray<long> _defUpkeep;
         PurseState _purses;
+        HouseholdCash _households;
 
         public string Id => SystemId;
         public SimPhase Phase => SimPhase.Production;
@@ -109,6 +110,7 @@ namespace FES.Agents
             _facilities = ctx.World.Get<FacilityTable>();
             _cargo = ctx.World.Get<CargoTable>();
             _purses = ctx.World.Get<PurseState>();
+            _households = ctx.World.Get<HouseholdCash>();
             _lod = ctx.World.Get<LodState>();
             _specialties = ctx.World.Get<NodeSpecialties>();
             _groups = new GroupDirectory(ctx.World.Get<GroupTable>(), ctx.World.Get<NodeTable>());
@@ -160,8 +162,8 @@ namespace FES.Agents
                 FacilityOwner = _facilities.Owner.AsArray(),
                 FacilityLevel = _facilities.Level.AsArray(),
                 FacilityEfficiency = _facilities.Efficiency.AsArray(),
-                NodePurse = _purses.NodePurse,
-                Purse = _purses.Purse,
+                NodeFloat = _purses.NodeFloat,
+                Float = _purses.Float,
                 FacilityCash = _facilities.Cash.AsArray(),
                 NodeDetail = _lod.Detail,
                 LineStart = _lineStart.AsArray(),
@@ -198,8 +200,7 @@ namespace FES.Agents
                 FacilityCash = _facilities.Cash.AsArray(),
                 FacilityNegativeCashWeeks = _facilities.NegativeCashWeeks.AsArray(),
                 FacilityNode = _facilities.Node.AsArray(),
-                NodePurse = _purses.NodePurse,
-                Purse = _purses.Purse,
+                HouseholdCash = _households.Cash,
                 Bankrupt = _bankrupt,
             };
             if (ForceManaged) upkeep.Execute();
@@ -226,9 +227,12 @@ namespace FES.Agents
                 int cell = _playerOutputCell[i];
                 int overflow = quantity - stored;
                 if (overflow == 0 || cell < 0) continue; // no market for the good: the overflow is lost
+                // As much as the traders can pay for is sold; the rest is lost too (DEC-061).
+                overflow = _purses.Sellable(_facilities.Node[f], overflow, _markets.Price[cell]);
+                if (overflow == 0) continue;
                 _flows.Sell(cell, overflow);
                 _facilities.Cash[f] += (long)overflow * _markets.Price[cell];
-                _purses.Change(_facilities.Node[f], -(long)overflow * _markets.Price[cell]);
+                _purses.ChangeFloat(_facilities.Node[f], -(long)overflow * _markets.Price[cell]);
             }
         }
 
@@ -369,9 +373,9 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> FacilityLevel;
         [ReadOnly] public NativeArray<long> FacilityEfficiency;
         public NativeArray<long> FacilityCash;
-        /// <summary>Per node: its purse; buyers pay into it and sellers are paid from it (DEC-061).</summary>
-        [ReadOnly] public NativeArray<int> NodePurse;
-        public NativeArray<long> Purse;
+        /// <summary>Per node: its traders' float; buyers pay into it and sellers are paid from it (DEC-061).</summary>
+        [ReadOnly] public NativeArray<int> NodeFloat;
+        public NativeArray<long> Float;
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> LineStart;
         [ReadOnly] public NativeArray<int> LineCell;
@@ -421,7 +425,7 @@ namespace FES.Agents
                 }
                 if (!inStock || cost > FacilityCash[f]) continue;
                 FacilityCash[f] -= cost;
-                Purse[NodePurse[FacilityNode[f]]] += cost;
+                Float[NodeFloat[FacilityNode[f]]] += cost;
 
                 bool playerOwned = FacilityOwner[f] == OwnerIds.Player;
                 for (int k = start; k < end; k++)
@@ -463,15 +467,24 @@ namespace FES.Agents
             }
             else if (cell >= 0)
             {
+                // Sold as far as the traders can pay; the rest is lost, since NPC facilities keep no stock (DEC-061).
+                int traders = NodeFloat[FacilityNode[f]];
+                long price = Price[cell];
+                if (price > 0)
+                {
+                    long payable = Float[traders] > 0 ? Float[traders] / price : 0;
+                    if (clamped > payable) clamped = (int)payable;
+                }
+                if (clamped == 0) return;
                 Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
-                FacilityCash[f] += (long)clamped * Price[cell];
-                Purse[NodePurse[FacilityNode[f]]] -= (long)clamped * Price[cell];
+                FacilityCash[f] += clamped * price;
+                Float[traders] -= clamped * price;
             }
         }
     }
 
     /// <summary>
-    /// Weekly upkeep (wages) of every facility, scaled by its level, paid to the purse where it stands
+    /// Weekly upkeep (wages) of every facility, scaled by its level, paid to the households of its node
     /// (DEC-061); cash may go below zero. A facility whose cash ended <see cref="BankruptWeeks"/> weeks in a
     /// row below zero is listed as bankrupt (DEC-051).
     /// </summary>
@@ -487,8 +500,8 @@ namespace FES.Agents
         public NativeArray<int> FacilityNegativeCashWeeks;
         public NativeList<int> Bankrupt;
         [ReadOnly] public NativeArray<int> FacilityNode;
-        [ReadOnly] public NativeArray<int> NodePurse;
-        public NativeArray<long> Purse;
+        /// <summary>Per node: <see cref="FES.Economy.HouseholdCash.Cash"/>.</summary>
+        public NativeArray<long> HouseholdCash;
 
         public void Execute()
         {
@@ -496,7 +509,7 @@ namespace FES.Agents
             {
                 long upkeep = DefUpkeep[FacilityDefIndex[f]] * FacilityLevel[f];
                 FacilityCash[f] -= upkeep;
-                Purse[NodePurse[FacilityNode[f]]] += upkeep;
+                HouseholdCash[FacilityNode[f]] += upkeep;
                 if (FacilityCash[f] >= 0) FacilityNegativeCashWeeks[f] = 0;
                 else if (++FacilityNegativeCashWeeks[f] >= BankruptWeeks) Bankrupt.Add(f);
             }

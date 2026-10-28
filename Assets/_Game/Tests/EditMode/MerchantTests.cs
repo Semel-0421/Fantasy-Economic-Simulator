@@ -149,6 +149,8 @@ namespace FES.Tests
             using var stock = new NativeArray<int>(new[] { 100, 0 }, Allocator.Temp);
             using var supply = new NativeArray<int>(2, Allocator.Temp);
             using var demand = new NativeArray<int>(2, Allocator.Temp);
+            using var nodeFloat = new NativeArray<int>(new[] { 0, 0 }, Allocator.Temp);
+            using var floats = new NativeArray<long>(1, Allocator.Temp);
             new MerchantFlowJob
             {
                 CategoryCount = 1,
@@ -160,7 +162,7 @@ namespace FES.Tests
                 RouteTurns = routeTurns, RouteCostPerUnitRaw = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
                 MarketCellStart = cellStart, MarketCellCount = cellCount, CellGood = cellGood,
                 GoodCategory = goodZero, GoodWeight = goodWeight, NodeLicenseRow = licenseRow, Licensed = licensed, BaseGoodCount = 1,
-                Price = price, Stock = stock, Supply = supply, Demand = demand,
+                Price = price, NodeFloat = nodeFloat, Float = floats, Stock = stock, Supply = supply, Demand = demand,
             }.Execute();
 
             // margin 30 - 10 - 1 = 19; half the stock times 19/30 = 31 units, 10% (3) lost on the way.

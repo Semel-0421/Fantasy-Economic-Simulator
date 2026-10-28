@@ -46,10 +46,10 @@ namespace FES.Agents
             // Fees, passage and guards are wages at the origin; insurance goes to a guild there; the toll to
             // the entered nation (DEC-061).
             var purses = ctx.World.Get<PurseState>();
-            purses.Change(player.Node, quote.Fee + quote.Passage + quote.Guards);
+            purses.PayHouseholds(player.Node, quote.Fee + quote.Passage + quote.Guards);
             int guild = MoneyLedger.InsuranceGuild(ctx.World, player.Node);
             if (guild >= 0) ctx.World.Get<GroupTable>().Cash[guild] += quote.Insurance;
-            else purses.Change(player.Node, quote.Insurance);
+            else purses.PayHouseholds(player.Node, quote.Insurance);
             MoneyLedger.ToState(ctx.World, Destination.Value, quote.Toll);
             // A ship that sails lands with the player and docks at the destination port (DEC-053).
             var ship = ctx.World.Get<PlayerShip>();
@@ -73,7 +73,7 @@ namespace FES.Agents
             {
                 value = config.EncounterCashLoss.MulInt(Math.Max(0, player.Coins[quote.FeeContinent]));
                 player.Coins[quote.FeeContinent] -= value;
-                ctx.World.Get<PurseState>().Change(player.Node, value); // [Draft] spent where the trip began
+                ctx.World.Get<PurseState>().PayHouseholds(player.Node, value); // [Draft] spent where the trip began
             }
             else
             {
@@ -84,7 +84,7 @@ namespace FES.Agents
             }
             long refund = Insurance ? config.InsuranceRefund.MulInt(value) : 0;
             player.Coins[quote.FeeContinent] += refund;
-            // [Draft] The insuring guild pays what its cash covers, the purse at the origin the rest.
+            // [Draft] The insuring guild pays what its cash covers, the households at the origin the rest.
             MoneyLedger.PayFromGroup(ctx.World, MoneyLedger.InsuranceGuild(ctx.World, player.Node), player.Node, refund);
             ctx.Events.Publish(new TripEncounter(Destination, loss, value, refund, ctx.Turn));
         }
@@ -267,7 +267,7 @@ namespace FES.Agents
                 bank.PlayerDeposit[nation] -= cost - fromCoins;
                 bank.Reserve[nation] -= cost - fromCoins;
             }
-            ctx.World.Get<PurseState>().Change(player.Node, cost);
+            ctx.World.Get<PurseState>().ChangeFloat(player.Node, cost);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, filled);
             ctx.World.Get<MarketFlows>().Buy(cell, filled);
             ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, true, Quantity, filled, price, ctx.Turn));
@@ -295,7 +295,10 @@ namespace FES.Agents
         }
     }
 
-    /// <summary>Sells goods from the cart at the player's market at its current price, for local coins.</summary>
+    /// <summary>
+    /// Sells goods from the cart at the player's market at its current price, for local coins, as many as the
+    /// traders there can pay for (DEC-061).
+    /// </summary>
     public sealed class SellGoodsCommand : ICommand
     {
         public readonly GoodId Good;
@@ -309,27 +312,29 @@ namespace FES.Agents
 
         public CommandResult Validate(SimContext ctx)
         {
-            var error = PlayerTrade.Check(ctx, Good, Quantity, out _);
+            var error = PlayerTrade.Check(ctx, Good, Quantity, out int cell);
             if (error != null) return CommandResult.Fail(error);
             if (!LicenseRules.PlayerMaySell(ctx.World, ctx.Services.Get<GameDatabase>(), Good, ctx.World.Get<PlayerState>().Node, ctx.Turn))
                 return CommandResult.Fail("Selling this good here needs this nation's license.");
-            return Fill(ctx) > 0 ? CommandResult.Success : CommandResult.Fail("The cart holds none of this good.");
+            if (ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good) <= 0) return CommandResult.Fail("The cart holds none of this good.");
+            return Fill(ctx, cell) > 0 ? CommandResult.Success : CommandResult.Fail("The traders here have no money to pay.");
         }
 
         public void Apply(SimContext ctx)
         {
             PlayerTrade.Check(ctx, Good, Quantity, out int cell);
-            int filled = Fill(ctx);
+            int filled = Fill(ctx, cell);
             var player = ctx.World.Get<PlayerState>();
             int price = ctx.World.Get<MarketStore>().Price[cell];
             player.LocalCoins += (long)filled * price;
-            ctx.World.Get<PurseState>().Change(player.Node, -(long)filled * price);
+            ctx.World.Get<PurseState>().ChangeFloat(player.Node, -(long)filled * price);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, -filled);
             ctx.World.Get<MarketFlows>().Sell(cell, filled);
             ctx.Events.Publish(new GoodsTraded(new NodeId(player.Node), Good, false, Quantity, filled, price, ctx.Turn));
         }
 
-        int Fill(SimContext ctx) => Math.Min(Quantity, ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good));
+        int Fill(SimContext ctx, int cell) => ctx.World.Get<PurseState>().Sellable(ctx.World.Get<PlayerState>().Node,
+            Math.Min(Quantity, ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good)), ctx.World.Get<MarketStore>().Price[cell]);
     }
 
     static class PlayerTrade
@@ -544,7 +549,7 @@ namespace FES.Agents
             }
             int seller = facilities.Group[Facility.Value];
             if (seller >= 0) ctx.World.Get<GroupTable>().Cash[seller] += proceeds;
-            else ctx.World.Get<PurseState>().Change(node, proceeds);
+            else ctx.World.Get<PurseState>().PayHouseholds(node, proceeds);
             facilities.Owner[Facility.Value] = OwnerIds.Player;
             facilities.Mode[Facility.Value] = (byte)ControlMode.Manual;
             facilities.WarehouseClaimUntil[Facility.Value] = -1; // a lost warehouse bought back is the player's again

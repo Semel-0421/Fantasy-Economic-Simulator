@@ -121,7 +121,8 @@ namespace FES.Agents
         bool HoldsLicenses(SimContext ctx, int a) =>
             LicenseRules.MerchantHoldsLicenses(ctx.Seed, new AgentId(a), _db.Config.LicensedMerchantPermille);
 
-        // Sells the whole load at the destination's current price (DEC-006); unsellable goods stay on board.
+        // Sells the whole load at the destination's current price (DEC-006), as far as the traders there can pay
+        // (DEC-061); unsellable goods stay on board.
         void Arrive(SimContext ctx, int a)
         {
             int node = _agents.Destination[a];
@@ -134,10 +135,12 @@ namespace FES.Agents
             {
                 if (NeedsLicense(node, item.Good.Value) && !HoldsLicenses(ctx, a)) continue;
                 if (!_markets.TryFindCell(node, item.Good, out int cell)) continue;
-                _flows.Sell(cell, item.Quantity);
-                _agents.Cash[a] += (long)item.Quantity * _markets.Price[cell];
-                _purses.Change(node, -(long)item.Quantity * _markets.Price[cell]);
-                _cargo.Change(holder, item.Good, -item.Quantity);
+                int units = _purses.Sellable(node, item.Quantity, _markets.Price[cell]);
+                if (units <= 0) continue;
+                _flows.Sell(cell, units);
+                _agents.Cash[a] += (long)units * _markets.Price[cell];
+                _purses.ChangeFloat(node, -(long)units * _markets.Price[cell]);
+                _cargo.Change(holder, item.Good, -units);
             }
         }
 
@@ -193,12 +196,12 @@ namespace FES.Agents
             var goodId = new GoodId(_markets.CellGood[bestCell]);
             _flows.Buy(bestCell, (int)bestQuantity);
             _agents.Cash[a] -= bestQuantity * _markets.Price[bestCell];
-            _purses.Change(node, bestQuantity * _markets.Price[bestCell]);
+            _purses.ChangeFloat(node, bestQuantity * _markets.Price[bestCell]);
             _cargo.Change(holder, goodId, (int)bestQuantity);
             _cargo.Collect(holder, _items);
             var quote = _costs.Quote(bestRoute, _items, new TripOptions(false, false, true)); // merchants need no ship (DEC-034)
             _agents.Cash[a] -= quote.DepartureCost + quote.Toll; // same continent: one coin (DEC-015)
-            _purses.Change(node, quote.DepartureCost); // fees are wages at the origin (DEC-061)
+            _purses.PayHouseholds(node, quote.DepartureCost); // fees are wages at the origin (DEC-061)
             MoneyLedger.ToState(_world, _routes.To[bestRoute], quote.Toll);
             _agents.Destination[a] = _routes.To[bestRoute];
             _agents.ArrivalTurn[a] = ctx.Turn + _routes.TravelTurns[bestRoute];
@@ -210,7 +213,7 @@ namespace FES.Agents
                 // [Draft] Stolen coins end up spent where the trip began.
                 long stolen = _db.Config.EncounterCashLoss.MulInt(Math.Max(0, _agents.Cash[a]));
                 _agents.Cash[a] -= stolen;
-                _purses.Change(node, stolen);
+                _purses.PayHouseholds(node, stolen);
             }
             else if (loss == EncounterLoss.Cargo) Encounters.TakeCargo(_cargo, holder, _db.Config.EncounterCargoLoss, _items);
         }
@@ -229,7 +232,7 @@ namespace FES.Agents
         void PayUpkeep(SimContext ctx, int a)
         {
             _agents.Cash[a] -= _db.Config.MerchantUpkeep[_agents.Scale[a]];
-            _purses.Change(_agents.Node[a], _db.Config.MerchantUpkeep[_agents.Scale[a]]);
+            _purses.PayHouseholds(_agents.Node[a], _db.Config.MerchantUpkeep[_agents.Scale[a]]);
             if (_agents.Cash[a] >= 0)
             {
                 _agents.NegativeCashWeeks[a] = 0;
@@ -294,6 +297,8 @@ namespace FES.Agents
                 Licensed = _policy.Licensed,
                 BaseGoodCount = _policy.BaseGoodCount,
                 Price = _markets.Price,
+                NodeFloat = _purses.NodeFloat,
+                Float = _purses.Float,
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
                 Demand = _markets.Demand,
@@ -320,7 +325,9 @@ namespace FES.Agents
     /// licensed goods scaled by the licensed share, all within the node's pooled cargo capacity spread over
     /// its routes and their travel turns, goods taken in cell order. The units leave the origin's stock (through its supply into its
     /// demand, like a purchase) and reach the destination's supply the same week, less the route's expected
-    /// encounter loss ([Draft]: no transit time, no base fee). Nodes run in order, so results are independent of Burst.
+    /// encounter loss ([Draft]: no transit time, no base fee). Between nations, the destination's traders pay the
+    /// origin's for the units at the origin price, and move no more than their float pays for (DEC-061).
+    /// Nodes run in order, so results are independent of Burst.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
     public struct MerchantFlowJob : IJob
@@ -356,6 +363,8 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> NodeLicenseRow;
         [ReadOnly] public NativeArray<byte> Licensed;
         [ReadOnly] public NativeArray<int> Price;
+        [ReadOnly] public NativeArray<int> NodeFloat;
+        public NativeArray<long> Float;
 
         public NativeArray<int> Stock;
         public NativeArray<int> Supply;
@@ -391,7 +400,7 @@ namespace FES.Agents
                         int toCell = FindCell(to, CellGood[c]);
                         if (toCell < 0) continue;
                         long budget = RouteBudget[r];
-                        Move(c, toCell, CellGood[c], to, RouteCostPerUnitRaw[r], RouteExpectedLoss[r], ref budget);
+                        Move(n, c, toCell, CellGood[c], to, RouteCostPerUnitRaw[r], RouteExpectedLoss[r], ref budget);
                         RouteBudget[r] = budget;
                     }
                 }
@@ -412,7 +421,7 @@ namespace FES.Agents
             return -1;
         }
 
-        void Move(int fromCell, int toCell, int good, int to, long perUnitRaw, long expectedLossRaw, ref long budget)
+        void Move(int from, int fromCell, int toCell, int good, int to, long perUnitRaw, long expectedLossRaw, ref long budget)
         {
             long sell = Price[toCell];
             long rate = Tariff[to];
@@ -423,8 +432,16 @@ namespace FES.Agents
             long quantity = Fx.MulIntRaw(Stock[fromCell], FlowShareRaw) * marginRaw / (sell << Fx.FractionBits);
             if (Licensed[NodeLicenseRow[to] * BaseGoodCount + good / QualityGrades.Count] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
+            int payer = NodeFloat[to], payee = NodeFloat[from];
+            long buy = Price[fromCell];
+            if (payer != payee && buy > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / buy);
             if (quantity <= 0) return;
             budget -= quantity * GoodWeight[good];
+            if (payer != payee)
+            {
+                Float[payer] -= quantity * buy;
+                Float[payee] += quantity * buy;
+            }
 
             Stock[fromCell] -= (int)quantity;
             Supply[fromCell] = MarketStore.ClampToNonNegativeInt(Supply[fromCell] + quantity);

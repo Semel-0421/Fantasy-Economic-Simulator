@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-10-28
+- [04_Roadmap.md] P13b done; P13c, P15 and P17 ready
+- [systems/SYS_MARKETS.md] Drafts for the household budget, payment for delivered units, payout caps, flows between floats and wages to households (P13b); implementation notes and cost
+- [systems/SYS_BANKING.md] Drafts updated for floats and household cash; eight-year measurement
+- [systems/SYS_PRODUCTION.md, SYS_MERCHANTS.md] Capped sales, flows paid between floats
+- [02_Data_Formats.md] households.budget_weeks, markets.trader_float_permille
 - [04_Roadmap.md] P13a done; P13b and P14 ready
 - [systems/SYS_BANKING.md] Drafts and notes for purses, seeding, exchange through international banks, operator changes, insurance and robbery; measured drain
 - [systems/SYS_PRODUCTION.md, SYS_TRAVEL_COSTS.md, SYS_MARKETS.md] Wages, fees and tolls routed (P13a)

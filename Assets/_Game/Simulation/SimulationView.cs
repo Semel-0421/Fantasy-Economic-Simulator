@@ -386,8 +386,10 @@ namespace FES.Simulation
         /// <summary>Money in the nation now: cash held there and its bank's reserve.</summary>
         public long NationMoneyTotal(NodeId nation) => Totals.NationTotal(_banks.NationIndex(nation.Value));
         public long ContinentMoneyTotal(int continent) => Totals.ContinentTotal[continent];
-        /// <summary>Money held by the households and traders of a nation (DEC-061).</summary>
-        public long NationPurse(NodeId nation) => _world.Get<PurseState>().Purse[_banks.NationIndex(nation.Value)];
+        /// <summary>Money the traders of a nation hold to pay sellers with (DEC-061).</summary>
+        public long TraderFloat(NodeId nation) => _world.Get<PurseState>().Float[_banks.NationIndex(nation.Value)];
+        /// <summary>Money the households of a node hold (DEC-061).</summary>
+        public long HouseholdCash(NodeId node) => _world.Get<FES.Economy.HouseholdCash>().Cash[node.Value];
 
         MoneyTotals Totals
         {

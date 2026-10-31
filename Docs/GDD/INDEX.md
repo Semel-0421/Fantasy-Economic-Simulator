@@ -2,7 +2,7 @@
 doc: INDEX
 title: Fantasy Economic Simulator design index
 status: draft
-updated: 2026-10-27
+updated: 2026-11-01
 ---
 
 # Fantasy Economic Simulator design docs
@@ -23,7 +23,7 @@ updated: 2026-10-27
 | Start | A random village, no bank access (DEC-040) |
 | World | 5 continents, 25 nations, 50 regions, 250 cities, 1,250 villages |
 | Goods | 20 categories x 50 goods x 4 grades = 4,000 items |
-| Stage | Economy simulation built (P1 to P12b); money loop (P13), ranks, delegation and NPC growth designed next |
+| Stage | Economy simulation built (P1 to P13d, labor, tax, state economy); refactoring, then balance; P14 to P18 ready (see 04_Roadmap) |
 
 ## Document map
 | Document | Contents |
@@ -40,6 +40,7 @@ updated: 2026-10-27
 | [systems/SYS_BANKING.md](systems/SYS_BANKING.md) | Banks, currency exchange, loans and seizure |
 | [systems/SYS_INFRASTRUCTURE.md](systems/SYS_INFRASTRUCTURE.md) | Ports and paved roads |
 | [systems/SYS_INTEREST_GROUPS.md](systems/SYS_INTEREST_GROUPS.md) | Companies, guilds, state and private enterprises |
+| [systems/SYS_STATE_ECONOMY.md](systems/SYS_STATE_ECONOMY.md) | Labor market, income tax, defense, land development, subsidies |
 | [systems/SYS_LICENSES.md](systems/SYS_LICENSES.md) | Licenses for special goods |
 | [systems/SYS_ROUTE_HAZARDS.md](systems/SYS_ROUTE_HAZARDS.md) | Hard terrain and random encounters |
 | [systems/SYS_MARKETS.md](systems/SYS_MARKETS.md) | Demand, necessity/luxury elasticity |
@@ -60,5 +61,4 @@ Detail: [03_Decisions.md](03_Decisions.md)
 | Q-030 | Basic price index basket (deferred by the user) | Later |
 
 ## Recent changes
-See [CHANGELOG.md](CHANGELOG.md). Latest: 2026-10-27, collateral and seizure resolved, random village
-start and state-owned banks added (DEC-038 to DEC-041).
+See [CHANGELOG.md](CHANGELOG.md).

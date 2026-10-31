@@ -183,7 +183,7 @@ namespace FES.Agents
 
         public string Id => "agents.merchant_generation";
         public SimPhase Phase => SimPhase.Finance;
-        public int Order => SimOrder.Late + 40;
+        public int Order => FinanceOrder.MerchantGenerations;
 
         public void Initialize(SimContext ctx)
         {

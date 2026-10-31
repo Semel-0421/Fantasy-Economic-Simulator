@@ -116,12 +116,10 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 Q-030 (deferred)
 
 ## Labor market and income tax
-- [Confirmed] Merchant groups pay wages from surplus cash into the labor market, which reaches the nation's households
-  (DEC-070). Each nation's employment rate rises and falls with real household spending per head against its
-  long-run level, and scales those wages. [Draft] Facility upkeep is not scaled by it.
-- [Confirmed] Households and companies pay 10% income tax yearly into the state's reserve (DEC-071). Measured
-  income per head is after this tax.
+See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the income tax.
 
 ## Population and necessity supply
 - [Confirmed] Population growth follows the necessities actually there to buy: what households could afford, capped by
-  what the market holds (DEC-072). [Draft] 1% a year at full supply, 6% less per full shortfall, within 4% either way.
+  what the market holds (DEC-072), scaled on Victorian Europe (DEC-074).
+- [Draft] 0.8% a year at full supply (from memory, not checked), falling 4% per full shortfall, at most 1.3% (England and
+  Wales 1851-1901, checked) and at least -4% (Ireland's famine, from memory, not checked).

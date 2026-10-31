@@ -39,6 +39,13 @@ namespace FES.World
         public int NationIndex(int nationNode) => nationNode - _nodes.LevelStart(WorldLevel.Nation);
         public int NationNode(int nationIndex) => nationIndex + _nodes.LevelStart(WorldLevel.Nation);
 
+        /// <summary>The nation index of a node, or -1 outside any nation.</summary>
+        public int NationOf(int node)
+        {
+            int nationNode = _nodes.AncestorAt(node, WorldLevel.Nation);
+            return nationNode < 0 ? -1 : NationIndex(nationNode);
+        }
+
         /// <summary>The nation index of the bank whose branch is at <paramref name="node"/>, or -1 (villages, continents).</summary>
         public int BranchNation(int node)
         {

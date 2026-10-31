@@ -1,6 +1,13 @@
+---
+doc: ARCHITECTURE
+title: Core architecture
+status: final
+updated: 2026-11-01
+---
+
 # 00 — Core Architecture
 
-Status: skeleton implemented (2026-10-27). Code: `Assets/_Game/`. Tests: `Assets/_Game/Tests/EditMode`.
+Status: economy simulation implemented (2026-11-01). Code: `Assets/_Game/`. Tests: `Assets/_Game/Tests/EditMode`.
 
 ## Goals
 
@@ -17,7 +24,7 @@ Status: skeleton implemented (2026-10-27). Code: `Assets/_Game/`. Tests: `Assets
 | `FES.Data` | `Data/` | Core | CSV loader, definitions, `SimulationConfig`, `GameDatabase`, `CsvMapSource` |
 | `FES.World` | `World/` | Core, Data | `NodeTable` (hierarchy), `RouteTable`, `WorldBuilder`, `WorldModule` |
 | `FES.Economy` | `Economy/` | Core, Data, World | `MarketStore` (sparse), `MarketFlows`, Burst pricing/consumption jobs, modifiers + world events, currency |
-| `FES.Agents` | `Agents/` | Core, Data, World, Economy | player, travel, merchants, facilities, Burst production, LOD, guidance, player commands |
+| `FES.Agents` | `Agents/` | Core, Data, World, Economy | player, travel, merchants, facilities, Burst production, LOD, guidance, player commands, banks, finance, interest groups, policy, labor, tax, state economy |
 | `FES.Persistence` | `Persistence/` | Core | save container, section versioning, migrations |
 | `FES.Simulation` | `Simulation/` | all above | `SimulationBuilder` (composition root), `GameSimulation` facade, `SimulationView` (read-only queries), `PlayerActions` |
 | `FES.Unity` | `Unity/` | Core, Data, Simulation | `SimulationRunner` MonoBehaviour, `StreamingAssetsData` loader — the only code allowed to use `UnityEngine` |
@@ -102,18 +109,34 @@ Phases run in order; within a phase systems run by `(Order, Id)`; events dispatc
 | Environment | `economy.world_events` (Default) — expire/roll modifiers; `economy.modifier_fold` (Late) — refold `MarketFlows` |
 | Production | `agents.production` (Default, Burst) |
 | Agents | `agents.merchants` — `IMerchantBehavior` (default: `ArbitrageMerchantBehavior`) |
-| Markets | `economy.pricing` (Late, Burst) — household consumption (per turn for slow levels, inline for every-turn levels), then reprices levels due per `TierSchedule` |
-| Finance | `economy.currency` — yearly minting, price index, exchange rates (pricing sees it next turn) |
+| Markets | `economy.pricing` (Late, Burst) — household consumption (per turn for slow levels, inline for every-turn levels), then reprices levels due per `TierSchedule`; `agents.household_spending` (Late + 1) |
+| Finance | `economy.currency` (Default) — yearly minting, price index, exchange rates (pricing sees it next turn); then the Late band below |
 | Guidance | `agents.guidance` — decay, then add signals of this turn's applied commands |
-| Cleanup | (reserved) |
+| Cleanup | `agents.groups`, `agents.licenses` — yearly dues and expiry |
+
+The Finance phase's Late band, by offset from `SimOrder.Late` (the constants are in `FinanceOrder`):
+
+| Offset | Systems |
+|---|---|
+| 0 | `agents.banks`, `agents.roads` |
+| 5 | `agents.state_spending` |
+| 6 | `agents.labor` |
+| 7 | `agents.defense` |
+| 10 | `agents.finance` |
+| 15 | `agents.income_tax` |
+| 18 | `agents.state_projects` |
+| 19 | `agents.subsidies` |
+| 20 | `agents.households` |
+| 30 | `agents.policy` |
+| 40 | `agents.merchant_generation` |
 
 Order bands: `SimOrder.Early = -100`, `Default = 0`, `Late = 100`. Flows accumulate at Early/Default and
 are consumed at Late.
 
 Default cadence (`config.csv`): village 1, city 1, region 2, nation 4 (offset 1), continent 4.
 
-Measured on the full-scale world (Editor, Windows desktop, safety checks on): **~7 ms/turn**
-(pricing 3.3 ms, consumption 1.3 ms, production 1.0 ms, modifier fold 0.7 ms). Not yet profiled on Android.
+Measured on the full-scale world (Editor, Windows desktop, safety checks on): **33.6 ms/turn** on average from
+turn 60 to 182 (`[FES scale settled]`). Not yet profiled on Android.
 
 Production is a single-threaded Burst job: facilities share market cells and cells clamp after every
 add, so facility order must stay fixed. Each facility's target cells and modifier slots are resolved
@@ -164,11 +187,11 @@ Loading is atomic: the file is parsed and migrated before anything is applied, a
 undelivered events are dropped and `ILoadListener` systems rebuild derived state (LOD, modifier folds).
 Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, not saved.
 
-## Known gaps (intentional for the skeleton)
+## Known gaps
 
-- Merchants trade only within their home continent and do not borrow yet (P9b).
+- Merchants trade only within their home continent until P17.
+- The map is hand-written data; the seeded hex map comes with P18 (DEC-075).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
 - Saves reject changed data instead of remapping ids by key.
 - Sections missing from an older save keep the freshly built state.
-- `SimulationView` covers the map, markets, facilities, player, guidance and currency; merchants and
-  events have no view yet.
+- `SimulationView` has no view of merchants or world events yet.

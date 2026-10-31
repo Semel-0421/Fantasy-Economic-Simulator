@@ -45,6 +45,12 @@ namespace FES.Core
             if (array.IsCreated) array.Dispose();
         }
 
+        /// <summary>Disposes the field in place (so IsCreated turns false) if it is allocated.</summary>
+        public static void DisposeIfCreated<T>(ref this NativeList<T> list) where T : unmanaged
+        {
+            if (list.IsCreated) list.Dispose();
+        }
+
         static void ReadBody<T>(BinaryReader reader, NativeArray<T> array) where T : unmanaged
         {
             if (array.Length == 0) return;

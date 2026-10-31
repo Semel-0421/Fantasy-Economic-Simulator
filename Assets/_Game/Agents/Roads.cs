@@ -52,7 +52,7 @@ namespace FES.Agents
 
         public string Id => "agents.roads";
         public SimPhase Phase => SimPhase.Finance;
-        public int Order => SimOrder.Late;
+        public int Order => FinanceOrder.Roads;
 
         public void Initialize(SimContext ctx)
         {

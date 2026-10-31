@@ -24,6 +24,10 @@ namespace FES.Economy
         /// <summary>Per node: necessity units demanded at the prices households met.</summary>
         public NativeArray<long> NecessityMet;
 
+        /// <summary>The share of its necessities a node's households could buy, in thousandths; full when they wanted none.</summary>
+        public long NecessitySuppliedPermille(int node) =>
+            NecessityWanted[node] > 0 ? NecessityMet[node] * 1000 / NecessityWanted[node] : 1000;
+
         public string Key => "economy.households";
         public int Version => 1;
 

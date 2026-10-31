@@ -1,3 +1,10 @@
+---
+doc: DATA-FORMATS
+title: Data formats and config keys
+status: final
+updated: 2026-11-01
+---
+
 # 02 — Data Formats
 
 All files live in `Assets/StreamingAssets/Data/`. CSV with a header row; lines starting with `#` and blank lines
@@ -147,8 +154,8 @@ changing a default in code does.
 | cargo.lost_warehouse_weeks | 8 | weeks a lost facility's warehouse can still be emptied |
 | producers.<level>.<tier> | village primary 4, tertiary 2; city secondary 4 | producer groups per node |
 | grade.<grade>.price_permille | 600/1000/1800/3500 | grade price multipliers |
-| price.adjust_permille / max_step_permille / anchor_permille / stock_pressure_permille / min | 250 / 150 / 20 / 250 / 1 | pricing |
-| currency.mint_permille, gold_reserve, silver_reserve, coin_supply, coins_per_gold, coins_per_silver | 30, 1e6, 1e7, 5e6, 10, 1 | currency |
+| price.adjust_permille, price.max_step_permille, price.anchor_permille, price.stock_pressure_permille, price.min | 250, 150, 20, 250, 1 | pricing |
+| currency.mint_permille, currency.gold_reserve, currency.silver_reserve, currency.coin_supply, currency.coins_per_gold, currency.coins_per_silver | 30, 1e6, 1e7, 5e6, 10, 1 | currency |
 | policy.step_permille, policy.max_steps | 100, 5 | one policy step and the limit either way ([Draft]) |
 | policy.move_threshold_permille, policy.resistance_permille | 100, 1000 | share of influence a policy needs to move, and the status-quo bias per step already taken ([Draft]) |
 | policy.asset_weight_permille, policy.lobby_weight_permille, policy.influence_per_job | 1000, 3000, 50 | influence per coin of assets, per coin lobbied, per job ([Draft]) |

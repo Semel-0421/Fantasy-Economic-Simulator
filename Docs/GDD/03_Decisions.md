@@ -390,6 +390,9 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   births 35 and deaths 22 per thousand, checked), at most -4% in a famine (Ireland, from memory).
 - Impact: SYS-MARKETS, SYS-PRODUCTION, SYS-ROUTE-HAZARDS, SYS-INFRASTRUCTURE
 
+### DEC-073 (number unused)
+- No decision has this number; references skip from DEC-072 to DEC-074.
+
 ### DEC-072 The state defends, develops land and draws on state facilities; population follows necessity supply
 - Decision: a nation spends a fixed 5% of its budget on defense (standing army and mercenaries), with maintenance on
   top, directly in its own markets. It runs a land development plan (ports, coast-to-inland highways, paved roads

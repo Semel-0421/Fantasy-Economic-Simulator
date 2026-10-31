@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-01
+- [systems/SYS_STATE_ECONOMY.md] New: labor, tax, defense, land development and subsidy rules gathered from DEC-070 to DEC-074
+- [systems/SYS_MARKETS.md] Population numbers corrected to DEC-074 (were DEC-072's); labor and tax moved out
+- [00_Architecture.md] Pipeline, cost and known gaps brought up to date; system order table
+- [04_Roadmap.md] Remaining work listed; latest measurement; old measurement notes condensed
+- [03_Decisions.md] DEC-073 marked unused
+- [02_Data_Formats.md] Price and currency keys written in full; frontmatter on 00, 01, 02 and the reference
+
 ## 2026-10-31
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-074 (subsidies, army safety, reserved construction, Victorian growth), DEC-075 (hex map before front-end work); P18, P19
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_MARKETS.md, SYS_INFRASTRUCTURE.md] DEC-072 (state defense, land development, state facility levy, population by necessity supply)

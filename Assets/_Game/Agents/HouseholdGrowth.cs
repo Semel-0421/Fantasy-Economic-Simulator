@@ -28,7 +28,7 @@ namespace FES.Agents
 
         public string Id => "agents.households";
         public SimPhase Phase => SimPhase.Finance;
-        public int Order => SimOrder.Late + 20;
+        public int Order => FinanceOrder.Households;
 
         public void Initialize(SimContext ctx)
         {

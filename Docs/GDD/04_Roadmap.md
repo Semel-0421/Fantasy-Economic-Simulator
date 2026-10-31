@@ -2,8 +2,8 @@
 doc: ROADMAP
 title: Economy rules implementation plan
 status: draft
-updated: 2026-10-27
-related: [SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-PRODUCTION, SYS-MERCHANTS, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, SYS-PLAYER-START, DECISIONS]
+updated: 2026-11-01
+related: [SYS-STATE-ECONOMY, SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-PRODUCTION, SYS-MERCHANTS, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, SYS-PLAYER-START, DECISIONS]
 ---
 
 # Economy rules implementation plan
@@ -38,6 +38,8 @@ flowchart LR
     P13b --> P15[P15 Managers, hired merchant groups]
     P13c --> P16[P16 Group investment, closures]
     P13b --> P17[P17 Cross-continent NPC trade]
+    P13d --> P18[P18 Hex map from the seed]
+    P19[P19 War]
 ```
 
 | Phase | Scope | Systems | Ready? |
@@ -80,22 +82,28 @@ flowchart LR
 - P1 to P12b are done; P12c (shares, privatization) is later (DEC-056). Next: P13a to P13d close the money
   loop (DEC-061, DEC-062); balance numbers should wait for them. P14 to P17 follow (DEC-063 to DEC-066).
 - P13a to P13d are done: money is conserved per continent and circulates (households, floats, facilities,
-  groups, the state); prices follow the published money total; the sample world's population falls about
-  1% a year. A full-scale turn takes about 19.5 ms (18.0 before P13) in its first weeks; from turn 60 to 182
-  it averages about 28.5 ms, with 3 ms in `agents.banks` (it was 30.6 ms there: payments to a nation's
-  households scanned every node; the scale test logs this as `[FES scale settled]`). What is left of the
-  balance is listed in SYS-BANKING. On the player's continent the floats ran dry and goods went unsold: NPC
-  output now always reaches the market and only its payment is capped, which took years 6 to 10 of household
-  spending there from 328k to 958k a year and defaults from 918 to 443. Groups based in the detailed area are now
-  stepped wherever they go, with a range by personality. Merchant bankruptcies came from producers taking the float
-  before merchants sold; with the reserve, repeated sale tries, a labor market (DEC-070) and an income tax (DEC-071),
-  merchant bankruptcies stay under 5% of all 460 groups a year. With state defense, projects and population following
-  necessity supply (DEC-072), ten sample years show 143 merchant bankruptcies, 318 defaults, household spending of
-  1,383k a year, stock of 523k, 44,983 people, and on the player's continent a bank reserve of 2,685k, 1k lent, 8 NPC
-  loans. A full-scale turn averages 34.3 ms from turn 60 to 182. Open: population falls about 1% a year, and the
-  reserve and households' idle cash keep growing. P14 to P17 are ready.
-- With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
-- With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
-  tier cadence would cut it if mobile needs it.
-- Since P4, city workshops buy inputs only from stock, and no merchant carries village ore to cities yet,
-  so smithies stay idle until P5.
+  groups, the state); prices follow the published money total.
+- Merchant bankruptcies stay under 5% of all 460 groups a year, the user's limit for leaving them alone.
+
+## Latest measurement
+Sample world over ten years, player's continent where noted (after subsidies and reserved construction, 2026-10-31):
+household spending in years 6 to 10 of 1,618k a year; 295 NPC defaults; 130 merchant bankruptcies (1.5 to 4.3% a year);
+46,580 people at the end of year 9; a bank reserve of 2,748k. A full-scale turn averages 33.6 ms from turn 60 to 182
+(the scale test logs this as `[FES scale settled]`); running aggregate merchants on the market tier cadence would cut it if
+mobile needs it.
+
+## Remaining work
+Order agreed: refactoring, then balance, then the phases.
+
+Balance
+- Population falls 0.8 to 1.2% a year; Europe's +0.8% and the famine's -4% are from memory and unchecked (DEC-074).
+- The bank reserve keeps growing, probably from minted coins going to reserves; the mint path is not isolated.
+- Households' idle cash grew before subsidies; measure it again.
+- About 140 [Draft] numbers remain; they are settled during balancing.
+
+Gaps
+- The sample world has no highways, so that project never runs there.
+- The player's facilities get no subsidy; whether that is intended is undecided.
+- Q-030, the price index basket, is deferred by the user.
+
+Phases, in the proposed order: P16, P17, P15, P14, P18 (before front-end work), then P12c and P19.

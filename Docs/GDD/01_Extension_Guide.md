@@ -1,3 +1,10 @@
+---
+doc: EXTENSION-GUIDE
+title: How to extend the simulation
+status: final
+updated: 2026-11-01
+---
+
 # 01 — Extension Guide
 
 How to add features without editing existing systems.

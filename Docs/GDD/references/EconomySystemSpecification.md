@@ -1,3 +1,10 @@
+---
+doc: REF-ECONOMY-SPEC
+title: Outside reference, data-oriented economy backend
+status: final
+updated: 2026-10-31
+---
+
 # [기술 보고서] 고성능 데이터 지향 경제 시뮬레이션 백엔드 아키텍처
 **High-Performance Data-Oriented Economic Simulation Backend Architecture**
 

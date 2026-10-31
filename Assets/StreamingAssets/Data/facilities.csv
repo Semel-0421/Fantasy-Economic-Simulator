@@ -4,5 +4,13 @@ barley_farm,Primary,farm_barley,0
 iron_mine,Primary,mine_iron,1
 copper_mine,Primary,mine_copper,1
 sheep_pasture,Primary,pasture_wool,0
-smithy,Secondary,smith_tools,0
+mill,Secondary,mill_flour,0
+malthouse,Secondary,malt_barley,0
+iron_smelter,Secondary,smelt_iron,0
+copper_smelter,Secondary,smelt_copper,0
+spinnery,Secondary,spin_yarn,0
+smithy,Tertiary,smith_tools,0
+coppersmith,Tertiary,smith_cookware,0
+tailor,Tertiary,sew_clothes,0
+brewery,Tertiary,brew_ale,0
 bakery,Tertiary,bake_bread,0

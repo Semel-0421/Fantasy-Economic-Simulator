@@ -114,7 +114,7 @@ namespace FES.Agents
             for (int n = 0; n < _wages.Length; n++)
             {
                 if (_wages[n] == 0) continue;
-                MoneyLedger.PayNationHouseholds(_world, n, _wages[n]);
+                MoneyLedger.PayNationWages(_world, _config, n, _wages[n]);
                 _wages[n] = 0;
             }
         }

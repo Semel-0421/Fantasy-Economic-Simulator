@@ -12,6 +12,8 @@ namespace FES.Agents
         public const int Defense = SimOrder.Late + 7;
         public const int Records = SimOrder.Late + 10;
         public const int IncomeTax = SimOrder.Late + 15;
+        public const int Nobles = SimOrder.Late + 16;
+        public const int Migration = SimOrder.Late + 17;
         public const int StateProjects = SimOrder.Late + 18;
         public const int Subsidies = SimOrder.Late + 19;
         public const int Households = SimOrder.Late + 20;

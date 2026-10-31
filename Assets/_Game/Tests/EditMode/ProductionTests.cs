@@ -88,8 +88,28 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var facilities = sim.World.Get<FacilityTable>();
             long idle = sim.Database.Config.FacilityStartCash[(int)IndustryTier.Tertiary] - 10 * Upkeep(sim, IndustryTier.Tertiary);
+            var markets = sim.World.Get<FES.Economy.MarketStore>();
+            foreach (int f in FacilitiesOf(sim, IndustryTier.Tertiary))
+                foreach (var line in sim.Database.Facilities[facilities.DefIndex[f]].Recipe.Inputs)
+                    if (markets.TryFindCell(facilities.Node[f], line.Good, out int cell)) markets.Stock[cell] = 100000;
             for (int t = 0; t < 10; t++) sim.AdvanceTurn();
             Assert.IsTrue(FacilitiesOf(sim, IndustryTier.Tertiary).Any(f => facilities.Cash[f] != idle));
+        }
+
+        [Test]
+        public void FacilityShortOfInput_BidsItsPriceUp()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var markets = sim.World.Get<FES.Economy.MarketStore>();
+            int f = FacilitiesOf(sim, IndustryTier.Tertiary).First();
+            var input = sim.Database.Facilities[facilities.DefIndex[f]].Recipe.Inputs[0].Good;
+            Assert.IsTrue(markets.TryFindCell(facilities.Node[f], input, out int cell));
+            markets.Stock[cell] = 0;
+            int before = markets.Price[cell];
+            sim.AdvanceTurn();
+            Assert.Greater(markets.Price[cell], before);
+            Assert.AreEqual(0, markets.InputBid[cell], "a price update uses the bid up");
         }
 
         [Test]

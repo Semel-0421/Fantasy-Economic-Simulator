@@ -158,7 +158,7 @@ namespace FES.Agents
                 long paid = Math.Min(_config.TaxHousehold.MulInt(Math.Max(0, _households.YearIncome(node))), Math.Max(0, _households.Cash[node]));
                 if (paid <= 0) continue;
                 _households.Cash[node] -= paid;
-                MoneyLedger.ToState(_world, node, paid);
+                Nobles.CollectTax(_world, _config, node, paid);
                 _books.LastHouseholds[_nodes.Continent[node]] += paid;
                 households += paid;
             }
@@ -184,7 +184,7 @@ namespace FES.Agents
         {
             long paid = Math.Min(_config.TaxCompany.MulInt(Math.Max(0, profit)), Math.Max(0, cash));
             if (paid <= 0) return 0;
-            MoneyLedger.ToState(_world, node, paid);
+            Nobles.CollectTax(_world, _config, node, paid);
             _books.LastCompanies[_nodes.Continent[node]] += paid;
             return paid;
         }

@@ -34,7 +34,7 @@ namespace FES.Economy
         /// <param name="anchorMulRaw">Multiplier on the base price for the anchor (events x currency inflation).</param>
         /// <param name="elapsedTurns">Turns since this market last repriced; rates scale with it so slow tiers keep pace.</param>
         public static void Step(in PriceParams p, int basePrice, long anchorMulRaw, int elapsedTurns,
-            ref int price, ref int prevPrice, ref int stock, ref int supply, ref int demand)
+            ref int price, ref int prevPrice, ref int stock, ref int supply, ref int demand, int inputBid = 0)
         {
             long s = supply;
             long d = demand;
@@ -43,8 +43,9 @@ namespace FES.Economy
             // Pressure in [-1, 1]: positive when demand outruns supply (stock counts partially as supply).
             // Integer division truncates toward zero, which is symmetric.
             long effectiveSupply = s + Fx.RoundShift(st * p.StockPressureRaw);
-            long total = d + effectiveSupply;
-            long pressureRaw = total == 0 ? 0 : ((d - effectiveSupply) << Fx.FractionBits) / total;
+            long wanted = d + inputBid;
+            long total = wanted + effectiveSupply;
+            long pressureRaw = total == 0 ? 0 : ((wanted - effectiveSupply) << Fx.FractionBits) / total;
 
             long maxStep = p.MaxStepRaw * elapsedTurns;
             long stepRaw = Fx.RoundShift(pressureRaw * p.AdjustRaw) * elapsedTurns;
@@ -85,6 +86,7 @@ namespace FES.Economy
     [BurstCompile(CompileSynchronously = true)]
     public struct PriceUpdateJob : IJobParallelFor
     {
+        [NativeDisableParallelForRestriction] public NativeArray<int> InputBid;
         public PriceParams Params;
         public DemandParams Consumption;
         public int CategoryCount;
@@ -219,7 +221,8 @@ namespace FES.Economy
 
                 int price = Price[c], prev = PrevPrice[c], stock = Stock[c], supply = Supply[c], demand = Demand[c];
                 PriceKernel.Step(Params, GoodBasePrice[good], valueMul, elapsed,
-                    ref price, ref prev, ref stock, ref supply, ref demand);
+                    ref price, ref prev, ref stock, ref supply, ref demand, InputBid[c]);
+                InputBid[c] = 0;
                 Price[c] = price;
                 PrevPrice[c] = prev;
                 Stock[c] = stock;

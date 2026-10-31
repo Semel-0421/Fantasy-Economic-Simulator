@@ -143,6 +143,7 @@ namespace FES.Agents
         HouseholdCash _households;
         PurseState _purses;
         int[] _nationsOnContinent;
+        WorldState _world;
 
         public string Id => "agents.state_spending";
         public SimPhase Phase => SimPhase.Finance;
@@ -158,6 +159,7 @@ namespace FES.Agents
             _population = ctx.World.Get<HouseholdState>();
             _households = ctx.World.Get<HouseholdCash>();
             _purses = ctx.World.Get<PurseState>();
+            _world = ctx.World;
             _nationsOnContinent = new int[_nodes.ContinentCount];
             for (int n = 0; n < _banks.NationCount; n++) _nationsOnContinent[_nodes.Continent[_banks.NationNode(n)]]++;
         }
@@ -185,14 +187,7 @@ namespace FES.Agents
             foreach (int node in nodes) people += _population.Population[node];
             if (people <= 0) return;
             _bank.Reserve[nation] -= amount;
-            long given = 0;
-            foreach (int node in nodes)
-            {
-                long wage = amount * _population.Population[node] / people;
-                _households.Cash[node] += wage;
-                given += wage;
-            }
-            _households.Cash[_banks.NationNode(nation)] += amount - given;
+            MoneyLedger.PayNationWages(_world, _config, nation, amount);
         }
     }
 }

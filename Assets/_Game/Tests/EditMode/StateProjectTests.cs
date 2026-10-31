@@ -39,7 +39,7 @@ namespace FES.Tests
         [Test]
         public void Projects_AreFundedAndFinished_AndConserveMoney()
         {
-            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nbank.state_reserve_target_permille,0\nstate.project_weeks,4\nstate.subsidy_max_per_nation,0\n"), 42).Build();
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nfacility.bankrupt_weeks,100000\nbank.npc_max_reserve_share_permille,0\nbank.state_reserve_target_permille,0\nstate.project_weeks,4\nstate.subsidy_max_per_nation,0\n"), 42).Build();
             var facilities = sim.World.Get<FacilityTable>();
             int before = facilities.Count;
             int finished = 0;
@@ -151,6 +151,8 @@ namespace FES.Tests
         public void Population_FollowsNecessitySupply()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MigrationMaxShare = Fx.Zero;
+            sim.Database.Config.PopulationUrbanPenalty = Fx.Zero;
             var households = sim.World.Get<HouseholdState>();
             var nodes = sim.World.Get<NodeTable>();
             var config = sim.Database.Config;

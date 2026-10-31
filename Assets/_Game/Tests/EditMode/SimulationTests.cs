@@ -35,7 +35,7 @@ namespace FES.Tests
             int villages = nodes.LevelCount(WorldLevel.Village), cities = nodes.LevelCount(WorldLevel.City);
             var facilities = sim.World.Get<FacilityTable>();
             // A slot whose inputs nobody makes nearby goes to a primary producer, so every slot is filled (P13d).
-            Assert.AreEqual(villages * (4 + 2) + cities * 4, facilities.Count);
+            Assert.AreEqual(villages * 4 + cities * (6 + 8), facilities.Count);
             int primaries = Enumerable.Range(0, facilities.Count).Count(f => sim.Database.Facilities[facilities.DefIndex[f]].Tier == IndustryTier.Primary);
             Assert.GreaterOrEqual(primaries, villages * 4);
             Assert.Greater(facilities.Count, primaries);

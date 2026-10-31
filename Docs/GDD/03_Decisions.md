@@ -369,6 +369,52 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-079 Free people and rural-urban migration
+- Date: 2026-11-01
+- Decision: town labor markets offer better jobs, free people may move, and villagers leave for towns, on real cases. Urbanization takes about
+  fifteen years. Half of village wages still leaves (DEC-077).
+- Reason: the user's decision; earlier the start population was urban with no movement
+- Real cases used: Harris-Todaro (people weigh wage times the chance of a job); England and Wales about 35% urban in 1801 and 77% in 1901; town air frees after a
+  year and a day; the English labor statutes of 1349 and 1351 (lords resist movement); Prussia's edict of 1807 taking effect in 1810; Russia's 49 years of redemption from 1861; the urban penalty.
+- [Draft] Details by Claude, numbers placeholders. Start: 65% rural (nation 0.7M, regions 0.35M, cities 0.525M, villages 0.65M), demand the same per head. Villages 20% free. Up to 8%
+  of a village moves a year on the widest gap; jobs are 100,000 per facility level; bound people run away at 1% a year, 3% from a lord who broke the contract. 20% of town jobs open brings emancipation: after 3
+  years 10% more of each village is freed yearly, paying 5% of income to the noble for 49 years. Migrants carry their share of cash. Towns grow 0.3% a year less. Emancipation is automatic; the player cannot yet enact or lobby it.
+- Impact: SYS-STATE-ECONOMY, SYS-MARKETS
+
+### DEC-078 A facility short of inputs bids their price up
+- Date: 2026-11-01
+- Decision: what a facility could not buy counts as demand in its market, so the price rises and merchants bring the input.
+- Reason: measured deadlock: raw goods piled in villages, while city prices stayed low because unmet input needs left no trace; the user's go-ahead
+- [Draft] Details by Claude: it bids only while it could pay and the output is worth more than the inputs; without this limit prices ran away and overflowed within three years.
+- The bid is kept apart from demand: it moves the price only, so it neither crowds households out nor removes unpaid stock.
+- Impact: SYS-PRODUCTION, SYS-MERCHANTS
+
+### DEC-077 Village wages partly leave for towns; a supply ladder of processing facilities
+- Date: 2026-11-01
+- Decision: part of a village facility's wages goes to the nation's towns, as absentee landlords' rents. Processing facilities
+  in several categories stand at city level and above, completing a supply ladder.
+- Reason: the user's decision; villages hoarded while towns lacked cash
+- [Draft] Details by Claude, all numbers placeholders: 50% of village wages leaves, split by DEC-076's wage weights. Ladder: wheat to
+  flour to bread; barley to malt to ale; iron ore to bars to tools; copper ore to bars to cookware; wool to yarn to clothes. Raw
+  and half-made goods have no household demand, except wheat at 10. Cities have 6 secondary and 8 tertiary slots.
+- [Draft] Later, by the user: raw output doubled, processing up 50%. Claude scaled processing inputs by the same 50% to keep recipe ratios.
+- Impact: SYS-PRODUCTION, SYS-MARKETS
+
+### DEC-076 Ten-million continents, city industry, town wages, and nobles under bilateral contracts
+- Date: 2026-11-01
+- Decision: a continent holds ten million people, with fewer in villages and most in cities. Cities grow industries that
+  work inputs. Wages rise with development at city level and above. Noble and royal houses manage villages and cities; the
+  royal blood collects a city's tax first; lord and vassal are bound by a two-way contract, as in European feudalism.
+- Reason: the user's decision, after measuring towns short of both income and goods
+- [Draft] Details by Claude, all numbers placeholders. Sample world per continent: nation node 2.5M, regions 1M, cities
+  1.25M, villages 50k, the continent node 1,000 (it has no market). Demand weights follow people (nation 8, region 3.2, city
+  4, village 0.16). Villages have no tertiary slots; cities have 8. Wage weights: above region 3, region 2.5, city 2,
+  village 1, for merchant and public wages and for what royal houses spend. Each nation's first city is the royal domain. Income
+  tax: royal house 10% first, then the city's holder 10%, then the village's noble 10%, the state the rest. Yearly a
+  vassal pays 20% of its purse as aid and its lord owes 50% of that back as protection, paid to the vassal's households; a
+  lord who cannot pay it in full loses that vassal's aid for a year. Houses spend 2% of their purse a week on their fiefs.
+- Impact: SYS-STATE-ECONOMY, SYS-MARKETS, SYS-PRODUCTION
+
 ### DEC-075 The map becomes hexagonal tiles, generated from the seed (before front-end work)
 - Decision: like Civilization, the map is a grid of hexagonal tiles; the map and its nodes are generated from the random
   seed. To be taken up before front-end development; nothing is built yet.

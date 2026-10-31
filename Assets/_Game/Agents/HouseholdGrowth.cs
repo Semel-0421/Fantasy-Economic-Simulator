@@ -25,6 +25,7 @@ namespace FES.Agents
         SimulationConfig _config;
         HouseholdState _households;
         HouseholdCash _cash;
+        NodeTable _nodes;
 
         public string Id => "agents.households";
         public SimPhase Phase => SimPhase.Finance;
@@ -35,6 +36,7 @@ namespace FES.Agents
             _config = ctx.Services.Get<GameDatabase>().Config;
             _households = ctx.World.Get<HouseholdState>();
             _cash = ctx.World.Get<HouseholdCash>();
+            _nodes = ctx.World.Get<NodeTable>();
         }
 
         public void Execute(SimContext ctx)
@@ -59,6 +61,7 @@ namespace FES.Agents
             long wanted = _households.NecessityWanted[node];
             var change = _config.PopulationBaseGrowth;
             if (wanted > 0) change += _config.PopulationGrowthResponse * (Fx.FromRatio(_households.NecessityMet[node], wanted) - Fx.One);
+            if (_nodes.LevelOf(node) != WorldLevel.Village) change -= _config.PopulationUrbanPenalty;
             return Fx.Clamp(change, -_config.PopulationMaxDecline, _config.PopulationMaxGrowth);
         }
 

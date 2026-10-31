@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-11-01
+- [03_Decisions.md, systems/SYS_STATE_ECONOMY.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-079 (free people, migration, emancipation) and measurement
+- [03_Decisions.md, 04_Roadmap.md] DEC-078 (input bids) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-077 (absentee wages, supply ladder) and measurement; DEC-076 failure count corrected (3, not 51)
+- [03_Decisions.md, systems/SYS_STATE_ECONOMY.md, 04_Roadmap.md] DEC-076 (population, city industry, town wages, nobles) and its measurement
 - [systems/SYS_STATE_ECONOMY.md] New: labor, tax, defense, land development and subsidy rules gathered from DEC-070 to DEC-074
 - [systems/SYS_MARKETS.md] Population numbers corrected to DEC-074 (were DEC-072's); labor and tax moved out
 - [00_Architecture.md] Pipeline, cost and known gaps brought up to date; system order table

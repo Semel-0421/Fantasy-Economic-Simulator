@@ -9,3 +9,26 @@ tier.village.period,1
 player.start_cash,500
 cargo.cart.max_weight,400
 cargo.cart.max_size,300
+# A continent of ten million starting 65% rural, as England and Wales in 1801; migration fills the towns (DEC-079). Node levels carry 1 nation, 2 regions, 4 cities, 10 villages.
+households.continent.population,1000
+households.nation.population,700000
+households.region.population,350000
+households.city.population,525000
+households.village.population,650000
+households.continent.income_permille,5
+households.nation.income_permille,5
+households.region.income_permille,5
+households.city.income_permille,4
+households.village.income_permille,2
+# Cities work inputs; villages only raise them (DEC-076).
+producers.village.tertiary,0
+producers.city.secondary,6
+producers.city.tertiary,8
+# Demand follows people: the same per head at every level.
+demand.nation.weight_permille,5330
+demand.region.weight_permille,2670
+demand.city.weight_permille,4000
+demand.village.weight_permille,4950
+# Rural-urban migration over about fifteen years (DEC-079).
+migration.max_share_permille,80
+households.urban_penalty_permille,3

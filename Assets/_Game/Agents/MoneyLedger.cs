@@ -56,8 +56,9 @@ namespace FES.Agents
             for (int p = 0; p < purses.Count; p++)
                 if (purses.ContinentOf(p) == continent) money += purses.Float[p];
             var households = world.Get<HouseholdCash>();
+            var houses = world.Get<NobleState>();
             for (int node = 0; node < nodes.Count; node++)
-                if (nodes.Continent[node] == continent) money += households.Cash[node] + households.Spent[node];
+                if (nodes.Continent[node] == continent) money += households.Cash[node] + households.Spent[node] + houses.Cash[node];
             return money;
         }
 
@@ -151,6 +152,34 @@ namespace FES.Agents
             {
                 if (population[node] <= 0) continue;
                 long share = amount * population[node] / people;
+                cash[node] += share;
+                given += share;
+            }
+            cash[first] += amount - given;
+        }
+
+        /// <summary>Wages for a nation's households: by population, weighted so towns earn more per head (DEC-076).</summary>
+        public static void PayNationWages(WorldState world, SimulationConfig config, int nation, long amount)
+        {
+            var levels = world.Get<NodeTable>();
+            var nodes = world.Get<PurseState>().NationNodes[nation];
+            var population = world.Get<HouseholdState>().Population;
+            var cash = world.Get<HouseholdCash>().Cash;
+            long total = 0;
+            int first = -1;
+            foreach (int node in nodes)
+            {
+                if (population[node] <= 0) continue;
+                total += config.LevelWageWeight[levels.Level[node]].MulInt(population[node]);
+                if (first < 0) first = node;
+            }
+            if (first < 0) return;
+            long given = 0;
+            foreach (int node in nodes)
+            {
+                if (population[node] <= 0) continue;
+                long share = amount / total * config.LevelWageWeight[levels.Level[node]].MulInt(population[node])
+                    + amount % total * config.LevelWageWeight[levels.Level[node]].MulInt(population[node]) / total;
                 cash[node] += share;
                 given += share;
             }

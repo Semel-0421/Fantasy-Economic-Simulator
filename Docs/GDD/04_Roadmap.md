@@ -92,13 +92,38 @@ household spending in years 6 to 10 of 1,618k a year; 295 NPC defaults; 130 merc
 (the scale test logs this as `[FES scale settled]`); running aggregate merchants on the market tier cadence would cut it if
 mobile needs it.
 
+After DEC-076 (ten sample years): 20.0M people falling to 16.6M, about -2.2% a year, which is worse. Year 10 supply: nation 14%,
+region 27%, city 30%, village 132%. Household cash: villages 5,574k, all towns 1,500k. 3 facility failures, 153 merchant
+bankruptcies, no broken contracts. Villages are full and hoard, while town households lack cash.
+
+After DEC-077 (ten sample years): 16.7M people, about -1.7% a year. Year 10 supply: nation 13%, region 29%, city 47%, village 62%.
+Household cash: villages 3,414k, towns 5,865k. Household spending 1,301k in year 10, below 2,079k. 12 facility failures, 161
+merchant bankruptcies, no broken contracts. Spending fell and the population still shrinks.
+
+After DEC-078 (ten sample years): 16.4M people, about -1.8% a year. Year 10 supply: nation 9%, region 26%, city 37%, village 60%, noisy
+from year to year. Household spending 1,720k (1,301k before). Raw prices in cities now rise and fall, clothes about 200. 13 facility
+failures, 156 merchant bankruptcies. The population still shrinks.
+
+With bids apart from demand: year 1 household spending 678k (289k with bids in demand). Year 10: 16.4M people, about -1.8% a year; supply nation 11%, region 27%, city 39%, village 70%;
+household cash nation 2,969k, region 747k, city 1,135k, village 4,007k; spending 1,642k; 15 facility failures, 158 merchant bankruptcies. Nation households hold cash with goods absent. Full-scale turn cost not measured.
+
+With raw output doubled and processing throughput up 50% (inputs and outputs): year 10 16.8M people, about -1.7% a year; supply nation 16%, region 25%, city 43%, village 90%; spending 1,743k; 16 facility failures, 150 merchant bankruptcies. Village stock value 15,211k and city stock 2,097k keep growing; region prices stay below city prices.
+
+With migration (DEC-079, fifteen sample years): urban share 35% to 72%; income per head village 35 to 226, city 126 to 237 (thousandths, so the gap closes as Harris-Todaro expects); both nations emancipate in year 2.
+Year 15: 14.9M people from 20.0M, about -2% a year, which is worse; supply nation 17%, region 25%, city 24%, village 43%; spending 2,848k; village cash 6,176k; 15 facility failures, 183 merchant bankruptcies.
+
 ## Remaining work
 Order agreed: refactoring, then balance, then the phases.
 
 Balance
-- Population falls 0.8 to 1.2% a year; Europe's +0.8% and the famine's -4% are from memory and unchecked (DEC-074).
-- The bank reserve keeps growing, probably from minted coins going to reserves; the mint path is not isolated.
-- Households' idle cash grew before subsidies; measure it again.
+- Population falls 0.8 to 1.2% a year. Year 10 necessity supply by level: nation 4%, region 10%, city 18%, village 89%.
+  With unlimited town cash (experiment) region and city reach only about 45% and nation 0%, so towns lack both income and goods.
+- Europe's +0.8% fits 180 million in 1800 to 455 million in 1914. Ireland fell 21% in 1841-1851, about -2.3% a year; the
+  -4% cap is the famine years' peak by estimate, not a sourced figure.
+- The bank reserve's growth is not a leak: minted coins go to reserves, the target follows the coin supply, and the excess
+  stays near 300k per continent.
+- Idle cash: continent households hold about 2.5M and have no market demand; groups grow to about 4.2M with nothing to
+  spend on until P16.
 - About 140 [Draft] numbers remain; they are settled during balancing.
 
 Gaps

@@ -100,6 +100,8 @@ namespace FES.Agents
         HouseholdCash _households;
         IncomeTaxState _books;
         NativeArray<long> _floatReserve;
+        NativeArray<long> _nodeWageAway;
+        NativeArray<long> _nodeWagesAway;
 
         public string Id => SystemId;
         public SimPhase Phase => SimPhase.Production;
@@ -137,6 +139,12 @@ namespace FES.Agents
             _playerOutputCell = new NativeList<int>(Allocator.Persistent);
             _playerOutputQuantity = new NativeList<int>(Allocator.Persistent);
             _bankrupt = new NativeList<int>(Allocator.Persistent);
+            var nodeTable = ctx.World.Get<NodeTable>();
+            _nodeWageAway = new NativeArray<long>(nodeTable.Count, Allocator.Persistent);
+            _nodeWagesAway = new NativeArray<long>(nodeTable.Count, Allocator.Persistent);
+            for (int n = 0; n < nodeTable.Count; n++)
+                if (nodeTable.LevelOf(n) == WorldLevel.Village && ctx.World.Get<NodeBanks>().NationOf(n) >= 0)
+                    _nodeWageAway[n] = _db.Config.VillageWageAwayShare.Raw;
             _inputCost = new NativeList<long>(Allocator.Persistent);
             _groupDividend = new NativeList<long>(Allocator.Persistent);
             _groupTable = ctx.World.Get<GroupTable>();
@@ -213,6 +221,7 @@ namespace FES.Agents
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
                 Demand = _markets.Demand,
+                InputBid = _markets.InputBid,
                 PlayerOutputFacility = _playerOutputFacility,
                 PlayerOutputGood = _playerOutputGood,
                 PlayerOutputCell = _playerOutputCell,
@@ -243,9 +252,17 @@ namespace FES.Agents
                 FacilityInputCost = _inputCost.AsArray(),
                 GroupDividend = _groupDividend.AsArray(),
                 FacilityDividendsYear = _books.FacilityDividends.AsArray(),
+                NodeWageAwayRaw = _nodeWageAway,
+                NodeWagesAway = _nodeWagesAway,
             };
             if (ForceManaged) upkeep.Execute();
             else upkeep.Schedule().Complete();
+            for (int n = 0; n < _nodeWagesAway.Length; n++)
+            {
+                if (_nodeWagesAway[n] == 0) continue;
+                MoneyLedger.PayNationWages(_world, _db.Config, _purses.NodeFloat[n], _nodeWagesAway[n]);
+                _nodeWagesAway[n] = 0;
+            }
             PassOnDividends();
 
             foreach (int f in _bankrupt) GoBankrupt(ctx, f);
@@ -398,6 +415,8 @@ namespace FES.Agents
 
         public void Dispose()
         {
+            _nodeWageAway.DisposeIfCreated();
+            _nodeWagesAway.DisposeIfCreated();
             if (_lineStart.IsCreated) _lineStart.Dispose();
             if (_lineCell.IsCreated) _lineCell.Dispose();
             if (_lineGood.IsCreated) _lineGood.Dispose();

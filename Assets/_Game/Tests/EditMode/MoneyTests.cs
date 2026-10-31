@@ -151,10 +151,8 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var households = sim.World.Get<HouseholdCash>();
             var city = Node(sim, City);
-            long cash = households.Cash.Sum();
-            for (int t = 0; t < 4; t++) sim.AdvanceTurn();
-            // They spend more than the wages they earn until dividends and state spending come (P13c).
-            Assert.Less(households.Cash.Sum(), cash);
+            for (int t = 0; t < 12; t++) sim.AdvanceTurn();
+            Assert.Greater(households.SpentYear.Sum(), 0);
             Assert.Greater(households.Desired[city.Value], 0);
             AssertConserved(sim, "after spending");
         }
@@ -162,8 +160,8 @@ namespace FES.Tests
         [Test]
         public void Households_WithoutCash_BuyLess()
         {
-            using var broke = TestWorlds.BuildSample();
-            using var paid = TestWorlds.BuildSample();
+            using var broke = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nlabor.village_wage_away_permille,0\n"), 42).Build();
+            using var paid = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nlabor.village_wage_away_permille,0\n"), 42).Build();
             var city = Node(broke, City);
             broke.AdvanceTurn();
             paid.AdvanceTurn();
@@ -172,9 +170,19 @@ namespace FES.Tests
             broke.World.Get<PurseState>().ChangeFloat(city.Value, households.Cash[city.Value]);
             households.Cash[city.Value] = 0;
             long Met(GameSimulation sim) => sim.World.Get<HouseholdState>().NecessityMet[city.Value];
+            foreach (var sim in new[] { broke, paid })
+            {
+                var markets = sim.World.Get<MarketStore>();
+                int end = markets.MarketCellStart[city.Value] + markets.MarketCellCount[city.Value];
+                for (int c = markets.MarketCellStart[city.Value]; c < end; c++) markets.Stock[c] = 100000;
+            }
             long brokeMet = Met(broke), paidMet = Met(paid);
-            broke.AdvanceTurn();
-            paid.AdvanceTurn();
+            // The week's budget follows what they wanted last week, so it binds from the second week.
+            for (int t = 0; t < 3; t++)
+            {
+                broke.AdvanceTurn();
+                paid.AdvanceTurn();
+            }
             Assert.Less(Met(broke) - brokeMet, Met(paid) - paidMet);
             Assert.GreaterOrEqual(households.Cash[city.Value], 0);
             AssertConserved(broke, "broke households");

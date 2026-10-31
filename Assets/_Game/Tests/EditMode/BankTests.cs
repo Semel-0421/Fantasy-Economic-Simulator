@@ -19,7 +19,8 @@ namespace FES.Tests
         // paying tolls into them, reserves move only by what a test does.
         static GameSimulation Build(ulong seed = 42) => SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
             "key,value\nroad.upkeep,0\nbank.npc_max_reserve_share_permille,0\nfinance.event_chance_permille,0\npolicy.npc_lobby_share_permille,0\n"
-            + "bank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), seed)
+            + "bank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"
+            + "noble.royal_share_permille,0\nnoble.city_share_permille,0\nnoble.village_share_permille,0\n"), seed)
             .ConfigureServices(s => s.Set<IMerchantBehavior>(new IdleMerchantBehavior())).Build();
 
         static NodeId Node(GameSimulation sim, string key)

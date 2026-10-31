@@ -39,6 +39,8 @@ namespace FES.Agents
             builder.World.Add(new LaborState(purses.Count, db.Config.LaborBaseEmployment));
             builder.World.Add(new IncomeTaxState(nodes.ContinentCount));
             builder.World.Add(new DevelopmentState(nodes.Count, builder.World.Get<RouteTable>().Count, banks.NationCount, purses.Count, builder.World.Get<MarketStore>().GoodBasePrice.Length));
+            builder.World.Add(new NobleState(nodes));
+            builder.World.Add(new MigrationState(nodes, banks.NationCount, db.Config));
             builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
             builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
 
@@ -83,6 +85,8 @@ namespace FES.Agents
             builder.AddSystem(new DefenseSystem());
             builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new IncomeTaxSystem());
+            builder.AddSystem(new NobleSystem());
+            builder.AddSystem(new MigrationSystem());
             builder.AddSystem(new StateProjectSystem());
             builder.AddSystem(new SubsidySystem());
             builder.AddSystem(new HouseholdGrowthSystem());
@@ -115,9 +119,11 @@ namespace FES.Agents
 
             var made = new HashSet<int>[nodes.Count];
             for (int n = 0; n < nodes.Count; n++) made[n] = new HashSet<int>();
-            for (int n = 0; n < nodes.Count; n++)
+            // Nodes run from the top down, so a town's own slots see the village output below only on a second look.
+            for (int pass = 0; pass < 2; pass++)
+            for (int n = nodes.Count - 1; n >= 0; n--)
                 for (int t = 0; t < IndustryTiers.Count; t++)
-                    for (int k = 0; t == (int)IndustryTier.Primary && k < db.Config.ProducersPerNode[nodes.Level[n], t]; k++)
+                    for (int k = 0; t != (int)IndustryTier.Tertiary && k < db.Config.ProducersPerNode[nodes.Level[n], t]; k++)
                     {
                         var def = Draw(defsByTier, made, n, t, k, seed);
                         if (def == null) continue;

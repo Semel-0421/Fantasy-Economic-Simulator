@@ -42,9 +42,11 @@ namespace FES.Economy
         public NativeArray<int> Stock;
         public NativeArray<int> Supply;
         public NativeArray<int> Demand;
+        /// <summary>Per cell: inputs facilities could not buy since the last price update. It moves the price but trades nothing (DEC-078).</summary>
+        public NativeArray<int> InputBid;
 
         public string Key => "economy.markets";
-        public int Version => 1;
+        public int Version => 2;
 
         internal MarketStore(int marketCount, int cellCount, int goodCount)
         {
@@ -64,6 +66,7 @@ namespace FES.Economy
             Stock = new NativeArray<int>(cellCount, Allocator.Persistent);
             Supply = new NativeArray<int>(cellCount, Allocator.Persistent);
             Demand = new NativeArray<int>(cellCount, Allocator.Persistent);
+            InputBid = new NativeArray<int>(cellCount, Allocator.Persistent);
         }
 
         public bool Carries(int market, GoodId good) => TryFindCell(market, good, out _);
@@ -101,6 +104,7 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, Stock);
             NativeIO.WriteArray(writer, Supply);
             NativeIO.WriteArray(writer, Demand);
+            NativeIO.WriteArray(writer, InputBid);
         }
 
         public void Read(BinaryReader reader)
@@ -110,6 +114,7 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, Stock);
             NativeIO.ReadArray(reader, Supply);
             NativeIO.ReadArray(reader, Demand);
+            NativeIO.ReadArray(reader, InputBid);
         }
 
         /// <summary>Approximate native memory in bytes, for budgeting.</summary>
@@ -132,6 +137,7 @@ namespace FES.Economy
             Stock.DisposeIfCreated();
             Supply.DisposeIfCreated();
             Demand.DisposeIfCreated();
+            InputBid.DisposeIfCreated();
         }
     }
 

@@ -369,6 +369,10 @@ namespace FES.Simulation
         /// <summary>The continent's international bank, or <see cref="NodeId.None"/>.</summary>
         public NodeId InternationalBankOf(int continent) => new NodeId(_banks.InternationalBankOf(continent));
         public long PlayerDeposit(NodeId nation) => _bank.PlayerDeposit[_banks.NationIndex(nation.Value)];
+        /// <summary>The purse of the noble or royal house seated at a node.</summary>
+        /// <summary>The share of a node's people free to leave.</summary>
+        public Fx FreeShare(NodeId node) => Fx.FromRaw(_world.Get<MigrationState>().FreeShare[node.Value]);
+        public long HousePurse(NodeId node) => _world.Get<NobleState>().Cash[node.Value];
         public long BankReserve(NodeId nation) => _bank.Reserve[_banks.NationIndex(nation.Value)];
         public void GetLoans(List<LoanInfo> into) => BankSystem.CollectLoans(_loans, _banks, into);
         public void GetAuctions(List<AuctionInfo> into) => BankSystem.CollectAuctions(_auctions, _banks, into);

@@ -19,6 +19,8 @@ namespace FES.Agents
     [BurstCompile(CompileSynchronously = true)]
     public struct ProductionJob : IJob
     {
+        /// <summary>Per cell: <see cref="MarketStore.InputBid"/>.</summary>
+        public NativeArray<int> InputBid;
         public ulong Seed;
         public int Turn;
         public uint Stream;
@@ -93,7 +95,24 @@ namespace FES.Agents
                     }
                     cost += need * Price[cell];
                 }
-                if (!inStock || cost > FacilityCash[f]) continue;
+                if (!inStock)
+                {
+                    // What it could not buy still bids the price up, so merchants bring the input here, as long as
+                    // it could pay and the output would be worth the inputs; that keeps the bid from running away (DEC-078).
+                    long outputValue = 0;
+                    for (int k = start; k < end; k++)
+                        if (LineIsInput[k] == 0 && LineCell[k] >= 0) outputValue += Fx.MulIntRaw(LineQuantity[k], output.Raw) * Price[LineCell[k]];
+                    if (inputCost >= outputValue || inputCost > FacilityCash[f]) continue;
+                    for (int k = start; k < end && LineIsInput[k] != 0; k++)
+                    {
+                        int cell = LineCell[k];
+                        if (cell < 0) continue;
+                        long need = Fx.MulIntRaw(LineQuantity[k], output.Raw);
+                        if (Stock[cell] < need) InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + need - Stock[cell]);
+                    }
+                    continue;
+                }
+                if (cost > FacilityCash[f]) continue;
                 FacilityCash[f] -= cost;
                 Float[NodeFloat[FacilityNode[f]]] += cost;
 
@@ -188,6 +207,10 @@ namespace FES.Agents
         public NativeArray<long> GroupDividend;
         /// <summary>Per facility: dividends paid this year, which the income tax counts as profit.</summary>
         public NativeArray<long> FacilityDividendsYear;
+        /// <summary>Per node, raw Fx: the share of wages paid there that leaves for the nation's towns.</summary>
+        [ReadOnly] public NativeArray<long> NodeWageAwayRaw;
+        /// <summary>Per node: this week's wages leaving it.</summary>
+        public NativeArray<long> NodeWagesAway;
 
         public void Execute()
         {
@@ -195,7 +218,9 @@ namespace FES.Agents
             {
                 long upkeep = DefUpkeep[FacilityDefIndex[f]] * FacilityLevel[f];
                 FacilityCash[f] -= upkeep;
-                HouseholdCash[FacilityNode[f]] += upkeep;
+                long away = Fx.MulIntRaw(upkeep, NodeWageAwayRaw[FacilityNode[f]]);
+                HouseholdCash[FacilityNode[f]] += upkeep - away;
+                NodeWagesAway[FacilityNode[f]] += away;
                 long buffer = (upkeep + FacilityInputCost[f]) * DividendBufferWeeks;
                 if (FacilityOwner[f] == OwnerIds.Npc && FacilityCash[f] > buffer)
                 {

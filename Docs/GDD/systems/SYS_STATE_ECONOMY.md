@@ -66,6 +66,16 @@ flowchart LR
   necessities, under a group already making the good or a newly founded company; a guild is founded where the site's city
   has none of that trade. Player facilities get no subsidy (open, see 04_Roadmap).
 
+## Nobles and royal houses
+- [Confirmed] Noble and royal houses manage villages and cities; the royal blood collects tax first; lord and vassal owe each
+  other under a two-way contract (DEC-076).
+- [Draft] Shares, aid, protection, the domain and spending are in DEC-076; protection has no effect on route danger yet.
+
+## Free people and migration
+- [Confirmed] Town jobs pay better, free people may move, and villagers leave for towns over about fifteen years (DEC-079).
+- [Draft] Rules and real cases are in DEC-079. `MigrationState` and `MigrationSystem` hold them; off unless `migration.max_share_permille` is set.
+
 ## Implementation
+`NobleState`, `NobleSystem` and `Nobles.CollectTax` hold the houses; `MoneyLedger.PayNationWages` applies the wage weights.
 `LaborMarketSystem`, `IncomeTaxSystem`, `DefenseSystem` (with `DefensePurchaseJob`), `StateProjectSystem`, `SubsidySystem`,
 all in the Finance phase; state in `LaborState`, `IncomeTaxState`, `DevelopmentState`. Tests: `StateProjectTests`, `MoneyTests`.

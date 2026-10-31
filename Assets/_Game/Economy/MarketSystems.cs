@@ -132,6 +132,7 @@ namespace FES.Economy
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
                 Demand = _markets.Demand,
+                InputBid = _markets.InputBid,
             };
             if (ForceManaged)
             {
@@ -225,6 +226,7 @@ namespace FES.Economy
             builder.AddSystem(new ModifierFoldSystem());
             builder.AddSystem(new PricingSystem());
             builder.AddSystem(new CurrencySystem());
+            builder.AddMigration(new MarketStoreV1Migration());
             builder.AddMigration(new CurrencyStateV1Migration());
             builder.AddMigration(new CurrencyStateV2Migration());
             builder.AddMigration(new HouseholdCashV1Migration());

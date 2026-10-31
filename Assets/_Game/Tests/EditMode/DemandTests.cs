@@ -98,10 +98,10 @@ namespace FES.Tests
             var nodes = TestWorlds.Sample().ReadText("map_nodes.csv").Split('\n')
                 .Select(l => l.TrimEnd('\r')).Where(l => l.Length > 0).ToList();
             nodes[0] += ",population";
-            for (int i = 1; i < nodes.Count; i++) nodes[i] += nodes[i].StartsWith(Village + ",") ? ",1000" : ",";
+            for (int i = 1; i < nodes.Count; i++) nodes[i] += nodes[i].StartsWith(Village + ",") ? ",1300000" : ",";
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith("map_nodes.csv", string.Join("\n", nodes) + "\n"), 42).Build();
             using var plain = TestWorlds.BuildSample();
-            Assert.AreEqual(1000, sim.View.Population(Node(sim, Village)));
+            Assert.AreEqual(1300000, sim.View.Population(Node(sim, Village)));
             Assert.AreEqual(sim.Database.Config.DefaultPopulation[(int)WorldLevel.Village], sim.View.Population(Node(sim, OtherVillage)));
 
             sim.AdvanceTurn();

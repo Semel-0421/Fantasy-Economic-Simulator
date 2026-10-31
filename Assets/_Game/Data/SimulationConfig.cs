@@ -80,6 +80,34 @@ namespace FES.Data
         /// <summary>Share of its float, as the week starts, that producers may be paid from; merchants sell into the rest later in the week.</summary>
         public Fx ProducerFloatShare = Fx.FromPermille(500);
         /// <summary>Employment rate where activity matches its long-run level, and its limits.</summary>
+        /// <summary>Per node level: how much a head earns of wages split across a nation (DEC-076): towns pay more than villages.</summary>
+        public readonly Fx[] LevelWageWeight =
+            { Fx.FromPermille(3000), Fx.FromPermille(3000), Fx.FromPermille(2500), Fx.FromPermille(2000), Fx.One };
+        /// <summary>Shares of income tax taken before the state: the royal house's first, then the city's holder and the village's noble (DEC-076).</summary>
+        public Fx NobleRoyalShare = Fx.FromPermille(100);
+        public Fx NobleCityShare = Fx.FromPermille(100);
+        public Fx NobleVillageShare = Fx.FromPermille(100);
+        /// <summary>Yearly aid a vassal pays from its purse, the share of it the lord owes back as protection, and a house's weekly spending from its purse.</summary>
+        public Fx NobleAidShare = Fx.FromPermille(200);
+        public Fx NobleProtectionShare = Fx.FromPermille(500);
+        public Fx NobleSpendShare = Fx.FromPermille(20);
+        /// <summary>Share of a village facility's wages that leaves for the nation's towns, as rents to absentee landlords (DEC-077).</summary>
+        public Fx VillageWageAwayShare = Fx.FromPermille(500);
+        /// <summary>Migration (DEC-079), off at a zero limit: the most of a village's people moving a year on the widest gap; villages' free share at the start.</summary>
+        public Fx MigrationMaxShare = Fx.Zero;
+        public Fx MigrationStartFreeShare = Fx.FromPermille(200);
+        /// <summary>Yearly share of bound people who run away, and how much faster where the lord broke the contract.</summary>
+        public Fx MigrationFleeShare = Fx.FromPermille(10);
+        public int MigrationBrokenContractFactor = 3;
+        public int MigrationJobsPerFacilityLevel = 100000;
+        /// <summary>Open town jobs, as a share of jobs, that move a nation to emancipate; years before it starts (Prussia 1807 to 1810); share freed a year; redemption years (Russia, 49) and share of income paid.</summary>
+        public Fx MigrationVacancyShare = Fx.FromPermille(200);
+        public int MigrationEmancipationLeadYears = 3;
+        public Fx MigrationFreedPerYear = Fx.FromPermille(100);
+        public int MigrationRedemptionYears = 49;
+        public Fx MigrationRedemptionShare = Fx.FromPermille(50);
+        /// <summary>Lower yearly growth in towns: the urban penalty.</summary>
+        public Fx PopulationUrbanPenalty = Fx.Zero;
         public Fx LaborBaseEmployment = Fx.FromPermille(900);
         public Fx LaborMinEmployment = Fx.FromPermille(500);
         public Fx LaborMaxEmployment = Fx.FromPermille(1000);
@@ -430,6 +458,7 @@ namespace FES.Data
                 DefaultIncomePerHead[l] = Permille(v, $"households.{level}.income_permille", DefaultIncomePerHead[l]);
                 if (DefaultPopulation[l] <= 0 || DefaultIncomePerHead[l].Raw <= 0)
                     throw new FormatException($"config.csv: households.{level}.population and income must be positive.");
+                LevelWageWeight[l] = Permille(v, $"labor.{level}.wage_weight_permille", LevelWageWeight[l]);
                 MerchantsPerNode[l] = Int(v, $"merchants.{level}", MerchantsPerNode[l]);
                 MerchantStartCash[l] = Long(v, $"merchants.{level}.start_cash", MerchantStartCash[l]);
                 MerchantMaxWeight[l] = Long(v, $"merchants.{level}.max_weight", MerchantMaxWeight[l]);
@@ -549,6 +578,24 @@ namespace FES.Data
             if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
             TraderFloatShare = Permille(v, "markets.trader_float_permille", TraderFloatShare);
             ProducerFloatShare = Permille(v, "markets.producer_float_permille", ProducerFloatShare);
+            NobleRoyalShare = Permille(v, "noble.royal_share_permille", NobleRoyalShare);
+            NobleCityShare = Permille(v, "noble.city_share_permille", NobleCityShare);
+            NobleVillageShare = Permille(v, "noble.village_share_permille", NobleVillageShare);
+            NobleAidShare = Permille(v, "noble.aid_permille", NobleAidShare);
+            NobleProtectionShare = Permille(v, "noble.protection_permille", NobleProtectionShare);
+            NobleSpendShare = Permille(v, "noble.spend_permille", NobleSpendShare);
+            VillageWageAwayShare = Permille(v, "labor.village_wage_away_permille", VillageWageAwayShare);
+            MigrationMaxShare = Permille(v, "migration.max_share_permille", MigrationMaxShare);
+            MigrationStartFreeShare = Permille(v, "migration.start_free_permille", MigrationStartFreeShare);
+            MigrationFleeShare = Permille(v, "migration.flee_permille", MigrationFleeShare);
+            MigrationBrokenContractFactor = Int(v, "migration.broken_contract_factor", MigrationBrokenContractFactor);
+            MigrationJobsPerFacilityLevel = Int(v, "migration.jobs_per_facility_level", MigrationJobsPerFacilityLevel);
+            MigrationVacancyShare = Permille(v, "migration.vacancy_permille", MigrationVacancyShare);
+            MigrationEmancipationLeadYears = Int(v, "migration.emancipation_lead_years", MigrationEmancipationLeadYears);
+            MigrationFreedPerYear = Permille(v, "migration.freed_per_year_permille", MigrationFreedPerYear);
+            MigrationRedemptionYears = Int(v, "migration.redemption_years", MigrationRedemptionYears);
+            MigrationRedemptionShare = Permille(v, "migration.redemption_permille", MigrationRedemptionShare);
+            PopulationUrbanPenalty = Permille(v, "households.urban_penalty_permille", PopulationUrbanPenalty);
             LaborBaseEmployment = Permille(v, "labor.base_employment_permille", LaborBaseEmployment);
             LaborMinEmployment = Permille(v, "labor.min_employment_permille", LaborMinEmployment);
             LaborMaxEmployment = Permille(v, "labor.max_employment_permille", LaborMaxEmployment);

@@ -97,6 +97,11 @@ changing a default in code does.
 | labor.base_employment_permille, labor.min_employment_permille, labor.max_employment_permille | 900, 500, 1000 | employment rate at long-run activity, and its limits ([Draft]) |
 | labor.response_permille, labor.long_run_response_permille | 500, 125 | quarterly share of the way toward the target rate, and of the long-run level toward activity ([Draft]) |
 | labor.merchant_wage_permille, labor.merchant_buffer_permille | 100, 1000 | weekly wage share of a group's cash above the buffer, at full employment; the buffer as a share of starting cash ([Draft]) |
+| labor.<level>.wage_weight_permille | 3000 / 3000 / 2500 / 2000 / 1000 | wage per head by level (DEC-076) |
+| noble.royal_share_permille, noble.city_share_permille, noble.village_share_permille, noble.aid_permille, noble.protection_permille, noble.spend_permille | 100, 100, 100, 200, 500, 20 | houses' tax shares, yearly aid, protection owed, weekly spending (DEC-076) |
+| labor.village_wage_away_permille | 500 | share of village facility wages paid to the nation's towns (DEC-077) |
+| migration.max_share_permille, migration.start_free_permille, migration.flee_permille, migration.broken_contract_factor, migration.jobs_per_facility_level | 0, 200, 10, 3, 100000 | migration limits and jobs (DEC-079) |
+| migration.vacancy_permille, migration.emancipation_lead_years, migration.freed_per_year_permille, migration.redemption_years, migration.redemption_permille, households.urban_penalty_permille | 200, 3, 100, 49, 50, 0 | emancipation, redemption and the urban penalty (DEC-079) |
 | tax.household_permille, tax.company_permille | 100, 100 | yearly income tax (DEC-071) |
 | state.defense_permille, state.defense_maintenance_permille, state.defense_interval_weeks | 50, 200, 4 | defense as a share of the yearly budget, maintenance on top, weeks between purchases (DEC-072) |
 | state.project_share_permille, state.projects_per_year, state.project_weeks, state.road_score_permille, state.trade_score_permille | 500, 3, 16, 120, 100 | share of the reserve above target for the year's plan; most per year; weeks each; what paving, and harbors and highways beyond their import bill, score against other needs ([Draft]) |

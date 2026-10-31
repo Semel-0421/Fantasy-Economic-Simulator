@@ -49,3 +49,7 @@ Implemented in P11; the numbers below are [Draft] placeholders and the mechanics
 - Building: the player, at one end of a land route, pays 300 per travel turn of the route; the road is
   done after 8 weeks. Interest groups build roads once they exist (SYS-INTEREST-GROUPS).
 - A ship sold at a port returns 70% of its price.
+
+## State development
+- [Confirmed] Nations build harbors, coast-to-inland highways, paved roads between towns, mines and farmland, from what
+  holds production back and what they spend on imports (DEC-072). `StateProjectSystem` plans yearly; numbers are [Draft].

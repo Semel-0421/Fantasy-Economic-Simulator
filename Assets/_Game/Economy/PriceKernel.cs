@@ -142,6 +142,13 @@ namespace FES.Economy
         /// Of <paramref name="wished"/> household units, how many the market could deliver now: supply and stock
         /// left after the demand already in. Households budget against these, not against goods nobody sells.
         /// </summary>
+        /// <summary>Of the necessities households could afford, what is there to buy, so population follows supply.</summary>
+        public static long Supplied(long met, int supply, int stock, int demand)
+        {
+            long left = (long)supply + stock - demand;
+            return left <= 0 ? 0 : left < met ? left : met;
+        }
+
         public static long Deliverable(long wished, int supply, int stock, int demand)
         {
             long left = (long)supply + stock - demand;
@@ -189,7 +196,7 @@ namespace FES.Economy
                     if (LastOffered[c] >= Turn - NeedMemoryWeeks)
                     {
                         wanted += cellWanted;
-                        met += cellMet;
+                        met += Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
                     }
                     Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
                     // Markets that reprice every turn settle the same turn, so nothing waits in PendingUnits.
@@ -304,7 +311,7 @@ namespace FES.Economy
                 if (LastOffered[c] >= Turn - NeedMemoryWeeks)
                 {
                     wanted += cellWanted;
-                    met += cellMet;
+                    met += PriceUpdateJob.Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
                 }
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
                 PendingUnits[c] = MarketStore.ClampToNonNegativeInt(PendingUnits[c] + consumed);

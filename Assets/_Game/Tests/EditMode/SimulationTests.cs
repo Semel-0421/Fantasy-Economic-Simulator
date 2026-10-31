@@ -487,6 +487,26 @@ namespace FES.Tests
                       $"facilities={sim.World.Get<FacilityTable>().Count} merchants={sim.World.Get<AgentTable>().Count} " +
                       $"build={build.ElapsedMilliseconds}ms avgTurn={run.Elapsed.TotalMilliseconds / turns:0.0}ms | {perSystem}");
 
+            // After a year the NPC loans and trade are in full swing; the first weeks flatter the turn.
+            while (sim.Turn < 60) sim.AdvanceTurn();
+            var totals = new double[sim.Systems.Count];
+            var settled = Stopwatch.StartNew();
+            for (int t = 0; t < SimClock.WeeksPerQuarter; t++)
+            {
+                sim.AdvanceTurn();
+                for (int i = 0; i < totals.Length; i++) totals[i] += sim.LastSystemDuration(i).TotalMilliseconds;
+            }
+            settled.Stop();
+            var scaleBank = sim.World.Get<BankState>();
+            long scaleReserves = 0, scaleDeposits = 0;
+            for (int n = 0; n < sim.World.Get<NodeBanks>().NationCount; n++)
+            {
+                scaleReserves += scaleBank.Reserve[n];
+                scaleDeposits += scaleBank.PlayerDeposit[n];
+            }
+            Debug.Log($"[FES scale settled] npcLoans={sim.World.Get<NpcLoanTable>().Count} auctions={sim.World.Get<AuctionTable>().Count} reserves={scaleReserves} deposits={scaleDeposits} avgTurn={settled.Elapsed.TotalMilliseconds / SimClock.WeeksPerQuarter:0.0}ms | " +
+                      string.Join(", ", sim.Systems.Select((s, i) => $"{s.Id}={totals[i] / SimClock.WeeksPerQuarter:0.0}ms")));
+
             Assert.AreEqual(1580, markets.MarketCount);
             Assert.AreEqual(4000, sim.Database.GoodCount);
         }

@@ -99,6 +99,8 @@ namespace FES.Agents
         WorldState _world;
         PurseState _purses;
         HouseholdCash _households;
+        IncomeTaxState _books;
+        NativeArray<long> _floatReserve;
 
         public string Id => SystemId;
         public SimPhase Phase => SimPhase.Production;
@@ -116,6 +118,8 @@ namespace FES.Agents
             _cargo = ctx.World.Get<CargoTable>();
             _purses = ctx.World.Get<PurseState>();
             _households = ctx.World.Get<HouseholdCash>();
+            _books = ctx.World.Get<IncomeTaxState>();
+            _floatReserve = new NativeArray<long>(_purses.Float.Length, Allocator.Persistent);
             _lod = ctx.World.Get<LodState>();
             _specialties = ctx.World.Get<NodeSpecialties>();
             _groups = new GroupDirectory(ctx.World.Get<GroupTable>(), ctx.World.Get<NodeTable>());
@@ -161,6 +165,19 @@ namespace FES.Agents
             _inputCost.ResizeUninitialized(_facilities.Count);
             _groupDividend.ResizeUninitialized(_groupTable.Count);
             for (int g = 0; g < _groupDividend.Length; g++) _groupDividend[g] = 0;
+            for (int p = 0; p < _floatReserve.Length; p++)
+                _floatReserve[p] = Math.Max(0, _purses.Float[p]) - _db.Config.ProducerFloatShare.MulInt(Math.Max(0, _purses.Float[p]));
+            _books.EnsureRows(_facilities, _world.Get<AgentTable>());
+            var development = _world.Get<DevelopmentState>();
+            var bank = _world.Get<BankState>();
+            long[] subsidyBudget = new long[bank.Reserve.Length];
+            foreach (var policy in development.Subsidies) subsidyBudget[policy.Nation] = 1;
+            for (int n = 0; n < subsidyBudget.Length; n++)
+            {
+                if (subsidyBudget[n] != 0)
+                    subsidyBudget[n] = _db.Config.SubsidyShare.MulInt(Math.Max(0, MoneyLedger.StateExcess(_world, _db.Config, n))) / SimClock.WeeksPerYear;
+                development.SubsidyLeft[n] = subsidyBudget[n];
+            }
 
             var job = new ProductionJob
             {
@@ -176,6 +193,10 @@ namespace FES.Agents
                 FacilityEfficiency = _facilities.Efficiency.AsArray(),
                 NodeFloat = _purses.NodeFloat,
                 Float = _purses.Float,
+                FloatReserve = _floatReserve,
+                GoodCount = _markets.GoodBasePrice.Length,
+                SubsidyRate = development.SubsidyRate,
+                SubsidyLeft = development.SubsidyLeft,
                 FacilityCash = _facilities.Cash.AsArray(),
                 NodeDetail = _lod.Detail,
                 LineStart = _lineStart.AsArray(),
@@ -201,6 +222,7 @@ namespace FES.Agents
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
+            for (int n = 0; n < subsidyBudget.Length; n++) bank.Reserve[n] -= subsidyBudget[n] - development.SubsidyLeft[n];
 
             // Upkeep after every sale of the week, the warehouse overflow included.
             StorePlayerOutput();
@@ -221,6 +243,7 @@ namespace FES.Agents
                 FacilityGroup = _facilities.Group.AsArray(),
                 FacilityInputCost = _inputCost.AsArray(),
                 GroupDividend = _groupDividend.AsArray(),
+                FacilityDividendsYear = _books.FacilityDividends.AsArray(),
             };
             if (ForceManaged) upkeep.Execute();
             else upkeep.Schedule().Complete();
@@ -265,8 +288,9 @@ namespace FES.Agents
             {
                 long dividend = _groupDividend[g];
                 if (dividend == 0) continue;
-                long passed = share.MulInt(dividend);
-                if (_groupTable.KindOf(g) == GroupKind.StateEnterprise) MoneyLedger.ToState(_world, _groupTable.Node[g], passed);
+                bool state = _groupTable.KindOf(g) == GroupKind.StateEnterprise;
+                long passed = (state ? _db.Config.StateFacilityLevy : share).MulInt(dividend);
+                if (state) MoneyLedger.ToState(_world, _groupTable.Node[g], passed);
                 else _purses.PayHouseholds(_groupTable.Node[g], passed);
                 _groupTable.Cash[g] += dividend - passed;
             }
@@ -288,6 +312,7 @@ namespace FES.Agents
             // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.
             if (wasPlayer) _facilities.Group[f] = _groups.PrivateAt(_facilities.Node[f], _db.Config);
             _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f], StartCash(f));
+            _books.RestartFacility(f, _facilities.Cash[f]);
             _facilities.NegativeCashWeeks[f] = 0;
             _facilities.WarehouseClaimUntil[f] = claimUntil;
             ctx.Events.Publish(new FacilityBankrupt(new FacilityId(f), wasPlayer, claimUntil, ctx.Turn));
@@ -320,12 +345,19 @@ namespace FES.Agents
             _lineUpGood.Clear();
             _lineUpCell.Clear();
             _lineUpModifier.Clear();
+            var development = _world.Get<DevelopmentState>();
             for (int f = 0; f < _facilities.Count; f++)
             {
                 _lineStart.Add(_lineCell.Length);
-                var recipe = _db.Facilities[_facilities.DefIndex[f]].Recipe;
-                AddLines(_facilities.Node[f], recipe.Inputs, true);
-                AddLines(_facilities.Node[f], recipe.Outputs, false);
+                var def = _db.Facilities[_facilities.DefIndex[f]];
+                AddLines(_facilities.Node[f], def.Recipe.Inputs, true);
+                int firstOutput = _lineOutputMul.Length;
+                AddLines(_facilities.Node[f], def.Recipe.Outputs, false);
+                // The state's land development raises primary output on that land (DEC-072).
+                int land = def.Tier == IndustryTier.Primary ? development.LandLevel[_facilities.Node[f]] : 0;
+                if (land == 0) continue;
+                var bonus = Fx.One + _db.Config.StateLandBonus * Fx.FromInt(land);
+                for (int k = firstOutput; k < _lineOutputMul.Length; k++) _lineOutputMul[k] = (Fx.FromRaw(_lineOutputMul[k]) * bonus).Raw;
             }
             _lineStart.Add(_lineCell.Length);
             _linesForCount = _facilities.Count;
@@ -385,6 +417,7 @@ namespace FES.Agents
             if (_inputCost.IsCreated) _inputCost.Dispose();
             if (_groupDividend.IsCreated) _groupDividend.Dispose();
             _defUpkeep.DisposeIfCreated();
+            _floatReserve.DisposeIfCreated();
         }
     }
 
@@ -404,6 +437,7 @@ namespace FES.Agents
         public uint Stream;
         public uint GradeStream;
         public int VariancePermille;
+        public int GoodCount;
         public long GradeUpChanceRaw;
 
         [ReadOnly] public NativeArray<int> FacilityNode;
@@ -414,6 +448,11 @@ namespace FES.Agents
         /// <summary>Per node: its traders' float; buyers pay into it and sellers are paid from it (DEC-061).</summary>
         [ReadOnly] public NativeArray<int> NodeFloat;
         public NativeArray<long> Float;
+        /// <summary>Per float: what producers leave for the merchants who sell later in the week.</summary>
+        [ReadOnly] public NativeArray<long> FloatReserve;
+        /// <summary>Per float and good: the state's subsidy on output (DEC-074), and what it may still pay this week.</summary>
+        [ReadOnly] public NativeArray<long> SubsidyRate;
+        public NativeArray<long> SubsidyLeft;
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> LineStart;
         [ReadOnly] public NativeArray<int> LineCell;
@@ -511,18 +550,23 @@ namespace FES.Agents
             }
             else if (cell >= 0)
             {
-                // Sold as far as the traders can pay; the rest is lost, since NPC facilities keep no stock (DEC-061).
+                // All of it reaches the market; the producer is paid only as far as the traders can pay (DEC-061),
+                // from what the float keeps free of this week's merchants.
                 int traders = NodeFloat[FacilityNode[f]];
-                long price = Price[cell];
-                if (price > 0)
-                {
-                    long payable = Float[traders] > 0 ? Float[traders] / price : 0;
-                    if (clamped > payable) clamped = (int)payable;
-                }
-                if (clamped == 0) return;
+                long paid = clamped * Price[cell];
+                long payable = Float[traders] - FloatReserve[traders];
+                if (paid > payable) paid = payable > 0 ? payable : 0;
                 Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
-                FacilityCash[f] += clamped * price;
-                Float[traders] -= clamped * price;
+                FacilityCash[f] += paid;
+                Float[traders] -= paid;
+                long rate = SubsidyRate[traders * GoodCount + good];
+                if (rate > 0)
+                {
+                    long grant = Fx.MulIntRaw(clamped * Price[cell], rate);
+                    if (grant > SubsidyLeft[traders]) grant = SubsidyLeft[traders];
+                    FacilityCash[f] += grant;
+                    SubsidyLeft[traders] -= grant;
+                }
             }
         }
     }
@@ -555,6 +599,8 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<long> FacilityInputCost;
         /// <summary>Per group: dividends received this week.</summary>
         public NativeArray<long> GroupDividend;
+        /// <summary>Per facility: dividends paid this year, which the income tax counts as profit.</summary>
+        public NativeArray<long> FacilityDividendsYear;
 
         public void Execute()
         {
@@ -568,6 +614,7 @@ namespace FES.Agents
                 {
                     long dividend = Fx.MulIntRaw(FacilityCash[f] - buffer, DividendShareRaw);
                     FacilityCash[f] -= dividend;
+                    FacilityDividendsYear[f] += dividend;
                     if (FacilityGroup[f] >= 0) GroupDividend[FacilityGroup[f]] += dividend;
                     else HouseholdCash[FacilityNode[f]] += dividend;
                 }

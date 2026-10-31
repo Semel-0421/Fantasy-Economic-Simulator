@@ -1,6 +1,15 @@
 # Changelog
 
 ## 2026-10-31
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-074 (subsidies, army safety, reserved construction, Victorian growth), DEC-075 (hex map before front-end work); P18, P19
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_MARKETS.md, SYS_INFRASTRUCTURE.md] DEC-072 (state defense, land development, state facility levy, population by necessity supply)
+- [03_Decisions.md] DEC-070 (labor market and employment rate), DEC-071 (income tax)
+- [systems/SYS_MERCHANTS.md, 02_Data_Formats.md, 04_Roadmap.md] Producers' share of the float, repeated sale tries and selling trips, labor and tax keys, measurement
+- [systems/SYS_PRODUCTION.md] NPC output always reaches the market; only its payment is capped by the float
+- [04_Roadmap.md] Bank cost cause and fix, float fix result
+- [systems/SYS_MERCHANTS.md, 02_Data_Formats.md] Trade range by personality; groups based in the detailed area stay stepped
+- [systems/SYS_MERCHANTS.md, 02_Data_Formats.md] Merchant traits, generations and optional rumors from the reference ([Draft]); detailed merchants in a Burst job
+- [04_Roadmap.md] Settled full-scale turn cost and the float shortage on the player's continent recorded
 - [references/EconomySystemSpecification.md] Added as an outside reference (not a decision); listed in INDEX.md
 - [03_Decisions.md] DEC-067 (needs count usually traded goods), DEC-068 (continent and nation markets supplied), DEC-069 (spawning, four smithies, tool demand 4 -> 12)
 - [systems/SYS_MARKETS.md, SYS_MERCHANTS.md, SYS_PRODUCTION.md, SYS_BANKING.md, 02_Data_Formats.md, 04_Roadmap.md] P13d drafts replaced by those decisions; new measurement and what is left

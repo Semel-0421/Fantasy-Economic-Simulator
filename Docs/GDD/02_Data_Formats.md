@@ -82,15 +82,32 @@ changing a default in code does.
 | demand.<grade>.luxury_share_permille | 0 / 0 / 500 / 1000 | how far each grade of a necessity is bought like a luxury ([Draft]) |
 | households.<level>.population, households.<level>.income_permille | 20000 / 10000 / 4000 / 2000 / 500; 300 / 300 / 300 / 500 / 2000 | default population and weekly income per head in thousandths of a coin ([Draft]; P13d replaced `households.<level>.income`, 4 / 4 / 3 / 3 / 2 coins) |
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
-| households.base_growth_permille, households.growth_response_permille, households.max_change_permille | 5, 50, 30 | yearly population change ([Draft]) |
 | households.income_response_permille, households.income_max_change_permille | 500, 500 | yearly income change toward measured income: share of the gap, cap as a share of the larger value ([Draft]; cap was 50) |
 | households.need_memory_weeks | 52 | a necessity counts toward population change if offered within this many weeks (DEC-067, [Draft] value) |
 | households.budget_weeks | 26 | households spend at most their cash over this many weeks a week ([Draft]) |
 | markets.trader_float_permille | 100 | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
+| markets.producer_float_permille | 500 | share of a float, as the week starts, that producers may be paid from |
+| labor.base_employment_permille, labor.min_employment_permille, labor.max_employment_permille | 900, 500, 1000 | employment rate at long-run activity, and its limits ([Draft]) |
+| labor.response_permille, labor.long_run_response_permille | 500, 125 | quarterly share of the way toward the target rate, and of the long-run level toward activity ([Draft]) |
+| labor.merchant_wage_permille, labor.merchant_buffer_permille | 100, 1000 | weekly wage share of a group's cash above the buffer, at full employment; the buffer as a share of starting cash ([Draft]) |
+| tax.household_permille, tax.company_permille | 100, 100 | yearly income tax (DEC-071) |
+| state.defense_permille, state.defense_maintenance_permille, state.defense_interval_weeks | 50, 200, 4 | defense as a share of the yearly budget, maintenance on top, weeks between purchases (DEC-072) |
+| state.project_share_permille, state.projects_per_year, state.project_weeks, state.road_score_permille, state.trade_score_permille | 500, 3, 16, 120, 100 | share of the reserve above target for the year's plan; most per year; weeks each; what paving, and harbors and highways beyond their import bill, score against other needs ([Draft]) |
+| state.defense_safety_cost_per_route, state.defense_max_safety_permille | 15000, 600 | yearly defense per route for a full danger cut, and the most it cuts (DEC-074) |
+| state.subsidy_share_permille, state.subsidy_rate_permille, state.subsidy_years, state.subsidy_max_per_nation | 300, 200, 3, 2 | share of the excess subsidies may pay in a year; rate on output's value; length; most at once (DEC-074) |
+| households.base_growth_permille, households.growth_response_permille, households.max_growth_permille, households.max_decline_permille | 8, 40, 13, 40 | yearly population change at full necessity supply, per full shortfall, and limits (DEC-074) |
+| state.farmland_cost, state.mine_cost, state.harbor_cost, state.highway_cost_per_turn | 5000, 8000, 10000, 1000 | project costs ([Draft]) |
+| state.land_bonus_permille, state.land_max, state.harbor_bonus_permille, state.harbor_max, state.highway_bonus_permille | 100, 5, 100, 3, 200 | output and charge bonuses of projects ([Draft]) |
+| state.facility_levy_permille | 500 | share of a state enterprise's dividends the state collects ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |
 | merchants.<level>.upkeep, merchants.bankrupt_weeks | 50/40/30/20/10, 5 | weekly upkeep of a detailed group, weeks below zero before bankruptcy ([Draft]) |
+| merchants.traits, merchants.rumors | 1, 0 | merchant traits; judging prices by memory and rumor ([Draft]) |
+| merchants.generation_permille, merchants.mutation_permille, merchants.fitness_capital_permille | 50, 150, 700 | yearly handover share; chance of a random trait; capital's weight in fitness ([Draft]) |
+| merchants.<personality>.spend_permille, merchants.<personality>.min_margin_permille | cautious 500 / 200, normal 750 / 100, aggressive 1000 / 0 | share of cash risked, least margin ([Draft]) |
+| merchants.<personality>.range_level | cautious Region, normal Nation, aggressive Continent | where a group may trade, under its home's ancestor at that level |
+| merchants.<occupation>.capacity_permille, .upkeep_permille, .distance_power | local 1000 / 1000 / 2, expedition 1000 / 1000 / 0, peddler 500 / 500 / 1 | capacity, upkeep, how distance counts ([Draft]) |
 | merchants.flow_permille | 500 | aggregate trade: share of stock moved per unit of margin ([Draft]) |
 | production.variance_permille | 100 | weekly output variance of detailed facilities |
 | facility.<tier>.start_cash | 500/2000/1000 | starting cash of a facility and of a new operator |

@@ -81,7 +81,41 @@ stateDiagram-v2
 - Price gap closing while the merchant is still travelling: the sale happens at the arrival price.
 - Partial fill at purchase: the merchant travels with what it got if the trip is still profitable.
 
+## Traits and generations ([Draft], from references/EconomySystemSpecification.md)
+- Each group has a personality and an occupation, nine traits in all, drawn at random at the start
+  (`merchants.traits`, on).
+  - Personality (cautious, normal, aggressive): risks 50 / 75 / 100% of its cash on a load and wants a
+    margin of 20 / 10 / 0% over the buying price (`merchants.<personality>.spend_permille`,
+    `min_margin_permille`).
+  - [Confirmed] Range by personality: a cautious group trades only within its home's region; an aggressive
+    group goes wherever the profit is on its continent. [Draft] A normal group stays in its home's nation
+    (`merchants.<personality>.range_level`). A group based above that level stays under its home.
+  - Occupation (local, expedition, peddler): divides a load's profit by the travel turns to the power
+    2 / 0 / 1 when choosing; peddlers have half the capacity and upkeep
+    (`merchants.<occupation>.distance_power`, `capacity_permille`, `upkeep_permille`).
+  - Aggregate flows use the capacity-weighted average of a node's idle groups.
+- Yearly, each continent scores its active groups' traits: 70% capital relative to the continent's average,
+  at most twice it counting, and 30% the year's survival (`merchants.fitness_capital_permille`). This
+  corrects the specification's formula, where absolute capital outweighed survival and coins could not be
+  compared. Only groups stepped one by one earn a score. Then 5% of all NPC groups hand over to a successor
+  (`merchants.generation_permille`), keeping cash, cargo and place; a bankrupt group's replacement is
+  drawn the same way, 15% at random (`merchants.mutation_permille`).
+- Rumors, off by default (`merchants.rumors`): a group remembers four nodes, learned by visiting or from
+  groups at the same node that turn, and judges other nodes at the anchor price. In the sample world this
+  raised bankruptcies from 2 to 233 in ten years, since the anchor overstates what glutted markets pay.
+
+## Selling and wages
+- [Confirmed] Producers may be paid from only half the float each week (`markets.producer_float_permille`), so
+  merchants arriving later in the week can be paid.
+- [Confirmed] A group tries again each idle week to sell what no one could pay for. With nothing worth buying,
+  or no cash, it carries what it holds to where that sells for most after costs, and rolls encounters as usual.
+- [Confirmed] Groups pay wages from surplus cash (DEC-070); facilities and groups pay income tax (DEC-071).
+
 ## Unity implementation notes
+- `DetailedMerchantJob` (Burst, single-threaded, rows in order, P13d) steps every group of a detailed node, every
+  group based at one wherever it is, and every group on a trip; `ArbitrageMerchantBehavior.RunDetailed` settles
+  its tolls and bankruptcies after it. Cargo rows are
+  linked per group for the job's length, and the first group at a node lists its stocked cells for the rest.
 Implemented in P5.
 - `ArbitrageMerchantBehavior` is the default `IMerchantBehavior`. `MerchantSystem` calls `RunDetailed` for
   every group of a detailed node and every group on a trip, then `RunAggregate` once.

@@ -28,9 +28,13 @@ namespace FES.Agents
         public readonly NativeColumn<int> NegativeCashWeeks;
         /// <summary>The interest group owning the merchant group; -1 for none (DEC-055).</summary>
         public readonly NativeColumn<int> Group;
+        /// <summary>Personality and occupation, see <see cref="MerchantTraits"/>.</summary>
+        public readonly NativeColumn<byte> Trait;
+        /// <summary>The nodes the group knows the prices of.</summary>
+        public readonly NativeColumn<NodeMemory> Memory;
 
         public override string Key => SectionKey;
-        public override int Version => 3;
+        public override int Version => 4;
 
         public AgentTable()
         {
@@ -44,6 +48,8 @@ namespace FES.Agents
             ArrivalTurn = Column<int>();
             NegativeCashWeeks = Column<int>();
             Group = Column<int>();
+            Trait = Column<byte>();
+            Memory = Column<NodeMemory>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -58,6 +64,8 @@ namespace FES.Agents
             ArrivalTurn.Add(-1);
             NegativeCashWeeks.Add(0);
             Group.Add(-1);
+            Trait.Add(MerchantTraits.Neutral);
+            Memory.Add(NodeMemory.Empty);
             return new AgentId(Count - 1);
         }
 

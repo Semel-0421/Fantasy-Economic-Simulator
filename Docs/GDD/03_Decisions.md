@@ -369,6 +369,62 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-075 The map becomes hexagonal tiles, generated from the seed (before front-end work)
+- Decision: like Civilization, the map is a grid of hexagonal tiles; the map and its nodes are generated from the random
+  seed. To be taken up before front-end development; nothing is built yet.
+- Reason: the user's decision
+- Impact: the hand-written map_nodes.csv and map_routes.csv and the sample world; state land development (DEC-072), which
+  stands in for tiles with the land around a node, should move onto tiles
+
+### DEC-074 State subsidies; the army's safety; reserved construction
+- Decision: a nation can enact a subsidy on a good, paid by output, so existing producers take it up and new companies and
+  guilds appear. Army spending makes routes safer in proportion; a war system comes later. State projects are planned
+  yearly and built in order. Population growth follows Victorian Europe.
+- Reason: the reserve must return to the market; the user's decision
+- [Draft] Details by Claude, all numbers placeholders: with money above target a nation enacts on its dearest good, at most
+  2 at a time for 3 years, paying 20% of the output's value out of 30% of the excess a year. Each year of a policy one
+  producer opens at the node shortest of necessities, under a group already making the good or a newly founded company;
+  a guild is founded where the site's city has none of that trade. Safety is yearly defense per route over 15,000, at
+  most 60%. Up to 3 projects are planned a year, 16 weeks each; those not started by the next plan are dropped.
+  Population: 0.8% at full supply (Europe's rate, from memory, not checked), at most 1.3% (England and Wales 1851-1901,
+  births 35 and deaths 22 per thousand, checked), at most -4% in a famine (Ireland, from memory).
+- Impact: SYS-MARKETS, SYS-PRODUCTION, SYS-ROUTE-HAZARDS, SYS-INFRASTRUCTURE
+
+### DEC-072 The state defends, develops land and draws on state facilities; population follows necessity supply
+- Decision: a nation spends a fixed 5% of its budget on defense (standing army and mercenaries), with maintenance on
+  top, directly in its own markets. It runs a land development plan (ports, coast-to-inland highways, paved roads
+  between towns, mines, farmland), choosing from what holds production back and what it spends on imports. These
+  projects give a bonus to land outside the nodes, and state facilities pay the state part of their profit.
+  Population growth rises and falls with the supply of civilian necessities.
+- Reason: the reserve must return to the economy and surplus should go where it helps; the user's decision
+- [Draft] Details by Claude, all numbers placeholders: the budget is the reserve at the year's start less the player's
+  deposits; maintenance is 20% on top; purchases every 4 weeks from all stock by value, with no effect from the
+  army yet. Half the reserve above target funds up to 3 projects a year, one of each kind, done in 26 weeks. The
+  map has no tiles, so the land around a node stands for them: +10% primary output per level, at most 5; harbors -10% per
+  level on water routes from there; highways -20% on the route's charge. Farmland and mines also open a facility of
+  the state enterprise; the state collects 50% of its dividends. Growth numbers moved to DEC-074 (previously: 1% at full supply, 6% less per
+  full shortfall, within 4%).
+- Impact: SYS-BANKING, SYS-INFRASTRUCTURE, SYS-PRODUCTION, SYS-MARKETS
+
+### DEC-071 A yearly income tax on households and companies
+- Decision: every node's households and every facility and merchant group pay 10% of the year's income, once a
+  year, into the bank reserve of their nation.
+- Reason: the state needs income to spend; the user's decision
+- [Draft] Details by Claude: households' income is the measured income the income-per-head rule uses; a company's
+  profit is its change in cash plus dividends paid; losses carry no relief; nobody pays beyond the cash held; a
+  new operator starts new books; bank-held facilities, interest groups and the player's own purse pay nothing.
+- Impact: SYS-MARKETS, SYS-BANKING
+
+### DEC-070 A labor market takes merchants' surplus; employment follows the economy
+- Decision: merchant groups pay wages into a labor market from their surplus cash, and the employment rate
+  rises and falls with an economic indicator.
+- Reason: with merchants paid at last (producers leave them half the float), group cash grew from 97k to 1,134k
+  with no way back; the user's decision
+- [Draft] Details by Claude: one rate per nation, starting at 90%, within 50 to 100%; the indicator is real
+  household spending per head against its own long-run level, read each quarter; wages are 10% a week of cash above
+  starting cash, times the rate, paid to the nation's households by population. Facility upkeep stays as it was.
+- Impact: SYS-MARKETS, SYS-MERCHANTS
+
 ### DEC-069 Facility slots without local inputs; four smithies per city
 - Date: 2026-10-31
 - Decision: a facility type with inputs is drawn only where some facility makes every input in the node's

@@ -59,7 +59,7 @@ namespace FES.Agents
             long wanted = _households.NecessityWanted[node];
             var change = _config.PopulationBaseGrowth;
             if (wanted > 0) change += _config.PopulationGrowthResponse * (Fx.FromRatio(_households.NecessityMet[node], wanted) - Fx.One);
-            return Clamp(change, _config.PopulationMaxChange);
+            return Fx.Clamp(change, -_config.PopulationMaxDecline, _config.PopulationMaxGrowth);
         }
 
         // A share of the way from last year's income per head to the year's measured income per head and week,
@@ -73,7 +73,5 @@ namespace FES.Agents
             var limit = _config.IncomeMaxChange * Fx.Max(income, measured);
             return income + Fx.Clamp(_config.IncomeResponse * (measured - income), -limit, limit);
         }
-
-        static Fx Clamp(Fx value, Fx limit) => Fx.Clamp(value, -limit, limit);
     }
 }

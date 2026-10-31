@@ -19,7 +19,7 @@ namespace FES.Tests
         // paying tolls into them, reserves move only by what a test does.
         static GameSimulation Build(ulong seed = 42) => SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
             "key,value\nroad.upkeep,0\nbank.npc_max_reserve_share_permille,0\nfinance.event_chance_permille,0\npolicy.npc_lobby_share_permille,0\n"
-            + "bank.state_spending_permille,0\nfacility.dividend_permille,0\n"), seed)
+            + "bank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), seed)
             .ConfigureServices(s => s.Set<IMerchantBehavior>(new IdleMerchantBehavior())).Build();
 
         static NodeId Node(GameSimulation sim, string key)
@@ -84,7 +84,8 @@ namespace FES.Tests
             long supply = currency.CoinSupply[continent];
             for (int t = 0; t <= SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
             Assert.Greater(currency.CoinSupply[continent], supply);
-            Assert.AreEqual(start + currency.CoinSupply[continent] - supply, sim.View.BankReserve(nation));
+            var tax = sim.World.Get<IncomeTaxState>();
+            Assert.AreEqual(start + currency.CoinSupply[continent] - supply + tax.LastHouseholds[continent] + tax.LastCompanies[continent], sim.View.BankReserve(nation));
         }
 
         [Test]

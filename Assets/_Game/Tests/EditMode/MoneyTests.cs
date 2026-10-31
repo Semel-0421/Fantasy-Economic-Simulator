@@ -208,6 +208,144 @@ namespace FES.Tests
         }
 
         [Test]
+        public void NpcOutput_ReachesTheMarket_EvenWhenTheTradersCannotPay()
+        {
+            using var normal = TestWorlds.BuildSample();
+            using var dry = TestWorlds.BuildSample();
+            var purses = dry.World.Get<PurseState>();
+            var bank = dry.World.Get<BankState>();
+            for (int p = 0; p < purses.Count; p++)
+            {
+                bank.InternationalReserve[purses.ContinentOf(p)] += purses.Float[p];
+                purses.Float[p] = 0;
+            }
+            long Paid(GameSimulation sim)
+            {
+                var facilities = sim.World.Get<FacilityTable>();
+                return Enumerable.Range(0, facilities.Count).Sum(f => facilities.Cash[f]);
+            }
+            long Stock(GameSimulation sim)
+            {
+                var stock = sim.World.Get<MarketStore>().Stock;
+                long total = 0;
+                for (int k = 0; k < stock.Length; k++) total += stock[k];
+                return total;
+            }
+
+            normal.AdvanceTurn();
+            dry.AdvanceTurn();
+            Assert.AreEqual(Stock(normal), Stock(dry));
+            Assert.Less(Paid(dry), Paid(normal));
+            for (int p = 0; p < purses.Count; p++) Assert.GreaterOrEqual(purses.Float[p], 0);
+            AssertConserved(dry, "dry floats");
+        }
+
+        [Test]
+        public void Producers_LeaveTheirShareOfTheFloat_ForMerchants()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var purses = sim.World.Get<PurseState>();
+            var bank = sim.World.Get<BankState>();
+            for (int p = 0; p < purses.Count; p++)
+            {
+                bank.InternationalReserve[purses.ContinentOf(p)] += purses.Float[p] - 100;
+                purses.Float[p] = 100;
+            }
+            var job = sim.Systems.OfType<ProductionSystem>().Single();
+            job.Execute(sim.Context);
+            for (int p = 0; p < purses.NationCount; p++) Assert.GreaterOrEqual(purses.Float[p], 50);
+        }
+
+        [Test]
+        public void RichMerchant_PaysWages_ScaledByEmployment()
+        {
+            long Wage(int employmentPermille)
+            {
+                using var sim = TestWorlds.BuildSample();
+                var agents = sim.World.Get<AgentTable>();
+                var purses = sim.World.Get<PurseState>();
+                var labor = sim.World.Get<LaborState>();
+                var households = sim.World.Get<HouseholdCash>();
+                int a = Enumerable.Range(0, agents.Count).First(i => purses.NodeFloat[agents.Node[i]] < purses.NationCount);
+                long start = sim.Database.Config.MerchantStartCash[agents.Scale[a]];
+                agents.Cash[a] = start + 1_000_000;
+                households.Cash[agents.Node[a]] -= 1_000_000;
+                labor.Employment[purses.NodeFloat[agents.Node[a]]] = Fx.FromPermille(employmentPermille).Raw;
+                sim.Systems.OfType<LaborMarketSystem>().Single().Execute(sim.Context);
+                AssertConserved(sim, "wages");
+                return start + 1_000_000 - agents.Cash[a];
+            }
+            long full = Wage(1000), half = Wage(500);
+            Assert.AreEqual(100_000, full, 20);
+            Assert.AreEqual(50_000, half, 20);
+        }
+
+        [Test]
+        public void Employment_FollowsRealSpending()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var labor = sim.World.Get<LaborState>();
+            var nation = 0;
+            for (int t = 0; t < SimClock.WeeksPerQuarter * 2; t++) sim.AdvanceTurn();
+            var steady = labor.Rate(nation);
+
+            labor.LongRunActivity[nation] = labor.LongRunActivity[nation] * 4;
+            for (int t = 0; t < SimClock.WeeksPerQuarter; t++) sim.AdvanceTurn();
+            Assert.Less(labor.Rate(nation).Raw, steady.Raw, "spending far below its long-run level");
+
+            var low = labor.Rate(nation);
+            labor.LongRunActivity[nation] = labor.LongRunActivity[nation] / 16;
+            for (int t = 0; t < SimClock.WeeksPerQuarter; t++) sim.AdvanceTurn();
+            Assert.Greater(labor.Rate(nation).Raw, low.Raw, "spending far above its long-run level");
+            Assert.LessOrEqual(labor.Rate(nation).Raw, sim.Database.Config.LaborMaxEmployment.Raw);
+        }
+
+        [Test]
+        public void IncomeTax_IsCollectedYearly_AndConserved()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var books = sim.World.Get<IncomeTaxState>();
+            IncomeTaxCollected tax = null;
+            for (int t = 0; t <= SimClock.WeeksPerYear && tax == null; t++)
+            {
+                sim.AdvanceTurn();
+                tax = sim.LastTurnEvents.OfType<IncomeTaxCollected>().SingleOrDefault();
+            }
+            Assert.IsNotNull(tax);
+            Assert.Greater(tax.Households, 0);
+            Assert.AreEqual(tax.Households, books.LastHouseholds.Sum());
+            Assert.AreEqual(tax.Companies, books.LastCompanies.Sum());
+            AssertConserved(sim, "income tax");
+        }
+
+        [Test]
+        public void IncomeTax_TakesTenPercentOfProfit_NothingOnALoss_AndCountsDividends()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var agents = sim.World.Get<AgentTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            sim.AdvanceTurn();
+            int gain = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc);
+            int loss = Enumerable.Range(0, facilities.Count).Last(i => facilities.Owner[i] == OwnerIds.Npc);
+            while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+
+            books.RestartFacility(gain, 1_000);
+            facilities.Cash[gain] = 11_000; // profit 10,000 and 5,000 of dividends paid
+            books.FacilityDividends[gain] = 5_000;
+            books.RestartFacility(loss, 5_000);
+            facilities.Cash[loss] = 1_000;
+            books.RestartMerchant(0, 1_000);
+            agents.Cash[0] = 3_000;
+            sim.Systems.OfType<IncomeTaxSystem>().Single().Execute(sim.Context);
+
+            Assert.AreEqual(11_000 - 1_500, facilities.Cash[gain]);
+            Assert.AreEqual(1_000, facilities.Cash[loss]);
+            Assert.AreEqual(3_000 - 200, agents.Cash[0]);
+            Assert.AreEqual(9_500, books.FacilityStart[gain], "the new year's books");
+        }
+
+        [Test]
         public void RichFacility_PaysDividends_ThatItsGroupPassesOn()
         {
             using var sim = TestWorlds.BuildSample();

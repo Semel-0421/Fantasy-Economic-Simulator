@@ -22,6 +22,8 @@ namespace FES.Agents
         public NativeArray<long> Float;
         /// <summary>Per node: its float. Static, rebuilt from the map.</summary>
         public NativeArray<int> NodeFloat;
+        /// <summary>Per nation: its nodes, in node order. Static, rebuilt from the map.</summary>
+        public readonly int[][] NationNodes;
         readonly int[] _continentOfFloat;
         readonly HouseholdCash _households;
 
@@ -43,6 +45,12 @@ namespace FES.Agents
                 int nationNode = nodes.AncestorAt(node, WorldLevel.Nation);
                 NodeFloat[node] = nationNode >= 0 ? banks.NationIndex(nationNode) : NationCount + nodes.Continent[node];
             }
+            var lists = new System.Collections.Generic.List<int>[NationCount];
+            for (int n = 0; n < NationCount; n++) lists[n] = new System.Collections.Generic.List<int>();
+            for (int node = 0; node < nodes.Count; node++)
+                if (NodeFloat[node] < NationCount) lists[NodeFloat[node]].Add(node);
+            NationNodes = new int[NationCount][];
+            for (int n = 0; n < NationCount; n++) NationNodes[n] = lists[n].ToArray();
         }
 
         public int Count => Float.Length;
@@ -92,6 +100,7 @@ namespace FES.Agents
     {
         HouseholdCash _households;
         PurseState _purses;
+        LaborState _labor;
 
         public string Id => "agents.household_spending";
         public SimPhase Phase => SimPhase.Markets;
@@ -101,6 +110,7 @@ namespace FES.Agents
         {
             _households = ctx.World.Get<HouseholdCash>();
             _purses = ctx.World.Get<PurseState>();
+            _labor = ctx.World.Get<LaborState>();
         }
 
         public void Execute(SimContext ctx)
@@ -110,6 +120,7 @@ namespace FES.Agents
             {
                 if (spent[node] == 0) continue;
                 _purses.Float[_purses.NodeFloat[node]] += spent[node];
+                _labor.QuarterSpending[_purses.NodeFloat[node]] += spent[node];
                 _households.SpentYear[node] += spent[node];
                 spent[node] = 0;
             }
@@ -130,9 +141,8 @@ namespace FES.Agents
         CurrencyState _currency;
         HouseholdState _population;
         HouseholdCash _households;
+        PurseState _purses;
         int[] _nationsOnContinent;
-        // Per nation: its nodes.
-        int[][] _nationNodes;
 
         public string Id => "agents.state_spending";
         public SimPhase Phase => SimPhase.Finance;
@@ -147,18 +157,9 @@ namespace FES.Agents
             _currency = ctx.World.Get<CurrencyState>();
             _population = ctx.World.Get<HouseholdState>();
             _households = ctx.World.Get<HouseholdCash>();
-            var purses = ctx.World.Get<PurseState>();
+            _purses = ctx.World.Get<PurseState>();
             _nationsOnContinent = new int[_nodes.ContinentCount];
-            var lists = new System.Collections.Generic.List<int>[_banks.NationCount];
-            for (int n = 0; n < _banks.NationCount; n++)
-            {
-                _nationsOnContinent[_nodes.Continent[_banks.NationNode(n)]]++;
-                lists[n] = new System.Collections.Generic.List<int>();
-            }
-            for (int node = 0; node < _nodes.Count; node++)
-                if (purses.NodeFloat[node] < _banks.NationCount) lists[purses.NodeFloat[node]].Add(node);
-            _nationNodes = new int[_banks.NationCount][];
-            for (int n = 0; n < _banks.NationCount; n++) _nationNodes[n] = lists[n].ToArray();
+            for (int n = 0; n < _banks.NationCount; n++) _nationsOnContinent[_nodes.Continent[_banks.NationNode(n)]]++;
         }
 
         public void Execute(SimContext ctx)
@@ -174,13 +175,12 @@ namespace FES.Agents
         public long Excess(int nation)
         {
             int continent = _nodes.Continent[_banks.NationNode(nation)];
-            long share = _config.BankInitialReserveShare.MulInt(_currency.CoinSupply[continent]) / Math.Max(1, _nationsOnContinent[continent]);
-            return _bank.Reserve[nation] - _bank.PlayerDeposit[nation] - _config.StateReserveTarget.MulInt(share);
+            return MoneyLedger.StateExcess(_bank, _config, _currency, nation, continent, _nationsOnContinent[continent]);
         }
 
         void PayWages(int nation, long amount)
         {
-            var nodes = _nationNodes[nation];
+            var nodes = _purses.NationNodes[nation];
             long people = 0;
             foreach (int node in nodes) people += _population.Population[node];
             if (people <= 0) return;
@@ -202,6 +202,23 @@ namespace FES.Agents
     /// </summary>
     public static class MoneyLedger
     {
+        /// <summary>A nation's reserve above its target and the player's deposits.</summary>
+        public static long StateExcess(BankState bank, SimulationConfig config, CurrencyState currency, int nation, int continent, int nationsOnContinent)
+        {
+            long share = config.BankInitialReserveShare.MulInt(currency.CoinSupply[continent]) / Math.Max(1, nationsOnContinent);
+            return bank.Reserve[nation] - bank.PlayerDeposit[nation] - config.StateReserveTarget.MulInt(share);
+        }
+
+        public static long StateExcess(WorldState world, SimulationConfig config, int nation)
+        {
+            var nodes = world.Get<NodeTable>();
+            var banks = world.Get<NodeBanks>();
+            int continent = nodes.Continent[banks.NationNode(nation)], nations = 0;
+            for (int n = 0; n < banks.NationCount; n++)
+                if (nodes.Continent[banks.NationNode(n)] == continent) nations++;
+            return StateExcess(world.Get<BankState>(), config, world.Get<CurrencyState>(), nation, continent, nations);
+        }
+
         /// <summary>
         /// Every coin of a continent, wherever it is, counting debts (negative cash) as they stand: the
         /// player's coins, facilities, merchant groups and interest groups on the continent, its bank
@@ -306,10 +323,27 @@ namespace FES.Agents
         /// <summary>Money for a nation's households, split by the population of its nodes (DEC-061).</summary>
         public static void PayNationHouseholds(WorldState world, int nation, long amount)
         {
-            var purses = world.Get<PurseState>();
+            var nodes = world.Get<PurseState>().NationNodes[nation];
             var population = world.Get<HouseholdState>().Population;
-            Split(amount, purses.NodeFloat.Length, node => purses.NodeFloat[node] == nation ? population[node] : 0,
-                world.Get<HouseholdCash>().Cash);
+            var cash = world.Get<HouseholdCash>().Cash;
+            long people = 0;
+            int first = -1;
+            foreach (int node in nodes)
+            {
+                if (population[node] <= 0) continue;
+                people += population[node];
+                if (first < 0) first = node;
+            }
+            if (first < 0) return;
+            long given = 0;
+            foreach (int node in nodes)
+            {
+                if (population[node] <= 0) continue;
+                long share = amount * population[node] / people;
+                cash[node] += share;
+                given += share;
+            }
+            cash[first] += amount - given;
         }
 
         /// <summary>

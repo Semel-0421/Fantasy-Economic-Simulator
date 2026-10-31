@@ -515,6 +515,7 @@ namespace FES.Agents
             // arrears are wages and bills the households there never get (DEC-061).
             if (facilities.Cash[facility] < 0) MoneyLedger.PayLocalHouseholds(ctx.World, facilities.Node[facility], facilities.Cash[facility]);
             facilities.Cash[facility] = Math.Max(0, facilities.Cash[facility]);
+            ctx.World.Get<IncomeTaxState>().RestartFacility(facility, facilities.Cash[facility]);
             facilities.NegativeCashWeeks[facility] = 0;
             long reserve = db.Config.AuctionReserveShare.MulInt(FacilityValue(db, facilities, facility));
             ctx.World.Get<AuctionTable>().Add(facility, nation, ctx.Turn + db.Config.AuctionWeeks, reserve, forPlayerLoan: false);

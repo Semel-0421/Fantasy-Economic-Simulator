@@ -123,6 +123,183 @@ namespace FES.Tests
         }
 
         [Test]
+        public void DetailedJob_BurstMatchesManaged_WithRumors()
+        {
+            var data = TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nmerchants.rumors,1\n");
+            using var burst = SimulationBuilder.FromData(data, 3).Build();
+            using var managed = SimulationBuilder.FromData(data, 3).Build();
+            ((ArbitrageMerchantBehavior)managed.Context.Services.Get<IMerchantBehavior>()).ForceManaged = true;
+            for (int t = 0; t < 2 * SimClock.WeeksPerYear + 2; t++)
+            {
+                burst.AdvanceTurn();
+                managed.AdvanceTurn();
+            }
+            Assert.AreEqual(managed.ComputeHash(), burst.ComputeHash());
+        }
+
+        [Test]
+        public void Traits_AreDrawnAtStart_AndNeutralWhenOff()
+        {
+            using var on = TestWorlds.BuildSample();
+            var traits = on.World.Get<AgentTable>().Trait.AsArray().ToArray();
+            Assert.Greater(traits.Distinct().Count(), 5, "nine combinations, drawn at random");
+
+            using var off = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nmerchants.traits,0\n"), 42).Build();
+            Assert.IsTrue(off.World.Get<AgentTable>().Trait.AsArray().All(t => t == MerchantTraits.Neutral));
+            for (int t = 0; t < SimClock.WeeksPerYear + 2; t++) off.AdvanceTurn();
+            Assert.IsTrue(off.World.Get<AgentTable>().Trait.AsArray().All(t => t == MerchantTraits.Neutral));
+        }
+
+        [Test]
+        public void Personality_LimitsWhatAGroupRisks()
+        {
+            var config = SimulationConfig.Defaults();
+            using var table = new MerchantTraitTable(config);
+            int cautious = MerchantTraits.Of(MerchantPersonality.Cautious, MerchantOccupation.Local);
+            int aggressive = MerchantTraits.Of(MerchantPersonality.Aggressive, MerchantOccupation.Peddler);
+            Assert.Less(table.SpendRaw[cautious], table.SpendRaw[aggressive]);
+            Assert.Greater(table.MinMarginRaw[cautious], table.MinMarginRaw[aggressive]);
+            Assert.Greater(table.DistancePower[cautious], table.DistancePower[aggressive]);
+            Assert.Less(table.CapacityRaw[aggressive], table.CapacityRaw[cautious]);
+        }
+
+        [Test]
+        public void UnsoldCargo_IsSoldOnceTheTradersCanPay()
+        {
+            using var sim = TestWorlds.BuildSample();
+            sim.AdvanceTurn();
+            var agents = sim.World.Get<AgentTable>();
+            var cargo = sim.World.Get<CargoTable>();
+            var lod = sim.World.Get<LodState>();
+            var markets = sim.World.Get<MarketStore>();
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            int a = Enumerable.Range(0, agents.Count).First(i => lod.IsDetailed(agents.Node[i]) && !agents.IsTravelling(i)
+                && markets.TryFindCell(agents.Node[i], wheat, out _));
+            var holder = CargoHolders.Merchant(new AgentId(a));
+            cargo.Clear(holder);
+            cargo.Change(holder, wheat, 10);
+            // Plenty in the float: the load goes in the group's next idle week, without a trip.
+            sim.World.Get<PurseState>().Float[sim.World.Get<PurseState>().NodeFloat[agents.Node[a]]] += 1_000_000;
+            sim.World.Get<HouseholdCash>().Cash[agents.Node[a]] -= 1_000_000;
+            long cash = agents.Cash[a];
+            sim.AdvanceTurn();
+            Assert.Greater(agents.Cash[a], cash - sim.Database.Config.MerchantUpkeep[agents.Scale[a]]);
+        }
+
+        [Test]
+        public void GroupWithCargoAndNoCash_CarriesItToWhereItSells()
+        {
+            using var sim = TestWorlds.BuildSample();
+            sim.AdvanceTurn();
+            var agents = sim.World.Get<AgentTable>();
+            var cargo = sim.World.Get<CargoTable>();
+            var lod = sim.World.Get<LodState>();
+            var purses = sim.World.Get<PurseState>();
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            int a = Enumerable.Range(0, agents.Count).First(i => lod.IsDetailed(agents.Node[i]) && !agents.IsTravelling(i));
+            var holder = CargoHolders.Merchant(new AgentId(a));
+            cargo.Clear(holder);
+            cargo.Change(holder, wheat, 50);
+            sim.World.Get<HouseholdCash>().Cash[agents.Node[a]] += agents.Cash[a];
+            agents.Cash[a] = 0;
+            int p = purses.NodeFloat[agents.Node[a]];
+            sim.World.Get<HouseholdCash>().Cash[agents.Node[a]] += purses.Float[p];
+            purses.Float[p] = 0;
+            sim.AdvanceTurn();
+            Assert.IsTrue(agents.IsTravelling(a), "it set off to sell");
+        }
+
+        [Test]
+        public void CautiousGroups_StayInTheirHomeRegion()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var nodes = sim.World.Get<NodeTable>();
+            for (int a = 0; a < agents.Count; a++)
+                agents.Trait[a] = MerchantTraits.Of(MerchantPersonality.Cautious, MerchantOccupation.Expedition);
+            int trips = 0;
+            for (int t = 0; t < 30; t++)
+            {
+                sim.AdvanceTurn();
+                for (int a = 0; a < agents.Count; a++)
+                {
+                    if (!agents.IsTravelling(a) || nodes.Level[agents.Home[a]] < (byte)WorldLevel.Region) continue;
+                    trips++;
+                    Assert.AreEqual(nodes.AncestorAt(agents.Home[a], WorldLevel.Region), nodes.AncestorAt(agents.Destination[a], WorldLevel.Region));
+                }
+            }
+            Assert.Greater(trips, 0);
+        }
+
+        [Test]
+        public void GroupBasedInTheDetailedArea_IsSteppedAwayFromIt()
+        {
+            using var sim = TestWorlds.BuildSample();
+            sim.AdvanceTurn();
+            var agents = sim.World.Get<AgentTable>();
+            var nodes = sim.World.Get<NodeTable>();
+            var lod = sim.World.Get<LodState>();
+            int a = Enumerable.Range(0, agents.Count).First(i => lod.IsDetailed(agents.Home[i]) && !agents.IsTravelling(i));
+            int away = Enumerable.Range(0, nodes.Count).First(n => !lod.IsDetailed(n) && nodes.Continent[n] == nodes.Continent[agents.Home[a]]);
+            agents.Node[a] = away;
+            long cash = agents.Cash[a];
+            sim.AdvanceTurn();
+            Assert.AreNotEqual(cash, agents.Cash[a]);
+        }
+
+        [Test]
+        public void NewYear_SetsWeightsByFitness_AndAShareOfGroupsHandsOver()
+        {
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
+                "key,value\nmerchants.generation_permille,500\nmerchants.mutation_permille,0\n"), 42).Build();
+            var agents = sim.World.Get<AgentTable>();
+            var genetics = sim.World.Get<MerchantGenetics>();
+            var nodes = sim.World.Get<NodeTable>();
+            int continent = nodes.Continent[sim.World.Get<PlayerState>().Node];
+            int first = continent * MerchantTraits.Count;
+            long uniform = genetics.Weight[first];
+            for (int t = 0; t < SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
+            var before = agents.Trait.AsArray().ToArray();
+            var cash = agents.Cash.AsArray().ToArray();
+            genetics.YearBankruptcies[first] = 1000; // trait 0 failed everywhere this year
+            sim.AdvanceTurn();
+            Assert.Less(genetics.Weight[first], uniform, "a failing trait is drawn less");
+            Assert.AreEqual(0, genetics.YearBankruptcies[first]);
+            var after = agents.Trait.AsArray();
+            int changed = Enumerable.Range(0, before.Length).Count(a => before[a] != after[a]);
+            Assert.Greater(changed, before.Length / 5, "about half hand over, most to another trait");
+            Assert.IsTrue(sim.World.Get<CurrencyState>().CoinSupply[continent] > 0);
+        }
+
+        [Test]
+        public void NodeMemory_KeepsTheLastFourNodes()
+        {
+            var memory = NodeMemory.Empty;
+            Assert.IsFalse(memory.Knows(1));
+            for (int n = 1; n <= 5; n++) memory.Learn(n);
+            Assert.IsFalse(memory.Knows(1), "the oldest went");
+            for (int n = 2; n <= 5; n++) Assert.IsTrue(memory.Knows(n));
+            memory.Learn(3); // already known: nothing moves
+            memory.Learn(6);
+            Assert.IsFalse(memory.Knows(2));
+            Assert.IsTrue(memory.Knows(3));
+        }
+
+        [Test]
+        public void Rumors_ConserveMoney_AndTeachGroupsNodes()
+        {
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nmerchants.rumors,1\n"), 42).Build();
+            var currency = sim.World.Get<CurrencyState>();
+            for (int t = 0; t < 30; t++)
+            {
+                sim.AdvanceTurn();
+                for (int c = 0; c < currency.ContinentCount; c++)
+                    Assert.AreEqual(currency.CoinSupply[c], MoneyLedger.ContinentMoney(sim.World, c));
+            }
+            Assert.IsTrue(sim.World.Get<AgentTable>().Memory.AsArray().Any(m => m.B >= 0), "someone knows more than one node");
+        }
+
+        [Test]
         public void AggregateFlow_MovesStockTowardTheHigherPrice()
         {
             using var detail = new NativeArray<byte>(new byte[] { 0, 0 }, Allocator.Temp);
@@ -151,12 +328,14 @@ namespace FES.Tests
             using var demand = new NativeArray<int>(2, Allocator.Temp);
             using var nodeFloat = new NativeArray<int>(new[] { 0, 0 }, Allocator.Temp);
             using var floats = new NativeArray<long>(1, Allocator.Temp);
+            using var nodeSpend = new NativeArray<long>(new[] { Fx.OneRaw, Fx.OneRaw }, Allocator.Temp);
+            using var nodeMargin = new NativeArray<long>(2, Allocator.Temp);
             new MerchantFlowJob
             {
                 CategoryCount = 1,
                 FlowShareRaw = Fx.FromPermille(500).Raw,
                 LicensedShareRaw = Fx.FromPermille(200).Raw,
-                NodeDetail = detail, NodeContinent = continent, NodeCapacity = capacity, NodeCategorySpecialty = specialty,
+                NodeDetail = detail, NodeContinent = continent, NodeCapacity = capacity, NodeSpendRaw = nodeSpend, NodeMinMarginRaw = nodeMargin, NodeCategorySpecialty = specialty,
                 Tariff = rates, SpecialtySurcharge = rates,
                 OutStart = outStart, OutCount = outCount, RouteIndex = routeIndex, RouteTo = routeTo,
                 RouteTurns = routeTurns, RouteCostPerUnitRaw = routeCost, RouteBudget = routeBudget, RouteExpectedLoss = routeLoss,
@@ -186,7 +365,7 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 3, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 4, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {

@@ -388,6 +388,9 @@ namespace FES.Simulation
         public long ContinentMoneyTotal(int continent) => Totals.ContinentTotal[continent];
         /// <summary>Money the traders of a nation hold to pay sellers with (DEC-061).</summary>
         public long TraderFloat(NodeId nation) => _world.Get<PurseState>().Float[_banks.NationIndex(nation.Value)];
+
+        /// <summary>The share of a nation's workers employed this quarter.</summary>
+        public Fx EmploymentRate(NodeId nation) => _world.Get<LaborState>().Rate(_banks.NationIndex(nation.Value));
         /// <summary>Money the households of a node hold (DEC-061).</summary>
         public long HouseholdCash(NodeId node) => _world.Get<FES.Economy.HouseholdCash>().Cash[node.Value];
 

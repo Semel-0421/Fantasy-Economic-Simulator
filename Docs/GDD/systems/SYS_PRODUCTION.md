@@ -45,8 +45,9 @@ raw materials propagate to finished goods, and each node's specialties give ever
   (`facility.<tier>.upkeep`).
 - [Confirmed] Upkeep is paid as wages to the households of the facility's node (DEC-061; built in P13a
   and P13b).
-- [Draft] NPC output is sold only as far as the traders' float there can pay; the rest is lost (P13b,
-  SYS-MARKETS).
+- [Confirmed] NPC output always reaches the market; the producer is paid only as far as the traders' float
+  there can pay, and the rest goes unpaid (previously: the unpaid part of the output was lost, P13b,
+  SYS-MARKETS). Player output sold as overflow is still capped in units.
 - [Confirmed] Profit above 26 weeks of costs is paid out at 10% a week to the owning group (DEC-061).
 - [Draft] Built in P13c: costs are the week's upkeep plus its inputs at current prices, whether bought or
   not (`facility.dividend_buffer_weeks`, `facility.dividend_permille`). Only NPC-run facilities pay;

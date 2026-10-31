@@ -740,6 +740,7 @@ namespace FES.Agents
                 MoneyLedger.PayFromGroup(ctx.World, _facilities.Group[f], _facilities.Node[f], price);
                 _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f],
                     _db.Config.FacilityStartCash[(int)_db.Facilities[_facilities.DefIndex[f]].Tier]);
+                ctx.World.Get<IncomeTaxState>().RestartFacility(f, _facilities.Cash[f]);
                 _facilities.NegativeCashWeeks[f] = 0;
             }
 

@@ -75,7 +75,7 @@ namespace FES.Agents
 
     public static class LicenseRules
     {
-        static readonly uint MerchantStream = DetHash.Of("agents.licenses.merchants");
+        public static readonly uint MerchantStream = DetHash.Of("agents.licenses.merchants");
 
         /// <summary>A license's price, in the issuing nation's coin: the good's Mid base price times the config factor.</summary>
         public static long Price(GameDatabase db, int baseGood) =>

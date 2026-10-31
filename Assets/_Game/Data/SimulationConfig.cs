@@ -57,9 +57,14 @@ namespace FES.Data
         public readonly Fx[] DefaultIncomePerHead =
             { Fx.FromPermille(300), Fx.FromPermille(300), Fx.FromPermille(300), Fx.FromPermille(500), Fx.FromPermille(2000) };
         /// <summary>Yearly population change: the base rate, plus this share of how far necessities were afforded above or below need.</summary>
-        public Fx PopulationBaseGrowth = Fx.FromPermille(5);
-        public Fx PopulationGrowthResponse = Fx.FromPermille(50);
-        public Fx PopulationMaxChange = Fx.FromPermille(30);
+        /// <summary>
+        /// Yearly population change with necessities fully supplied: Victorian Europe's rate. The best year reaches
+        /// England and Wales 1851-1901 (about 1.2-1.3%: births 35, deaths 22 per thousand); the worst, famine.
+        /// </summary>
+        public Fx PopulationBaseGrowth = Fx.FromPermille(8);
+        public Fx PopulationGrowthResponse = Fx.FromPermille(40);
+        public Fx PopulationMaxGrowth = Fx.FromPermille(13);
+        public Fx PopulationMaxDecline = Fx.FromPermille(40);
         /// <summary>
         /// Yearly income change (DEC-050, P13c): income per head moves this share of the way to the income
         /// households measurably received over the year, by at most the cap either way.
@@ -72,6 +77,56 @@ namespace FES.Data
         public int HouseholdBudgetWeeks = 26;
         /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
         public Fx TraderFloatShare = Fx.FromPermille(100);
+        /// <summary>Share of its float, as the week starts, that producers may be paid from; merchants sell into the rest later in the week.</summary>
+        public Fx ProducerFloatShare = Fx.FromPermille(500);
+        /// <summary>Employment rate where activity matches its long-run level, and its limits.</summary>
+        public Fx LaborBaseEmployment = Fx.FromPermille(900);
+        public Fx LaborMinEmployment = Fx.FromPermille(500);
+        public Fx LaborMaxEmployment = Fx.FromPermille(1000);
+        /// <summary>Share of the way the rate moves toward its target per quarter, and the long-run level toward activity.</summary>
+        public Fx LaborResponse = Fx.FromPermille(500);
+        public Fx LaborLongRunResponse = Fx.FromPermille(125);
+        /// <summary>Weekly share of a merchant group's cash above its buffer that it pays out in wages at full employment.</summary>
+        public Fx LaborMerchantWage = Fx.FromPermille(100);
+        /// <summary>A merchant group keeps this share of its starting cash as working capital before paying wages.</summary>
+        public Fx LaborMerchantBuffer = Fx.FromPermille(1000);
+        /// <summary>Income tax, paid yearly, on households' measured income and on companies' profit.</summary>
+        public Fx TaxHousehold = Fx.FromPermille(100);
+        public Fx TaxCompany = Fx.FromPermille(100);
+        /// <summary>Defense as a share of a nation's yearly budget, and its maintenance on top, as a share of that.</summary>
+        public Fx DefenseShare = Fx.FromPermille(50);
+        public Fx DefenseMaintenance = Fx.FromPermille(200);
+        /// <summary>Weeks between defense purchases; scanning every market is the cost.</summary>
+        public int DefenseIntervalWeeks = 4;
+        /// <summary>Yearly defense per route of the nation for one full danger cut, and the most it can cut.</summary>
+        public int DefenseSafetyCostPerRoute = 15_000;
+        public Fx DefenseMaxSafety = Fx.FromPermille(600);
+        /// <summary>Share of the reserve above target subsidies may pay in a year, and the rate on the value produced.</summary>
+        public Fx SubsidyShare = Fx.FromPermille(300);
+        public Fx SubsidyRate = Fx.FromPermille(200);
+        public int SubsidyYears = 3;
+        public int SubsidyMaxPerNation = 2;
+        /// <summary>Share of the reserve above target a nation may put into projects each year, and how many.</summary>
+        public Fx StateProjectShare = Fx.FromPermille(500);
+        public int StateProjectsPerYear = 3;
+        public int StateProjectWeeks = 16;
+        /// <summary>What harbors and highways score beyond the import bill.</summary>
+        public int StateTradeScore = 100;
+        /// <summary>What paving scores when a nation chooses, in the permille its other needs score in.</summary>
+        public int StateRoadScore = 120;
+        public long StateFarmlandCost = 5_000;
+        public long StateMineCost = 8_000;
+        public long StateHarborCost = 10_000;
+        public long StateHighwayCostPerTurn = 1_000;
+        /// <summary>Primary output per level of land development, and the most levels.</summary>
+        public Fx StateLandBonus = Fx.FromPermille(100);
+        public int StateLandMax = 5;
+        /// <summary>Per-unit charge cut on water routes per harbor level, and the most levels; and on highways.</summary>
+        public Fx StateHarborBonus = Fx.FromPermille(100);
+        public int StateHarborMax = 3;
+        public Fx StateHighwayBonus = Fx.FromPermille(200);
+        /// <summary>Share of a state enterprise's dividends the state collects; it keeps the rest for itself.</summary>
+        public Fx StateFacilityLevy = Fx.FromPermille(500);
 
         /// <summary>One policy step changes tolls, license prices or minting by this share; at most this many steps either way (DEC-058).</summary>
         public Fx PolicyStep = Fx.FromPermille(100);
@@ -253,6 +308,29 @@ namespace FES.Data
 
         /// <summary>A facility goes bankrupt after this many consecutive weeks with cash below zero (DEC-051).</summary>
         public int FacilityBankruptWeeks = 5;
+
+        /// <summary>Merchant groups have a personality and occupation (reference specification, [Draft]).</summary>
+        public bool MerchantTraitsEnabled = true;
+        /// <summary>
+        /// Groups judge prices only at nodes they have seen or heard of (reference specification, [Draft]). Off by
+        /// default: in the sample world it raised merchant bankruptcies from 2 to 233 in ten years.
+        /// </summary>
+        public bool MerchantRumorsEnabled = false;
+        /// <summary>Yearly share of groups that hand over to a successor of a newly drawn trait.</summary>
+        public Fx MerchantGenerationShare = Fx.FromPermille(50);
+        /// <summary>Chance a new group's trait is drawn at random rather than by fitness.</summary>
+        public Fx MerchantMutationShare = Fx.FromPermille(150);
+        /// <summary>Weight of relative capital in a trait's fitness; survival has the rest.</summary>
+        public Fx MerchantFitnessCapital = Fx.FromPermille(700);
+        /// <summary>Per personality (cautious, normal, aggressive): share of cash risked on a load, and the least margin over the buying price.</summary>
+        public readonly Fx[] PersonalitySpend = { Fx.FromPermille(500), Fx.FromPermille(750), Fx.One };
+        public readonly Fx[] PersonalityMinMargin = { Fx.FromPermille(200), Fx.FromPermille(100), Fx.Zero };
+        /// <summary>Per personality: the group trades within its home's ancestor at this level.</summary>
+        public readonly WorldLevel[] PersonalityRange = { WorldLevel.Region, WorldLevel.Nation, WorldLevel.Continent };
+        /// <summary>Per occupation (local, expedition, peddler): capacity and upkeep scale, and how strongly distance counts when choosing a load.</summary>
+        public readonly Fx[] OccupationCapacity = { Fx.One, Fx.One, Fx.FromPermille(500) };
+        public readonly Fx[] OccupationUpkeep = { Fx.One, Fx.One, Fx.FromPermille(500) };
+        public readonly int[] OccupationDistancePower = { 2, 0, 1 };
 
         /// <summary>An NPC facility keeps this many weeks of costs (upkeep and inputs at current prices); cash above it is profit (DEC-061).</summary>
         public int DividendBufferWeeks = 26;
@@ -461,7 +539,8 @@ namespace FES.Data
                 throw new FormatException("config.csv: households.q1..q5.income_share_permille must sum to 1000.");
             PopulationBaseGrowth = Permille(v, "households.base_growth_permille", PopulationBaseGrowth);
             PopulationGrowthResponse = Permille(v, "households.growth_response_permille", PopulationGrowthResponse);
-            PopulationMaxChange = Permille(v, "households.max_change_permille", PopulationMaxChange);
+            PopulationMaxGrowth = Permille(v, "households.max_growth_permille", PopulationMaxGrowth);
+            PopulationMaxDecline = Permille(v, "households.max_decline_permille", PopulationMaxDecline);
             IncomeResponse = Permille(v, "households.income_response_permille", IncomeResponse);
             IncomeMaxChange = Permille(v, "households.income_max_change_permille", IncomeMaxChange);
             NeedMemoryWeeks = Int(v, "households.need_memory_weeks", NeedMemoryWeeks);
@@ -469,6 +548,41 @@ namespace FES.Data
             HouseholdBudgetWeeks = Int(v, "households.budget_weeks", HouseholdBudgetWeeks);
             if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
             TraderFloatShare = Permille(v, "markets.trader_float_permille", TraderFloatShare);
+            ProducerFloatShare = Permille(v, "markets.producer_float_permille", ProducerFloatShare);
+            LaborBaseEmployment = Permille(v, "labor.base_employment_permille", LaborBaseEmployment);
+            LaborMinEmployment = Permille(v, "labor.min_employment_permille", LaborMinEmployment);
+            LaborMaxEmployment = Permille(v, "labor.max_employment_permille", LaborMaxEmployment);
+            LaborResponse = Permille(v, "labor.response_permille", LaborResponse);
+            LaborLongRunResponse = Permille(v, "labor.long_run_response_permille", LaborLongRunResponse);
+            LaborMerchantWage = Permille(v, "labor.merchant_wage_permille", LaborMerchantWage);
+            LaborMerchantBuffer = Permille(v, "labor.merchant_buffer_permille", LaborMerchantBuffer);
+            TaxHousehold = Permille(v, "tax.household_permille", TaxHousehold);
+            TaxCompany = Permille(v, "tax.company_permille", TaxCompany);
+            DefenseShare = Permille(v, "state.defense_permille", DefenseShare);
+            DefenseMaintenance = Permille(v, "state.defense_maintenance_permille", DefenseMaintenance);
+            DefenseIntervalWeeks = Int(v, "state.defense_interval_weeks", DefenseIntervalWeeks);
+            DefenseSafetyCostPerRoute = Int(v, "state.defense_safety_cost_per_route", DefenseSafetyCostPerRoute);
+            DefenseMaxSafety = Permille(v, "state.defense_max_safety_permille", DefenseMaxSafety);
+            SubsidyShare = Permille(v, "state.subsidy_share_permille", SubsidyShare);
+            SubsidyRate = Permille(v, "state.subsidy_rate_permille", SubsidyRate);
+            SubsidyYears = Int(v, "state.subsidy_years", SubsidyYears);
+            SubsidyMaxPerNation = Int(v, "state.subsidy_max_per_nation", SubsidyMaxPerNation);
+            StateTradeScore = Int(v, "state.trade_score_permille", StateTradeScore);
+            if (DefenseIntervalWeeks < 1) throw new FormatException("config.csv: state.defense_interval_weeks must be >= 1.");
+            StateProjectShare = Permille(v, "state.project_share_permille", StateProjectShare);
+            StateProjectsPerYear = Int(v, "state.projects_per_year", StateProjectsPerYear);
+            StateProjectWeeks = Int(v, "state.project_weeks", StateProjectWeeks);
+            StateRoadScore = Int(v, "state.road_score_permille", StateRoadScore);
+            StateFarmlandCost = Long(v, "state.farmland_cost", StateFarmlandCost);
+            StateMineCost = Long(v, "state.mine_cost", StateMineCost);
+            StateHarborCost = Long(v, "state.harbor_cost", StateHarborCost);
+            StateHighwayCostPerTurn = Long(v, "state.highway_cost_per_turn", StateHighwayCostPerTurn);
+            StateLandBonus = Permille(v, "state.land_bonus_permille", StateLandBonus);
+            StateLandMax = Int(v, "state.land_max", StateLandMax);
+            StateHarborBonus = Permille(v, "state.harbor_bonus_permille", StateHarborBonus);
+            StateHarborMax = Int(v, "state.harbor_max", StateHarborMax);
+            StateHighwayBonus = Permille(v, "state.highway_bonus_permille", StateHighwayBonus);
+            StateFacilityLevy = Permille(v, "state.facility_levy_permille", StateFacilityLevy);
             InternationalBankReserveShare = Permille(v, "bank.international_reserve_permille", InternationalBankReserveShare);
             TargetReserveRatio = Permille(v, "bank.target_reserve_permille", TargetReserveRatio);
             MaxLoanRateMultiplier = Permille(v, "bank.max_rate_multiplier_permille", MaxLoanRateMultiplier);
@@ -494,6 +608,32 @@ namespace FES.Data
             if (SpecialtyGradeUpChance.Raw < 0 || SpecialtyGradeUpChance.Raw > Fx.One.Raw)
                 throw new FormatException("config.csv: specialty.grade_up_permille must be within 0..1000.");
             FacilityBankruptWeeks = Int(v, "facility.bankrupt_weeks", FacilityBankruptWeeks);
+            MerchantTraitsEnabled = Int(v, "merchants.traits", MerchantTraitsEnabled ? 1 : 0) != 0;
+            MerchantRumorsEnabled = Int(v, "merchants.rumors", MerchantRumorsEnabled ? 1 : 0) != 0;
+            MerchantGenerationShare = Permille(v, "merchants.generation_permille", MerchantGenerationShare);
+            MerchantMutationShare = Permille(v, "merchants.mutation_permille", MerchantMutationShare);
+            MerchantFitnessCapital = Permille(v, "merchants.fitness_capital_permille", MerchantFitnessCapital);
+            string[] personalities = { "cautious", "normal", "aggressive" };
+            for (int i = 0; i < personalities.Length; i++)
+            {
+                PersonalitySpend[i] = Permille(v, $"merchants.{personalities[i]}.spend_permille", PersonalitySpend[i]);
+                PersonalityMinMargin[i] = Permille(v, $"merchants.{personalities[i]}.min_margin_permille", PersonalityMinMargin[i]);
+                string rangeKey = $"merchants.{personalities[i]}.range_level";
+                if (v.TryGetValue(rangeKey, out var range))
+                    PersonalityRange[i] = CsvTable.TryParseEnumName(range, out WorldLevel rangeLevel)
+                        ? rangeLevel
+                        : throw new FormatException($"config.csv: {rangeKey} '{range}' is not a WorldLevel.");
+                Record(rangeKey, PersonalityRange[i].ToString());
+            }
+            string[] occupations = { "local", "expedition", "peddler" };
+            for (int i = 0; i < occupations.Length; i++)
+            {
+                OccupationCapacity[i] = Permille(v, $"merchants.{occupations[i]}.capacity_permille", OccupationCapacity[i]);
+                OccupationUpkeep[i] = Permille(v, $"merchants.{occupations[i]}.upkeep_permille", OccupationUpkeep[i]);
+                OccupationDistancePower[i] = Int(v, $"merchants.{occupations[i]}.distance_power", OccupationDistancePower[i]);
+                if (OccupationDistancePower[i] < 0 || OccupationDistancePower[i] > 2)
+                    throw new FormatException($"config.csv: merchants.{occupations[i]}.distance_power must be 0, 1 or 2.");
+            }
             DividendBufferWeeks = Int(v, "facility.dividend_buffer_weeks", DividendBufferWeeks);
             if (DividendBufferWeeks < 0) throw new FormatException("config.csv: facility.dividend_buffer_weeks must be >= 0.");
             DividendShare = Permille(v, "facility.dividend_permille", DividendShare);

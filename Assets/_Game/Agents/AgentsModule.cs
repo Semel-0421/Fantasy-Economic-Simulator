@@ -11,6 +11,7 @@ namespace FES.Agents
     {
         static readonly uint SpawnStream = DetHash.Of("agents.spawn");
         static readonly uint StartStream = DetHash.Of("agents.player.start");
+        static readonly uint TraitStream = DetHash.Of("agents.merchant_trait");
         static readonly string[] RequiredModules = { "world", "economy" };
 
         public string Id => "agents";
@@ -34,20 +35,24 @@ namespace FES.Agents
             builder.World.Add(new LoanTable());
             builder.World.Add(new AuctionTable());
             builder.World.Add(new NpcLoanTable());
-            builder.World.Add(new PurseState(nodes, banks, builder.World.Get<HouseholdCash>()));
+            var purses = builder.World.Add(new PurseState(nodes, banks, builder.World.Get<HouseholdCash>()));
+            builder.World.Add(new LaborState(purses.Count, db.Config.LaborBaseEmployment));
+            builder.World.Add(new IncomeTaxState(nodes.ContinentCount));
+            builder.World.Add(new DevelopmentState(nodes.Count, builder.World.Get<RouteTable>().Count, banks.NationCount, purses.Count, builder.World.Get<MarketStore>().GoodBasePrice.Length));
             builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
             builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
 
             var facilities = builder.World.Add(new FacilityTable());
             SpawnFacilities(facilities, nodes, db, seed);
             var merchants = builder.World.Add(new AgentTable());
-            SpawnMerchants(merchants, nodes, db.Config);
+            SpawnMerchants(merchants, nodes, db.Config, seed);
             var groups = builder.World.Add(new GroupTable());
             GroupSetup.Found(groups, nodes, db, facilities);
             GroupSetup.AssignOwners(groups, nodes, db, facilities, merchants);
             builder.World.Add(new GuildMembershipTable());
             builder.World.Add(new PolicyState(banks.NationCount, nodes.ContinentCount, db));
             builder.World.Add(new GuidanceState());
+            builder.World.Add(new MerchantGenetics(nodes.ContinentCount));
             MoneyLedger.Seed(builder.World, db.Config);
             builder.World.Add(new LodState(nodes.Count));
 
@@ -60,6 +65,7 @@ namespace FES.Agents
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
             builder.AddMigration(new PurseStateV1Migration());
+            builder.AddMigration(new AgentTableV3Migration());
             builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
             builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
@@ -73,9 +79,15 @@ namespace FES.Agents
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());
             builder.AddSystem(new StateSpendingSystem());
+            builder.AddSystem(new LaborMarketSystem());
+            builder.AddSystem(new DefenseSystem());
             builder.AddSystem(new FinanceSystem());
+            builder.AddSystem(new IncomeTaxSystem());
+            builder.AddSystem(new StateProjectSystem());
+            builder.AddSystem(new SubsidySystem());
             builder.AddSystem(new HouseholdGrowthSystem());
             builder.AddSystem(new PolicySystem());
+            builder.AddSystem(new MerchantGenerationSystem());
             builder.AddSystem(new RoadSystem());
             builder.AddSystem(new GroupSystem());
         }
@@ -139,13 +151,16 @@ namespace FES.Agents
             return eligible[rng.NextInt(eligible.Count)];
         }
 
-        static void SpawnMerchants(AgentTable table, NodeTable nodes, SimulationConfig config)
+        static void SpawnMerchants(AgentTable table, NodeTable nodes, SimulationConfig config, ulong seed)
         {
             for (int n = 0; n < nodes.Count; n++)
             {
                 var level = nodes.LevelOf(n);
                 for (int k = 0; k < config.MerchantsPerNode[(int)level]; k++)
-                    table.Add(n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
+                {
+                    var id = table.Add(n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
+                    if (config.MerchantTraitsEnabled) table.Trait[id.Value] = (byte)DetRandom.For(seed, 0, TraitStream, id.Value).NextInt(MerchantTraits.Count);
+                }
             }
         }
     }

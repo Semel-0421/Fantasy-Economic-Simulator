@@ -28,6 +28,9 @@ namespace FES.Core
 
         public void Add(T value) => _list.Add(value);
 
+        /// <summary>The column itself, for jobs that add or remove rows.</summary>
+        public NativeList<T> List => _list;
+
         public void RemoveAtSwapBack(int index) => _list.RemoveAtSwapBack(index);
 
         /// <summary>View for jobs. Invalidated when the column grows.</summary>

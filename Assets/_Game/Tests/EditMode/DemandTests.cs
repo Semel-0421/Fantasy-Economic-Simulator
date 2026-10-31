@@ -156,8 +156,8 @@ namespace FES.Tests
 
             sim.AdvanceTurn();
             Assert.AreEqual(1, sim.LastTurnEvents.OfType<HouseholdsUpdated>().Count());
-            Assert.AreEqual(starvedPop - config.PopulationMaxChange.MulInt(starvedPop), households.Population[starved]);
-            Assert.AreEqual(fedPop + config.PopulationMaxChange.MulInt(fedPop), households.Population[fed]);
+            Assert.AreEqual(starvedPop + (config.PopulationBaseGrowth - config.PopulationGrowthResponse).MulInt(starvedPop), households.Population[starved]);
+            Assert.AreEqual(fedPop + config.PopulationMaxGrowth.MulInt(fedPop), households.Population[fed]);
             Assert.AreEqual(expected, sim.View.IncomePerHead(city));
             Assert.Greater(sim.View.IncomePerHead(region).Raw, (regionIncome * Fx.FromInt(10)).Raw);
             Assert.AreEqual(0, households.NecessityWanted[starved]);

@@ -65,6 +65,8 @@ flowchart LR
 | P16 | Group investment (new facilities, level-ups, roads; one project per group a year), closure after two losing years | SYS-INTEREST-GROUPS, SYS-PRODUCTION | Ready |
 | P17 | Large merchant groups and aggregate flows cross continents (65% share), exchanging at international banks | SYS-MERCHANTS | Ready |
 | P13d | Price index from published totals (DEC-062), retuning with a ten-year sample run, turn cost within +1.5 ms | SYS-BANKING | Done |
+| P18 | Hexagonal tile map, with the map and nodes generated from the seed; state land development moves onto tiles (DEC-075) | SYS-INFRASTRUCTURE | Before front-end work |
+| P19 | War system; the army's safety effect (DEC-074) is its first piece | | Later |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -79,8 +81,19 @@ flowchart LR
   loop (DEC-061, DEC-062); balance numbers should wait for them. P14 to P17 follow (DEC-063 to DEC-066).
 - P13a to P13d are done: money is conserved per continent and circulates (households, floats, facilities,
   groups, the state); prices follow the published money total; the sample world's population falls about
-  1% a year. A full-scale turn takes about 19.5 ms (18.0 before P13), at the +1.5 ms limit. What is left of
-  the balance is listed in SYS-BANKING. P14 to P17 are ready.
+  1% a year. A full-scale turn takes about 19.5 ms (18.0 before P13) in its first weeks; from turn 60 to 182
+  it averages about 28.5 ms, with 3 ms in `agents.banks` (it was 30.6 ms there: payments to a nation's
+  households scanned every node; the scale test logs this as `[FES scale settled]`). What is left of the
+  balance is listed in SYS-BANKING. On the player's continent the floats ran dry and goods went unsold: NPC
+  output now always reaches the market and only its payment is capped, which took years 6 to 10 of household
+  spending there from 328k to 958k a year and defaults from 918 to 443. Groups based in the detailed area are now
+  stepped wherever they go, with a range by personality. Merchant bankruptcies came from producers taking the float
+  before merchants sold; with the reserve, repeated sale tries, a labor market (DEC-070) and an income tax (DEC-071),
+  merchant bankruptcies stay under 5% of all 460 groups a year. With state defense, projects and population following
+  necessity supply (DEC-072), ten sample years show 143 merchant bankruptcies, 318 defaults, household spending of
+  1,383k a year, stock of 523k, 44,983 people, and on the player's continent a bank reserve of 2,685k, 1k lent, 8 NPC
+  loans. A full-scale turn averages 34.3 ms from turn 60 to 182. Open: population falls about 1% a year, and the
+  reserve and households' idle cash keep growing. P14 to P17 are ready.
 - With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.

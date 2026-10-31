@@ -94,10 +94,14 @@ namespace FES.Agents
         readonly MarketStore _markets;
         readonly MarketFlows _flows;
         readonly CurrencyState _currency;
+        readonly DevelopmentState _development;
+        readonly PurseState _purses;
 
         public TravelCosts(WorldState world, GameDatabase db)
         {
             _db = db;
+            _development = world.Get<DevelopmentState>();
+            _purses = world.Get<PurseState>();
             _nodes = world.Get<NodeTable>();
             _routes = world.Get<RouteTable>();
             _tolls = world.Get<NodeTolls>();
@@ -151,11 +155,27 @@ namespace FES.Agents
 
         /// <summary>The route's charge per cargo unit, cut by paving in proportion to the road's condition (DEC-054).</summary>
         public Fx PerUnitCharge(int route) =>
-            Fx.FromInt(_routes.CostPerUnit[route]) * (Fx.One - _roads.Effect(route, _db.Config.RoadCostReduction));
+            Fx.FromInt(_routes.CostPerUnit[route]) * (Fx.One - _roads.Effect(route, _db.Config.RoadCostReduction)) * DevelopmentFactor(route);
+
+        // Highways and harbor works the states have built (DEC-072).
+        Fx DevelopmentFactor(int route)
+        {
+            var development = _development;
+            if (development.RouteGrade[route] > 0) return Fx.One - _db.Config.StateHighwayBonus;
+            int harbor = development.HarborLevel[_routes.From[route]];
+            return harbor > 0 && IsWater(route) ? Fx.One - _db.Config.StateHarborBonus * Fx.FromInt(harbor) : Fx.One;
+        }
 
         /// <summary>The terrain and region danger of a route, cut by paving (DEC-054).</summary>
         public Fx RouteDanger(int route) =>
-            Fx.FromRaw(_hazards.BaseDanger[route]) * (Fx.One - _roads.Effect(route, _db.Config.RoadDangerReduction));
+            Fx.FromRaw(_hazards.BaseDanger[route]) * (Fx.One - _roads.Effect(route, _db.Config.RoadDangerReduction)) * ArmyFactor(route);
+
+        // A nation's army makes its routes safer (DEC-074).
+        Fx ArmyFactor(int route)
+        {
+            int nation = _purses.NodeFloat[_routes.From[route]];
+            return nation < _development.Security.Length ? Fx.One - Fx.FromRaw(_development.Security[nation]) : Fx.One;
+        }
 
         /// <summary>
         /// Route danger growing linearly with the cargo's value and cut by guards; at most 1 (DEC-026).
@@ -188,7 +208,7 @@ namespace FES.Agents
     /// <summary>One roll per trip (DEC-026): whether an encounter happens and whether it takes cash or cargo.</summary>
     public static class Encounters
     {
-        static readonly uint Stream = DetHash.Of("agents.encounters");
+        public static readonly uint Stream = DetHash.Of("agents.encounters");
 
         /// <param name="salt">Separates travellers that share an entity index (player 0, merchants 1).</param>
         public static EncounterLoss Roll(ulong seed, int turn, int entity, uint salt, Fx chance)

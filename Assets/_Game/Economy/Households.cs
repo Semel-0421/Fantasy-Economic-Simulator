@@ -38,7 +38,7 @@ namespace FES.Economy
             {
                 int level = nodes.Level[n];
                 Population[n] = config.DefaultPopulation[level];
-                IncomePerHead[n] = Fx.FromInt(config.DefaultIncomePerHead[level]).Raw;
+                IncomePerHead[n] = config.DefaultIncomePerHead[level].Raw;
             }
             foreach (var def in map.Nodes)
                 if (def.Population >= 0 && nodes.TryFind(def.Key, out var node)) Population[node.Value] = def.Population;
@@ -51,7 +51,7 @@ namespace FES.Economy
         /// <summary>Luxury demand relative to a default node of the level: total income over the default.</summary>
         public Fx LuxuryWeight(int node, int level, SimulationConfig config) =>
             Fx.FromRatio(Population[node] * IncomePerHead[node],
-                config.DefaultPopulation[level] * Fx.FromInt(config.DefaultIncomePerHead[level]).Raw);
+                config.DefaultPopulation[level] * config.DefaultIncomePerHead[level].Raw);
 
         public void Write(BinaryWriter writer)
         {
@@ -104,6 +104,8 @@ namespace FES.Economy
         public NativeArray<long> Desired;
         /// <summary>Per cell: household units consumed since the market last repriced, not yet paid for.</summary>
         public NativeArray<int> PendingUnits;
+        /// <summary>Per cell: the last turn the market offered the good (supply or stock), for population needs (P13d).</summary>
+        public NativeArray<int> LastOffered;
         /// <summary>Per node: paid for consumption since the year began (P13c).</summary>
         public NativeArray<long> SpentYear;
         /// <summary>Per node: cash when the year began; with <see cref="SpentYear"/> it gives the year's income.</summary>
@@ -111,7 +113,10 @@ namespace FES.Economy
 
         public const string SectionKey = "economy.household_cash";
         public string Key => SectionKey;
-        public int Version => 2;
+        public int Version => 3;
+
+        /// <summary>A good the market has never offered: older than any memory of it.</summary>
+        public const int NeverOffered = -1000000;
 
         public HouseholdCash(int nodeCount, int cellCount)
         {
@@ -119,6 +124,8 @@ namespace FES.Economy
             Spent = new NativeArray<long>(nodeCount, Allocator.Persistent);
             Desired = new NativeArray<long>(nodeCount, Allocator.Persistent);
             PendingUnits = new NativeArray<int>(cellCount, Allocator.Persistent);
+            LastOffered = new NativeArray<int>(cellCount, Allocator.Persistent);
+            for (int c = 0; c < cellCount; c++) LastOffered[c] = NeverOffered;
             SpentYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
             CashYearStart = new NativeArray<long>(nodeCount, Allocator.Persistent);
         }
@@ -157,6 +164,7 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, PendingUnits);
             NativeIO.WriteArray(writer, SpentYear);
             NativeIO.WriteArray(writer, CashYearStart);
+            NativeIO.WriteArray(writer, LastOffered);
         }
 
         public void Read(BinaryReader reader)
@@ -167,6 +175,7 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, PendingUnits);
             NativeIO.ReadArray(reader, SpentYear);
             NativeIO.ReadArray(reader, CashYearStart);
+            NativeIO.ReadArray(reader, LastOffered);
         }
 
         public void Dispose()
@@ -177,6 +186,29 @@ namespace FES.Economy
             PendingUnits.DisposeIfCreated();
             SpentYear.DisposeIfCreated();
             CashYearStart.DisposeIfCreated();
+            LastOffered.DisposeIfCreated();
+        }
+    }
+
+    /// <summary>Version 2 did not remember what markets offered: every good starts as never offered.</summary>
+    public sealed class HouseholdCashV2Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 2;
+
+        public byte[] Migrate(byte[] section)
+        {
+            var reader = new BinaryReader(new MemoryStream(section));
+            for (int skipped = 0; skipped < 3; skipped++) reader.BaseStream.Seek(reader.ReadInt32() * (long)sizeof(long), SeekOrigin.Current);
+            int cells = reader.ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(cells);
+                for (int c = 0; c < cells; c++) writer.Write(HouseholdCash.NeverOffered);
+            }
+            return output.ToArray();
         }
     }
 

@@ -94,6 +94,9 @@ namespace FES.Economy
         public int InlineLevelMask;
         /// <summary>Anchor multiplier (raw Q16) for cells of a node's specialties.</summary>
         public long SpecialtyAnchorMulRaw;
+        public int Turn;
+        /// <summary>Needs count for goods the market offered within this many weeks (usually traded goods).</summary>
+        public int NeedMemoryWeeks;
 
         /// <summary>Per level: turns since that level last repriced.</summary>
         [ReadOnly] public NativeArray<int> LevelElapsed;
@@ -127,6 +130,7 @@ namespace FES.Economy
         [NativeDisableParallelForRestriction] public NativeArray<long> Spent;
         [NativeDisableParallelForRestriction] public NativeArray<long> Desired;
         [NativeDisableParallelForRestriction] public NativeArray<int> PendingUnits;
+        [NativeDisableParallelForRestriction] public NativeArray<int> LastOffered;
 
         [NativeDisableParallelForRestriction] public NativeArray<int> Price;
         [NativeDisableParallelForRestriction] public NativeArray<int> PrevPrice;
@@ -181,8 +185,12 @@ namespace FES.Economy
                         consumed = Fx.RoundShift(consumed * budget);
                         cellMet = Fx.RoundShift(cellMet * budget);
                     }
-                    wanted += cellWanted;
-                    met += cellMet;
+                    if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
+                    if (LastOffered[c] >= Turn - NeedMemoryWeeks)
+                    {
+                        wanted += cellWanted;
+                        met += cellMet;
+                    }
                     Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
                     // Markets that reprice every turn settle the same turn, so nothing waits in PendingUnits.
                     pending = MarketStore.ClampToNonNegativeInt(consumed);
@@ -235,6 +243,8 @@ namespace FES.Economy
         /// <summary>Bit l set = markets of WorldLevel l consume here.</summary>
         public int LevelMask;
         public long SpecialtyAnchorMulRaw;
+        public int Turn;
+        public int NeedMemoryWeeks;
         [ReadOnly] public NativeArray<byte> MarketLevel;
         [ReadOnly] public NativeArray<int> MarketCellStart;
         [ReadOnly] public NativeArray<int> MarketCellCount;
@@ -260,6 +270,7 @@ namespace FES.Economy
         [NativeDisableParallelForRestriction] public NativeArray<long> NecessityMet;
         [NativeDisableParallelForRestriction] public NativeArray<long> Desired;
         [NativeDisableParallelForRestriction] public NativeArray<int> PendingUnits;
+        [NativeDisableParallelForRestriction] public NativeArray<int> LastOffered;
 
         public void Execute(int market)
         {
@@ -289,8 +300,12 @@ namespace FES.Economy
                     consumed = Fx.RoundShift(consumed * budget);
                     cellMet = Fx.RoundShift(cellMet * budget);
                 }
-                wanted += cellWanted;
-                met += cellMet;
+                if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
+                if (LastOffered[c] >= Turn - NeedMemoryWeeks)
+                {
+                    wanted += cellWanted;
+                    met += cellMet;
+                }
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
                 PendingUnits[c] = MarketStore.ClampToNonNegativeInt(PendingUnits[c] + consumed);
             }

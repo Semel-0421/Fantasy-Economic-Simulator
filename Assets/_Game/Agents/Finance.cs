@@ -513,7 +513,7 @@ namespace FES.Agents
             facilities.Mode[facility] = (byte)ControlMode.Automated;
             // The bank runs it until the sale without the old arrears, so it cannot go bankrupt meanwhile; the
             // arrears are wages and bills the households there never get (DEC-061).
-            if (facilities.Cash[facility] < 0) ctx.World.Get<PurseState>().PayHouseholds(facilities.Node[facility], facilities.Cash[facility]);
+            if (facilities.Cash[facility] < 0) MoneyLedger.PayLocalHouseholds(ctx.World, facilities.Node[facility], facilities.Cash[facility]);
             facilities.Cash[facility] = Math.Max(0, facilities.Cash[facility]);
             facilities.NegativeCashWeeks[facility] = 0;
             long reserve = db.Config.AuctionReserveShare.MulInt(FacilityValue(db, facilities, facility));
@@ -641,6 +641,7 @@ namespace FES.Agents
             for (int c = 0; c < _finance.ContinentCount; c++)
             {
                 _finance.PublishedContinentTotal[c] = record.ContinentTotal[c];
+                _currency.MoneyTotal[c] = record.ContinentTotal[c]; // prices follow it from now on (DEC-062)
                 var previous = Fx.FromRaw(_finance.PublishedPriceIndex[c]);
                 var index = Fx.FromRaw(record.PriceIndex[c]);
                 _finance.PublishedInflation[c] = (index / previous - Fx.One).Raw;

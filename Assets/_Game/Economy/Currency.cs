@@ -17,6 +17,13 @@ namespace FES.Economy
         public readonly long[] CoinSupply;
         /// <summary>Coin supply at world start; the inflation baseline.</summary>
         public readonly long[] BaselineCoinSupply;
+        /// <summary>
+        /// The continent's money total as last published (DEC-062): every coin held, counted once. Starts at the
+        /// coin supply, which the money loop keeps it equal to (DEC-061).
+        /// </summary>
+        public readonly long[] MoneyTotal;
+        /// <summary>The money total at world start; the inflation baseline.</summary>
+        public readonly long[] BaselineMoneyTotal;
         /// <summary>Price level relative to the baseline (1.0 = no inflation). Scales market anchor prices.</summary>
         public readonly Fx[] PriceIndex;
         /// <summary>Value of one local coin in reference units (world-average purchasing power = 1.0).</summary>
@@ -26,7 +33,7 @@ namespace FES.Economy
 
         public const string SectionKey = "economy.currency";
         public string Key => SectionKey;
-        public int Version => 2;
+        public int Version => 3;
 
         public CurrencyState(int continentCount)
         {
@@ -35,6 +42,8 @@ namespace FES.Economy
             SilverReserve = new long[continentCount];
             CoinSupply = new long[continentCount];
             BaselineCoinSupply = new long[continentCount];
+            MoneyTotal = new long[continentCount];
+            BaselineMoneyTotal = new long[continentCount];
             PriceIndex = new Fx[continentCount];
             ExchangeRate = new Fx[continentCount];
             MintRateMultiplier = new Fx[continentCount];
@@ -63,6 +72,11 @@ namespace FES.Economy
                 writer.Write(ExchangeRate[c].Raw);
             }
             for (int c = 0; c < ContinentCount; c++) writer.Write(MintRateMultiplier[c].Raw);
+            for (int c = 0; c < ContinentCount; c++)
+            {
+                writer.Write(MoneyTotal[c]);
+                writer.Write(BaselineMoneyTotal[c]);
+            }
         }
 
         public void Read(BinaryReader reader)
@@ -79,6 +93,46 @@ namespace FES.Economy
                 ExchangeRate[c] = Fx.FromRaw(reader.ReadInt64());
             }
             for (int c = 0; c < count; c++) MintRateMultiplier[c] = Fx.FromRaw(reader.ReadInt64());
+            for (int c = 0; c < count; c++)
+            {
+                MoneyTotal[c] = reader.ReadInt64();
+                BaselineMoneyTotal[c] = reader.ReadInt64();
+            }
+        }
+    }
+
+    /// <summary>Version 2 priced on the coin supply: the money totals start from it.</summary>
+    public sealed class CurrencyStateV2Migration : ISaveMigration
+    {
+        public string SectionKey => CurrencyState.SectionKey;
+        public int FromVersion => 2;
+
+        public byte[] Migrate(byte[] section)
+        {
+            var reader = new BinaryReader(new MemoryStream(section));
+            int continents = reader.ReadInt32();
+            var supply = new long[continents];
+            var baseline = new long[continents];
+            for (int c = 0; c < continents; c++)
+            {
+                reader.ReadInt64();
+                reader.ReadInt64();
+                supply[c] = reader.ReadInt64();
+                baseline[c] = reader.ReadInt64();
+                reader.ReadInt64();
+                reader.ReadInt64();
+            }
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                for (int c = 0; c < continents; c++)
+                {
+                    writer.Write(supply[c]);
+                    writer.Write(baseline[c]);
+                }
+            }
+            return output.ToArray();
         }
     }
 
@@ -111,8 +165,8 @@ namespace FES.Economy
 
     /// <summary>
     /// Gold/silver standard. Each year a fixed share of the remaining metal reserves is mined and minted.
-    /// Minting grows coin supply (inflation); as reserves deplete, minting slows and the coin appreciates
-    /// against continents that still mint heavily.
+    /// Minting grows coin supply; prices follow the published money total (DEC-062), so as reserves deplete,
+    /// minting slows and the coin appreciates against continents that still mint heavily.
     /// </summary>
     public sealed class GoldStandardCurrencyModel : ICurrencyModel
     {
@@ -130,6 +184,8 @@ namespace FES.Economy
                 state.SilverReserve[c] = silverScale.MulInt(config.InitialSilverReserve);
                 state.CoinSupply[c] = config.InitialCoinSupply;
                 state.BaselineCoinSupply[c] = config.InitialCoinSupply;
+                state.MoneyTotal[c] = config.InitialCoinSupply;
+                state.BaselineMoneyTotal[c] = config.InitialCoinSupply;
             }
             UpdateRates(state);
         }
@@ -149,7 +205,7 @@ namespace FES.Economy
             long sumIndexRaw = 0;
             for (int c = 0; c < state.ContinentCount; c++)
             {
-                state.PriceIndex[c] = Fx.FromRatio(state.CoinSupply[c], state.BaselineCoinSupply[c]);
+                state.PriceIndex[c] = Fx.FromRatio(state.MoneyTotal[c], state.BaselineMoneyTotal[c]);
                 sumIndexRaw += state.PriceIndex[c].Raw;
             }
             if (state.ContinentCount == 0) return;

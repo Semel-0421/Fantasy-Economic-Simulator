@@ -32,6 +32,15 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   supply (DEC-061). Built in P13a and P13b.
 - [Draft] Default population per level, quintile shares and yearly change rates start as placeholder
   config values.
+- [Confirmed] A necessity counts toward population change if its market offered it (supply or stock) in the
+  last 52 weeks (`households.need_memory_weeks`, [Draft] value): a good that stops arriving is a famine,
+  one never sold there is not (DEC-067).
+- [Confirmed] Continent and nation markets are supplied over routes, and their households buy there
+  (DEC-068).
+- [Draft] P13d: income per head starts at 0.3 / 0.3 / 0.3 / 0.5 / 2.0 coins a week per continent /
+  nation / region / city / village (`households.<level>.income_permille`; was 4 / 4 / 3 / 3 / 2 coins as
+  `households.<level>.income`), near what households measurably earn in the sample world, so luxury
+  demand starts where measured income keeps it.
 - [Draft] Elasticity values per class start as placeholder config values.
 - [Draft] Claude's proposals, built in P10:
   - `goods.csv` marks each base good `necessity` (default) or `luxury`. A necessity's grades are bought
@@ -103,6 +112,5 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   null reference in Burst.
 
 ## Open questions
-- Q-036: P10 stopped the price runaway, but markets still pay sellers whatever households can afford, so
-  money totals keep growing; the price index stays on the minted coin supply for now.
+- Q-036 (resolved by DEC-062, built in P13d): the price index follows the published money total.
 Q-030 (deferred)

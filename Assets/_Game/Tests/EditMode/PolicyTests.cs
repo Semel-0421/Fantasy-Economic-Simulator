@@ -163,12 +163,13 @@ namespace FES.Tests
             using var opposed = Build();
             using var indifferent = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
                 "key,value\nfinance.event_chance_permille,0\npolicy.inflation_opposition_permille,1000000000\n"), 42).Build();
-            while (opposed.Turn <= 2 * SimClock.WeeksPerYear)
+            while (opposed.Turn <= 3 * SimClock.WeeksPerYear)
             {
                 opposed.AdvanceTurn();
                 indifferent.AdvanceTurn();
             }
-            // The first year's minting raised prices; the second review weighs that (DEC-060).
+            // The first year's minting raised prices from the second year's statistics on (DEC-062); the
+            // third review weighs that (DEC-060).
             Assert.Greater(opposed.View.PublishedContinent(0).Inflation.Raw, 0);
             Assert.Less(opposed.View.MintStep(0), indifferent.View.MintStep(0));
         }

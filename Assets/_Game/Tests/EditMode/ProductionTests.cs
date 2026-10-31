@@ -156,7 +156,8 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var view = sim.View;
             var facilities = sim.World.Get<FacilityTable>();
-            int bakery = FacilitiesAtPlayer(sim, IndustryTier.Tertiary).First();
+            int bakery = FacilitiesOf(sim, IndustryTier.Tertiary).First();
+            sim.World.Get<PlayerState>().Node = facilities.Node[bakery];
             var id = new FacilityId(bakery);
             sim.Actions.BuyFacility(id, 0, GuidanceAxis.Trade);
             sim.AdvanceTurn();

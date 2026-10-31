@@ -31,7 +31,8 @@ Good id = `baseIndex * 4 + grade`.
 
 `key,tier,recipe,state_owned` — tier is `Primary`, `Secondary` or `Tertiary`; `state_owned` (optional, 1)
 gives facilities of the type to their nation's state enterprise. Spawn counts per node come from
-`producers.<level>.<tier>` in config; the facility type is picked deterministically among that tier's defs.
+`producers.<level>.<tier>` in config; the facility type is picked deterministically among that tier's defs
+whose inputs are all made in the node's subtree, or among the primary defs when none qualifies (DEC-069).
 
 ## events.csv
 
@@ -79,10 +80,11 @@ changing a default in code does.
 | demand.<level>.weight_permille | continent 40000 ... village 1000 | base demand weight |
 | demand.necessity_elasticity_permille, demand.luxury_elasticity_permille, demand.max_cheap_permille | 500, 1500, 2000 | demand curve ([Draft]) |
 | demand.<grade>.luxury_share_permille | 0 / 0 / 500 / 1000 | how far each grade of a necessity is bought like a luxury ([Draft]) |
-| households.<level>.population, households.<level>.income | continent 20000 / 4 ... village 500 / 2 | default population and weekly income per head ([Draft]) |
+| households.<level>.population, households.<level>.income_permille | 20000 / 10000 / 4000 / 2000 / 500; 300 / 300 / 300 / 500 / 2000 | default population and weekly income per head in thousandths of a coin ([Draft]; P13d replaced `households.<level>.income`, 4 / 4 / 3 / 3 / 2 coins) |
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
 | households.base_growth_permille, households.growth_response_permille, households.max_change_permille | 5, 50, 30 | yearly population change ([Draft]) |
 | households.income_response_permille, households.income_max_change_permille | 500, 500 | yearly income change toward measured income: share of the gap, cap as a share of the larger value ([Draft]; cap was 50) |
+| households.need_memory_weeks | 52 | a necessity counts toward population change if offered within this many weeks (DEC-067, [Draft] value) |
 | households.budget_weeks | 26 | households spend at most their cash over this many weeks a week ([Draft]) |
 | markets.trader_float_permille | 100 | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |

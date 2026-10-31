@@ -101,4 +101,7 @@ SYS-BANKING) are implemented.
   grade-up from Best, or when no market up the hierarchy trades the higher grade.
 - Effect sizes ([Draft]): output x1.25, 20% one grade higher, local anchor x0.8. Facility spawning does
   not favour specialties.
+- [Confirmed] A facility type with inputs is drawn only where some facility makes every input in the node's
+  subtree (a bakery where wheat grows, a smithy above iron mines); with no such type a primary producer
+  takes the slot. Cities keep four smithies; iron tools' base demand is 12 (was 4, [Draft] value) (DEC-069).
 

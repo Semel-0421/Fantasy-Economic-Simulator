@@ -253,6 +253,58 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Needs_CountUsuallyTradedGoods_NotGoodsNeverSold()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var households = sim.World.Get<HouseholdState>();
+            var cash = sim.World.Get<HouseholdCash>();
+            var markets = sim.World.Get<MarketStore>();
+            var city = Node(sim, City);
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            Assert.IsTrue(markets.TryFindCell(city.Value, wheat, out int cell));
+            int start = markets.MarketCellStart[city.Value], end = start + markets.MarketCellCount[city.Value];
+
+            // Nothing offered, ever: no need counts.
+            for (int c = start; c < end; c++)
+            {
+                markets.Stock[c] = 0;
+                cash.LastOffered[c] = HouseholdCash.NeverOffered;
+            }
+            var merchantless = households.NecessityWanted[city.Value];
+            for (int c = start; c < end; c++) markets.Supply[c] = 0;
+            int weeksAgo = sim.Database.Config.NeedMemoryWeeks / 2;
+
+            // Wheat sold half a year ago and gone now counts: it is a shortage, not a good nobody sells.
+            cash.LastOffered[cell] = sim.Turn - weeksAgo;
+            sim.AdvanceTurn();
+            Assert.Greater(households.NecessityWanted[city.Value], merchantless);
+
+            // Forgotten after the memory runs out, unless the market offered it meanwhile.
+            cash.LastOffered[cell] = sim.Turn - sim.Database.Config.NeedMemoryWeeks - 5;
+            markets.Stock[cell] = 0;
+            markets.Supply[cell] = 0;
+            int before = cash.LastOffered[cell];
+            sim.AdvanceTurn();
+            Assert.IsTrue(cash.LastOffered[cell] == before || cash.LastOffered[cell] == sim.Turn - 1);
+        }
+
+        [Test]
+        public void UpperMarkets_GetGoods_AndTheirHouseholdsBuy()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            var markets = sim.World.Get<MarketStore>();
+            var cash = sim.World.Get<HouseholdCash>();
+            int nation = nodes.AncestorAt(Node(sim, City).Value, WorldLevel.Nation);
+            long start = cash.Cash[nation];
+            for (int t = 0; t < 2 * SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
+            Assert.Greater(cash.SpentYear[nation], 0, "the nation's households bought something this year");
+            int first = markets.MarketCellStart[nation];
+            Assert.IsTrue(Enumerable.Range(first, markets.MarketCellCount[nation]).Any(c => cash.LastOffered[c] != HouseholdCash.NeverOffered));
+            AssertConserved(sim, "upper markets");
+        }
+
+        [Test]
         public void Exchange_NeedsCoinsAtTheInternationalBanks()
         {
             using var sim = TestWorlds.BuildSample();

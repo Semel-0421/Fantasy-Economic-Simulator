@@ -47,7 +47,8 @@ faster than its cash at the risk of losing what it owns.
   (DEC-042).
 - [Confirmed] Totals drive loan interest, the price index (continent total) and financial events (DEC-042).
   Until households spend (P13b) the index follows the coin supply; then the published continent total
-  (DEC-062).
+  (DEC-062; built in P13d: the index is the published total over the total at world start, which equals
+  the starting coin supply, so a year's minting reaches prices with the next year's statistics).
 - [Confirmed] Money is created only by minting (DEC-061). Tolls and license prices go to the nation's
   reserve; the state spends reserves above a target as public wages; auction buyers and new operators
   pay from their group's cash; withdrawals in a bank run go to the nation's households (DEC-061).
@@ -63,9 +64,10 @@ faster than its cash at the risk of losing what it owns.
     handed out from theirs, and is refused when that bank lacks them. A payment that settles a debt in
     another continent's coin (seized deposits, cargo sold for a foreign lender, an auction abroad) moves
     the value through both international banks.
-  - A new operator's arrival settles the old operator's cash with the households of its node (arrears are
-    wages and bills they never get); the starting cash comes from the owning group, then those
-    households. A seized ship is bought by the lending nation's traders. Robbed coins go to the households
+  - A new operator's arrival settles the old operator's cash with the nation's households by population
+    (arrears are wages and bills they never get); the starting cash comes from the owning group, then
+    those households. (P13d: charged to the node's households alone, the cities where firms are based
+    went into debt and stopped buying; outside any nation, the node's households.) A seized ship is bought by the lending nation's traders. Robbed coins go to the households
     where the trip began. Insurance premiums go to the lowest-numbered guild of the origin city (else its
     households); refunds come from that guild's cash, then the households. Facility sale proceeds go to
     the seller's group; the company's founding money becomes its cash. A ship is bought from and sold back
@@ -89,6 +91,29 @@ faster than its cash at the risk of losing what it owns.
     price (the coin supply index reaches 1.66); population falls about 2.7% a year (necessities priced
     out in 7 of 18 populated nodes, whose budgets bind); derived income per head falls to about a tenth of
     the starting parameter; NPC loan defaults run at 100 to 160 a year.
+- [Draft] Claude's retuning, P13d (sample world, ten years, both continents unless noted):
+  - Diagnosis: the 3.9x average price came from goods nobody sells, which sit at their choke price;
+    stocked goods traded at 0.5 to 0.8 of their anchor. Population fell because its need counted goods no
+    market offered (half the people live at continent and nation nodes, where nothing is ever stocked)
+    and because cities' households carried every failed firm's start-up cash. Most defaults came from
+    four smithies per city glutting tools (977 in stock at one city, at a tenth of the anchor) and from
+    bakeries in villages without wheat.
+  - Changes: the index from published totals; population needs count usually traded goods (DEC-067);
+    operator funding spread over the nation; routes up to nation and continent markets (DEC-068);
+    input-aware spawning and more demand for tools (DEC-069); income per head defaults near measured
+    income (SYS-MARKETS).
+  - Result (continent 0): the index runs 1.00 to 1.67 with the minting; stocked goods trade at 0.7 to 1.1
+    of their anchor; population falls about 1.0% a year (was 2.7%); households hold 2.5 to 2.7M, facilities
+    0.27M, reserves settle near 2.1M. NPC defaults run at about 25 in year 1 and 80 to 130 a year later
+    (both continents); merchant bankruptcies fall from about 28 to about 5 a year.
+  - Left for later:
+    - Floats grow to 1.6M and groups to 1.2M: floats have no outflow but sales (a rule is undecided), and
+      P16 invests groups' cash.
+    - City and region budgets bind at 3 to 22%: they earn about 1,000 coins a week and wish for about 4,500,
+      while villages hold 24 to 225k. This is why smithies still default 330 times in ten years, and why
+      population falls.
+    - Continent nodes still get no goods: the nation's households buy what arrives first, so their 1.2M
+      stays idle in the sample world.
 - [Confirmed] Financial state is recorded quarterly; statistics are published yearly, and NPC agents use the
   same published statistics at the same time (DEC-043).
 - [Confirmed] Banks lend only from their reserves; a nation can run out of credit (DEC-046).
@@ -183,6 +208,9 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the
   shared lending and seizure steps; `AuctionTable` (version 2) marks whether a sale repays the player's
   loan.
+- `CurrencyState` version 3 (P13d) holds each continent's published money total and its baseline;
+  `FinanceSystem` sets the total when it publishes, and the currency model prices on it the turn after.
+  A version 2 save starts both at its coin supply figures.
 - `PurseState` (persistent, version 2 since P13b) holds the traders' floats and each node's float, with
   `Payable` and `Sellable` for capped payouts; `MoneyLedger` routes the payments above, seeds floats and
   households and audits a continent's money (`ContinentMoney`), which `MoneyTests` checks every turn

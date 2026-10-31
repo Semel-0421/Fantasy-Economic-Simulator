@@ -73,10 +73,12 @@ namespace FES.Tests
                 {
                     string nation = $"{cont}n{n}";
                     nodes.Append($"{nation},,Nation,{cont}\n");
+                    routes.Append($"{nation},{cont},2,3\n{cont},{nation},2,3\n");
                     for (int r = 0; r < 2; r++)
                     {
                         string region = $"{nation}r{r}";
                         nodes.Append($"{region},,Region,{nation}\n");
+                        routes.Append($"{region},{nation},2,3\n{nation},{region},2,3\n");
                         for (int c = 0; c < 5; c++)
                         {
                             string city = $"{region}c{c}";

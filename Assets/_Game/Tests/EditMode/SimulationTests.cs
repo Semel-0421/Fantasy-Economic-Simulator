@@ -34,11 +34,28 @@ namespace FES.Tests
             var nodes = sim.World.Get<NodeTable>();
             int villages = nodes.LevelCount(WorldLevel.Village), cities = nodes.LevelCount(WorldLevel.City);
             var facilities = sim.World.Get<FacilityTable>();
+            // A slot whose inputs nobody makes nearby goes to a primary producer, so every slot is filled (P13d).
             Assert.AreEqual(villages * (4 + 2) + cities * 4, facilities.Count);
+            int primaries = Enumerable.Range(0, facilities.Count).Count(f => sim.Database.Facilities[facilities.DefIndex[f]].Tier == IndustryTier.Primary);
+            Assert.GreaterOrEqual(primaries, villages * 4);
+            Assert.Greater(facilities.Count, primaries);
+
+            // A facility with inputs stands where its inputs are made, in its node's subtree (P13d).
+            for (int f = 0; f < facilities.Count; f++)
+                foreach (var input in sim.Database.Facilities[facilities.DefIndex[f]].Recipe.Inputs)
+                    Assert.IsTrue(Enumerable.Range(0, facilities.Count).Any(g => sim.Database.Facilities[facilities.DefIndex[g]].Recipe.Outputs.Any(o => o.Good == input.Good)
+                        && Within(nodes, facilities.Node[g], facilities.Node[f])), $"facility {f}");
 
             int expectedMerchants = villages * 3 + cities * 10 + nodes.LevelCount(WorldLevel.Region) * 30
                 + nodes.LevelCount(WorldLevel.Nation) * 50 + nodes.LevelCount(WorldLevel.Continent) * 50;
             Assert.AreEqual(expectedMerchants, sim.World.Get<AgentTable>().Count);
+        }
+
+        static bool Within(NodeTable nodes, int node, int ancestor)
+        {
+            for (int m = node; m >= 0; m = nodes.Parent[m])
+                if (m == ancestor) return true;
+            return false;
         }
 
         [Test]

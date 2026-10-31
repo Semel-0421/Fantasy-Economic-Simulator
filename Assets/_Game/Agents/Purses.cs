@@ -291,6 +291,18 @@ namespace FES.Agents
             into[first] += amount - given;
         }
 
+        /// <summary>
+        /// Money for the households around <paramref name="node"/>: its nation's, by population, or the node's
+        /// own outside any nation. Negative amounts are charged the same way.
+        /// </summary>
+        public static void PayLocalHouseholds(WorldState world, int node, long amount)
+        {
+            var purses = world.Get<PurseState>();
+            int nation = purses.NodeFloat[node];
+            if (nation < purses.NationCount) PayNationHouseholds(world, nation, amount);
+            else purses.PayHouseholds(node, amount);
+        }
+
         /// <summary>Money for a nation's households, split by the population of its nodes (DEC-061).</summary>
         public static void PayNationHouseholds(WorldState world, int nation, long amount)
         {
@@ -327,18 +339,19 @@ namespace FES.Agents
 
         /// <summary>
         /// A new operator takes over an asset at <paramref name="node"/> with <paramref name="cash"/> (DEC-061):
-        /// the old operator's cash settles with the households there ([Draft]: arrears are wages and bills they
-        /// never get; anything left goes with the old operator to them), and the starting cash comes from the
-        /// owning group's cash, then from the households.
+        /// the old operator's cash settles with the nation's households ([Draft]: arrears are wages and bills
+        /// they never get; anything left goes with the old operator to them), and the starting cash comes from
+        /// the owning group's cash, then from those households. Spread over the nation (P13d), so one city's
+        /// households do not carry every failure of the firms based there.
         /// </summary>
         public static long FundNewOperator(WorldState world, int group, int node, long oldCash, long cash)
         {
-            world.Get<PurseState>().PayHouseholds(node, oldCash);
+            PayLocalHouseholds(world, node, oldCash);
             PayFromGroup(world, group, node, cash);
             return cash;
         }
 
-        /// <summary>A group pays <paramref name="amount"/> from its cash; what it lacks comes from the households of <paramref name="node"/>.</summary>
+        /// <summary>A group pays <paramref name="amount"/> from its cash; what it lacks comes from the households around <paramref name="node"/>.</summary>
         public static void PayFromGroup(WorldState world, int group, int node, long amount)
         {
             long fromGroup = 0;
@@ -348,7 +361,7 @@ namespace FES.Agents
                 fromGroup = Math.Min(amount, Math.Max(0, groups.Cash[group]));
                 groups.Cash[group] -= fromGroup;
             }
-            world.Get<PurseState>().PayHouseholds(node, -(amount - fromGroup));
+            if (amount > fromGroup) PayLocalHouseholds(world, node, -(amount - fromGroup));
         }
 
         /// <summary>

@@ -369,6 +369,35 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-069 Facility slots without local inputs; four smithies per city
+- Date: 2026-10-31
+- Decision: a facility type with inputs is drawn only where some facility makes every input in the node's
+  subtree; a slot with no such type goes to a primary producer. Cities keep four smithies, and iron tools'
+  base demand rises from 4 to 12 to absorb them ([Draft] value).
+- Reason: smithies glutted tools and bakeries stood in villages without wheat. Measured: tripling the
+  demand only cut smithy defaults from 377 to 330 in ten years (one smithy per city gave 74), since city
+  households' budgets bind.
+- Alternatives: leave the slot empty (recommended, rejected) · random placement (rejected) · one or two
+  smithies per city (one recommended, rejected)
+- Impact: [SYS-PRODUCTION](systems/SYS_PRODUCTION.md)
+
+### DEC-068 Continent and nation markets are supplied
+- Date: 2026-10-31
+- Decision: households at continent and nation nodes buy like any others, so goods must reach them. Maps
+  connect a region to its nation and a nation to its continent by routes.
+- Reason: those nodes had no routes, so about 2M coins sat with households who could buy nothing.
+- Alternatives: send wages and starting cash only to nodes that can buy (recommended, rejected) · fewer
+  people at those nodes (rejected) · leave them (rejected)
+- Impact: [SYS-MARKETS](systems/SYS_MARKETS.md), [SYS-MERCHANTS](systems/SYS_MERCHANTS.md)
+
+### DEC-067 Population needs count usually traded goods
+- Date: 2026-10-31
+- Decision: a necessity counts toward population change if its market offered it within the last 52 weeks.
+  A good that stops arriving is a famine; a good never sold there is not.
+- Alternatives: only goods offered that week (rejected: a total famine would not count) · every good the
+  market carries (rejected: population fell 2.7% a year)
+- Impact: [SYS-MARKETS](systems/SYS_MARKETS.md)
+
 ### DEC-066 Large merchant groups trade across continents
 - Date: 2026-10-27
 - Decision: large NPC merchant groups also trade between continents, changing coins at international

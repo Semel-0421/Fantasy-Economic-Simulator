@@ -49,6 +49,8 @@ without scripting. Their counts per node are already in config (`merchants.<leve
     pay the origin's for the goods at the origin price, within their float (P13b, DEC-061).
   - A group arriving sells only as many units as the traders there can pay for; the rest stays on board
     (P13b).
+  - Maps connect each region to its nation and each nation to its continent, so groups and flows reach
+    those markets (DEC-068; [Draft] 2 turns, cost 3, base fee 5 in the sample map).
   - Capacity per group: weight 4,000 / 4,000 / 2,000 / 1,000 / 400 and size 3,200 / 3,200 / 1,600 /
     800 / 300 per level (`merchants.<level>.max_weight`, `max_size`).
   - Since P9b, an NPC group whose cash ended a week below zero borrows against the cargo it carries

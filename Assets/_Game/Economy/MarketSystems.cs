@@ -82,7 +82,7 @@ namespace FES.Economy
             for (int l = 0; l < WorldLevels.Count; l++)
                 if (ctx.Schedule[(WorldLevel)l].Period == 1) inlineMask |= 1 << l;
             int slowMask = ((1 << WorldLevels.Count) - 1) & ~inlineMask;
-            if (slowMask != 0) Consume(slowMask);
+            if (slowMask != 0) Consume(slowMask, ctx.Turn);
 
             int dueMask = 0;
             for (int l = 0; l < WorldLevels.Count; l++)
@@ -102,6 +102,9 @@ namespace FES.Economy
                 DueLevelMask = dueMask,
                 InlineLevelMask = inlineMask,
                 SpecialtyAnchorMulRaw = _specialtyAnchorMulRaw,
+                Turn = ctx.Turn,
+                NeedMemoryWeeks = _config.NeedMemoryWeeks,
+                LastOffered = _cash.LastOffered,
                 LevelElapsed = _levelElapsed,
                 MarketLevel = _nodes.Level,
                 MarketCellStart = _markets.MarketCellStart,
@@ -139,7 +142,7 @@ namespace FES.Economy
         }
 
         // Household consumption for markets that reprice less often than every turn.
-        void Consume(int levelMask)
+        void Consume(int levelMask, int turn)
         {
             var job = new ConsumptionJob
             {
@@ -147,6 +150,9 @@ namespace FES.Economy
                 CategoryCount = _flows.CategoryCount,
                 LevelMask = levelMask,
                 SpecialtyAnchorMulRaw = _specialtyAnchorMulRaw,
+                Turn = turn,
+                NeedMemoryWeeks = _config.NeedMemoryWeeks,
+                LastOffered = _cash.LastOffered,
                 MarketLevel = _nodes.Level,
                 MarketCellStart = _markets.MarketCellStart,
                 MarketCellCount = _markets.MarketCellCount,
@@ -220,7 +226,9 @@ namespace FES.Economy
             builder.AddSystem(new PricingSystem());
             builder.AddSystem(new CurrencySystem());
             builder.AddMigration(new CurrencyStateV1Migration());
+            builder.AddMigration(new CurrencyStateV2Migration());
             builder.AddMigration(new HouseholdCashV1Migration());
+            builder.AddMigration(new HouseholdCashV2Migration());
         }
     }
 }

@@ -110,11 +110,14 @@ namespace FES.Tests
             Assert.AreEqual(last.NationTotal[Nation(sim)], sim.View.PublishedNation(NationNode(sim)).Total);
             Assert.AreEqual(Fx.Zero, sim.View.PublishedContinent(0).Inflation); // nothing minted in the first year
 
+            // Prices follow the published total (DEC-062), so the first year's coins show from year 2's record.
             AdvanceTo(sim, 2 * SimClock.WeeksPerYear + 1);
             Assert.AreEqual(1, sim.View.PublishedYear);
+            var before = sim.View.PublishedContinent(0).PriceIndex;
+            AdvanceTo(sim, 3 * SimClock.WeeksPerYear + 1);
             var published = sim.View.PublishedContinent(0);
             Assert.AreEqual(Fx.FromRaw(finance.Latest.PriceIndex[0]), published.PriceIndex);
-            Assert.AreEqual(published.PriceIndex - Fx.One, published.Inflation); // the year before was at 1.0
+            Assert.AreEqual(published.PriceIndex / before - Fx.One, published.Inflation);
             Assert.Greater(published.Inflation.Raw, 0);
 
             int kept = sim.Database.Config.FinanceHistoryQuarters;

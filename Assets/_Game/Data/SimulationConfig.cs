@@ -50,8 +50,12 @@ namespace FES.Data
         };
         /// <summary>Starting population per node level, unless the map sets it (DEC-050).</summary>
         public readonly long[] DefaultPopulation = { 20000, 10000, 4000, 2000, 500 };
-        /// <summary>Starting weekly income per head, in coins, per node level.</summary>
-        public readonly long[] DefaultIncomePerHead = { 4, 4, 3, 3, 2 };
+        /// <summary>
+        /// Starting weekly income per head, in coins, per node level ([Draft] P13d: near what households measurably
+        /// earn in the sample world; was 4 / 4 / 3 / 3 / 2).
+        /// </summary>
+        public readonly Fx[] DefaultIncomePerHead =
+            { Fx.FromPermille(300), Fx.FromPermille(300), Fx.FromPermille(300), Fx.FromPermille(500), Fx.FromPermille(2000) };
         /// <summary>Yearly population change: the base rate, plus this share of how far necessities were afforded above or below need.</summary>
         public Fx PopulationBaseGrowth = Fx.FromPermille(5);
         public Fx PopulationGrowthResponse = Fx.FromPermille(50);
@@ -62,6 +66,8 @@ namespace FES.Data
         /// </summary>
         public Fx IncomeResponse = Fx.FromPermille(500);
         public Fx IncomeMaxChange = Fx.FromPermille(500);
+        /// <summary>A necessity counts toward population change if its market offered it within this many weeks: a good that stops arriving is a famine, one never sold is not (P13d).</summary>
+        public int NeedMemoryWeeks = 52;
         /// <summary>Households spend at most their cash over this many weeks a week; demand shrinks to fit (DEC-061, P13b).</summary>
         public int HouseholdBudgetWeeks = 26;
         /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
@@ -343,8 +349,8 @@ namespace FES.Data
                     Int(v, $"tier.{level}.offset", TierCadences[l].Offset));
                 LevelDemandWeight[l] = Permille(v, $"demand.{level}.weight_permille", LevelDemandWeight[l]);
                 DefaultPopulation[l] = Long(v, $"households.{level}.population", DefaultPopulation[l]);
-                DefaultIncomePerHead[l] = Long(v, $"households.{level}.income", DefaultIncomePerHead[l]);
-                if (DefaultPopulation[l] <= 0 || DefaultIncomePerHead[l] <= 0)
+                DefaultIncomePerHead[l] = Permille(v, $"households.{level}.income_permille", DefaultIncomePerHead[l]);
+                if (DefaultPopulation[l] <= 0 || DefaultIncomePerHead[l].Raw <= 0)
                     throw new FormatException($"config.csv: households.{level}.population and income must be positive.");
                 MerchantsPerNode[l] = Int(v, $"merchants.{level}", MerchantsPerNode[l]);
                 MerchantStartCash[l] = Long(v, $"merchants.{level}.start_cash", MerchantStartCash[l]);
@@ -458,6 +464,8 @@ namespace FES.Data
             PopulationMaxChange = Permille(v, "households.max_change_permille", PopulationMaxChange);
             IncomeResponse = Permille(v, "households.income_response_permille", IncomeResponse);
             IncomeMaxChange = Permille(v, "households.income_max_change_permille", IncomeMaxChange);
+            NeedMemoryWeeks = Int(v, "households.need_memory_weeks", NeedMemoryWeeks);
+            if (NeedMemoryWeeks < 0) throw new FormatException("config.csv: households.need_memory_weeks must be >= 0.");
             HouseholdBudgetWeeks = Int(v, "households.budget_weeks", HouseholdBudgetWeeks);
             if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
             TraderFloatShare = Permille(v, "markets.trader_float_permille", TraderFloatShare);

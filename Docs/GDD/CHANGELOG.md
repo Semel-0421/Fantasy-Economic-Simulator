@@ -1,6 +1,16 @@
 # Changelog
 
+## 2026-10-31
+- [03_Decisions.md] DEC-067 (needs count usually traded goods), DEC-068 (continent and nation markets supplied), DEC-069 (spawning, four smithies, tool demand 4 -> 12)
+- [systems/SYS_MARKETS.md, SYS_MERCHANTS.md, SYS_PRODUCTION.md, SYS_BANKING.md, 02_Data_Formats.md, 04_Roadmap.md] P13d drafts replaced by those decisions; new measurement and what is left
+- [data] map_routes.csv: routes up to nation and continent nodes; goods.csv: iron_tools base_demand 12
+
 ## 2026-10-28
+- [04_Roadmap.md] P13d done
+- [systems/SYS_BANKING.md] Price index from published totals built; retuning diagnosis, changes, result and what is left; operator funding over the nation
+- [systems/SYS_MARKETS.md] Population need counts offered goods only; income per head defaults in permille (4/4/3/3/2 -> 0.3/0.3/0.3/0.5/2.0); Q-036 resolved
+- [systems/SYS_PRODUCTION.md] Input-aware facility spawning; one smithy per city (was 4)
+- [02_Data_Formats.md] households.<level>.income_permille replaces households.<level>.income; producers.city.secondary 1
 - [04_Roadmap.md] P13c done; P13d and P16 ready
 - [systems/SYS_PRODUCTION.md, SYS_INTEREST_GROUPS.md] Dividend and group payout drafts (P13c)
 - [systems/SYS_BANKING.md] State spending draft; ten-year measurement and retuning list

@@ -145,9 +145,14 @@ namespace FES.Tests
             long gold0 = currency.GoldReserve[0];
             long coins0 = currency.CoinSupply[0];
             for (int t = 0; t <= SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
-
             Assert.Less(currency.GoldReserve[0], gold0);
             Assert.Greater(currency.CoinSupply[0], coins0);
+
+            // Prices follow the published money total (DEC-062): the first year's coins count from the
+            // second year's statistics on.
+            while (sim.Turn <= 2 * SimClock.WeeksPerYear + 1) sim.AdvanceTurn(); // published at the new year, priced the turn after
+            Assert.AreEqual(Fx.FromRatio(currency.MoneyTotal[0], currency.BaselineMoneyTotal[0]), currency.PriceIndex[0]);
+            Assert.AreEqual(sim.World.Get<FES.Agents.FinanceState>().PublishedContinentTotal[0], currency.MoneyTotal[0]);
             Assert.Greater(currency.PriceIndex[0].Raw, Fx.OneRaw);
             Assert.AreNotEqual(currency.ExchangeRate[0], currency.ExchangeRate[1]);
         }

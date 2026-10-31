@@ -42,7 +42,7 @@ namespace FES.Tests
                 Assert.IsTrue(db.TryGetGood("wheat", (QualityGrade)g, out var wheat));
                 Assert.IsFalse(db.Good(wheat).RequiresLicense);
             }
-            var goods = TestWorlds.Sample().ReadText(GameDatabase.GoodsFile).Replace("iron_tools,tools,90,4,6,4,1", "iron_tools,tools,90,4,6,4,2");
+            var goods = TestWorlds.Sample().ReadText(GameDatabase.GoodsFile).Replace("iron_tools,tools,90,12,6,4,1", "iron_tools,tools,90,12,6,4,2");
             Assert.Throws<System.FormatException>(() => GameDatabase.Load(TestWorlds.SampleWith(GameDatabase.GoodsFile, goods)));
         }
 

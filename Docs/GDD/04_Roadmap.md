@@ -64,7 +64,7 @@ flowchart LR
 | P15 | Facility managers (Automated mode sells output), hiring merchant groups, free arbitrage then standing orders, wages | SYS-AUTOMATION | Ready |
 | P16 | Group investment (new facilities, level-ups, roads; one project per group a year), closure after two losing years | SYS-INTEREST-GROUPS, SYS-PRODUCTION | Ready |
 | P17 | Large merchant groups and aggregate flows cross continents (65% share), exchanging at international banks | SYS-MERCHANTS | Ready |
-| P13d | Price index from published totals (DEC-062), retuning with a ten-year sample run, turn cost within +1.5 ms | SYS-BANKING | Ready |
+| P13d | Price index from published totals (DEC-062), retuning with a ten-year sample run, turn cost within +1.5 ms | SYS-BANKING | Done |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -77,9 +77,10 @@ flowchart LR
   files marked [Draft]; they block balance, not code.
 - P1 to P12b are done; P12c (shares, privatization) is later (DEC-056). Next: P13a to P13d close the money
   loop (DEC-061, DEC-062); balance numbers should wait for them. P14 to P17 follow (DEC-063 to DEC-066).
-- P13a to P13c are done: money is conserved per continent and circulates (households, floats, facilities,
-  groups, the state). P13d retunes it: prices still climb to about 3.9 times base in ten years and
-  population falls about 2.7% a year in the sample world (SYS-BANKING).
+- P13a to P13d are done: money is conserved per continent and circulates (households, floats, facilities,
+  groups, the state); prices follow the published money total; the sample world's population falls about
+  1% a year. A full-scale turn takes about 19.5 ms (18.0 before P13), at the +1.5 ms limit. What is left of
+  the balance is listed in SYS-BANKING. P14 to P17 are ready.
 - With P9b a full-scale turn took about 14.8 ms; with P10 about 18.0 ms (household demand per cell).
 - With P5 a full-scale turn takes about 14.7 ms (7.8 ms before); running aggregate merchants on the market
   tier cadence would cut it if mobile needs it.

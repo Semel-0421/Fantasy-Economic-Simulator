@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-10-31
+- [references/EconomySystemSpecification.md] Added as an outside reference (not a decision); listed in INDEX.md
 - [03_Decisions.md] DEC-067 (needs count usually traded goods), DEC-068 (continent and nation markets supplied), DEC-069 (spawning, four smithies, tool demand 4 -> 12)
 - [systems/SYS_MARKETS.md, SYS_MERCHANTS.md, SYS_PRODUCTION.md, SYS_BANKING.md, 02_Data_Formats.md, 04_Roadmap.md] P13d drafts replaced by those decisions; new measurement and what is left
 - [data] map_routes.csv: routes up to nation and continent nodes; goods.csv: iron_tools base_demand 12

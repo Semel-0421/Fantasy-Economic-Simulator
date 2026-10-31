@@ -46,6 +46,7 @@ updated: 2026-10-27
 | [systems/SYS_PLAYER_START.md](systems/SYS_PLAYER_START.md) | Random village start |
 | [01_Overview.md](01_Overview.md) | Goal, core loop, ranks at a glance |
 | [systems/SYS_PROGRESSION.md](systems/SYS_PROGRESSION.md) | Ranks and ruin |
+| [references/EconomySystemSpecification.md](references/EconomySystemSpecification.md) | Outside reference, not decided: data-oriented backend with trait-based agents, rumors, a changing hierarchy and a genetic algorithm (differs from DEC-003, DEC-043 and the static map) |
 | [systems/SYS_AUTOMATION.md](systems/SYS_AUTOMATION.md) | Facility managers and hired merchant groups |
 
 Documents 00 and 02 describe the built code; `systems/` holds each system's rules, with implementation

@@ -125,6 +125,12 @@ With orders, plans and vehicle costs (DEC-085), thirty sample years: 13.98M peop
 
 Thirty sample years by detail mode (`lod.mode`): around the player 13.98M people, supply 42/66/66/103%; every node detailed 10.81M, -1.5% a year, 20/47/56/76%, 3,357 merchant bankruptcies of 460 groups (about 24% a year), 318 pack, 142 cart, no wagons; every node aggregate 14.70M, 28/69/60/112%, no bankruptcies because aggregate merchants pay nothing. Earlier sample figures mostly reflect aggregate flows and overstate supply; the earlier reading of about 3% merchant bankruptcies a year counted groups that cannot fail.
 
+With fewer merchants in associations (DEC-086), thirty sample years. Every node detailed: 11.91M people, -1.45% a year in the last decade; supply 25/52/53/74%; 17% of groups fail a year. Around the player: 14.51M, -0.56%; supply 35/74/69/124%. Guild cash falls from 65k at year 10 to 26k at year 30 with every node detailed, so the safety net is running down.
+
+With grants and contracts (DEC-087), thirty sample years. Every node detailed: 12.40M people, -1.17% a year in the last decade; supply 35/57/61/93%; 16% of merchants fail a year; 437 contracts signed, 331 broken, 3 live. Around the player: 14.23M, -0.79%; supply 38/59/65/92%; 428 signed, 340 broken. Contracts rarely last, cause not yet confirmed.
+
+Contracts sized to demand (DEC-087), thirty sample years. Every node detailed: 12.20M people, -1.26% a year; supply 32/52/62/84%; 331 signed, 163 broken (was 76% broken); mean 8 units a week. Around the player: 14.26M, -0.73%; supply 36/61/63/105%; 260 signed, 45 broken. Contracts now mostly last, but are too small to move supply: the change in people is within noise.
+
 ## Remaining work
 Order agreed: refactoring, then balance, then the phases.
 

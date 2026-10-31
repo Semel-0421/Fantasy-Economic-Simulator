@@ -200,6 +200,8 @@ namespace FES.Agents
                 VehicleDangerRaw = _vehicleDanger,
                 VehiclePremiumRaw = _vehiclePremium,
                 GuardBaseCost = _db.Config.GuardBaseCost,
+                MemberPremiumRaw = _db.Config.MerchantMemberPremium.Raw,
+                AgentAssociation = _agents.Association.AsArray(),
                 RiskAversion = _db.Config.MerchantRiskAversion,
                 GuardCostShareRaw = _db.Config.GuardCostShare.Raw,
                 GuardReductionRaw = _db.Config.GuardReduction.Raw,

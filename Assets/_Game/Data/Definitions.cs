@@ -96,6 +96,8 @@ namespace FES.Data
         public readonly int Index;
         public readonly string Key;
         public readonly IndustryTier Tier;
+        /// <summary>The state grants its producers money to grow the industry (DEC-087).</summary>
+        public bool Strategic;
         public readonly RecipeDef Recipe;
         /// <summary>Strategic: facilities of this type belong to their nation's state enterprise (DEC-055).</summary>
         public readonly bool StateOwned;

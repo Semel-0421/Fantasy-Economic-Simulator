@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-11-01
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-087 contracts sized to demand and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-087 (strategic grants, supply contracts) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-086 (fewer merchants, associations) and measurement
 - [04_Roadmap.md] Measurement by detail mode; `lod.mode` for measuring
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-085 (orders, factory plans, vehicle costs and risks) and measurement
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-084 (merchant vehicles) and measurement

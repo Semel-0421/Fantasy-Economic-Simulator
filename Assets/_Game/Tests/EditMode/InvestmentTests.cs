@@ -132,6 +132,46 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Association_HelpsAMemberRunningShort_WithoutMakingCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var groups = sim.World.Get<GroupTable>();
+            int guild = Enumerable.Range(0, groups.Count).First(g => groups.KindOf(g) == GroupKind.Guild);
+            int a = Enumerable.Range(0, agents.Count).First(i => agents.Owner[i] == OwnerIds.Npc);
+            groups.Cash[guild] = 100_000;
+            agents.Association[a] = guild;
+            agents.Cash[a] = 0;
+            int continent = sim.World.Get<FES.World.NodeTable>().Continent[agents.Home[a]];
+            long money = MoneyLedger.ContinentMoney(sim.World, continent);
+            sim.AdvanceTurn();
+            Assert.Less(groups.Cash[guild], 100_000);
+            Assert.AreEqual(money, MoneyLedger.ContinentMoney(sim.World, continent));
+        }
+
+        [Test]
+        public void Contract_DeliversAtItsPrice_WithoutMakingCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var markets = sim.World.Get<MarketStore>();
+            var groups = sim.World.Get<GroupTable>();
+            var nodes = sim.World.Get<FES.World.NodeTable>();
+            var contracts = sim.World.Get<ContractTable>();
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            int from = Enumerable.Range(0, nodes.Count).First(n => nodes.LevelOf(n) == WorldLevel.Village);
+            int to = nodes.Parent[from];
+            markets.TryFindCell(from, wheat, out int fromCell);
+            markets.TryFindCell(to, wheat, out int toCell);
+            int continent = nodes.Continent[from];
+            sim.World.Get<PurseState>().ChangeFloat(to, 0);
+            markets.Stock[fromCell] = 1000;
+            contracts.Add(ContractParty.OfGroup(0), ContractParty.OfGroup(1), fromCell, toCell, from, to, 10, markets.Price[fromCell] + 1L, 100);
+            long money = MoneyLedger.ContinentMoney(sim.World, continent);
+            sim.AdvanceTurn();
+            Assert.AreEqual(money, MoneyLedger.ContinentMoney(sim.World, continent));
+        }
+
+        [Test]
         public void VehicleCosts_RiseWithGrade()
         {
             using var sim = TestWorlds.BuildSample();

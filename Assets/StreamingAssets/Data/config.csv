@@ -62,3 +62,13 @@ merchants.vehicle2.premium_permille,2000
 merchants.vehicle1.cash_times,6
 merchants.vehicle2.cash_times,20
 merchants.risk_aversion,4
+# A third as many merchants; many belong to associations as a safety net (DEC-086).
+merchants.continent,17
+merchants.nation,17
+merchants.region,10
+merchants.city,3
+merchants.village,1
+merchants.join_permille,300
+# Strategic grants and take-or-pay supply contracts (DEC-087).
+state.strategic_subsidy_permille,200
+contract.per_nation,8

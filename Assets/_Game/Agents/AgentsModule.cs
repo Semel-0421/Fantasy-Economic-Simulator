@@ -41,6 +41,7 @@ namespace FES.Agents
             builder.World.Add(new DevelopmentState(nodes.Count, builder.World.Get<RouteTable>().Count, banks.NationCount, purses.Count, builder.World.Get<MarketStore>().GoodBasePrice.Length));
             builder.World.Add(new NobleState(nodes));
             builder.World.Add(new OrderTable());
+            builder.World.Add(new ContractTable());
             builder.World.Add(new DemandForecast(builder.World.Get<MarketStore>().CellCount));
             builder.World.Add(new MerchantTripStats());
             builder.World.Add(new MigrationState(nodes, banks.NationCount, db.Config));
@@ -72,6 +73,7 @@ namespace FES.Agents
             builder.AddMigration(new PurseStateV1Migration());
             builder.AddMigration(new AgentTableV3Migration());
             builder.AddMigration(new AgentTableV4Migration());
+            builder.AddMigration(new AgentTableV5Migration());
             builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
             builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
@@ -96,6 +98,9 @@ namespace FES.Agents
             builder.AddSystem(new InvestmentSystem());
             builder.AddSystem(new MerchantVehicleSystem());
             builder.AddSystem(new OrderSystem());
+            builder.AddSystem(new ContractSystem());
+            builder.AddSystem(new StrategicSubsidySystem());
+            builder.AddSystem(new MerchantMembershipSystem());
             builder.AddSystem(new DemandForecastSystem());
             builder.AddSystem(new HouseholdGrowthSystem());
             builder.AddSystem(new PolicySystem());

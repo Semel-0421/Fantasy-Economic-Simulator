@@ -93,6 +93,7 @@ namespace FES.Tests
         public void MerchantBelowZeroCash_IsReplacedAtHome()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MerchantJoinShare = Fx.Zero; // no association to help it
             var agents = sim.World.Get<AgentTable>();
             sim.AdvanceTurn(); // LOD is set on the first turn
             int a = DetailedMerchants(sim).First(m => !agents.IsTravelling(m));
@@ -368,7 +369,7 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 5, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 6, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {

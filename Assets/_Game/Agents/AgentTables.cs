@@ -34,9 +34,11 @@ namespace FES.Agents
         public readonly NativeColumn<NodeMemory> Memory;
         /// <summary>What the group carries with, see <see cref="MerchantVehicles"/> (DEC-084).</summary>
         public readonly NativeColumn<byte> Vehicle;
+        /// <summary>The guild or company the group belongs to, or -1 (DEC-086); apart from its owner <see cref="Group"/>.</summary>
+        public readonly NativeColumn<int> Association;
 
         public override string Key => SectionKey;
-        public override int Version => 5;
+        public override int Version => 6;
 
         public AgentTable()
         {
@@ -53,6 +55,7 @@ namespace FES.Agents
             Trait = Column<byte>();
             Memory = Column<NodeMemory>();
             Vehicle = Column<byte>();
+            Association = Column<int>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -70,6 +73,7 @@ namespace FES.Agents
             Trait.Add(MerchantTraits.Neutral);
             Memory.Add(NodeMemory.Empty);
             Vehicle.Add(MerchantVehicles.Pack);
+            Association.Add(-1);
             return new AgentId(Count - 1);
         }
 

@@ -107,6 +107,9 @@ changing a default in code does.
 | merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle{0,1,2}.start_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 0, 3, 100 | merchant vehicles (DEC-084) |
 | merchants.vehicle{0,1,2}.cost_permille, .danger_permille, .premium_permille, .cash_times; merchants.risk_aversion; orders.lead_weeks, orders.expiry_weeks; production.forecast_enabled, production.forecast_min_permille | 1000, 1000, 1000, 3; 1; 8, 52; 0, 100 | DEC-085; goods.csv gains made_to_order |
 | lod.mode | 0 | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
+| merchants.join_permille, merchants.member_fee_permille, merchants.support_floor_permille, merchants.support_share_permille, merchants.member_premium_permille | 0, 50, 200, 100, 500 | merchant associations (DEC-086) |
+| state.strategic_subsidy_permille; contract.per_nation, contract.min_stock, contract.stock_weeks, contract.term_weeks, contract.base_discount_permille, contract.discount_per_unit_permille, contract.max_discount_permille | 0; 0, 200, 26, 52, 50, 1, 250 | DEC-087; facilities.csv gains strategic |
+| contract.demand_share_permille, contract.credit_weeks | 500, 8 | contract volume and credit check (DEC-087) |
 | investment.payback_years, investment.max_per_node, investment.projects_per_node | 0, 24, 2 | NPC investment (DEC-080) |
 | migration.emancipation_earliest_years | 0 | years before emancipation can be enacted (DEC-080) |
 | tax.household_permille, tax.company_permille | 100, 100 | yearly income tax (DEC-071) |

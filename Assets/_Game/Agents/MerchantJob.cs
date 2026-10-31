@@ -84,6 +84,8 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<long> VehicleDangerRaw;
         [ReadOnly] public NativeArray<long> VehiclePremiumRaw;
         public long GuardBaseCost;
+        public long MemberPremiumRaw;
+        [ReadOnly] public NativeArray<int> AgentAssociation;
         public int RiskAversion;
         public long GuardCostShareRaw;
         public long GuardReductionRaw;
@@ -427,6 +429,7 @@ namespace FES.Agents
                 TripStats[1]++;
             }
             long premium = Fx.MulIntRaw(Fx.MulIntRaw(value, InsurancePremiumRaw), VehiclePremiumRaw[AgentVehicle[a]]);
+            if (AgentAssociation[a] >= 0 && AgentVehicle[a] > MerchantVehicles.Pack) premium = Fx.MulIntRaw(premium, MemberPremiumRaw);
             bool insured = Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw) > premium && AgentCash[a] >= premium;
             if (insured)
             {

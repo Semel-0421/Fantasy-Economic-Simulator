@@ -46,8 +46,8 @@ namespace FES.Tests
                     Assert.IsTrue(Enumerable.Range(0, facilities.Count).Any(g => sim.Database.Facilities[facilities.DefIndex[g]].Recipe.Outputs.Any(o => o.Good == input.Good)
                         && Within(nodes, facilities.Node[g], facilities.Node[f])), $"facility {f}");
 
-            int expectedMerchants = villages * 3 + cities * 10 + nodes.LevelCount(WorldLevel.Region) * 30
-                + nodes.LevelCount(WorldLevel.Nation) * 50 + nodes.LevelCount(WorldLevel.Continent) * 50;
+            int expectedMerchants = villages * 1 + cities * 3 + nodes.LevelCount(WorldLevel.Region) * 10
+                + nodes.LevelCount(WorldLevel.Nation) * 17 + nodes.LevelCount(WorldLevel.Continent) * 17;
             Assert.AreEqual(expectedMerchants, sim.World.Get<AgentTable>().Count);
         }
 

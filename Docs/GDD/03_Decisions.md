@@ -369,6 +369,20 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-087 Strategic grants and supply contracts
+- Date: 2026-11-01
+- Decision: the state grants part of its money to groups producing important national resources, to grow those industries. Supply contracts run person to person, group to person and group to group: the unit price scales with volume, below market, and the buyer must buy for the whole term.
+- Reason: the user's decision; part of the safety-net proposal was accepted, so merchant bodies get no state money
+- [Draft] Details by Claude, numbers placeholders. Strategic: mines, smelters, smithy, cartwright, wagonworks (facilities.csv `strategic`); 20% a year of the reserve above target, by facility levels. Contracts: up to 8 a year per nation on the widest gaps between a market with 200 or more in stock and the settled price (the anchor, or less) of one with less; weekly volume is the lesser of stock over 26 weeks and half what the buyer's market takes; 52 weeks; discount off the settled price 5%, plus 0.1% per unit, to 25%, never below the seller's price; the buyer must hold 8 weeks of the bill to sign. Each week the seller buys from its market, the buyer pays the contract price and sells into its own. A buyer unable to pay breaks the contract, with no further penalty. Delivery has no transit time, toll or risk.
+- Impact: SYS-STATE-ECONOMY, SYS-MERCHANTS, SYS-INTEREST-GROUPS, 02_Data_Formats
+
+### DEC-086 Fewer merchants in associations
+- Date: 2026-11-01
+- Decision: a third as many merchants. As a supply safety net, merchants may belong to guilds and other bodies; members can draw on the body's budget and pay half the insurance premium when using carts and wagons.
+- Reason: the user's decision; with every node detailed, trade earned about 29% of merchants' running costs
+- [Draft] Details by Claude, numbers placeholders. Groups per node 17, 17, 10, 3, 1. Each year a 30% chance to join the richest guild of the home's city, else the richest company of the nation. Fee 5% a year of cash above starting cash; below 20% of starting cash a member draws up to 10% of the body's cash a week. Running costs are unchanged.
+- Impact: SYS-MERCHANTS, SYS-INTEREST-GROUPS, 02_Data_Formats
+
 ### DEC-085 Orders, factory plans, vehicle costs and risks
 - Date: 2026-11-01
 - Decision: carts, wagons and some luxuries are ordered at a node with stock and collected after a period. Factories change output to demand, checked and forecast each quarter. Pack animals cost least to run and wagons most, to lengthen upgrades. Higher grades draw more raids, cost more to insure, and lead merchants to hire guards.

@@ -175,7 +175,7 @@ namespace FES.Data
                     throw new FormatException($"facilities.csv row {r + 1}: unknown recipe '{recipeKey}'.");
                 if (!facilityKeys.Add(key)) throw new FormatException($"facilities.csv: duplicate key '{key}'.");
                 Facilities.Add(new FacilityDef(Facilities.Count, key, facilities.GetEnum<IndustryTier>(r, "tier"), recipe,
-                    facilities.GetIntOr(r, "state_owned", 0) != 0));
+                    facilities.GetIntOr(r, "state_owned", 0) != 0) { Strategic = facilities.GetIntOr(r, "strategic", 0) != 0 });
             }
         }
 

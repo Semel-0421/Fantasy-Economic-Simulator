@@ -210,6 +210,25 @@ namespace FES.Data
         public readonly Fx[] MerchantVehiclePremium = { Fx.One, Fx.One, Fx.One };
         /// <summary>Orders (DEC-085): weeks from reserving to collecting, and weeks before an unfilled order lapses.</summary>
         public int OrderLeadWeeks = 8;
+        /// <summary>Supply contracts (DEC-087), off at zero: signed a year per nation; the least stock to count as having or lacking a good; weekly volume as stock over these weeks; term; discount off the buyer's market, growing with weekly volume to a limit.</summary>
+        public int ContractsPerNation = 0;
+        public int ContractMinStock = 200;
+        public int ContractStockWeeks = 26;
+        /// <summary>The share of the buyer market's weekly demand a contract may supply, and the weeks of its bill a buyer must hold to sign.</summary>
+        public Fx ContractDemandShare = Fx.FromPermille(500);
+        public int ContractCreditWeeks = 8;
+        public int ContractTermWeeks = 52;
+        public Fx ContractBaseDiscount = Fx.FromPermille(50);
+        public Fx ContractDiscountPerUnit = Fx.FromPermille(1);
+        public Fx ContractMaxDiscount = Fx.FromPermille(250);
+        /// <summary>The share of the reserve above target granted yearly to strategic producers (DEC-087).</summary>
+        public Fx StrategicSubsidyShare = Fx.Zero;
+        /// <summary>Merchant associations (DEC-086), off at zero: the yearly chance a group joins; the yearly fee on cash above its start; the share of start cash under which it is helped, the share of the association's cash a grant may take, and what members pay of the premium with carts and wagons.</summary>
+        public Fx MerchantJoinShare = Fx.Zero;
+        public Fx MerchantMemberFee = Fx.FromPermille(50);
+        public Fx MerchantSupportFloor = Fx.FromPermille(200);
+        public Fx MerchantSupportShare = Fx.FromPermille(100);
+        public Fx MerchantMemberPremium = Fx.FromPermille(500);
         /// <summary>0: detail around the player. 1: every node detailed. 2: every node aggregate.</summary>
         public int LodMode = 0;
         /// <summary>How many times the expected loss a merchant weighs when deciding on guards.</summary>
@@ -525,6 +544,21 @@ namespace FES.Data
                 MerchantVehiclePremium[k] = Permille(v, $"merchants.vehicle{k}.premium_permille", MerchantVehiclePremium[k]);
             }
             OrderLeadWeeks = Int(v, "orders.lead_weeks", OrderLeadWeeks);
+            ContractsPerNation = Int(v, "contract.per_nation", ContractsPerNation);
+            ContractMinStock = Int(v, "contract.min_stock", ContractMinStock);
+            ContractStockWeeks = Int(v, "contract.stock_weeks", ContractStockWeeks);
+            ContractDemandShare = Permille(v, "contract.demand_share_permille", ContractDemandShare);
+            ContractCreditWeeks = Int(v, "contract.credit_weeks", ContractCreditWeeks);
+            ContractTermWeeks = Int(v, "contract.term_weeks", ContractTermWeeks);
+            ContractBaseDiscount = Permille(v, "contract.base_discount_permille", ContractBaseDiscount);
+            ContractDiscountPerUnit = Permille(v, "contract.discount_per_unit_permille", ContractDiscountPerUnit);
+            ContractMaxDiscount = Permille(v, "contract.max_discount_permille", ContractMaxDiscount);
+            StrategicSubsidyShare = Permille(v, "state.strategic_subsidy_permille", StrategicSubsidyShare);
+            MerchantJoinShare = Permille(v, "merchants.join_permille", MerchantJoinShare);
+            MerchantMemberFee = Permille(v, "merchants.member_fee_permille", MerchantMemberFee);
+            MerchantSupportFloor = Permille(v, "merchants.support_floor_permille", MerchantSupportFloor);
+            MerchantSupportShare = Permille(v, "merchants.support_share_permille", MerchantSupportShare);
+            MerchantMemberPremium = Permille(v, "merchants.member_premium_permille", MerchantMemberPremium);
             LodMode = Int(v, "lod.mode", LodMode);
             MerchantRiskAversion = Int(v, "merchants.risk_aversion", MerchantRiskAversion);
             OrderExpiryWeeks = Int(v, "orders.expiry_weeks", OrderExpiryWeeks);

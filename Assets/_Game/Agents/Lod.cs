@@ -43,7 +43,16 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             var facilities = ctx.World.Get<FacilityTable>();
             var agents = ctx.World.Get<AgentTable>();
-            var focusLevel = ctx.Services.Get<GameDatabase>().Config.LodFocusLevel;
+            var config = ctx.Services.Get<GameDatabase>().Config;
+            var focusLevel = config.LodFocusLevel;
+
+            // Measuring: every node one way, whatever the player does.
+            if (config.LodMode != 0)
+            {
+                for (int n = 0; n < lod.Detail.Length; n++)
+                    lod.Detail[n] = (byte)(config.LodMode == 1 ? SimDetail.Detailed : SimDetail.Aggregate);
+                return;
+            }
 
             for (int n = 0; n < lod.Detail.Length; n++) lod.Detail[n] = (byte)SimDetail.Aggregate;
 

@@ -40,6 +40,9 @@ namespace FES.Agents
             builder.World.Add(new IncomeTaxState(nodes.ContinentCount));
             builder.World.Add(new DevelopmentState(nodes.Count, builder.World.Get<RouteTable>().Count, banks.NationCount, purses.Count, builder.World.Get<MarketStore>().GoodBasePrice.Length));
             builder.World.Add(new NobleState(nodes));
+            builder.World.Add(new OrderTable());
+            builder.World.Add(new DemandForecast(builder.World.Get<MarketStore>().CellCount));
+            builder.World.Add(new MerchantTripStats());
             builder.World.Add(new MigrationState(nodes, banks.NationCount, db.Config));
             builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
             builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
@@ -68,6 +71,7 @@ namespace FES.Agents
             builder.AddMigration(new PlayerShipV1Migration());
             builder.AddMigration(new PurseStateV1Migration());
             builder.AddMigration(new AgentTableV3Migration());
+            builder.AddMigration(new AgentTableV4Migration());
             builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
             builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
@@ -89,6 +93,10 @@ namespace FES.Agents
             builder.AddSystem(new MigrationSystem());
             builder.AddSystem(new StateProjectSystem());
             builder.AddSystem(new SubsidySystem());
+            builder.AddSystem(new InvestmentSystem());
+            builder.AddSystem(new MerchantVehicleSystem());
+            builder.AddSystem(new OrderSystem());
+            builder.AddSystem(new DemandForecastSystem());
             builder.AddSystem(new HouseholdGrowthSystem());
             builder.AddSystem(new PolicySystem());
             builder.AddSystem(new MerchantGenerationSystem());
@@ -166,6 +174,7 @@ namespace FES.Agents
                 {
                     var id = table.Add(n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
                     if (config.MerchantTraitsEnabled) table.Trait[id.Value] = (byte)DetRandom.For(seed, 0, TraitStream, id.Value).NextInt(MerchantTraits.Count);
+                    table.Vehicle[id.Value] = MerchantVehicles.AtStart(config, seed, id.Value);
                 }
             }
         }

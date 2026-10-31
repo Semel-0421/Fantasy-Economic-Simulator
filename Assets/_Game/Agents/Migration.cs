@@ -139,6 +139,7 @@ namespace FES.Agents
             int enacted = _state.EnactedYear[nation];
             if (enacted < 0)
             {
+                if (ctx.Turn < _config.MigrationEmancipationEarliestYears * SimClock.WeeksPerYear) return;
                 if (bound <= 0 || jobs <= 0 || jobs - people < _config.MigrationVacancyShare.MulInt(jobs)) return;
                 _state.EnactedYear[nation] = ctx.Clock.Year;
                 ctx.Events.Publish(new EmancipationEnacted(new NodeId(_banks.NationNode(nation)), ctx.Clock.Year));

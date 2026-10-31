@@ -95,12 +95,27 @@ namespace FES.Data
         public Fx VillageWageAwayShare = Fx.FromPermille(500);
         /// <summary>Migration (DEC-079), off at a zero limit: the most of a village's people moving a year on the widest gap; villages' free share at the start.</summary>
         public Fx MigrationMaxShare = Fx.Zero;
+        /// <summary>Paid expansion (DEC-080): extra output per level above the first, on top of the level itself, and the highest level. Costs the tier's value times the level.</summary>
+        public Fx FacilityExpansionBonus = Fx.Zero;
+        /// <summary>Wages that follow production (DEC-082): this share of what a facility made this week, valued at base prices. Off at zero.</summary>
+        public Fx FacilityOutputWage = Fx.Zero;
+        /// <summary>Public wages in towns (DEC-082): the share of the reserve above target paid out each week. Off at zero.</summary>
+        public Fx StatePublicWageShare = Fx.Zero;
+        public int FacilityMaxLevel = 5;
+        /// <summary>A facility's output without its tools and seed (DEC-081).</summary>
+        public Fx FacilityUnaidedOutput = Fx.FromPermille(700);
+        /// <summary>NPC investment (DEC-080), off at zero: the longest payback in years a group accepts, and the most facilities on a node.</summary>
+        public int InvestmentPaybackYears = 0;
+        public int InvestmentMaxPerNode = 24;
+        public int InvestmentProjectsPerNode = 2;
         public Fx MigrationStartFreeShare = Fx.FromPermille(200);
         /// <summary>Yearly share of bound people who run away, and how much faster where the lord broke the contract.</summary>
         public Fx MigrationFleeShare = Fx.FromPermille(10);
         public int MigrationBrokenContractFactor = 3;
         public int MigrationJobsPerFacilityLevel = 100000;
         /// <summary>Open town jobs, as a share of jobs, that move a nation to emancipate; years before it starts (Prussia 1807 to 1810); share freed a year; redemption years (Russia, 49) and share of income paid.</summary>
+        /// <summary>Years from the start before a nation can enact emancipation.</summary>
+        public int MigrationEmancipationEarliestYears = 0;
         public Fx MigrationVacancyShare = Fx.FromPermille(200);
         public int MigrationEmancipationLeadYears = 3;
         public Fx MigrationFreedPerYear = Fx.FromPermille(100);
@@ -183,6 +198,27 @@ namespace FES.Data
         public readonly long[] MerchantStartCash = { 5000, 4000, 3000, 2000, 1000 };
 
         /// <summary>Cargo limits of one merchant group, per level of its home node (DEC-013).</summary>
+        /// <summary>Per vehicle (pack, cart, wagon, DEC-084): how far it multiplies a group's cargo and flow.</summary>
+        public readonly Fx[] MerchantVehicleCapacity = { Fx.One, Fx.One, Fx.One };
+        /// <summary>Per vehicle: the share of groups starting with it; pack takes the rest.</summary>
+        public readonly Fx[] MerchantVehicleStartShare = { Fx.Zero, Fx.Zero, Fx.Zero };
+        /// <summary>A group buys the next vehicle when its cash is this many times the price; the yearly chance a vehicle wears down one step.</summary>
+        public readonly int[] MerchantVehicleCashTimes = { 0, 3, 3 };
+        /// <summary>Per vehicle (DEC-085): how far it multiplies running costs, encounter chance and insurance premium.</summary>
+        public readonly Fx[] MerchantVehicleCost = { Fx.One, Fx.One, Fx.One };
+        public readonly Fx[] MerchantVehicleDanger = { Fx.One, Fx.One, Fx.One };
+        public readonly Fx[] MerchantVehiclePremium = { Fx.One, Fx.One, Fx.One };
+        /// <summary>Orders (DEC-085): weeks from reserving to collecting, and weeks before an unfilled order lapses.</summary>
+        public int OrderLeadWeeks = 8;
+        /// <summary>0: detail around the player. 1: every node detailed. 2: every node aggregate.</summary>
+        public int LodMode = 0;
+        /// <summary>How many times the expected loss a merchant weighs when deciding on guards.</summary>
+        public int MerchantRiskAversion = 1;
+        public int OrderExpiryWeeks = 52;
+        /// <summary>Quarterly factory planning (DEC-085), and the least share of capacity a factory keeps running.</summary>
+        public bool ForecastEnabled = false;
+        public Fx ForecastMinPlan = Fx.FromPermille(100);
+        public Fx MerchantVehicleWear = Fx.FromPermille(100);
         public readonly long[] MerchantMaxWeight = { 4000, 4000, 2000, 1000, 400 };
         public readonly long[] MerchantMaxSize = { 3200, 3200, 1600, 800, 300 };
 
@@ -479,6 +515,22 @@ namespace FES.Data
             MerchantBankruptWeeks = Int(v, "merchants.bankrupt_weeks", MerchantBankruptWeeks);
             if (MerchantBankruptWeeks < 1) throw new FormatException("config.csv: merchants.bankrupt_weeks must be >= 1.");
             MerchantFlowShare = Permille(v, "merchants.flow_permille", MerchantFlowShare);
+            for (int k = 0; k < MerchantVehicleCapacity.Length; k++)
+            {
+                MerchantVehicleCapacity[k] = Permille(v, $"merchants.vehicle{k}.capacity_permille", MerchantVehicleCapacity[k]);
+                MerchantVehicleStartShare[k] = Permille(v, $"merchants.vehicle{k}.start_permille", MerchantVehicleStartShare[k]);
+                MerchantVehicleCashTimes[k] = Int(v, $"merchants.vehicle{k}.cash_times", MerchantVehicleCashTimes[k]);
+                MerchantVehicleCost[k] = Permille(v, $"merchants.vehicle{k}.cost_permille", MerchantVehicleCost[k]);
+                MerchantVehicleDanger[k] = Permille(v, $"merchants.vehicle{k}.danger_permille", MerchantVehicleDanger[k]);
+                MerchantVehiclePremium[k] = Permille(v, $"merchants.vehicle{k}.premium_permille", MerchantVehiclePremium[k]);
+            }
+            OrderLeadWeeks = Int(v, "orders.lead_weeks", OrderLeadWeeks);
+            LodMode = Int(v, "lod.mode", LodMode);
+            MerchantRiskAversion = Int(v, "merchants.risk_aversion", MerchantRiskAversion);
+            OrderExpiryWeeks = Int(v, "orders.expiry_weeks", OrderExpiryWeeks);
+            ForecastEnabled = Int(v, "production.forecast_enabled", ForecastEnabled ? 1 : 0) != 0;
+            ForecastMinPlan = Permille(v, "production.forecast_min_permille", ForecastMinPlan);
+            MerchantVehicleWear = Permille(v, "merchants.vehicle_wear_permille", MerchantVehicleWear);
             for (int t = 0; t < IndustryTiers.Count; t++)
             {
                 string tier = ((IndustryTier)t).ToString().ToLowerInvariant();
@@ -586,6 +638,14 @@ namespace FES.Data
             NobleSpendShare = Permille(v, "noble.spend_permille", NobleSpendShare);
             VillageWageAwayShare = Permille(v, "labor.village_wage_away_permille", VillageWageAwayShare);
             MigrationMaxShare = Permille(v, "migration.max_share_permille", MigrationMaxShare);
+            MigrationEmancipationEarliestYears = Int(v, "migration.emancipation_earliest_years", MigrationEmancipationEarliestYears);
+            FacilityExpansionBonus = Permille(v, "facility.expansion_bonus_permille", FacilityExpansionBonus);
+            FacilityOutputWage = Permille(v, "facility.output_wage_permille", FacilityOutputWage);
+            StatePublicWageShare = Permille(v, "state.public_wage_permille", StatePublicWageShare);
+            FacilityMaxLevel = Int(v, "facility.max_level", FacilityMaxLevel);
+            FacilityUnaidedOutput = Permille(v, "facility.unaided_output_permille", FacilityUnaidedOutput);
+            InvestmentPaybackYears = Int(v, "investment.payback_years", InvestmentPaybackYears);
+            InvestmentMaxPerNode = Int(v, "investment.max_per_node", InvestmentMaxPerNode); InvestmentProjectsPerNode = Int(v, "investment.projects_per_node", InvestmentProjectsPerNode);
             MigrationStartFreeShare = Permille(v, "migration.start_free_permille", MigrationStartFreeShare);
             MigrationFleeShare = Permille(v, "migration.flee_permille", MigrationFleeShare);
             MigrationBrokenContractFactor = Int(v, "migration.broken_contract_factor", MigrationBrokenContractFactor);

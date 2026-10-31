@@ -192,7 +192,7 @@ namespace FES.Economy
             for (int g = 0; g < db.GoodCount; g++)
             {
                 store.GoodBasePrice[g] = db.Goods[g].BasePrice;
-                store.GoodBaseDemand[g] = db.Goods[g].BaseDemand;
+                store.GoodBaseDemand[g] = db.Goods[g].MadeToOrder ? 0 : db.Goods[g].BaseDemand; // ordered instead (DEC-085)
                 store.GoodCategory[g] = db.Goods[g].CategoryIndex;
                 store.GoodWeight[g] = db.Goods[g].Weight;
                 store.GoodSize[g] = db.Goods[g].Size;

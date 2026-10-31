@@ -186,6 +186,42 @@ namespace FES.Agents
             cash[first] += amount - given;
         }
 
+        /// <summary>Public wages (DEC-082): to a nation's towns by how far their cash falls short of the necessities they would buy; by the usual wage weights if none does.</summary>
+        public static void PayNationTownWages(WorldState world, SimulationConfig config, int nation, long amount)
+        {
+            var levels = world.Get<NodeTable>();
+            var nodes = world.Get<PurseState>().NationNodes[nation];
+            var households = world.Get<HouseholdCash>();
+            long total = 0;
+            int first = -1;
+            foreach (int node in nodes)
+            {
+                long gap = TownShortfall(levels, households, config, node);
+                if (gap <= 0) continue;
+                total += gap;
+                if (first < 0) first = node;
+            }
+            if (first < 0)
+            {
+                PayNationWages(world, config, nation, amount);
+                return;
+            }
+            long given = 0;
+            foreach (int node in nodes)
+            {
+                long gap = TownShortfall(levels, households, config, node);
+                if (gap <= 0) continue;
+                long share = amount / total * gap + amount % total * gap / total;
+                households.Cash[node] += share;
+                given += share;
+            }
+            households.Cash[first] += amount - given;
+        }
+
+        static long TownShortfall(NodeTable levels, HouseholdCash households, SimulationConfig config, int node) =>
+            levels.LevelOf(node) == WorldLevel.Village ? 0
+                : households.DesiredNecessity[node] - Math.Max(0, households.Cash[node]) / Math.Max(1, config.HouseholdBudgetWeeks);
+
         /// <summary>
         /// Toll and license money (DEC-061): the bank reserve of the nation of <paramref name="node"/>, or
         /// its continent's international bank outside any nation.

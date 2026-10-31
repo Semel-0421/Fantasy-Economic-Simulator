@@ -1,9 +1,16 @@
-# Weekly inputs/outputs per facility at level 1. role: in|out
+# Weekly inputs/outputs per facility at level 1. role: in|aid|out; aid is bought when it can be, and without it output falls (DEC-081)
 recipe,role,good,grade,qty
+farm_wheat,aid,wheat,Mid,15
+farm_wheat,aid,iron_tools,Mid,1
 farm_wheat,out,wheat,Mid,120
+farm_barley,aid,barley,Low,12
+farm_barley,aid,iron_tools,Mid,1
 farm_barley,out,barley,Low,100
+mine_iron,aid,iron_tools,Mid,1
 mine_iron,out,iron_ore,Mid,50
+mine_copper,aid,iron_tools,Mid,1
 mine_copper,out,copper_ore,Low,40
+pasture_wool,aid,iron_tools,Mid,1
 pasture_wool,out,wool,Mid,40
 mill_flour,in,wheat,Mid,45
 mill_flour,out,flour,Mid,45
@@ -25,3 +32,9 @@ brew_ale,in,malt,Mid,30
 brew_ale,out,ale,Mid,45
 bake_bread,in,flour,Mid,30
 bake_bread,out,bread,Mid,45
+make_cart,in,iron_bar,Mid,1
+make_cart,in,yarn,Mid,2
+make_cart,out,cart,Mid,3
+make_wagon,in,iron_bar,Mid,3
+make_wagon,in,yarn,Mid,6
+make_wagon,out,wagon,Mid,3

@@ -330,8 +330,11 @@ namespace FES.Tests
             using var floats = new NativeArray<long>(1, Allocator.Temp);
             using var nodeSpend = new NativeArray<long>(new[] { Fx.OneRaw, Fx.OneRaw }, Allocator.Temp);
             using var nodeMargin = new NativeArray<long>(2, Allocator.Temp);
+            using var vehicleMul = new NativeArray<long>(new[] { Fx.OneRaw, Fx.OneRaw }, Allocator.Temp);
             new MerchantFlowJob
             {
+                NodeVehicleCostRaw = vehicleMul,
+                NodeVehicleDangerRaw = vehicleMul,
                 CategoryCount = 1,
                 FlowShareRaw = Fx.FromPermille(500).Raw,
                 LicensedShareRaw = Fx.FromPermille(200).Raw,
@@ -365,7 +368,7 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 4, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 5, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {

@@ -114,6 +114,7 @@ namespace FES.Tests
         public void SpecialtyOutput_GetsTheBonus()
         {
             using var sim = BuildExact(gradeUpPermille: 0);
+            sim.Database.Config.FacilityUnaidedOutput = Fx.One;
             var facilities = sim.World.Get<FacilityTable>();
             int special = PrimaryFacility(sim, specialty: true);
             int plain = PrimaryFacility(sim, specialty: false);
@@ -135,6 +136,7 @@ namespace FES.Tests
         public void SpecialtyOutput_CanComeOutOneGradeHigher()
         {
             using var sim = BuildExact(gradeUpPermille: 1000);
+            sim.Database.Config.FacilityUnaidedOutput = Fx.One;
             var facilities = sim.World.Get<FacilityTable>();
             int special = PrimaryFacility(sim, specialty: true);
             var line = sim.Database.Facilities[facilities.DefIndex[special]].Recipe.Outputs[0];

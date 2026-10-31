@@ -32,6 +32,7 @@ namespace FES.Economy
         NativeArray<long> _luxuryWeight;
         NativeArray<long> _goodLuxuryShare;
         NativeArray<long> _budget;
+        NativeArray<long> _luxuryBudget;
         long _specialtyAnchorMulRaw;
 
         public string Id => "economy.pricing";
@@ -61,6 +62,7 @@ namespace FES.Economy
             _necessityWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _luxuryWeight = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _budget = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _luxuryBudget = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _goodLuxuryShare = new NativeArray<long>(db.GoodCount, Allocator.Persistent);
             for (int g = 0; g < db.GoodCount; g++)
                 _goodLuxuryShare[g] = db.Goods[g].IsLuxury ? Fx.One.Raw : _config.GradeLuxuryShare[(int)db.Goods[g].Grade].Raw;
@@ -75,7 +77,8 @@ namespace FES.Economy
                 _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
                 _necessityWeight[n] = _households.NecessityWeight(n, level, _config).Raw;
                 _luxuryWeight[n] = _households.LuxuryWeight(n, level, _config).Raw;
-                _budget[n] = _cash.BudgetFactor(n, _config.HouseholdBudgetWeeks);
+                _budget[n] = _cash.NecessityBudgetFactor(n, _config.HouseholdBudgetWeeks);
+                _luxuryBudget[n] = _cash.LuxuryBudgetFactor(n, _config.HouseholdBudgetWeeks);
             }
 
             int inlineMask = 0;
@@ -123,9 +126,11 @@ namespace FES.Economy
                 NecessityWanted = _households.NecessityWanted,
                 NecessityMet = _households.NecessityMet,
                 MarketBudget = _budget,
+                MarketLuxuryBudget = _luxuryBudget,
                 Cash = _cash.Cash,
                 Spent = _cash.Spent,
                 Desired = _cash.Desired,
+                DesiredNecessity = _cash.DesiredNecessity,
                 PendingUnits = _cash.PendingUnits,
                 Price = _markets.Price,
                 PrevPrice = _markets.PrevPrice,
@@ -170,12 +175,14 @@ namespace FES.Economy
                 LevelWeight = _levelWeight,
                 ModifierMul = _flows.Multipliers,
                 MarketBudget = _budget,
+                MarketLuxuryBudget = _luxuryBudget,
                 Supply = _markets.Supply,
                 Stock = _markets.Stock,
                 Demand = _markets.Demand,
                 NecessityWanted = _households.NecessityWanted,
                 NecessityMet = _households.NecessityMet,
                 Desired = _cash.Desired,
+                DesiredNecessity = _cash.DesiredNecessity,
                 PendingUnits = _cash.PendingUnits,
             };
             if (ForceManaged)
@@ -195,6 +202,7 @@ namespace FES.Economy
             _luxuryWeight.DisposeIfCreated();
             _goodLuxuryShare.DisposeIfCreated();
             _budget.DisposeIfCreated();
+            _luxuryBudget.DisposeIfCreated();
         }
     }
 
@@ -231,6 +239,7 @@ namespace FES.Economy
             builder.AddMigration(new CurrencyStateV2Migration());
             builder.AddMigration(new HouseholdCashV1Migration());
             builder.AddMigration(new HouseholdCashV2Migration());
+            builder.AddMigration(new HouseholdCashV3Migration());
         }
     }
 }

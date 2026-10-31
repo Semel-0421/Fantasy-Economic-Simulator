@@ -369,6 +369,50 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-085 Orders, factory plans, vehicle costs and risks
+- Date: 2026-11-01
+- Decision: carts, wagons and some luxuries are ordered at a node with stock and collected after a period. Factories change output to demand, checked and forecast each quarter. Pack animals cost least to run and wagons most, to lengthen upgrades. Higher grades draw more raids, cost more to insure, and lead merchants to hire guards.
+- Reason: the user's decision; vehicle factories had overproduced
+- [Draft] Details by Claude, numbers placeholders. Made to order: cart, wagon, cookware. An order takes the nearest node's stock, else waits at the nearest market; it reserves when stock is there, is collected and paid after 8 weeks, and lapses unfilled after 52. Households order cookware quarterly with what is left after necessities. Secondary and tertiary factories run at 10-100% of capacity: forecast is the mean of last forecast and last quarter's net off-take; target adds a quarter's cover (not for ordered goods) and open orders, less stock. Pack, cart, wagon: running cost 0.6, 1, 1.8; raid chance 0.7, 1, 1.6; premium 0.8, 1, 2; next vehicle at cash of 6 and 20 times its price. Merchants hire guards when four times the expected saving beats their cost, and insure when the refund beats the premium.
+- Limits: orders are seen only by factories selling to that same market, so factories cannot stop completely (stopping them removed carts from the world in a test); away from the player, raids apply as expected loss, with no guards or insurance; the player's own peddler is unchanged.
+- Impact: SYS-MERCHANTS, SYS-PRODUCTION, SYS-MARKETS, 02_Data_Formats
+
+### DEC-084 Merchant vehicles
+- Date: 2026-11-01
+- Decision: each merchant group has its own carrying capacity. Merchants invest money to change vehicle, such as carts and wagons, and factories make and sell the vehicles.
+- Reason: the user's decision; moving more goods was the best tested lever for the nation node's supply
+- [Draft] Details by Claude, numbers placeholders. Pack 0.5x, cart 1x, wagon 3x; start 50/35/15%. They multiply cargo limits, and in aggregate also the share of stock a node's merchants move. Yearly: 10% chance to wear down a step, then buy the next vehicle at cash of 3 times its price, or bid if none is in stock. A replacement after bankruptcy starts on pack animals. New goods cart (150) and wagon (500), factories cartwright and wagonworks. Player-hired automated groups buy too; there is no player command yet, and the player's own peddler is unchanged.
+- Impact: SYS-MERCHANTS, SYS-PRODUCTION, 02_Data_Formats
+
+### DEC-083 Necessities first, then luxuries
+- Date: 2026-11-01
+- Decision: households buy necessities first and extend to luxuries gradually as money allows.
+- Reason: the user's decision; a short budget used to cut every good alike, so luxuries took money from food
+- [Draft] Details by Claude. The week's budget pays wished necessities first; what is left pays luxuries in proportion. A good's necessity and luxury parts follow its existing luxury share. Public wages (DEC-082) now answer the shortfall on necessities only.
+- Impact: SYS-MARKETS, SYS-STATE-ECONOMY
+
+### DEC-082 Wages that follow output and public wages in towns
+- Date: 2026-11-01
+- Decision: wages rise with what a facility produces (not its sales), and reserve above target is paid as public wages in towns. Weights are set by test.
+- Reason: the user's decision; a city's supply rose from 29% to 129% with the household budget limit removed, so city households are short of money.
+- [Draft] Output wage is 2.5% of output at base prices, public wages 3% a week of the excess, split by how far each town's cash falls short of what it would buy. Numbers are the best of a thirty-year grid, within noise of its neighbors; output wages of 10% and above shrank facilities and worsened population.
+- Impact: SYS-STATE-ECONOMY, 02_Data_Formats
+
+### DEC-081 Primary producers buy tools and seed
+- Date: 2026-11-01
+- Decision: farms, mines and pastures buy tools, and farms seed. Labor stays the weekly upkeep, which is paid as wages.
+- Reason: the user's decision
+- [Draft] Details by Claude, numbers placeholders. Recipe role `aid`: all bought or none, and without them output is 70%, so the tools-bars-ore-mines cycle cannot deadlock. Wheat farm 15 wheat and 1 tool, barley farm 12 barley and 1 tool, mine and pasture 1 tool. A missing aid bids its price up, within the output's worth and the cash.
+- Impact: SYS-PRODUCTION, 02_Data_Formats
+
+### DEC-080 Paid expansion and NPC investment on every node
+- Date: 2026-11-01
+- Decision: factories can be expanded with money, upkeep rises and output rises much more. NPCs may found and manage facilities on every node, and the founder takes the income.
+- Reason: the user's decision; measured finished goods capacity was about 20-30% of demand, close to the supply rate
+- [Draft] Details by Claude, numbers placeholders. Secondary and tertiary to level 5 for tier value times level, paid to the node's households. Output is level times (1 + 0.25 per level above one), so 1, 2.5, 4.5, 7, 10; upkeep is the level. Yearly on every node, up to 2 projects by the richest of the node's private enterprise, the nation's companies and its state enterprise: payback within 8 years, output at or above its anchor price, under 26 weeks of stock, 4 weeks of inputs at hand, 24 facilities a node, primary only in villages. This widens DEC-076, which kept villages from tertiary work, for investment only. Groups now pass on 25% of dividends rather than 80% so they have capital. Player command: `ExpandFacilityCommand`.
+- Emancipation (DEC-079) now waits 5 years and 30% open jobs; it was enacted in year 2.
+- Impact: SYS-PRODUCTION, SYS-STATE-ECONOMY, SYS-INTEREST-GROUPS, 02_Data_Formats
+
 ### DEC-079 Free people and rural-urban migration
 - Date: 2026-11-01
 - Decision: town labor markets offer better jobs, free people may move, and villagers leave for towns, on real cases. Urbanization takes about

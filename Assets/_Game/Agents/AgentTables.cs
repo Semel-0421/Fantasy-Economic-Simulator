@@ -32,9 +32,11 @@ namespace FES.Agents
         public readonly NativeColumn<byte> Trait;
         /// <summary>The nodes the group knows the prices of.</summary>
         public readonly NativeColumn<NodeMemory> Memory;
+        /// <summary>What the group carries with, see <see cref="MerchantVehicles"/> (DEC-084).</summary>
+        public readonly NativeColumn<byte> Vehicle;
 
         public override string Key => SectionKey;
-        public override int Version => 4;
+        public override int Version => 5;
 
         public AgentTable()
         {
@@ -50,6 +52,7 @@ namespace FES.Agents
             Group = Column<int>();
             Trait = Column<byte>();
             Memory = Column<NodeMemory>();
+            Vehicle = Column<byte>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -66,6 +69,7 @@ namespace FES.Agents
             Group.Add(-1);
             Trait.Add(MerchantTraits.Neutral);
             Memory.Add(NodeMemory.Empty);
+            Vehicle.Add(MerchantVehicles.Pack);
             return new AgentId(Count - 1);
         }
 

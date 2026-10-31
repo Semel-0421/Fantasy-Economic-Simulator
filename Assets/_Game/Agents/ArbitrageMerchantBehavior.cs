@@ -33,6 +33,15 @@ namespace FES.Agents
 
         MerchantTraitTable _traits;
         NativeArray<long> _nodeSpend;
+        NativeArray<long> _vehicleCapacity;
+        NativeArray<long> _vehicleCost;
+        NativeArray<long> _vehicleDanger;
+        NativeArray<long> _vehiclePremium;
+        NativeArray<long> _nodeVehicleCost;
+        NativeArray<long> _nodeVehicleDanger;
+        NativeArray<long> _tripStats;
+        long[] _nodeVehicles;
+        int[] _nodeGroups;
         NativeArray<long> _nodeMinMargin;
         NativeArray<long> _tollsByNode;
         NativeArray<long> _continentIndex;
@@ -77,6 +86,22 @@ namespace FES.Agents
             int categories = _flows.CategoryCount;
             _traits = new MerchantTraitTable(_db.Config);
             _nodeSpend = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _vehicleCapacity = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
+            _vehicleCost = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
+            _vehicleDanger = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
+            _vehiclePremium = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
+            _nodeVehicleCost = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _nodeVehicleDanger = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _tripStats = new NativeArray<long>(4, Allocator.Persistent);
+            for (int k = 0; k < MerchantVehicles.Count; k++)
+            {
+                _vehicleCapacity[k] = _db.Config.MerchantVehicleCapacity[k].Raw;
+                _vehicleCost[k] = _db.Config.MerchantVehicleCost[k].Raw;
+                _vehicleDanger[k] = _db.Config.MerchantVehicleDanger[k].Raw;
+                _vehiclePremium[k] = _db.Config.MerchantVehiclePremium[k].Raw;
+            }
+            _nodeVehicles = new long[_nodes.Count];
+            _nodeGroups = new int[_nodes.Count];
             _nodeMinMargin = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _tollsByNode = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _continentIndex = new NativeArray<long>(_nodes.ContinentCount, Allocator.Persistent);
@@ -170,6 +195,18 @@ namespace FES.Agents
                 TraitSpendRaw = _traits.SpendRaw,
                 TraitMinMarginRaw = _traits.MinMarginRaw,
                 TraitCapacityRaw = _traits.CapacityRaw,
+                VehicleCapacityRaw = _vehicleCapacity,
+                VehicleCostRaw = _vehicleCost,
+                VehicleDangerRaw = _vehicleDanger,
+                VehiclePremiumRaw = _vehiclePremium,
+                GuardBaseCost = _db.Config.GuardBaseCost,
+                RiskAversion = _db.Config.MerchantRiskAversion,
+                GuardCostShareRaw = _db.Config.GuardCostShare.Raw,
+                GuardReductionRaw = _db.Config.GuardReduction.Raw,
+                InsurancePremiumRaw = _db.Config.InsurancePremium.Raw,
+                InsuranceRefundRaw = _db.Config.InsuranceRefund.Raw,
+                TripStats = _tripStats,
+                AgentVehicle = _agents.Vehicle.AsArray(),
                 TraitUpkeepRaw = _traits.UpkeepRaw,
                 TraitDistancePower = _traits.DistancePower,
                 TraitRangeLevel = _traits.RangeLevel,
@@ -211,6 +248,12 @@ namespace FES.Agents
                 _tollsByNode[n] = 0;
             }
             foreach (int a in _bankrupt) GoBankrupt(ctx, a);
+            var stats = _world.Get<MerchantTripStats>();
+            stats.Trips += _tripStats[0];
+            stats.Guarded += _tripStats[1];
+            stats.Insured += _tripStats[2];
+            stats.Encounters += _tripStats[3];
+            for (int k = 0; k < _tripStats.Length; k++) _tripStats[k] = 0;
         }
 
         void GoBankrupt(SimContext ctx, int a)
@@ -234,6 +277,7 @@ namespace FES.Agents
                 var rng = DetRandom.For(ctx.Seed, ctx.Turn, BankruptStream, a);
                 _agents.Trait[a] = genetics.Draw(ref rng, continent, _db.Config.MerchantMutationShare);
             }
+            _agents.Vehicle[a] = MerchantVehicles.Pack; // sold off with the old group
             ctx.Events.Publish(new MerchantBankrupt(new AgentId(a), ctx.Turn));
         }
 
@@ -258,6 +302,10 @@ namespace FES.Agents
                 _nodeCapacity[n] = 0;
                 _nodeSpend[n] = 0;
                 _nodeMinMargin[n] = 0;
+                _nodeVehicles[n] = 0;
+                _nodeVehicleCost[n] = Fx.OneRaw;
+                _nodeVehicleDanger[n] = Fx.OneRaw;
+                _nodeGroups[n] = 0;
             }
             for (int a = 0; a < _agents.Count; a++)
             {
@@ -265,7 +313,16 @@ namespace FES.Agents
                 if (_lod.IsDetailed(n) || _lod.IsDetailed(_agents.Home[a]) || _agents.IsTravelling(a)
                     || _agents.Mode[a] != (byte)ControlMode.Automated) continue;
                 int trait = _agents.Trait[a];
-                long capacity = Fx.MulIntRaw(_db.Config.MerchantMaxWeight[_agents.Scale[a]], _traits.CapacityRaw[trait]);
+                long capacity = Fx.MulIntRaw(Fx.MulIntRaw(_db.Config.MerchantMaxWeight[_agents.Scale[a]], _traits.CapacityRaw[trait]), _vehicleCapacity[_agents.Vehicle[a]]);
+                _nodeVehicles[n] += _vehicleCapacity[_agents.Vehicle[a]];
+                if (_nodeGroups[n] == 0)
+                {
+                    _nodeVehicleCost[n] = 0;
+                    _nodeVehicleDanger[n] = 0;
+                }
+                _nodeVehicleCost[n] += _vehicleCost[_agents.Vehicle[a]];
+                _nodeVehicleDanger[n] += _vehicleDanger[_agents.Vehicle[a]];
+                _nodeGroups[n]++;
                 _nodeCapacity[n] += capacity;
                 _nodeSpend[n] += capacity * _traits.SpendRaw[trait];
                 _nodeMinMargin[n] += capacity * _traits.MinMarginRaw[trait];
@@ -273,7 +330,10 @@ namespace FES.Agents
             for (int n = 0; n < _nodeCapacity.Length; n++)
             {
                 if (_nodeCapacity[n] <= 0) continue;
-                _nodeSpend[n] /= _nodeCapacity[n];
+                // Better vehicles dare move a larger share of the stock (DEC-084).
+                _nodeSpend[n] = (Fx.FromRaw(_nodeSpend[n] / _nodeCapacity[n]) * Fx.FromRaw(_nodeVehicles[n] / _nodeGroups[n])).Raw;
+                _nodeVehicleCost[n] /= _nodeGroups[n];
+                _nodeVehicleDanger[n] /= _nodeGroups[n];
                 _nodeMinMargin[n] /= _nodeCapacity[n];
             }
 
@@ -287,6 +347,8 @@ namespace FES.Agents
                 NodeCapacity = _nodeCapacity,
                 NodeSpendRaw = _nodeSpend,
                 NodeMinMarginRaw = _nodeMinMargin,
+                NodeVehicleCostRaw = _nodeVehicleCost,
+                NodeVehicleDangerRaw = _nodeVehicleDanger,
                 NodeCategorySpecialty = _nodeCategorySpecialty,
                 Tariff = _tolls.Tariff,
                 SpecialtySurcharge = _tolls.SpecialtySurcharge,
@@ -322,6 +384,13 @@ namespace FES.Agents
         {
             _traits?.Dispose();
             _nodeSpend.DisposeIfCreated();
+            _vehicleCapacity.DisposeIfCreated();
+            _vehicleCost.DisposeIfCreated();
+            _vehicleDanger.DisposeIfCreated();
+            _vehiclePremium.DisposeIfCreated();
+            _nodeVehicleCost.DisposeIfCreated();
+            _nodeVehicleDanger.DisposeIfCreated();
+            _tripStats.DisposeIfCreated();
             _nodeMinMargin.DisposeIfCreated();
             _tollsByNode.DisposeIfCreated();
             _continentIndex.DisposeIfCreated();

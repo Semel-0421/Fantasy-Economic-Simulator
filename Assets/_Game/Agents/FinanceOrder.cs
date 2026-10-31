@@ -17,6 +17,10 @@ namespace FES.Agents
         public const int StateProjects = SimOrder.Late + 18;
         public const int Subsidies = SimOrder.Late + 19;
         public const int Households = SimOrder.Late + 20;
+        public const int Investment = SimOrder.Late + 21;
+        public const int MerchantVehicles = SimOrder.Late + 22;
+        public const int Orders = SimOrder.Late + 23;
+        public const int DemandForecast = SimOrder.Late + 24;
         public const int Policy = SimOrder.Late + 30;
         public const int MerchantGenerations = SimOrder.Late + 40;
     }

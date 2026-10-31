@@ -34,6 +34,9 @@ namespace FES.Agents
         /// <summary>Per node: its groups' average share of stock they dare move, and least margin over the buying price (raw Q16).</summary>
         [ReadOnly] public NativeArray<long> NodeSpendRaw;
         [ReadOnly] public NativeArray<long> NodeMinMarginRaw;
+        /// <summary>Per node, raw Fx: its groups' average vehicle cost and danger multipliers (DEC-085).</summary>
+        [ReadOnly] public NativeArray<long> NodeVehicleCostRaw;
+        [ReadOnly] public NativeArray<long> NodeVehicleDangerRaw;
         [ReadOnly] public NativeArray<byte> NodeCategorySpecialty;
         [ReadOnly] public NativeArray<long> Tariff;
         [ReadOnly] public NativeArray<long> SpecialtySurcharge;
@@ -96,7 +99,7 @@ namespace FES.Agents
                         int toCell = FindCell(to, CellGood[c]);
                         if (toCell < 0) continue;
                         long budget = RouteBudget[r];
-                        Move(n, c, toCell, CellGood[c], to, RouteCostPerUnitRaw[r], RouteExpectedLoss[r], ref budget);
+                        Move(n, c, toCell, CellGood[c], to, Fx.RoundShift(RouteCostPerUnitRaw[r] * NodeVehicleCostRaw[n]), Fx.RoundShift(RouteExpectedLoss[r] * NodeVehicleDangerRaw[n]), ref budget);
                         RouteBudget[r] = budget;
                     }
                 }
@@ -128,6 +131,7 @@ namespace FES.Agents
             long quantity = Fx.MulIntRaw(Stock[fromCell], Fx.RoundShift(FlowShareRaw * NodeSpendRaw[from])) * marginRaw / (sell << Fx.FractionBits);
             if (Licensed[NodeLicenseRow[to] * BaseGoodCount + good / QualityGrades.Count] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
+            quantity = Math.Min(quantity, Stock[fromCell]); // good vehicles can ask for more than there is
             int payer = NodeFloat[to], payee = NodeFloat[from];
             long buy = Price[fromCell];
             if (payer != payee && buy > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / buy);

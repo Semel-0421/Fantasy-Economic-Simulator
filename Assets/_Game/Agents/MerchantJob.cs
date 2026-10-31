@@ -76,6 +76,21 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<long> TraitSpendRaw;
         [ReadOnly] public NativeArray<long> TraitMinMarginRaw;
         [ReadOnly] public NativeArray<long> TraitCapacityRaw;
+        /// <summary>Per vehicle: how far it multiplies cargo (raw Fx, DEC-084).</summary>
+        [ReadOnly] public NativeArray<long> VehicleCapacityRaw;
+        [ReadOnly] public NativeArray<byte> AgentVehicle;
+        /// <summary>Per vehicle, raw Fx (DEC-085): running cost, encounter chance and premium multipliers.</summary>
+        [ReadOnly] public NativeArray<long> VehicleCostRaw;
+        [ReadOnly] public NativeArray<long> VehicleDangerRaw;
+        [ReadOnly] public NativeArray<long> VehiclePremiumRaw;
+        public long GuardBaseCost;
+        public int RiskAversion;
+        public long GuardCostShareRaw;
+        public long GuardReductionRaw;
+        public long InsurancePremiumRaw;
+        public long InsuranceRefundRaw;
+        /// <summary>Trips, guarded trips, insured trips, encounters.</summary>
+        public NativeArray<long> TripStats;
         [ReadOnly] public NativeArray<long> TraitUpkeepRaw;
         [ReadOnly] public NativeArray<int> TraitDistancePower;
         [ReadOnly] public NativeArray<int> TraitRangeLevel;
@@ -243,8 +258,8 @@ namespace FES.Agents
             long minMarginRaw = TraitMinMarginRaw[trait];
             int power = TraitDistancePower[trait];
             int scale = AgentScale[a];
-            long maxWeight = Fx.MulIntRaw(Levels[scale].MaxWeight, TraitCapacityRaw[trait]);
-            long maxSize = Fx.MulIntRaw(Levels[scale].MaxSize, TraitCapacityRaw[trait]);
+            long maxWeight = Fx.MulIntRaw(Fx.MulIntRaw(Levels[scale].MaxWeight, TraitCapacityRaw[trait]), VehicleCapacityRaw[AgentVehicle[a]]);
+            long maxSize = Fx.MulIntRaw(Fx.MulIntRaw(Levels[scale].MaxSize, TraitCapacityRaw[trait]), VehicleCapacityRaw[AgentVehicle[a]]);
             long loadWeight = 0, loadSize = 0;
             for (int r = FirstRow[a]; r >= 0; r = NextRow[r])
             {
@@ -291,8 +306,8 @@ namespace FES.Agents
                     int toCell = FindCell(to, good);
                     if (toCell < 0) continue;
                     if (!licensed && NeedsLicense(to, good)) continue;
-                    long baseFee = RouteBaseFee[r];
-                    long perUnitRaw = RouteCostPerUnitRaw[r];
+                    long baseFee = Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]);
+                    long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]);
                     // A node nobody told the group about is judged at the anchor price.
                     long sell = !Rumors || memory.Knows(to) ? Price[toCell] : Fx.RoundShift(GoodBasePrice[good] * indexRaw);
                     long toll = Fx.MulIntRaw(sell, TollRate(to, good));
@@ -351,7 +366,7 @@ namespace FES.Agents
                 int to = RouteTo[r];
                 if (NodeContinent[to] != NodeContinent[node]) continue;
                 if (inRange && !Within(to, anchor)) continue;
-                long net = -RouteBaseFee[r], units = 0;
+                long net = -Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]), units = 0;
                 for (int i = 0; i < Rows.Length; i++)
                 {
                     int good = CargoGood[Rows[i]];
@@ -362,7 +377,7 @@ namespace FES.Agents
                     long value = (long)CargoQuantity[Rows[i]] * Price[cell];
                     net += value - Fx.MulIntRaw(value, TollRate(to, good));
                 }
-                net -= Fx.MulIntRaw(units, RouteCostPerUnitRaw[r]);
+                net -= Fx.MulIntRaw(Fx.MulIntRaw(units, RouteCostPerUnitRaw[r]), VehicleCostRaw[AgentVehicle[a]]);
                 if (net <= bestNet) continue;
                 bestRoute = r;
                 bestNet = net;
@@ -387,19 +402,41 @@ namespace FES.Agents
                 tollTotal += Fx.MulIntRaw(itemValue, TollRate(destination, good));
                 value += itemValue;
             }
-            long fee = RouteBaseFee[bestRoute] + Fx.MulIntRaw(units, RouteCostPerUnitRaw[bestRoute]);
+            long fee = Fx.MulIntRaw(RouteBaseFee[bestRoute] + Fx.MulIntRaw(units, RouteCostPerUnitRaw[bestRoute]), VehicleCostRaw[AgentVehicle[a]]);
             AgentCash[a] -= fee + tollTotal;
             HouseholdCash[node] += fee; // fees are wages at the origin (DEC-061)
             TollsByNode[destination] += tollTotal;
             AgentDestination[a] = destination;
             AgentArrivalTurn[a] = Turn + RouteTurns[bestRoute];
 
-            // Detailed merchants roll encounters like the player, without guards or insurance ([Draft]).
+            // Detailed merchants roll encounters like the player; bigger vehicles draw more of them (DEC-085).
             long chanceRaw = (RouteDangerRaw[bestRoute] * (Fx.OneRaw + (value << Fx.FractionBits) / DangerValueScale)) >> Fx.FractionBits;
+            chanceRaw = Fx.RoundShift(chanceRaw * VehicleDangerRaw[AgentVehicle[a]]);
             if (chanceRaw > Fx.OneRaw) chanceRaw = Fx.OneRaw;
             if (chanceRaw < 0) chanceRaw = 0;
+            TripStats[0]++;
+            // A group hires guards and insures when the expected cargo loss they save, half of encounters at the cargo share, beats their cost.
+            long expectedLoss = Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), chanceRaw) / 2;
+            long guardCost = GuardBaseCost + Fx.MulIntRaw(value, GuardCostShareRaw);
+            if (Fx.MulIntRaw(expectedLoss, GuardReductionRaw) * RiskAversion > guardCost && AgentCash[a] >= guardCost)
+            {
+                AgentCash[a] -= guardCost;
+                HouseholdCash[node] += guardCost;
+                chanceRaw -= Fx.RoundShift(chanceRaw * GuardReductionRaw);
+                expectedLoss -= Fx.MulIntRaw(expectedLoss, GuardReductionRaw);
+                TripStats[1]++;
+            }
+            long premium = Fx.MulIntRaw(Fx.MulIntRaw(value, InsurancePremiumRaw), VehiclePremiumRaw[AgentVehicle[a]]);
+            bool insured = Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw) > premium && AgentCash[a] >= premium;
+            if (insured)
+            {
+                AgentCash[a] -= premium;
+                HouseholdCash[node] += premium;
+                TripStats[2]++;
+            }
             var rng = DetRandom.For(Seed, Turn, EncounterStream, a, 1);
             if (rng.NextFx01().Raw >= chanceRaw) return;
+            TripStats[3]++;
             if (rng.NextInt(2) == 0)
             {
                 // [Draft] Stolen coins end up spent where the trip began.
@@ -410,6 +447,12 @@ namespace FES.Agents
             }
             for (int i = 0; i < Rows.Length; i++)
                 CargoQuantity[Rows[i]] -= (int)Fx.MulIntRaw(CargoQuantity[Rows[i]], CargoLossRaw);
+            if (!insured) return;
+            // [Draft] The households at the origin stand behind the policy, as far as they hold.
+            long refund = Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), InsuranceRefundRaw);
+            if (refund > HouseholdCash[node]) refund = HouseholdCash[node] > 0 ? HouseholdCash[node] : 0;
+            HouseholdCash[node] -= refund;
+            AgentCash[a] += refund;
         }
 
         void AddCargo(int a, int good, int quantity)
@@ -430,7 +473,7 @@ namespace FES.Agents
         // Upkeep can push cash below zero; enough such weeks and a new group replaces this one (DEC-011).
         void PayUpkeep(int a)
         {
-            long upkeep = Fx.MulIntRaw(Levels[AgentScale[a]].Upkeep, TraitUpkeepRaw[AgentTrait[a]]);
+            long upkeep = Fx.MulIntRaw(Fx.MulIntRaw(Levels[AgentScale[a]].Upkeep, TraitUpkeepRaw[AgentTrait[a]]), VehicleCostRaw[AgentVehicle[a]]);
             AgentCash[a] -= upkeep;
             HouseholdCash[AgentNode[a]] += upkeep;
             if (AgentCash[a] >= 0)

@@ -79,8 +79,8 @@ namespace FES.Tests
             int city = nodes.LevelStart(WorldLevel.City);
             int region = nodes.LevelStart(WorldLevel.Region);
             Assert.AreEqual(7 * 2, markets.MarketCellCount[village]);  // 7 non-tool goods x low/mid
-            Assert.AreEqual(16 * 3, markets.MarketCellCount[city]);     // all goods x low/mid/high
-            Assert.AreEqual(16 * 4, markets.MarketCellCount[region]);   // everything
+            Assert.AreEqual(18 * 3, markets.MarketCellCount[city]);     // all goods x low/mid/high
+            Assert.AreEqual(18 * 4, markets.MarketCellCount[region]);   // everything
 
             db.TryGetGood("iron_tools", QualityGrade.Mid, out var tools);
             db.TryGetGood("wheat", QualityGrade.Low, out var wheat);
@@ -134,7 +134,7 @@ namespace FES.Tests
                 Assert.GreaterOrEqual(markets.Price[c], 1);
                 if (markets.Price[c] != markets.GoodBasePrice[markets.CellGood[c]]) changed++;
             }
-            Assert.Greater(changed, markets.CellCount / 2);
+            Assert.Greater(changed, markets.CellCount / 3); // made-to-order goods wait for orders
         }
 
         [Test]

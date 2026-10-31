@@ -46,7 +46,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             bool enacted = false;
-            for (int t = 0; t < 5 * SimClock.WeeksPerYear && !enacted; t++)
+            for (int t = 0; t < 10 * SimClock.WeeksPerYear && !enacted; t++)
             {
                 sim.AdvanceTurn();
                 enacted = sim.LastTurnEvents.OfType<EmancipationEnacted>().Any();

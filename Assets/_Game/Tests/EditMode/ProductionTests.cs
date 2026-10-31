@@ -138,6 +138,7 @@ namespace FES.Tests
         public void PlayerOutput_GoesToTheWarehouse()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.FacilityOutputWage = Fx.Zero;
             var facilities = sim.World.Get<FacilityTable>();
             int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
             long cash = facilities.Cash[farm];
@@ -220,6 +221,7 @@ namespace FES.Tests
         public void Player_MovesCashAndCargo_AtOwnFacility()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.FacilityOutputWage = Fx.Zero;
             var view = sim.View;
             var facilities = sim.World.Get<FacilityTable>();
             int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();

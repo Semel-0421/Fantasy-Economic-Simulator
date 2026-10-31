@@ -36,9 +36,11 @@ namespace FES.Data
         public readonly bool RequiresLicense;
         /// <summary>The base good is a luxury rather than a necessity (DEC-045, DEC-048).</summary>
         public readonly bool IsLuxury;
+        /// <summary>Made on request: buyers order it and collect it later (DEC-085).</summary>
+        public readonly bool MadeToOrder;
 
         public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size,
-            bool requiresLicense, bool isLuxury = false)
+            bool requiresLicense, bool isLuxury = false, bool madeToOrder = false)
         {
             Id = id;
             BaseKey = baseKey;
@@ -49,6 +51,7 @@ namespace FES.Data
             Size = size;
             RequiresLicense = requiresLicense;
             IsLuxury = isLuxury;
+            MadeToOrder = madeToOrder;
         }
 
         public QualityGrade Grade => Id.Grade;
@@ -74,9 +77,12 @@ namespace FES.Data
         public readonly string Key;
         public readonly RecipeLine[] Inputs;
         public readonly RecipeLine[] Outputs;
+        /// <summary>Bought when they can be: tools and seed. Without them the facility still works, at a lower output (DEC-081).</summary>
+        public readonly RecipeLine[] Aids;
 
-        public RecipeDef(int index, string key, RecipeLine[] inputs, RecipeLine[] outputs)
+        public RecipeDef(int index, string key, RecipeLine[] inputs, RecipeLine[] outputs, RecipeLine[] aids = null)
         {
+            Aids = aids ?? System.Array.Empty<RecipeLine>();
             Index = index;
             Key = key;
             Inputs = inputs;

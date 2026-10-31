@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-11-01
+- [04_Roadmap.md] Measurement by detail mode; `lod.mode` for measuring
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-085 (orders, factory plans, vehicle costs and risks) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-084 (merchant vehicles) and measurement
+- [03_Decisions.md, 04_Roadmap.md] DEC-083 (necessities first) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-082 (output wages, public town wages) and measurement
+- [03_Decisions.md, systems/SYS_STATE_ECONOMY.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-080 (expansion, NPC investment), DEC-081 (tools and seed), emancipation timing, measurement
 - [03_Decisions.md, systems/SYS_STATE_ECONOMY.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-079 (free people, migration, emancipation) and measurement
 - [03_Decisions.md, 04_Roadmap.md] DEC-078 (input bids) and measurement
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-077 (absentee wages, supply ladder) and measurement; DEC-076 failure count corrected (3, not 51)

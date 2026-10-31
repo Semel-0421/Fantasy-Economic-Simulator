@@ -32,3 +32,33 @@ demand.village.weight_permille,4950
 # Rural-urban migration over about fifteen years (DEC-079).
 migration.max_share_permille,80
 households.urban_penalty_permille,3
+# Factories can be expanded and NPC groups invest on every node (DEC-080).
+facility.expansion_bonus_permille,250
+investment.payback_years,8
+# Emancipation waits for a settled labor shortage.
+migration.emancipation_earliest_years,5
+migration.vacancy_permille,300
+groups.payout_permille,250
+# Wages follow output and the state pays towns short of money; weights from a 30-year grid (DEC-082).
+facility.output_wage_permille,25
+state.public_wage_permille,30
+# Merchants differ by what they carry with; they buy carts and wagons from factories (DEC-084).
+merchants.vehicle0.capacity_permille,500
+merchants.vehicle1.capacity_permille,1000
+merchants.vehicle2.capacity_permille,3000
+merchants.vehicle1.start_permille,350
+merchants.vehicle2.start_permille,150
+# Orders, quarterly factory plans, and vehicle running costs and risks (DEC-085).
+production.forecast_enabled,1
+merchants.vehicle0.cost_permille,600
+merchants.vehicle1.cost_permille,1000
+merchants.vehicle2.cost_permille,1800
+merchants.vehicle0.danger_permille,700
+merchants.vehicle1.danger_permille,1000
+merchants.vehicle2.danger_permille,1600
+merchants.vehicle0.premium_permille,800
+merchants.vehicle1.premium_permille,1000
+merchants.vehicle2.premium_permille,2000
+merchants.vehicle1.cash_times,6
+merchants.vehicle2.cash_times,20
+merchants.risk_aversion,4

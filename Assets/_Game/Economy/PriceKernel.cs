@@ -127,6 +127,9 @@ namespace FES.Economy
 
         /// <summary>Per market: the share of their wished consumption its households can pay for (raw Q16).</summary>
         [ReadOnly] public NativeArray<long> MarketBudget;
+        /// <summary>Per market: the share of their wished luxuries left over for (raw Q16, DEC-083).</summary>
+        [ReadOnly] public NativeArray<long> MarketLuxuryBudget;
+        [NativeDisableParallelForRestriction] public NativeArray<long> DesiredNecessity;
         /// <summary>See <see cref="HouseholdCash"/>.</summary>
         [NativeDisableParallelForRestriction] public NativeArray<long> Cash;
         [NativeDisableParallelForRestriction] public NativeArray<long> Spent;
@@ -170,8 +173,8 @@ namespace FES.Economy
             long levelWeight = LevelWeight[level];
             long necessityWeight = MarketNecessityWeight[market];
             long luxuryWeight = MarketLuxuryWeight[market];
-            long wanted = 0, met = 0, desired = 0, spent = 0;
-            long budget = MarketBudget[market];
+            long wanted = 0, met = 0, desired = 0, desiredNecessity = 0, spent = 0;
+            long budget = MarketBudget[market], luxuryBudget = MarketLuxuryBudget[market];
             bool inline = (InlineLevelMask & (1 << level)) != 0;
             int modifierBase = market * CategoryCount;
             for (int c = start; c < end; c++)
@@ -189,11 +192,10 @@ namespace FES.Economy
                     long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                         necessityWeight, luxuryWeight, out long cellWanted, out long cellMet);
                     desired += Deliverable(consumed, Supply[c], Stock[c], Demand[c]) * Price[c];
-                    if (budget != Fx.OneRaw)
-                    {
-                        consumed = Fx.RoundShift(consumed * budget);
-                        cellMet = Fx.RoundShift(cellMet * budget);
-                    }
+                    desiredNecessity += Deliverable(cellMet, Supply[c], Stock[c], Demand[c]) * Price[c];
+                    long luxuries = consumed - cellMet;
+                    cellMet = Fx.RoundShift(cellMet * budget);
+                    consumed = cellMet + Fx.RoundShift(luxuries * luxuryBudget);
                     if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
                     if (LastOffered[c] >= Turn - NeedMemoryWeeks)
                     {
@@ -231,7 +233,11 @@ namespace FES.Economy
             }
             NecessityWanted[market] += wanted;
             NecessityMet[market] += met;
-            if (inline) Desired[market] = desired;
+            if (inline)
+            {
+                Desired[market] = desired;
+                DesiredNecessity[market] = desiredNecessity;
+            }
             // Households never pay more than they hold.
             long cash = Cash[market];
             if (spent > cash) spent = cash > 0 ? cash : 0;
@@ -272,6 +278,9 @@ namespace FES.Economy
         [ReadOnly] public NativeArray<long> ModifierMul;
 
         [ReadOnly] public NativeArray<long> MarketBudget;
+        /// <summary>Per market: the share of their wished luxuries left over for (raw Q16, DEC-083).</summary>
+        [ReadOnly] public NativeArray<long> MarketLuxuryBudget;
+        [NativeDisableParallelForRestriction] public NativeArray<long> DesiredNecessity;
         [ReadOnly] public NativeArray<int> Supply;
         [ReadOnly] public NativeArray<int> Stock;
 
@@ -289,8 +298,8 @@ namespace FES.Economy
 
             long anchorMul = MarketAnchorMul[market];
             long levelWeight = LevelWeight[level];
-            long budget = MarketBudget[market];
-            long wanted = 0, met = 0, desired = 0;
+            long budget = MarketBudget[market], luxuryBudget = MarketLuxuryBudget[market];
+            long wanted = 0, met = 0, desired = 0, desiredNecessity = 0;
             int start = MarketCellStart[market];
             int end = start + MarketCellCount[market];
             int modifierBase = market * CategoryCount;
@@ -305,11 +314,10 @@ namespace FES.Economy
                 long consumed = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                     MarketNecessityWeight[market], MarketLuxuryWeight[market], out long cellWanted, out long cellMet);
                 desired += PriceUpdateJob.Deliverable(consumed, Supply[c], Stock[c], Demand[c]) * Price[c];
-                if (budget != Fx.OneRaw)
-                {
-                    consumed = Fx.RoundShift(consumed * budget);
-                    cellMet = Fx.RoundShift(cellMet * budget);
-                }
+                desiredNecessity += PriceUpdateJob.Deliverable(cellMet, Supply[c], Stock[c], Demand[c]) * Price[c];
+                long luxuries = consumed - cellMet;
+                cellMet = Fx.RoundShift(cellMet * budget);
+                consumed = cellMet + Fx.RoundShift(luxuries * luxuryBudget);
                 if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
                 if (LastOffered[c] >= Turn - NeedMemoryWeeks)
                 {
@@ -322,6 +330,7 @@ namespace FES.Economy
             NecessityWanted[market] += wanted;
             NecessityMet[market] += met;
             Desired[market] = desired;
+            DesiredNecessity[market] = desiredNecessity;
         }
     }
 }

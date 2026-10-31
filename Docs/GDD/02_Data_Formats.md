@@ -102,6 +102,13 @@ changing a default in code does.
 | labor.village_wage_away_permille | 500 | share of village facility wages paid to the nation's towns (DEC-077) |
 | migration.max_share_permille, migration.start_free_permille, migration.flee_permille, migration.broken_contract_factor, migration.jobs_per_facility_level | 0, 200, 10, 3, 100000 | migration limits and jobs (DEC-079) |
 | migration.vacancy_permille, migration.emancipation_lead_years, migration.freed_per_year_permille, migration.redemption_years, migration.redemption_permille, households.urban_penalty_permille | 200, 3, 100, 49, 50, 0 | emancipation, redemption and the urban penalty (DEC-079) |
+| facility.expansion_bonus_permille, facility.max_level, facility.unaided_output_permille | 0, 5, 700 | expansion and output without tools (DEC-080, DEC-081) |
+| facility.output_wage_permille, state.public_wage_permille | 0, 0 | wages by output and public town wages (DEC-082) |
+| merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle{0,1,2}.start_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 0, 3, 100 | merchant vehicles (DEC-084) |
+| merchants.vehicle{0,1,2}.cost_permille, .danger_permille, .premium_permille, .cash_times; merchants.risk_aversion; orders.lead_weeks, orders.expiry_weeks; production.forecast_enabled, production.forecast_min_permille | 1000, 1000, 1000, 3; 1; 8, 52; 0, 100 | DEC-085; goods.csv gains made_to_order |
+| lod.mode | 0 | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
+| investment.payback_years, investment.max_per_node, investment.projects_per_node | 0, 24, 2 | NPC investment (DEC-080) |
+| migration.emancipation_earliest_years | 0 | years before emancipation can be enacted (DEC-080) |
 | tax.household_permille, tax.company_permille | 100, 100 | yearly income tax (DEC-071) |
 | state.defense_permille, state.defense_maintenance_permille, state.defense_interval_weeks | 50, 200, 4 | defense as a share of the yearly budget, maintenance on top, weeks between purchases (DEC-072) |
 | state.project_share_permille, state.projects_per_year, state.project_weeks, state.road_score_permille, state.trade_score_permille | 500, 3, 16, 120, 100 | share of the reserve above target for the year's plan; most per year; weeks each; what paving, and harbors and highways beyond their import bill, score against other needs ([Draft]) |

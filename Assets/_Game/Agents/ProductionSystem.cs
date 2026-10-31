@@ -92,6 +92,7 @@ namespace FES.Agents
         NativeList<int> _playerOutputQuantity;
         NativeList<int> _bankrupt;
         NativeList<long> _inputCost;
+        NativeList<long> _outputWage;
         NativeList<long> _groupDividend;
         NativeArray<long> _defUpkeep;
         GroupTable _groupTable;
@@ -146,6 +147,7 @@ namespace FES.Agents
                 if (nodeTable.LevelOf(n) == WorldLevel.Village && ctx.World.Get<NodeBanks>().NationOf(n) >= 0)
                     _nodeWageAway[n] = _db.Config.VillageWageAwayShare.Raw;
             _inputCost = new NativeList<long>(Allocator.Persistent);
+            _outputWage = new NativeList<long>(Allocator.Persistent);
             _groupDividend = new NativeList<long>(Allocator.Persistent);
             _groupTable = ctx.World.Get<GroupTable>();
             _world = ctx.World;
@@ -170,6 +172,7 @@ namespace FES.Agents
             _playerOutputQuantity.Clear();
             _bankrupt.Clear();
             _inputCost.ResizeUninitialized(_facilities.Count);
+            _outputWage.ResizeUninitialized(_facilities.Count);
             _groupDividend.ResizeUninitialized(_groupTable.Count);
             for (int g = 0; g < _groupDividend.Length; g++) _groupDividend[g] = 0;
             for (int p = 0; p < _floatReserve.Length; p++)
@@ -194,6 +197,13 @@ namespace FES.Agents
                 GradeStream = GradeStream,
                 VariancePermille = _db.Config.ProductionVariancePermille,
                 GradeUpChanceRaw = _db.Config.SpecialtyGradeUpChance.Raw,
+                ExpansionBonusRaw = _db.Config.FacilityExpansionBonus.Raw,
+                UnaidedOutputRaw = _db.Config.FacilityUnaidedOutput.Raw,
+                OutputWageRaw = _db.Config.FacilityOutputWage.Raw,
+                CellPlan = _world.Get<DemandForecast>().Plan,
+                CellProduced = _world.Get<DemandForecast>().Produced,
+                GoodBasePrice = _markets.GoodBasePrice,
+                FacilityOutputWage = _outputWage.AsArray(),
                 FacilityNode = _facilities.Node.AsArray(),
                 FacilityOwner = _facilities.Owner.AsArray(),
                 FacilityLevel = _facilities.Level.AsArray(),
@@ -250,6 +260,7 @@ namespace FES.Agents
                 FacilityOwner = _facilities.Owner.AsArray(),
                 FacilityGroup = _facilities.Group.AsArray(),
                 FacilityInputCost = _inputCost.AsArray(),
+                FacilityOutputWage = _outputWage.AsArray(),
                 GroupDividend = _groupDividend.AsArray(),
                 FacilityDividendsYear = _books.FacilityDividends.AsArray(),
                 NodeWageAwayRaw = _nodeWageAway,
@@ -367,6 +378,9 @@ namespace FES.Agents
                 _lineStart.Add(_lineCell.Length);
                 var def = _db.Facilities[_facilities.DefIndex[f]];
                 AddLines(_facilities.Node[f], def.Recipe.Inputs, true);
+                int firstAid = _lineIsInput.Length;
+                AddLines(_facilities.Node[f], def.Recipe.Aids, true);
+                for (int k = firstAid; k < _lineIsInput.Length; k++) _lineIsInput[k] = ProductionJob.AidLine;
                 int firstOutput = _lineOutputMul.Length;
                 AddLines(_facilities.Node[f], def.Recipe.Outputs, false);
                 // The state's land development raises primary output on that land (DEC-072).
@@ -433,6 +447,7 @@ namespace FES.Agents
             if (_playerOutputQuantity.IsCreated) _playerOutputQuantity.Dispose();
             if (_bankrupt.IsCreated) _bankrupt.Dispose();
             if (_inputCost.IsCreated) _inputCost.Dispose();
+            if (_outputWage.IsCreated) _outputWage.Dispose();
             if (_groupDividend.IsCreated) _groupDividend.Dispose();
             _defUpkeep.DisposeIfCreated();
             _floatReserve.DisposeIfCreated();

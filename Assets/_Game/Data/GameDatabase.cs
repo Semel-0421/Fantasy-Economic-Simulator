@@ -122,14 +122,14 @@ namespace FES.Data
                 {
                     long price = Math.Max(1, Config.GradePriceMultiplier[g].MulInt(basePrice));
                     Goods.Add(new GoodDef(GoodId.From(baseIndex, (QualityGrade)g), key, categoryIndex,
-                        (int)Math.Min(int.MaxValue, price), baseDemand, weight, size, license == 1, goodClass == "luxury"));
+                        (int)Math.Min(int.MaxValue, price), baseDemand, weight, size, license == 1, goodClass == "luxury", t.GetIntOr(r, "made_to_order", 0) != 0));
                 }
             }
         }
 
         void LoadRecipesAndFacilities(CsvTable recipes, CsvTable facilities)
         {
-            var byKey = new Dictionary<string, (List<RecipeLine> inputs, List<RecipeLine> outputs)>(StringComparer.Ordinal);
+            var byKey = new Dictionary<string, (List<RecipeLine> inputs, List<RecipeLine> outputs, List<RecipeLine> aids)>(StringComparer.Ordinal);
             var order = new List<string>();
             if (recipes != null)
             {
@@ -138,7 +138,7 @@ namespace FES.Data
                     string key = recipes.GetString(r, "recipe");
                     if (!byKey.TryGetValue(key, out var lines))
                     {
-                        byKey.Add(key, lines = (new List<RecipeLine>(), new List<RecipeLine>()));
+                        byKey.Add(key, lines = (new List<RecipeLine>(), new List<RecipeLine>(), new List<RecipeLine>()));
                         order.Add(key);
                     }
                     string goodKey = recipes.GetString(r, "good");
@@ -150,7 +150,8 @@ namespace FES.Data
                     string role = recipes.GetString(r, "role");
                     var roleLines = role == "in" ? lines.inputs
                         : role == "out" ? lines.outputs
-                        : throw new FormatException($"recipes.csv row {r + 1}: role must be 'in' or 'out'.");
+                        : role == "aid" ? lines.aids
+                        : throw new FormatException($"recipes.csv row {r + 1}: role must be 'in', 'aid' or 'out'.");
                     if (roleLines.Exists(l => l.Good.Value == good.Value))
                         throw new FormatException($"recipes.csv row {r + 1}: '{goodKey}' is listed twice as '{role}' in recipe '{key}'.");
                     roleLines.Add(line);
@@ -159,7 +160,7 @@ namespace FES.Data
             var recipeByKey = new Dictionary<string, RecipeDef>(StringComparer.Ordinal);
             foreach (var key in order)
             {
-                var def = new RecipeDef(Recipes.Count, key, byKey[key].inputs.ToArray(), byKey[key].outputs.ToArray());
+                var def = new RecipeDef(Recipes.Count, key, byKey[key].inputs.ToArray(), byKey[key].outputs.ToArray(), byKey[key].aids.ToArray());
                 Recipes.Add(def);
                 recipeByKey.Add(key, def);
             }

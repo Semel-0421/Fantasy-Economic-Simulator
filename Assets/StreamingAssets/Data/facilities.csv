@@ -14,3 +14,5 @@ coppersmith,Tertiary,smith_cookware,0
 tailor,Tertiary,sew_clothes,0
 brewery,Tertiary,brew_ale,0
 bakery,Tertiary,bake_bread,0
+cartwright,Tertiary,make_cart,0
+wagonworks,Tertiary,make_wagon,0

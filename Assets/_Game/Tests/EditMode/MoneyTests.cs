@@ -371,14 +371,15 @@ namespace FES.Tests
             AssertConserved(sim, "dividends");
             long dividend = facilityCash - facilities.Cash[f];
             Assert.That(dividend, Is.InRange(900_000, 1_100_000), "about 10% of the profit");
-            Assert.That(groups.Cash[g] - groupCash, Is.InRange(dividend / 5 - 10_000, dividend / 5 + 10_000), "the group keeps a fifth");
-            Assert.Greater(households.Cash[home] - homeCash, dividend / 2, "most goes to its home's households");
+            Assert.That(groups.Cash[g] - groupCash, Is.InRange(dividend * 3 / 4 - 10_000, dividend * 3 / 4 + 10_000), "the group keeps three quarters to invest");
+            Assert.Greater(households.Cash[home] - homeCash, dividend / 5, "the rest goes to its home's households");
         }
 
         [Test]
         public void State_SpendsReservesAboveItsTarget_AsPublicWages()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.StatePublicWageShare = Fx.Zero;
             var bank = sim.World.Get<BankState>();
             var households = sim.World.Get<HouseholdCash>();
             var city = Node(sim, City);

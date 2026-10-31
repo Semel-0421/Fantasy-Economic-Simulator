@@ -170,6 +170,10 @@ namespace FES.Agents
             {
                 long spending = _config.StateSpendingShare.MulInt(Math.Max(0, Excess(n)));
                 if (spending > 0) PayWages(n, spending);
+                long publicWages = _config.StatePublicWageShare.MulInt(Math.Max(0, Excess(n)));
+                if (publicWages <= 0) continue;
+                _bank.Reserve[n] -= publicWages;
+                MoneyLedger.PayNationTownWages(_world, _config, n, publicWages);
             }
         }
 

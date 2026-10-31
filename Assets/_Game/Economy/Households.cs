@@ -106,6 +106,8 @@ namespace FES.Economy
         /// budget; sets this turn's budget share.
         /// </summary>
         public NativeArray<long> Desired;
+        /// <summary>Per node: the part of <see cref="Desired"/> that is necessities, bought first (DEC-083).</summary>
+        public NativeArray<long> DesiredNecessity;
         /// <summary>Per cell: household units consumed since the market last repriced, not yet paid for.</summary>
         public NativeArray<int> PendingUnits;
         /// <summary>Per cell: the last turn the market offered the good (supply or stock), for population needs (P13d).</summary>
@@ -117,7 +119,7 @@ namespace FES.Economy
 
         public const string SectionKey = "economy.household_cash";
         public string Key => SectionKey;
-        public int Version => 3;
+        public int Version => 4;
 
         /// <summary>A good the market has never offered: older than any memory of it.</summary>
         public const int NeverOffered = -1000000;
@@ -127,6 +129,7 @@ namespace FES.Economy
             Cash = new NativeArray<long>(nodeCount, Allocator.Persistent);
             Spent = new NativeArray<long>(nodeCount, Allocator.Persistent);
             Desired = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            DesiredNecessity = new NativeArray<long>(nodeCount, Allocator.Persistent);
             PendingUnits = new NativeArray<int>(cellCount, Allocator.Persistent);
             LastOffered = new NativeArray<int>(cellCount, Allocator.Persistent);
             for (int c = 0; c < cellCount; c++) LastOffered[c] = NeverOffered;
@@ -148,14 +151,20 @@ namespace FES.Economy
         }
 
         /// <summary>
-        /// The share (raw Q16, at most 1) of their wished consumption a node's households can pay for this week:
-        /// they spend at most their cash over <paramref name="budgetWeeks"/> a week.
+        /// The share (raw Q16, at most 1) of their wished necessities a node's households can pay for this week:
+        /// they spend at most their cash over <paramref name="budgetWeeks"/> a week, necessities first (DEC-083).
         /// </summary>
-        public long BudgetFactor(int node, int budgetWeeks)
+        public long NecessityBudgetFactor(int node, int budgetWeeks) =>
+            Share(Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks), DesiredNecessity[node]);
+
+        /// <summary>The share of their wished luxuries that what is left after necessities pays for, so luxuries grow in as money does.</summary>
+        public long LuxuryBudgetFactor(int node, int budgetWeeks) =>
+            Share(Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks) - DesiredNecessity[node], Desired[node] - DesiredNecessity[node]);
+
+        static long Share(long budget, long desired)
         {
-            long budget = Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks);
+            if (desired <= 0) return Fx.OneRaw;
             if (budget <= 0) return 0;
-            long desired = Desired[node];
             if (desired <= budget) return Fx.OneRaw;
             return (budget << Fx.FractionBits) / desired;
         }
@@ -169,6 +178,7 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, SpentYear);
             NativeIO.WriteArray(writer, CashYearStart);
             NativeIO.WriteArray(writer, LastOffered);
+            NativeIO.WriteArray(writer, DesiredNecessity);
         }
 
         public void Read(BinaryReader reader)
@@ -180,6 +190,7 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, SpentYear);
             NativeIO.ReadArray(reader, CashYearStart);
             NativeIO.ReadArray(reader, LastOffered);
+            NativeIO.ReadArray(reader, DesiredNecessity);
         }
 
         public void Dispose()
@@ -187,10 +198,31 @@ namespace FES.Economy
             Cash.DisposeIfCreated();
             Spent.DisposeIfCreated();
             Desired.DisposeIfCreated();
+            DesiredNecessity.DisposeIfCreated();
             PendingUnits.DisposeIfCreated();
             SpentYear.DisposeIfCreated();
             CashYearStart.DisposeIfCreated();
             LastOffered.DisposeIfCreated();
+        }
+    }
+
+    /// <summary>Version 3 did not split what households wish for: necessities count as none until the next week measures them.</summary>
+    public sealed class HouseholdCashV3Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 3;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int nodes = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(nodes);
+                for (int n = 0; n < nodes; n++) writer.Write(0L);
+            }
+            return output.ToArray();
         }
     }
 

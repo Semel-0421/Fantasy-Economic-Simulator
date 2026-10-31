@@ -75,6 +75,10 @@ flowchart LR
 - [Confirmed] Town jobs pay better, free people may move, and villagers leave for towns over about fifteen years (DEC-079).
 - [Draft] Rules and real cases are in DEC-079. `MigrationState` and `MigrationSystem` hold them; off unless `migration.max_share_permille` is set.
 
+## Investment
+- [Confirmed] Factories expand for money, and NPCs found facilities on every node and keep their income (DEC-080). Primary producers buy tools and seed (DEC-081).
+- [Draft] Rules and numbers are in DEC-080 and DEC-081. `InvestmentSystem` and `FacilityExpansion` hold them; off unless `investment.payback_years` is set.
+
 ## Implementation
 `NobleState`, `NobleSystem` and `Nobles.CollectTax` hold the houses; `MoneyLedger.PayNationWages` applies the wage weights.
 `LaborMarketSystem`, `IncomeTaxSystem`, `DefenseSystem` (with `DefensePurchaseJob`), `StateProjectSystem`, `SubsidySystem`,

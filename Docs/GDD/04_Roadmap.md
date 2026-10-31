@@ -112,6 +112,19 @@ With raw output doubled and processing throughput up 50% (inputs and outputs): y
 With migration (DEC-079, fifteen sample years): urban share 35% to 72%; income per head village 35 to 226, city 126 to 237 (thousandths, so the gap closes as Harris-Todaro expects); both nations emancipate in year 2.
 Year 15: 14.9M people from 20.0M, about -2% a year, which is worse; supply nation 17%, region 25%, city 24%, village 43%; spending 2,848k; village cash 6,176k; 15 facility failures, 183 merchant bankruptcies.
 
+With investment and tools (DEC-080, DEC-081), thirty sample years: people 20.0M to 15.6M at year 15 and 12.8M at year 30, about -1.2% a year at the end, still falling. Urban share 67% at year 15, 75% at year 30.
+Supply nation, region, city, village: year 15 28, 51, 31, 100%; year 30 43, 55, 30, 155%. Facilities 860 from about 200. Merchant bankruptcies 461 of 460 groups in 30 years, about 3% a year, with almost none below zero at the end. The target of steady people and 70% supply everywhere is not met: villages are oversupplied while cities stay near 30%, cause not yet confirmed.
+
+With output wages and public wages (DEC-082), thirty sample years: 13.3M people, about -1.2% a year at the end; supply year 30 nation 37%, region 64%, city 35%, village 162%. Open: the nation node lacks goods; city households stay short of money. Unverified: the budget scales all goods alike, so luxuries may crowd out necessities.
+
+With necessities first (DEC-083), thirty sample years: 14.45M people, the yearly fall easing from -1.66% at year 10 to -0.50% at year 30; urban share 81%; supply year 30 nation 37%, region 77%, city 73%, village 136%; 835 facilities, 28 facility failures in all, none after year 5. Open: the nation node lacks goods; population is not yet steady.
+
+With merchant vehicles (DEC-084), thirty sample years: 14.94M people, -0.31% a year at the end; urban share 80%; supply nation 51%, region 78%, city 73%, village 146%; vehicles at the end 111 pack, 31 cart, 318 wagon. Open: vehicle factories overproduce (16,464 carts and 8,942 wagons in stock), and they use iron and yarn.
+
+With orders, plans and vehicle costs (DEC-085), thirty sample years: 13.98M people, -0.64% a year at the end, worse than the 14.94M and -0.31% before it; supply nation 42%, region 66%, city 66%, village 103%; vehicles 112 pack, 199 cart, 149 wagon; stock 1,365 carts and 3,427 wagons, cookware 8,051 still growing; 29% of detailed trips guarded, under 0.1% insured.
+
+Thirty sample years by detail mode (`lod.mode`): around the player 13.98M people, supply 42/66/66/103%; every node detailed 10.81M, -1.5% a year, 20/47/56/76%, 3,357 merchant bankruptcies of 460 groups (about 24% a year), 318 pack, 142 cart, no wagons; every node aggregate 14.70M, 28/69/60/112%, no bankruptcies because aggregate merchants pay nothing. Earlier sample figures mostly reflect aggregate flows and overstate supply; the earlier reading of about 3% merchant bankruptcies a year counted groups that cannot fail.
+
 ## Remaining work
 Order agreed: refactoring, then balance, then the phases.
 

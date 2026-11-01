@@ -208,6 +208,7 @@ namespace FES.Agents
             foreach (var def in _db.Facilities)
             {
                 if (project.Kind == StateProjectKind.Farmland ? !IsFarm(def) : !IsMine(def)) continue;
+                if (!FacilityPlaces.Allowed(def, _nodes, project.Node)) continue;
                 long ratio = 0;
                 foreach (var line in def.Recipe.Outputs)
                 {

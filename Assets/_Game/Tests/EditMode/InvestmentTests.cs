@@ -172,6 +172,27 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Contract_DepositIsDrawnDown_AndTheRestReturnsAtTheEnd()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var groups = sim.World.Get<GroupTable>();
+            var contracts = sim.World.Get<ContractTable>();
+            var markets = sim.World.Get<MarketStore>();
+            var nodes = sim.World.Get<FES.World.NodeTable>();
+            int from = Enumerable.Range(0, nodes.Count).First(n => nodes.LevelOf(n) == WorldLevel.Village);
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            markets.TryFindCell(from, wheat, out int cell);
+            markets.TryFindCell(nodes.Parent[from], wheat, out int toCell);
+            markets.Stock[cell] = 0; // nothing to deliver
+            groups.Cash[0] = 5000;
+            long buyer = groups.Cash[1];
+            contracts.Add(0, 1, cell, toCell, from, nodes.Parent[from], 1, 10, 0, 500);
+            sim.AdvanceTurn();
+            Assert.AreEqual(0, contracts.Count);
+            Assert.GreaterOrEqual(groups.Cash[1], buyer + 500 - 1000, "the unused deposit came back");
+        }
+
+        [Test]
         public void VehicleCosts_RiseWithGrade()
         {
             using var sim = TestWorlds.BuildSample();

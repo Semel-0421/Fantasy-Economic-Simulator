@@ -91,6 +91,11 @@ namespace FES.Data
             return db;
         }
 
+        const string FoodCategory = "provisions";
+        const string DrinkCategory = "drink";
+
+        static int RoundedShare(int amount, Fx share) => (int)((amount * share.Raw + Fx.OneRaw / 2) / Fx.OneRaw);
+
         void LoadGoods(CsvTable t)
         {
             for (int r = 0; r < t.RowCount; r++)
@@ -116,13 +121,20 @@ namespace FES.Data
                 if (weight < 0 || size < 0) throw new FormatException($"goods.csv row {r + 1}: weight and size must not be negative.");
                 string goodClass = t.GetStringOr(r, "class", "necessity");
                 if (goodClass.Length == 0) goodClass = "necessity";
-                if (goodClass != "necessity" && goodClass != "luxury")
-                    throw new FormatException($"goods.csv row {r + 1}: class must be necessity or luxury, not '{goodClass}'.");
+                if (goodClass != "necessity" && goodClass != "luxury" && goodClass != "semi")
+                    throw new FormatException($"goods.csv row {r + 1}: class must be necessity, semi or luxury, not '{goodClass}'.");
+                // Foods and drink keep their own grade prices, and their demand splits by grade, the rest to mid (DEC-090, DEC-091).
+                bool food = (category == FoodCategory || category == DrinkCategory) && Config.FoodGradeDemand[(int)QualityGrade.Mid].Raw > 0;
+                int otherDemand = 0;
+                if (food)
+                    for (int g = 0; g < QualityGrades.Count; g++)
+                        if (g != (int)QualityGrade.Mid) otherDemand += RoundedShare(baseDemand, Config.FoodGradeDemand[g]);
                 for (int g = 0; g < QualityGrades.Count; g++)
                 {
-                    long price = Math.Max(1, Config.GradePriceMultiplier[g].MulInt(basePrice));
+                    long price = Math.Max(1, (food ? Config.FoodGradePrice[g] : Config.GradePriceMultiplier[g]).MulInt(basePrice));
+                    int demand = !food ? baseDemand : g == (int)QualityGrade.Mid ? Math.Max(0, baseDemand - otherDemand) : RoundedShare(baseDemand, Config.FoodGradeDemand[g]);
                     Goods.Add(new GoodDef(GoodId.From(baseIndex, (QualityGrade)g), key, categoryIndex,
-                        (int)Math.Min(int.MaxValue, price), baseDemand, weight, size, license == 1, goodClass == "luxury", t.GetIntOr(r, "made_to_order", 0) != 0));
+                        (int)Math.Min(int.MaxValue, price), demand, weight, size, license == 1, goodClass == "luxury", t.GetIntOr(r, "made_to_order", 0) != 0, goodClass == "semi"));
                 }
             }
         }
@@ -175,7 +187,11 @@ namespace FES.Data
                     throw new FormatException($"facilities.csv row {r + 1}: unknown recipe '{recipeKey}'.");
                 if (!facilityKeys.Add(key)) throw new FormatException($"facilities.csv: duplicate key '{key}'.");
                 Facilities.Add(new FacilityDef(Facilities.Count, key, facilities.GetEnum<IndustryTier>(r, "tier"), recipe,
-                    facilities.GetIntOr(r, "state_owned", 0) != 0) { Strategic = facilities.GetIntOr(r, "strategic", 0) != 0 });
+                    facilities.GetIntOr(r, "state_owned", 0) != 0)
+                {
+                    Strategic = facilities.GetIntOr(r, "strategic", 0) != 0,
+                    Continent = string.IsNullOrEmpty(facilities.GetStringOr(r, "continent", "")) ? null : facilities.GetString(r, "continent"),
+                });
             }
         }
 

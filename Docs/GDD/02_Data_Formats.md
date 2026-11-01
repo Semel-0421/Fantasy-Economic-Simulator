@@ -24,7 +24,7 @@ except `config.csv`, which is hashed by its effective values (see below).
 | weight | weight of one unit, shared by all grades (optional, default 1) |
 | size | size (volume) of one unit, shared by all grades (optional, default 1) |
 | requires_license | 1 if selling needs a license of the nation (optional, default 0) |
-| class | `necessity` or `luxury` (optional, default necessity); sets the price elasticity ([Draft]) |
+| class | `necessity`, `semi` or `luxury` (optional, default necessity); sets the price elasticity ([Draft], `semi` DEC-091) |
 
 Each row expands to 4 items (`key@low`, `@mid`, `@high`, `@best`) with prices scaled by
 `grade.<grade>.price_permille` (defaults 600 / 1000 / 1800 / 3500).
@@ -36,10 +36,12 @@ Good id = `baseIndex * 4 + grade`.
 
 ## facilities.csv
 
-`key,tier,recipe,state_owned` — tier is `Primary`, `Secondary` or `Tertiary`; `state_owned` (optional, 1)
+`key,tier,recipe,state_owned,strategic,continent` — tier is `Primary`, `Secondary` or `Tertiary`; `state_owned` (optional, 1)
 gives facilities of the type to their nation's state enterprise. Spawn counts per node come from
 `producers.<level>.<tier>` in config; the facility type is picked deterministically among that tier's defs
 whose inputs are all made in the node's subtree, or among the primary defs when none qualifies (DEC-069).
+`continent` (optional, a continent key; DEC-096) means the type stands only there: it is left out of the picking
+above, `producers.per_continent` of it (default 3) spawn in villages there, and no one builds it elsewhere.
 
 ## events.csv
 
@@ -91,8 +93,8 @@ changing a default in code does.
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
 | households.income_response_permille, households.income_max_change_permille | 500, 500 | yearly income change toward measured income: share of the gap, cap as a share of the larger value ([Draft]; cap was 50) |
 | households.need_memory_weeks | 52 | a necessity counts toward population change if offered within this many weeks (DEC-067, [Draft] value) |
-| households.budget_weeks | 26 | households spend at most their cash over this many weeks a week ([Draft]) |
-| markets.trader_float_permille | 100 | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
+| households.budget_weeks | 26, sample data 13 (DEC-095) | households spend at most their cash over this many weeks a week ([Draft]) |
+| markets.trader_float_permille | 100, sample data 900 (DEC-094) | share of the starting money nobody holds that goes to the traders' floats; households get the rest ([Draft]) |
 | markets.producer_float_permille | 500 | share of a float, as the week starts, that producers may be paid from |
 | labor.base_employment_permille, labor.min_employment_permille, labor.max_employment_permille | 900, 500, 1000 | employment rate at long-run activity, and its limits ([Draft]) |
 | labor.response_permille, labor.long_run_response_permille | 500, 125 | quarterly share of the way toward the target rate, and of the long-run level toward activity ([Draft]) |
@@ -109,7 +111,12 @@ changing a default in code does.
 | lod.mode | 0 | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
 | merchants.join_permille, merchants.member_fee_permille, merchants.support_floor_permille, merchants.support_share_permille, merchants.member_premium_permille | 0, 50, 200, 100, 500 | merchant associations (DEC-086) |
 | state.strategic_subsidy_permille; contract.per_nation, contract.min_stock, contract.stock_weeks, contract.term_weeks, contract.base_discount_permille, contract.discount_per_unit_permille, contract.max_discount_permille | 0; 0, 200, 26, 52, 50, 1, 250 | DEC-087; facilities.csv gains strategic |
+| contract.min_weeks, contract.max_weeks, contract.deposit_permille (replacing contract.term_weeks) | 8, 104, 200 | contract term and deposit (DEC-088) |
 | contract.demand_share_permille, contract.credit_weeks | 500, 8 | contract volume and credit check (DEC-087) |
+| food.{low,mid,high,best}.price_permille, food.{low,mid,high,best}.demand_permille | 0 (off) | food and drink grade prices and demand split (DEC-090, DEC-091) |
+| production.forecast_primary, production.forecast_household_permille, production.forecast_cover_permille; investment.min_plan_permille | 0, 1000, 1000; 0 | market plans that reach raw goods; investors skip goods whose makers run below the share (DEC-091) |
+| demand.semi.{low,mid,high,best}.luxury_share_permille | 250, 650, 900, 1000 | how far a semi-necessity is bought like a luxury (DEC-091) |
+| traders.loan_share_permille, traders.loan_keep_weeks, traders.bank_loan_share_permille, traders.loan_interest_permille, traders.loan_weeks, traders.loan_repay_permille | 0 (sample data 10, DEC-094), 26, 0, 50, 52, 250 | loans to the traders' float, off while no share is set (DEC-092) |
 | investment.payback_years, investment.max_per_node, investment.projects_per_node | 0, 24, 2 | NPC investment (DEC-080) |
 | migration.emancipation_earliest_years | 0 | years before emancipation can be enacted (DEC-080) |
 | tax.household_permille, tax.company_permille | 100, 100 | yearly income tax (DEC-071) |
@@ -126,6 +133,22 @@ changing a default in code does.
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |
 | merchants.<level>.upkeep, merchants.bankrupt_weeks | 50/40/30/20/10, 5 | weekly upkeep of a detailed group, weeks below zero before bankruptcy ([Draft]) |
 | merchants.traits, merchants.rumors | 1, 0 | merchant traits; judging prices by memory and rumor ([Draft]) |
+| merchants.weigh_sales | 1 | groups weigh selling here against carrying the load on; 0 sells all on arrival (DEC-093) |
+| merchants.judge_hops | 1, sample data 3 (DEC-095) | how many markets ahead a group values a load |
+| merchants.bids | 0, sample data 2 | 1: a group with nothing to buy bids for what it would carry (DEC-095); 2: also when it leaves with something else, if the missing load pays more (DEC-096) |
+| merchants.return_home | 0, sample data 1 (DEC-095) | a group stranded above its home with nothing to carry comes back down empty |
+| merchants.cross_level | -1, sample data 2 (DEC-096) | the lowest level whose groups sail between continents; -1 none |
+| merchants.cross_flow_permille | 0, sample data 650 (DEC-066) | share of the normal flow that aggregate trade moves between continents |
+| merchants.judge_coin_units | 0, sample data 20 (DEC-096) | a market whose traders cannot pay for this many units is no market when judging a load; 0 off |
+| merchants.port_crossers | 0, sample data 1 (DEC-096) | a large enough group based at a port sails whatever its personality |
+| bank.international_balance | 0, sample data 1 (DEC-096) | nations keep their international bank between its starting share of the coin supply and twice that |
+| producers.per_continent | 3 | facilities of each continental type (DEC-096) |
+| credit.bill_cap_weeks | 0 off, sample data 8 (DEC-097) | a nation's traders may owe this many weeks of households' wishes in bills |
+| credit.bill_weeks, credit.bill_discount_permille, credit.bill_repay_permille, credit.bill_default_weeks, credit.bill_bank_floor_permille, credit.bill_producers | 8, 20, 250, 26, 500, 0 | a bill's term; the bank's discount; share of the float that pays due bills a week; weeks overdue before protest; the share of its reserve target the bank keeps; producers take bills too ([Draft]) |
+| credit.bond_buy_permille, credit.bond_keep_weeks, credit.bond_group_keep_times | 5, 26, 2 | share of idle money offered for bonds a week; weeks of spending households keep; times its starting cash a group keeps ([Draft]) |
+| credit.state_debt_permille, credit.state_bond_interest_permille, credit.state_bond_weeks | 0 off, sample data 300; 40; 1040 | a nation's debt limit as a share of its coin supply; yearly interest; term ([Draft]) |
+| credit.company_debt_permille, credit.company_bond_interest_permille, credit.company_bond_weeks, credit.company_default_weeks | 0 off, sample data 500; 70; 520; 26 | a group's debt limit as a share of its facilities' value; yearly interest; term; weeks behind before default ([Draft]) |
+| credit.working_weeks | 0 off, sample data 4 | weeks of upkeep and inputs a group keeps its facilities in cash for ([Draft]) |
 | merchants.generation_permille, merchants.mutation_permille, merchants.fitness_capital_permille | 50, 150, 700 | yearly handover share; chance of a random trait; capital's weight in fitness ([Draft]) |
 | merchants.<personality>.spend_permille, merchants.<personality>.min_margin_permille | cautious 500 / 200, normal 750 / 100, aggressive 1000 / 0 | share of cash risked, least margin ([Draft]) |
 | merchants.<personality>.range_level | cautious Region, normal Nation, aggressive Continent | where a group may trade, under its home's ancestor at that level |

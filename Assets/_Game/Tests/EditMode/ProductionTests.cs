@@ -64,7 +64,7 @@ namespace FES.Tests
         public void FacilityWithoutInputStock_ProducesNothing_ButPaysUpkeep()
         {
             // Smithies sit in cities, which no mine supplies with ore while merchants stay idle.
-            using var sim = SimulationBuilder.FromData(TestWorlds.Sample(), 42)
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("credit.working_weeks,0"), 42)
                 .ConfigureServices(s => s.Set<IMerchantBehavior>(new IdleMerchantBehavior())).Build();
             var facilities = sim.World.Get<FacilityTable>();
             var smithies = FacilitiesOf(sim, IndustryTier.Secondary).ToList();
@@ -148,7 +148,7 @@ namespace FES.Tests
             var stored = new List<CargoItem>();
             sim.View.GetWarehouse(new FacilityId(farm), stored);
             var output = sim.Database.Facilities[facilities.DefIndex[farm]].Recipe.Outputs[0];
-            Assert.AreEqual(output.Good, stored.Single().Good);
+            Assert.AreEqual(output.Good.BaseIndex, stored.Single().Good.BaseIndex); // a specialty may come out a grade higher
             Assert.Greater(stored.Single().Quantity, 0);
             Assert.AreEqual(cash - Upkeep(sim, IndustryTier.Primary), facilities.Cash[farm]); // nothing sold: the warehouse had room
         }

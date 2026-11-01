@@ -52,12 +52,13 @@ namespace FES.Economy
             if (stepRaw > maxStep) stepRaw = maxStep;
             if (stepRaw < -maxStep) stepRaw = -maxStep;
 
-            // Pull toward the anchor; at least one coin per update so cheap goods have no dead band.
+            // Pull toward the anchor; at least one coin per update so cheap goods have no dead band, unless the market
+            // presses the other way: a coin is a large share of a cheap price, and it would hide a shortage or a glut.
             long anchor = Fx.RoundShift(basePrice * anchorMulRaw);
             long current = price;
             long gap = anchor - current;
             long pull = Fx.RoundShift(gap * p.AnchorRaw * elapsedTurns);
-            if (pull == 0 && gap != 0 && p.AnchorRaw != 0) pull = gap > 0 ? 1 : -1;
+            if (pull == 0 && gap != 0 && p.AnchorRaw != 0 && (pressureRaw == 0 || pressureRaw > 0 == gap > 0)) pull = gap > 0 ? 1 : -1;
 
             long next = current + Fx.RoundShift(current * stepRaw) + pull;
             if (next < p.MinPrice) next = p.MinPrice;

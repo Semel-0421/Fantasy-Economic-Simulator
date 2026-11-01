@@ -14,7 +14,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 ## Rules
 - [Confirmed] Ordinary market goods are necessities or luxuries, with different price elasticity (DEC-045).
 - [Confirmed] Market demand includes weights that follow from that class (DEC-045).
-- [Confirmed] Each good is classed individually; higher grades lean toward luxury (DEC-048).
+- [Confirmed] Each good is classed individually; higher grades lean toward luxury (DEC-048). A semi-necessity such as ale is closer to a luxury from mid grade up (DEC-091).
 - [Confirmed] Demand weights follow node size, local wealth (money totals) and population (DEC-048).
 - [Confirmed] A price rise lowers quantity demanded, more strongly for luxuries (DEC-048).
 - [Confirmed] Household income follows a Pareto split: the top 20% move 80% of market money (DEC-049).

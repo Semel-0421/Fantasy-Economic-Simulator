@@ -12,6 +12,8 @@ namespace FES.Agents
     public sealed class MerchantTripStats : IWorldComponent
     {
         public long Trips, Guarded, Insured, Encounters;
+        /// <summary>DEC-093: sales below what the goods cost and the coins lost on them, loads carried on instead of sold, sales made because the group would not last the trip, all coins from sales, and what failed groups had paid for the goods they lost.</summary>
+        public long LossSales, LossAmount, CarriedOn, ForcedSales, Sold, LostWithGroups;
     }
 
     /// <summary>
@@ -176,9 +178,7 @@ namespace FES.Agents
     }
 
     /// <summary>
-    /// What each market's factories plan to make (DEC-085). Every quarter it measures how much left each market
-    /// beyond what came in, forecasts the next quarter from that and the last forecast, and sets a share of capacity:
-    /// the forecast, plus open orders and, for goods made to stock, a quarter's cover, less the stock. Primary producers do not plan.
+    /// What makers selling at each market plan to make (DEC-085, DEC-091), as <see cref="DemandForecastSystem"/> sets it.
     /// </summary>
     public sealed class DemandForecast : IPersistentComponent, IDisposable
     {
@@ -186,6 +186,7 @@ namespace FES.Agents
         public NativeArray<long> Plan;
         /// <summary>Per cell: units factories made this quarter.</summary>
         public NativeArray<long> Produced;
+        /// <summary>Per cell: how much lately left the market beyond what came in, smoothed, per quarter.</summary>
         public readonly long[] Forecast;
         public readonly long[] StockAtStart;
 
@@ -224,17 +225,50 @@ namespace FES.Agents
         }
     }
 
-    /// <summary>Quarterly factory planning; off unless production.forecast_enabled is set (DEC-085).</summary>
+    /// <summary>
+    /// Quarterly planning; off unless production.forecast_enabled is set (DEC-085, DEC-091). The forecast of a market's
+    /// good weighs what consumers would take at settled prices, above all, against what lately left the market. Consumers
+    /// are households and, up the chain, the makers they set running: each plan adds its inputs and aids to the demand at
+    /// the markets those makers buy from, so what households want reaches raw goods. Makers selling at a market serve it
+    /// first, with some cover, less its own stock: stock elsewhere does not feed it until merchants carry it. What
+    /// its makers cannot serve, and the demand of markets without makers, falls to the nation's other makers of the good
+    /// with capacity to spare, less what its markets hold beyond their own needs.
+    /// </summary>
     public sealed class DemandForecastSystem : ISimSystem
     {
+        // Enough for the longest chain, tools to bars to ore; tools also feed the mines, which settles within these.
+        const int ChainPasses = 6;
+
+        // One kind of maker selling at one market, keyed by the cell of its first output, where ProductionJob reads the plan.
+        struct Makers
+        {
+            public int Cell;
+            public FacilityDef Def;
+            /// <summary>Raw Fx: recipe runs a quarter at full capacity.</summary>
+            public long Runs;
+            /// <summary>Where its output cells start in the line list, then its inputs and aids.</summary>
+            public int FirstLine;
+            public long Plan;
+        }
+
         GameDatabase _db;
         DemandForecast _state;
         MarketStore _markets;
         MarketFlows _flows;
         FacilityTable _facilities;
         OrderTable _orders;
-        long[] _capacity;
-        long[] _ordered;
+        NodeTable _nodes;
+        PurseState _purses;
+        HouseholdState _population;
+        CurrencyState _currency;
+        DemandParams _demand;
+        readonly System.Collections.Generic.List<Makers> _makers = new System.Collections.Generic.List<Makers>();
+        readonly System.Collections.Generic.List<int> _lines = new System.Collections.Generic.List<int>();
+        int[] _cellPurse, _makersAt;
+        // Per cell, units a quarter.
+        long[] _households, _ordered, _industry, _nextIndustry, _capacity, _need;
+        // Per purse and good, units a quarter.
+        long[] _unmet, _spare, _surplus;
 
         public string Id => "agents.demand_forecast";
         public SimPhase Phase => SimPhase.Finance;
@@ -248,39 +282,170 @@ namespace FES.Agents
             _flows = ctx.World.Get<MarketFlows>();
             _facilities = ctx.World.Get<FacilityTable>();
             _orders = ctx.World.Get<OrderTable>();
-            _capacity = new long[_markets.CellCount];
-            _ordered = new long[_markets.CellCount];
+            _nodes = ctx.World.Get<NodeTable>();
+            _purses = ctx.World.Get<PurseState>();
+            _population = ctx.World.Get<HouseholdState>();
+            _currency = ctx.World.Get<CurrencyState>();
+            _demand = DemandParams.From(_db.Config);
+            int cells = _markets.CellCount, perGood = _purses.Count * _db.GoodCount;
+            _cellPurse = new int[cells];
+            _makersAt = new int[cells];
+            for (int n = 0; n < _nodes.Count; n++)
+            {
+                int end = _markets.MarketCellStart[n] + _markets.MarketCellCount[n];
+                for (int c = _markets.MarketCellStart[n]; c < end; c++) _cellPurse[c] = _purses.NodeFloat[n];
+            }
+            _households = new long[cells];
+            _ordered = new long[cells];
+            _industry = new long[cells];
+            _nextIndustry = new long[cells];
+            _capacity = new long[cells];
+            _need = new long[cells];
+            _unmet = new long[perGood];
+            _spare = new long[perGood];
+            _surplus = new long[perGood];
         }
 
         public void Execute(SimContext ctx)
         {
+            if (!_db.Config.ForecastEnabled || ctx.Turn == 0 || ctx.Turn % OrderSystem.QuarterWeeks != 0) return;
+            MeasureMarkets();
+            ListMakers();
+            Array.Clear(_industry, 0, _industry.Length);
+            for (int pass = 0; pass < ChainPasses; pass++) PlanMakers();
+            foreach (var makers in _makers) _state.Plan[makers.Cell] = makers.Plan;
+        }
+
+        void MeasureMarkets()
+        {
             var config = _db.Config;
-            if (!config.ForecastEnabled || ctx.Turn == 0 || ctx.Turn % OrderSystem.QuarterWeeks != 0) return;
-            Array.Clear(_capacity, 0, _capacity.Length);
             Array.Clear(_ordered, 0, _ordered.Length);
-            for (int f = 0; f < _facilities.Count; f++)
+            for (int n = 0; n < _nodes.Count; n++)
             {
-                var def = _db.Facilities[_facilities.DefIndex[f]];
-                if (def.Tier == IndustryTier.Primary || def.Recipe.Outputs.Length == 0) continue;
-                var line = def.Recipe.Outputs[0];
-                if (!_flows.TryFindNearestMarket(_facilities.Node[f], line.Good, out _, out int cell)) continue;
-                _capacity[cell] += FacilityExpansion.OutputScale(_facilities.Level[f], config).MulInt(line.Quantity * OrderSystem.QuarterWeeks);
+                int level = _nodes.Level[n], end = _markets.MarketCellStart[n] + _markets.MarketCellCount[n];
+                long index = _currency.PriceIndex[_nodes.Continent[n]].Raw;
+                for (int c = _markets.MarketCellStart[n]; c < end; c++)
+                {
+                    long stock = _markets.Stock[c];
+                    long left = Math.Max(0, _state.StockAtStart[c] + _state.Produced[c] - stock);
+                    _state.StockAtStart[c] = stock;
+                    _state.Produced[c] = 0;
+                    _state.Forecast[c] = (_state.Forecast[c] + left) / 2;
+                    _households[c] = HouseholdDemand.AtAnchor(_demand, config, _population, n, level, _db.Goods[_markets.CellGood[c]], index) * OrderSystem.QuarterWeeks;
+                }
             }
             for (int r = 0; r < _orders.Count; r++)
                 if (_orders.ReadyTurn[r] < 0) _ordered[_orders.Cell[r]] += _orders.Quantity[r];
-            for (int c = 0; c < _capacity.Length; c++)
+        }
+
+        void ListMakers()
+        {
+            _makers.Clear();
+            _lines.Clear();
+            Array.Fill(_makersAt, -1);
+            Array.Clear(_capacity, 0, _capacity.Length);
+            var config = _db.Config;
+            for (int f = 0; f < _facilities.Count; f++)
             {
-                long stock = _markets.Stock[c];
-                long left = Math.Max(0, _state.StockAtStart[c] + _state.Produced[c] - stock);
-                _state.StockAtStart[c] = stock;
-                _state.Produced[c] = 0;
-                _state.Forecast[c] = (_state.Forecast[c] + left) / 2;
-                if (_capacity[c] <= 0) continue;
-                long cover = _db.Goods[_markets.CellGood[c]].MadeToOrder ? 0 : _state.Forecast[c];
-                long target = _state.Forecast[c] + cover + _ordered[c] - stock;
-                var plan = Fx.Clamp(Fx.FromRatio(Math.Max(0, target), _capacity[c]), config.ForecastMinPlan, Fx.One);
-                _state.Plan[c] = plan.Raw;
+                var def = _db.Facilities[_facilities.DefIndex[f]];
+                if (_facilities.Owner[f] == OwnerIds.Player || def.Recipe.Outputs.Length == 0) continue; // the player runs their own as they like
+                if (def.Tier == IndustryTier.Primary && !config.ForecastPrimary) continue;
+                int node = _facilities.Node[f];
+                if (!_flows.TryFindNearestMarket(node, def.Recipe.Outputs[0].Good, out _, out int cell)) continue;
+                int at = _makersAt[cell];
+                if (at < 0)
+                {
+                    at = _makersAt[cell] = _makers.Count;
+                    _makers.Add(new Makers { Cell = cell, Def = def, FirstLine = _lines.Count });
+                    AddLines(node, def.Recipe.Outputs);
+                    AddLines(node, def.Recipe.Inputs);
+                    AddLines(node, def.Recipe.Aids);
+                }
+                var makers = _makers[at];
+                makers.Runs += FacilityExpansion.OutputScale(_facilities.Level[f], config).Raw * OrderSystem.QuarterWeeks;
+                _makers[at] = makers;
             }
+            foreach (var makers in _makers)
+            {
+                int line = makers.FirstLine;
+                foreach (var output in makers.Def.Recipe.Outputs)
+                {
+                    int cell = _lines[line++];
+                    if (cell >= 0) _capacity[cell] += Fx.MulIntRaw(output.Quantity, makers.Runs);
+                }
+            }
+        }
+
+        void AddLines(int node, RecipeLine[] lines)
+        {
+            foreach (var line in lines)
+                _lines.Add(_flows.TryFindNearestMarket(node, line.Good, out _, out int cell) ? cell : -1);
+        }
+
+        // One step up the chain: plans from what is wanted now, and what those plans will want.
+        void PlanMakers()
+        {
+            MeasureNeeds();
+            Array.Clear(_nextIndustry, 0, _nextIndustry.Length);
+            var config = _db.Config;
+            for (int m = 0; m < _makers.Count; m++)
+            {
+                var makers = _makers[m];
+                int line = makers.FirstLine;
+                long target = 0, capacity = 0;
+                foreach (var output in makers.Def.Recipe.Outputs)
+                {
+                    int cell = _lines[line++];
+                    long share = Fx.MulIntRaw(output.Quantity, makers.Runs);
+                    capacity += share;
+                    if (cell >= 0) target += Served(cell) * share / Math.Max(1, _capacity[cell]);
+                }
+                var plan = Fx.Clamp(Fx.FromRatio(target, Math.Max(1, capacity)), config.ForecastMinPlan, Fx.One);
+                makers.Plan = plan.Raw;
+                _makers[m] = makers;
+                long planned = (plan * Fx.FromRaw(makers.Runs)).Raw;
+                line = AddIndustry(makers.Def.Recipe.Inputs, line, planned);
+                AddIndustry(makers.Def.Recipe.Aids, line, planned);
+            }
+            (_industry, _nextIndustry) = (_nextIndustry, _industry);
+        }
+
+        void MeasureNeeds()
+        {
+            var config = _db.Config;
+            Array.Clear(_unmet, 0, _unmet.Length);
+            Array.Clear(_spare, 0, _spare.Length);
+            Array.Clear(_surplus, 0, _surplus.Length);
+            for (int c = 0; c < _need.Length; c++)
+            {
+                int good = _markets.CellGood[c], k = _cellPurse[c] * _db.GoodCount + good;
+                long forecast = config.ForecastHouseholdWeight.MulInt(_households[c] + _industry[c]) + (Fx.One - config.ForecastHouseholdWeight).MulInt(_state.Forecast[c]);
+                long wanted = forecast + (_db.Goods[good].MadeToOrder ? 0 : config.ForecastCover.MulInt(forecast)) + _ordered[c];
+                long stock = _markets.Stock[c];
+                _need[c] = Math.Max(0, wanted - stock);
+                _surplus[k] += Math.Max(0, stock - wanted);
+                _unmet[k] += Math.Max(0, _need[c] - _capacity[c]);
+                _spare[k] += Math.Max(0, _capacity[c] - _need[c]);
+            }
+        }
+
+        // What the makers selling at a cell should make: its own need, and their part of what the nation's other markets lack.
+        long Served(int cell)
+        {
+            int k = _cellPurse[cell] * _db.GoodCount + _markets.CellGood[cell];
+            long own = Math.Min(_need[cell], _capacity[cell]), spare = _capacity[cell] - own;
+            long lacking = Math.Max(0, _unmet[k] - _surplus[k]);
+            return _spare[k] <= 0 ? own : own + Math.Min(spare, lacking * spare / _spare[k]);
+        }
+
+        int AddIndustry(RecipeLine[] lines, int line, long planned)
+        {
+            foreach (var input in lines)
+            {
+                int cell = _lines[line++];
+                if (cell >= 0) _nextIndustry[cell] += Fx.MulIntRaw(input.Quantity, planned);
+            }
+            return line;
         }
     }
 }

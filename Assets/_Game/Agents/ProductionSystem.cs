@@ -189,6 +189,8 @@ namespace FES.Agents
                 development.SubsidyLeft[n] = subsidyBudget[n];
             }
 
+            var bills = _world.Get<BillTable>();
+            var billRoom = _world.Get<BillRoom>();
             var job = new ProductionJob
             {
                 Seed = ctx.Seed,
@@ -237,9 +239,20 @@ namespace FES.Agents
                 PlayerOutputCell = _playerOutputCell,
                 PlayerOutputQuantity = _playerOutputQuantity,
                 FacilityInputCost = _inputCost.AsArray(),
+                BillProducers = _db.Config.BillProducers,
+                BillRoom = billRoom.Room,
+                BillBankRoom = billRoom.BankRoom,
+                BillBankSpent = billRoom.BankSpent,
+                BillDiscountRaw = _db.Config.BillDiscount.Raw,
+                BillWeeks = _db.Config.BillWeeks,
+                BillHolder = bills.Holder.List,
+                BillPurse = bills.Purse.List,
+                BillFace = bills.Face.List,
+                BillDue = bills.DueTurn.List,
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
+            billRoom.SettleBank(bank);
             for (int n = 0; n < subsidyBudget.Length; n++) bank.Reserve[n] -= subsidyBudget[n] - development.SubsidyLeft[n];
 
             // Upkeep after every sale of the week, the warehouse overflow included.

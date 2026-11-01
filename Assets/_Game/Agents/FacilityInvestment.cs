@@ -6,6 +6,13 @@ using FES.World;
 
 namespace FES.Agents
 {
+    /// <summary>Where a facility type may stand: a continent's own goods are made nowhere else (DEC-096).</summary>
+    public static class FacilityPlaces
+    {
+        public static bool Allowed(FacilityDef def, NodeTable nodes, int node) =>
+            def.Continent == null || def.Continent == nodes.KeyOf(nodes.AncestorAt(node, WorldLevel.Continent));
+    }
+
     public sealed class FacilityExpanded : ISimEvent
     {
         public readonly FacilityId Facility;
@@ -102,6 +109,7 @@ namespace FES.Agents
         FacilityTable _facilities;
         GroupTable _groups;
         GroupDirectory _directory;
+        DemandForecast _forecast;
 
         public string Id => "agents.investment";
         public SimPhase Phase => SimPhase.Finance;
@@ -118,6 +126,7 @@ namespace FES.Agents
             _facilities = ctx.World.Get<FacilityTable>();
             _groups = ctx.World.Get<GroupTable>();
             _directory = new GroupDirectory(_groups, _nodes);
+            _forecast = ctx.World.Get<DemandForecast>();
         }
 
         public void Execute(SimContext ctx)
@@ -134,8 +143,12 @@ namespace FES.Agents
             int group = RichestAt(node, nationNode);
             if (group < 0) return false;
             var config = _db.Config;
-            // Keeps back what staking the node's family could take.
-            long cash = _groups.Cash[group] - config.GroupStartCash[(int)GroupKind.PrivateEnterprise];
+            // Keeps back what staking the node's family could take; corporate bonds may add to it (DEC-097).
+            long own = _groups.Cash[group] - config.GroupStartCash[(int)GroupKind.PrivateEnterprise];
+            int nation = _purses.NodeFloat[_groups.Node[group]];
+            long cash = own;
+            if (config.CompanyDebtShare.Raw > 0 && nation < _purses.NationCount)
+                cash += Math.Min(BondDesk.CompanyRoom(ctx.World, _db, group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
             int level = _nodes.Level[node], count = 0;
             int bestFacility = -1, bestDef = -1;
             long bestCost = 0, bestGain = 0;
@@ -162,7 +175,7 @@ namespace FES.Agents
             if (count < config.InvestmentMaxPerNode)
                 foreach (var def in _db.Facilities)
                 {
-                    if (def.StateOwned || !Allowed(def, level) || !Wanted(node, def, Fx.One)) continue;
+                    if (def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
                     long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier];
                     long gain = UnitMargin(node, def) - config.FacilityUpkeep[(int)def.Tier];
                     if (Better(gain, cost, bestGain, bestCost, cash))
@@ -175,6 +188,13 @@ namespace FES.Agents
                 }
             if (bestDef < 0) return false;
 
+            if (bestCost > own)
+            {
+                long raised = BondDesk.Raise(ctx.World, config, ctx.Turn, group, nation, bestCost - own);
+                _groups.Cash[group] += raised;
+                ctx.World.Get<CreditStats>().CompanyRaised += raised;
+                if (raised < bestCost - own) return false;
+            }
             _groups.Cash[group] -= bestCost;
             if (bestFacility >= 0)
             {
@@ -239,6 +259,8 @@ namespace FES.Agents
 
         bool Wanted(int node, FacilityDef def, Fx scale)
         {
+            if (def.Recipe.Outputs.Length > 0 && _flows.TryFindNearestMarket(node, def.Recipe.Outputs[0].Good, out _, out int planned)
+                && _forecast.Plan[planned] < _db.Config.InvestmentMinPlan.Raw) return false;
             foreach (var line in def.Recipe.Outputs)
             {
                 if (!_flows.TryFindNearestMarket(node, line.Good, out _, out int cell)) return false;

@@ -369,6 +369,99 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-097 Bills of exchange, government and corporate bonds
+- Date: 2026-11-01
+- Decision: credit widens to bills, government bonds and corporate bonds, among NPCs. The player has no credit commands yet.
+- Reason: the user's decision. Traders' money was the largest limit found, and idle money sat with nation and village households.
+- [Draft] Bills. A nation's traders who cannot pay give a bill for the rest of a merchant's sale, due in 8 weeks, up to 8 weeks of what households wish to buy, less what they already owe. The bank pays the seller the face less 2% as far as it has coins above half its reserve target; otherwise the seller holds the bill. Due bills are paid from at most 25% of the float a week. A bill 26 weeks overdue is protested and the holder takes the loss. Bills apply at home only, and producers do not take them (`credit.bill_producers`, off).
+- [Draft] Government bonds. A nation whose towns fall short of necessities sells bonds up to that shortfall, up to 30% of its share of the coin supply, and pays the towns with the coins. 4% a year, paid off over 20 years from the bank's spendable reserve. It sells none while it is behind on its bonds or in a credit crunch.
+- [Draft] Corporate bonds. A group feeds a facility short of 4 weeks of working cash, if its output is worth more than its inputs: from its own money above its starting cash, then from bonds, up to 50% of the value of its facilities. New facilities may be part paid the same way. 7% a year, paid off over 10 years. A group 26 weeks behind defaults and its holders lose what is left.
+- [Draft] Holders. Households offer 0.5% a week of their cash beyond 26 weeks of spending, and groups 0.5% a week of their cash beyond twice their starting cash.
+- Limits: at year 30 about half of the bills' face is protested, and at year 60 about 60%. The traders' float does not cover what they owe, so banks in effect pay merchants out of reserves, which taxes and minting refill: reserves were 3.2-3.5M at year 30, against 7.0M without credit, and 4.1M at year 60. A higher repayment share drains the floats and does worse: 50% 13.31M, 100% 12.56M, against 14.49M at 25% (three seeds). Bonds change supply little on their own; bills and working cash do most of the work (04_Roadmap).
+- Impact: SYS-BANKING, 02_Data_Formats, sample config.csv
+
+### DEC-096 Each continent makes its own goods, and groups carry them across the sea
+- Date: 2026-11-01
+- Decision: each continent has special goods made only there, so that trade between continents forms: spice and silk on Aurelia, fur and amber on Borealis. Builds P17 (DEC-066).
+- Reason: the user's decision
+- [Draft] Goods. `exotic` category, luxury class, traded at every level (Low and Mid at villages). `facilities.csv` gains a `continent` column; such facilities stand only there, 3 of each type at the start, in villages, and are never built elsewhere by groups, states or subsidies.
+- [Draft] Who sails. Groups based at region level or above (`merchants.cross_level`), and not of the cautious personality unless based at a port (`merchants.port_crossers`). Abroad a group goes anywhere; it buys no guards or insurance and sells for coins only. It values a sale after the rate and the 3% fee, and coins pass through both international banks. Aggregate flows cross at 65% (`merchants.cross_flow_permille`).
+- [Draft] What it took for trade to form. Built with only the rules above, 6 ships sailed out and 8 back in ten years, for 130 units a year, in one seed: 9 of the 10 groups allowed to sail were stranded for good on the foreign continent node. The following came from tracing that:
+  - A group abroad with nothing worth doing sails home with whatever it holds.
+  - A market whose traders cannot pay for 20 units is no market to a group judging a load (`merchants.judge_coin_units`): high prices at the top nodes come from nobody supplying them, not from anybody being able to pay.
+  - A group leaving with one load still bids for a better one it could not find (`merchants.bids` 2), which draws goods to the port. Without that the port rarely held them.
+  - Nations keep their international bank between 2% and 4% of the coin supply, out of and into their reserves (`bank.international_balance`). A one-sided surplus otherwise emptied one bank and stopped its exporters.
+  - The sea route takes 4 weeks at 6 a unit (previous: 8 weeks at 12).
+- Limits: with every node detailed, about 34 ships sail out a year and 2,300-3,000 units of special goods cross, plus 6,700-7,700 units of other goods. The prices stay far apart, with special goods at 66-90% of anchor at home and 154-168% abroad, and only 65-230 units in foreign stock at a time. Around the player, aggregate flows carry much more: prices fall to 12-15% of anchor at home and 26-73% abroad.
+- Alternatives: city-level groups sailing as well (`merchants.cross_level` 3): more ships, no more special goods, people no better. Not kept.
+- Impact: SYS-MERCHANTS, SYS-BANKING, 02_Data_Formats, goods.csv, recipes.csv, facilities.csv, market_profiles.csv, map_routes.csv, sample config.csv
+
+### DEC-095 The market package: judging three markets ahead, bids, sister-city roads, merchants in towns, a 13-week budget
+- Date: 2026-11-01
+- Decision: apply the best mix from the supply trials, with merchants judging three markets ahead instead of two.
+- Reason: the user's decision, after the review of real supply rigidities (04_Roadmap)
+- [Draft] Details by Claude.
+  - Households spend at most their cash over 13 weeks a week (previous: 26).
+  - A group values a load at the best price within three markets, after each hop's charge and toll, even through a market that does not trade the good (`merchants.judge_hops`).
+  - A group with nothing to buy bids for what it would carry if the market had it (`merchants.bids`). The bid raises the price and stops when the margin closes.
+  - Direct roads join sister cities: 2 weeks, 3 a unit, fee 5, paved.
+  - Merchants: 2 per continent, 2 per nation, 8 per region, 6 per city, 2 per village (`merchants.<level>`).
+  - A group stranded above its home with nothing to carry comes back down empty (`merchants.return_home`). As first built it could go up rather than down, and looked unhelpful; once fixed, groups idle at nation nodes fell from 14 to 2.
+- Impact: SYS-MERCHANTS, SYS-MARKETS, 02_Data_Formats, map_routes.csv, sample config.csv
+
+### DEC-094 Traders start with most of the free money, and households lend to them
+- Date: 2026-11-01
+- Decision: switch on the loans of DEC-092, households lending 1% a week of what they can spare at 5% a year, and give the traders' floats 90% of the starting money nobody holds (previous: 10%). The bank does not lend to them.
+- Reason: the user's decision, on Claude's recommendation: it kept the most people at years 30 and 60, and traders' money was the largest limit found
+- Limits: every node detailed it works; around the player, where far merchants do not draw on the float, the gain is small and coins sit idle there (04_Roadmap). Supply does not reach 100% in cities.
+- Impact: SYS-BANKING, 02_Data_Formats, sample config.csv
+
+### DEC-093 Merchants weigh a sale against carrying the load on
+- Date: 2026-11-01
+- Decision: a group with a load works out what it brings here at the current price and what it would bring elsewhere after the trip's costs, and does the better of the two, selling below cost when that is still better. A group that would not last the trip sells here, whatever it loses.
+- Reason: the user's decision. Until now a group sold everything on arrival without comparing anything, and a group with no cash paid for trips to markets whose traders could not pay either.
+- [Draft] Details by Claude. Worth elsewhere: the load's value as far as the traders there can pay, less toll, base fee, per-unit charge, upkeep for the trip's weeks and the expected cargo loss. Worth here: the load's value as far as the traders here can pay. A group would not last the trip when its cash does not cover those costs and its weeks below zero plus the route's turns reach merchants.bankrupt_weeks. With no market worth the trip it waits and tries again each week. What was paid for the load is kept for its profit and loss and for counting losses; it does not change the choice, since that money is gone either way.
+- Limits: only groups stepped one by one. Aggregate flows carry no load to weigh.
+- Alternatives: a group below zero selling to its node's households at a discount when traders cannot pay, tested and not kept: failures fall further, people and supply do not rise (04_Roadmap).
+- Impact: SYS-MERCHANTS, 02_Data_Formats
+
+### DEC-092 Loans to the traders' float, on trial
+- Date: 2026-11-01
+- Decision: test moving households' idle money to traders as loans rather than a grant. Built and switched off at first; switched on by DEC-094.
+- Reason: the user's decision to test; traders' money was the largest limit found
+- [Draft] Details by Claude, numbers placeholders. Each week the float pays simple interest and a 52nd of each loan, interest first, within 25% of the float. While it pays all that fell due, each node's households lend 1% of their cash beyond 26 weeks of spending. Unpaid interest is not income, and lending is neither income nor spending. The bank can lend a share of its reserve above target the same way.
+- Limits: a loan does not help a merchant directly, since the float is what pays sellers. No defaults or write-offs, because lending stops while traders are behind.
+- Impact: SYS-STATE-ECONOMY, 02_Data_Formats
+
+### DEC-091 Plans led by households, raw goods included; ale a semi-necessity; population holds at full supply
+- Date: 2026-11-01
+- Decision: the demand forecast gives household demand the highest weight. Raw goods follow the same forecast. Ale becomes a semi-necessity, closer to a luxury from mid grade up. Population holds at 100% supply.
+- Reason: the user's decision; the quarterly plan read only what sold, so a shortage looked like low demand and throttled makers up the chain
+- [Draft] Details by Claude, numbers placeholders. Forecast of a market's good: 70% what consumers would take at settled prices, 30% smoothed off-take. Consumers are households and, up the chain, the makers they set running, through six passes. Makers serve their own market first, with two quarters' cover (open orders added, none for goods made to order), less that market's stock. What they cannot serve, and demand at markets without makers, goes to the nation's makers with spare capacity, less what its markets hold beyond their own needs. Plans stay at 10-100% of capacity; a recipe's plan is the sum over its output grades. Semi-necessity luxury shares 25/65/90/100% by grade; ale's demand and prices split by grade like foods; a brewery makes 18, 24, 2, 1 of 45 by grade. Population change is 4% of the supply gap, with no base growth or urban penalty. Investors do not build for a good whose makers run below 80%. The price step no longer applies its one-coin pull to the anchor against the market's pressure: on cheap goods that coin cancelled the rise, so a market short by more than half still showed a price near the anchor.
+- Limits: nation-wide stock counts against makers with spare capacity even where merchants do not carry it; supply is well under 100% until traders have money (see the roadmap).
+- Impact: SYS-PRODUCTION, SYS-MARKETS, 02_Data_Formats
+
+### DEC-090 Food grades
+- Date: 2026-11-01
+- Decision: best and high grade foods are priced well apart from mid and low, and made in smaller amounts, so scarcity forms by itself.
+- Reason: the user's decision
+- [Draft] Details by Claude, numbers placeholders. Provisions only (`food.*` keys). Price low 0.7, mid 1, high 2.5, best 6 times base. Demand split 36/50/10/4%. Output about 40/53/4-5% and low, mid, high; only bread makes best (18, 24, 2, 1 of 45). Cheese and salt fish demand rose from 3 to 5, so the food total is 54.
+- Impact: SYS-MARKETS, SYS-PRODUCTION, 02_Data_Formats
+
+### DEC-089 More foods on the market
+- Date: 2026-11-01
+- Decision: a larger share of food comes from alternatives. Wheat must still be milled, bread stays preferred over other foods, and markets sell more kinds of goods.
+- Reason: the user's decision; bread was half of the need and short while wheat sat idle
+- [Draft] Details by Claude, numbers placeholders. Household demand: bread 22 (was 40), porridge 8, beans 8, vegetables 6, cheese 3, salt fish 3, wheat 0 (was 10), the same 50 in all. New producers: bean farm, vegetable farm, dairy, fishery (primary), porridge kitchen (tertiary, from barley). Fish need no coast yet.
+- Impact: SYS-MARKETS, SYS-PRODUCTION
+
+### DEC-088 Contract terms that fit, and a deposit
+- Date: 2026-11-01
+- Decision: a contract's term follows what each party needs. A deposit of 20% of the whole contract's value is paid in advance to sign.
+- Reason: the user's decision
+- [Draft] Details by Claude, numbers placeholders. Term is the shorter of the weeks the seller's stock lasts at the volume and the weeks the buyer's money covers the deposit on, from 8 to 104 weeks. Each delivery draws 20% of its bill from the deposit. At the end the undelivered part returns from the seller, as far as it holds. A buyer who cannot pay breaks the contract and forfeits what is left, the first penalty for breaking.
+- Impact: SYS-MERCHANTS, SYS-INTEREST-GROUPS, 02_Data_Formats
+
 ### DEC-087 Strategic grants and supply contracts
 - Date: 2026-11-01
 - Decision: the state grants part of its money to groups producing important national resources, to grow those industries. Supply contracts run person to person, group to person and group to group: the unit price scales with volume, below market, and the buyer must buy for the whole term.

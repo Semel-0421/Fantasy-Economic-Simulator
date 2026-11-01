@@ -44,6 +44,12 @@ namespace FES.Agents
             builder.World.Add(new ContractTable());
             builder.World.Add(new DemandForecast(builder.World.Get<MarketStore>().CellCount));
             builder.World.Add(new MerchantTripStats());
+            builder.World.Add(new TraderLoans(nodes.Count, banks.NationCount));
+            builder.World.Add(new BillTable());
+            builder.World.Add(new BillRoom(purses.Count));
+            builder.World.Add(new BondTable());
+            builder.World.Add(new CreditStats());
+            builder.World.Add(new BondOffers());
             builder.World.Add(new MigrationState(nodes, banks.NationCount, db.Config));
             builder.World.Add(new FinanceState(banks.NationCount, nodes.ContinentCount, db.Config.LoanInterestPerYear));
             builder.World.Add(new MoneyTotals(banks.NationCount, nodes.ContinentCount));
@@ -74,6 +80,8 @@ namespace FES.Agents
             builder.AddMigration(new AgentTableV3Migration());
             builder.AddMigration(new AgentTableV4Migration());
             builder.AddMigration(new AgentTableV5Migration());
+            builder.AddMigration(new AgentTableV6Migration());
+            builder.AddMigration(new ContractTableV1Migration());
             builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));
             builder.AddMigration(new GroupColumnMigration(AgentTable.SectionKey, 2));
@@ -100,6 +108,8 @@ namespace FES.Agents
             builder.AddSystem(new OrderSystem());
             builder.AddSystem(new ContractSystem());
             builder.AddSystem(new StrategicSubsidySystem());
+            builder.AddSystem(new CreditSystem());
+            builder.AddSystem(new TraderLoanSystem());
             builder.AddSystem(new MerchantMembershipSystem());
             builder.AddSystem(new DemandForecastSystem());
             builder.AddSystem(new HouseholdGrowthSystem());
@@ -128,7 +138,8 @@ namespace FES.Agents
         {
             var defsByTier = new List<FacilityDef>[IndustryTiers.Count];
             for (int t = 0; t < IndustryTiers.Count; t++) defsByTier[t] = new List<FacilityDef>();
-            foreach (var def in db.Facilities) defsByTier[(int)def.Tier].Add(def);
+            foreach (var def in db.Facilities)
+                if (def.Continent == null) defsByTier[(int)def.Tier].Add(def);
 
             var made = new HashSet<int>[nodes.Count];
             for (int n = 0; n < nodes.Count; n++) made[n] = new HashSet<int>();
@@ -157,6 +168,25 @@ namespace FES.Agents
                         table.Add(n, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, db.Config.FacilityStartCash[(int)def.Tier]);
                     }
                 }
+            }
+            SpawnContinental(table, nodes, db);
+        }
+
+        // A continent's own goods start with a few producers, spread over its villages (DEC-096).
+        static void SpawnContinental(FacilityTable table, NodeTable nodes, GameDatabase db)
+        {
+            var villages = new List<int>();
+            foreach (var def in db.Facilities)
+            {
+                if (def.Continent == null) continue;
+                if (!nodes.TryFind(def.Continent, out var continent))
+                    throw new System.FormatException($"facilities.csv: continent '{def.Continent}' of '{def.Key}' is not on the map.");
+                villages.Clear();
+                for (int n = 0; n < nodes.Count; n++)
+                    if (nodes.LevelOf(n) == WorldLevel.Village && nodes.IsAncestorOrSelf(continent.Value, n)) villages.Add(n);
+                for (int k = 0; k < db.Config.ContinentalProducers && villages.Count > 0; k++)
+                    table.Add(villages[(def.Index + k * villages.Count / db.Config.ContinentalProducers) % villages.Count], def.Index, OwnerIds.Npc,
+                        ControlMode.Automated, 1, Fx.One, db.Config.FacilityStartCash[(int)def.Tier]);
             }
         }
 

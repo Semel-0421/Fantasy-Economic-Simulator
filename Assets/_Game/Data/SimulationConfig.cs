@@ -41,6 +41,11 @@ namespace FES.Data
         public Fx LuxuryElasticity = Fx.FromPermille(1500);
         /// <summary>Per grade: how far a necessity is bought like a luxury (higher grades lean toward luxury, DEC-048).</summary>
         public readonly Fx[] GradeLuxuryShare = { Fx.Zero, Fx.Zero, Fx.FromPermille(500), Fx.One };
+        /// <summary>The same for a semi-necessity (DEC-091).</summary>
+        public readonly Fx[] SemiGradeLuxuryShare = { Fx.FromPermille(250), Fx.FromPermille(650), Fx.FromPermille(900), Fx.One };
+        /// <summary>How far a good is bought like a luxury.</summary>
+        public Fx LuxuryShare(GoodDef good) =>
+            good.IsLuxury ? Fx.One : (good.IsSemi ? SemiGradeLuxuryShare : GradeLuxuryShare)[(int)good.Grade];
         /// <summary>Demand below the anchor price grows with elasticity up to this multiple.</summary>
         public Fx MaxCheapDemand = Fx.FromInt(2);
         /// <summary>Share of household income per quintile, poorest first (Pareto, DEC-049); sums to 1.</summary>
@@ -77,6 +82,14 @@ namespace FES.Data
         public int HouseholdBudgetWeeks = 26;
         /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
         public Fx TraderFloatShare = Fx.FromPermille(100);
+        /// <summary>Loans to the traders' float (DEC-092): the weekly share of what households can spare beyond these weeks of spending, and of the bank's excess; zero is off.</summary>
+        public Fx TraderLoanShare = Fx.Zero;
+        public int TraderLoanKeepWeeks = 26;
+        public Fx TraderBankLoanShare = Fx.Zero;
+        /// <summary>Yearly interest, the weeks a loan is paid back over, and the share of the float a week's payments may take.</summary>
+        public Fx TraderLoanInterest = Fx.FromPermille(50);
+        public int TraderLoanWeeks = 52;
+        public Fx TraderLoanRepayShare = Fx.FromPermille(250);
         /// <summary>Share of its float, as the week starts, that producers may be paid from; merchants sell into the rest later in the week.</summary>
         public Fx ProducerFloatShare = Fx.FromPermille(500);
         /// <summary>Employment rate where activity matches its long-run level, and its limits.</summary>
@@ -210,6 +223,9 @@ namespace FES.Data
         public readonly Fx[] MerchantVehiclePremium = { Fx.One, Fx.One, Fx.One };
         /// <summary>Orders (DEC-085): weeks from reserving to collecting, and weeks before an unfilled order lapses.</summary>
         public int OrderLeadWeeks = 8;
+        /// <summary>Food grades (DEC-090): price multipliers in place of <see cref="GradePriceMultiplier"/>, and how a food's household demand splits by grade. Off at a zero split.</summary>
+        public readonly Fx[] FoodGradePrice = { Fx.Zero, Fx.Zero, Fx.Zero, Fx.Zero };
+        public readonly Fx[] FoodGradeDemand = { Fx.Zero, Fx.Zero, Fx.Zero, Fx.Zero };
         /// <summary>Supply contracts (DEC-087), off at zero: signed a year per nation; the least stock to count as having or lacking a good; weekly volume as stock over these weeks; term; discount off the buyer's market, growing with weekly volume to a limit.</summary>
         public int ContractsPerNation = 0;
         public int ContractMinStock = 200;
@@ -217,7 +233,10 @@ namespace FES.Data
         /// <summary>The share of the buyer market's weekly demand a contract may supply, and the weeks of its bill a buyer must hold to sign.</summary>
         public Fx ContractDemandShare = Fx.FromPermille(500);
         public int ContractCreditWeeks = 8;
-        public int ContractTermWeeks = 52;
+        public int ContractMinWeeks = 8;
+        public int ContractMaxWeeks = 104;
+        /// <summary>The share of the whole contract's value the buyer pays at signing (DEC-088).</summary>
+        public Fx ContractDepositShare = Fx.FromPermille(200);
         public Fx ContractBaseDiscount = Fx.FromPermille(50);
         public Fx ContractDiscountPerUnit = Fx.FromPermille(1);
         public Fx ContractMaxDiscount = Fx.FromPermille(250);
@@ -237,6 +256,14 @@ namespace FES.Data
         /// <summary>Quarterly factory planning (DEC-085), and the least share of capacity a factory keeps running.</summary>
         public bool ForecastEnabled = false;
         public Fx ForecastMinPlan = Fx.FromPermille(100);
+        /// <summary>The weight of what households and the factories they set running would take, against recent off-take (DEC-091).</summary>
+        public Fx ForecastHouseholdWeight = Fx.One;
+        /// <summary>The stock a plan aims to hold, as a share of the quarter's forecast.</summary>
+        public Fx ForecastCover = Fx.One;
+        /// <summary>Primary producers plan too (DEC-091).</summary>
+        public bool ForecastPrimary = false;
+        /// <summary>Nobody builds to make a good whose makers run below this share of capacity (DEC-091).</summary>
+        public Fx InvestmentMinPlan = Fx.Zero;
         public Fx MerchantVehicleWear = Fx.FromPermille(100);
         public readonly long[] MerchantMaxWeight = { 4000, 4000, 2000, 1000, 400 };
         public readonly long[] MerchantMaxSize = { 3200, 3200, 1600, 800, 300 };
@@ -399,6 +426,52 @@ namespace FES.Data
         /// default: in the sample world it raised merchant bankruptcies from 2 to 233 in ten years.
         /// </summary>
         public bool MerchantRumorsEnabled = false;
+        /// <summary>Groups weigh selling here against carrying the load on, and can sell at a loss to save themselves (DEC-093). Off: they sell all on arrival.</summary>
+        public bool MerchantWeighSales = true;
+        /// <summary>How many markets ahead a group judges a load (DEC-095); 1 sees only the next one.</summary>
+        public int MerchantJudgeHops = 1;
+        /// <summary>A wish a group cannot fill bids the price up, as a factory's does (DEC-095).</summary>
+        public bool MerchantBids = false;
+        /// <summary>A group leaving with one load still bids for a better one it could not find (DEC-096).</summary>
+        public bool MerchantBidsWhileLoaded = false;
+        /// <summary>A group stranded above its home with nothing to carry goes back empty (DEC-095).</summary>
+        public bool MerchantReturnHome = false;
+        /// <summary>A market whose traders cannot pay for this many units is no market to a group judging a load; 0 off (DEC-096).</summary>
+        public int MerchantJudgeCoinUnits = 0;
+        /// <summary>A large enough group based at a sea port may sail whatever its personality (DEC-096).</summary>
+        public bool MerchantPortCrossers = false;
+        /// <summary>Nations keep their international bank between its starting share of the coin supply and twice that (DEC-096).</summary>
+        public bool InternationalBalance = false;
+        /// <summary>The lowest level whose groups trade between continents (DEC-096): 0 continent, 1 nation, 2 region; below 0 none.</summary>
+        public int MerchantCrossLevel = -1;
+        /// <summary>The share of the normal flow that aggregate trade runs at between continents (DEC-066); zero is none.</summary>
+        public Fx MerchantCrossFlow = Fx.Zero;
+        /// <summary>How many of each continent-bound producer start on its continent (DEC-096).</summary>
+        public int ContinentalProducers = 3;
+        /// <summary>Bills (DEC-097): weeks of households' wishes traders may owe (zero is off), the weeks to maturity, the bank's discount, the share of the float paid on bills a week, the weeks overdue before a bill is lost, and the share of the reserve target under which the bank stops discounting.</summary>
+        public int BillCapWeeks = 0;
+        public int BillWeeks = 8;
+        public Fx BillDiscount = Fx.FromPermille(20);
+        public Fx BillRepayShare = Fx.FromPermille(250);
+        public int BillDefaultWeeks = 26;
+        public Fx BillBankFloor = Fx.FromPermille(500);
+        /// <summary>Producers too take bills for what traders cannot pay (DEC-097).</summary>
+        public bool BillProducers = false;
+        /// <summary>Bonds (DEC-097): the weekly share of idle money holders offer, weeks of spending households keep, and times its starting cash a group keeps.</summary>
+        public Fx BondBuyShare = Fx.FromPermille(5);
+        public int BondKeepWeeks = 26;
+        public int BondGroupKeepTimes = 2;
+        /// <summary>Government bonds: the debt limit as a share of the nation's part of the coin supply (zero is off), yearly interest, and weeks to repay.</summary>
+        public Fx StateDebtShare = Fx.Zero;
+        public Fx StateBondInterest = Fx.FromPermille(40);
+        public int StateBondWeeks = 1040;
+        /// <summary>Corporate bonds: the debt limit as a share of the value of a group's facilities (zero is off), yearly interest, weeks to repay, weeks behind before default.</summary>
+        public Fx CompanyDebtShare = Fx.Zero;
+        public Fx CompanyBondInterest = Fx.FromPermille(70);
+        public int CompanyBondWeeks = 520;
+        public int CompanyDefaultWeeks = 26;
+        /// <summary>Weeks of costs a group keeps its facilities in cash for; zero is off (DEC-097).</summary>
+        public int WorkingWeeks = 0;
         /// <summary>Yearly share of groups that hand over to a successor of a newly drawn trait.</summary>
         public Fx MerchantGenerationShare = Fx.FromPermille(50);
         /// <summary>Chance a new group's trait is drawn at random rather than by fitness.</summary>
@@ -544,12 +617,20 @@ namespace FES.Data
                 MerchantVehiclePremium[k] = Permille(v, $"merchants.vehicle{k}.premium_permille", MerchantVehiclePremium[k]);
             }
             OrderLeadWeeks = Int(v, "orders.lead_weeks", OrderLeadWeeks);
+            for (int g = 0; g < FoodGradePrice.Length; g++)
+            {
+                string grade = ((QualityGrade)g).ToString().ToLowerInvariant();
+                FoodGradePrice[g] = Permille(v, $"food.{grade}.price_permille", FoodGradePrice[g]);
+                FoodGradeDemand[g] = Permille(v, $"food.{grade}.demand_permille", FoodGradeDemand[g]);
+            }
             ContractsPerNation = Int(v, "contract.per_nation", ContractsPerNation);
             ContractMinStock = Int(v, "contract.min_stock", ContractMinStock);
             ContractStockWeeks = Int(v, "contract.stock_weeks", ContractStockWeeks);
             ContractDemandShare = Permille(v, "contract.demand_share_permille", ContractDemandShare);
             ContractCreditWeeks = Int(v, "contract.credit_weeks", ContractCreditWeeks);
-            ContractTermWeeks = Int(v, "contract.term_weeks", ContractTermWeeks);
+            ContractMinWeeks = Int(v, "contract.min_weeks", ContractMinWeeks);
+            ContractMaxWeeks = Int(v, "contract.max_weeks", ContractMaxWeeks);
+            ContractDepositShare = Permille(v, "contract.deposit_permille", ContractDepositShare);
             ContractBaseDiscount = Permille(v, "contract.base_discount_permille", ContractBaseDiscount);
             ContractDiscountPerUnit = Permille(v, "contract.discount_per_unit_permille", ContractDiscountPerUnit);
             ContractMaxDiscount = Permille(v, "contract.max_discount_permille", ContractMaxDiscount);
@@ -564,6 +645,10 @@ namespace FES.Data
             OrderExpiryWeeks = Int(v, "orders.expiry_weeks", OrderExpiryWeeks);
             ForecastEnabled = Int(v, "production.forecast_enabled", ForecastEnabled ? 1 : 0) != 0;
             ForecastMinPlan = Permille(v, "production.forecast_min_permille", ForecastMinPlan);
+            ForecastHouseholdWeight = Permille(v, "production.forecast_household_permille", ForecastHouseholdWeight);
+            ForecastCover = Permille(v, "production.forecast_cover_permille", ForecastCover);
+            ForecastPrimary = Int(v, "production.forecast_primary", ForecastPrimary ? 1 : 0) != 0;
+            InvestmentMinPlan = Permille(v, "investment.min_plan_permille", InvestmentMinPlan);
             MerchantVehicleWear = Permille(v, "merchants.vehicle_wear_permille", MerchantVehicleWear);
             for (int t = 0; t < IndustryTiers.Count; t++)
             {
@@ -642,7 +727,10 @@ namespace FES.Data
             MaxCheapDemand = Permille(v, "demand.max_cheap_permille", MaxCheapDemand);
             if (MaxCheapDemand.Raw < Fx.One.Raw) throw new FormatException("config.csv: demand.max_cheap_permille must be >= 1000.");
             for (int g = 0; g < QualityGrades.Count; g++)
+            {
                 GradeLuxuryShare[g] = Permille(v, $"demand.{((QualityGrade)g).ToString().ToLowerInvariant()}.luxury_share_permille", GradeLuxuryShare[g]);
+                SemiGradeLuxuryShare[g] = Permille(v, $"demand.semi.{((QualityGrade)g).ToString().ToLowerInvariant()}.luxury_share_permille", SemiGradeLuxuryShare[g]);
+            }
             long shares = 0;
             for (int q = 0; q < QuintileIncomeShare.Length; q++)
             {
@@ -663,6 +751,13 @@ namespace FES.Data
             HouseholdBudgetWeeks = Int(v, "households.budget_weeks", HouseholdBudgetWeeks);
             if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
             TraderFloatShare = Permille(v, "markets.trader_float_permille", TraderFloatShare);
+            TraderLoanShare = Permille(v, "traders.loan_share_permille", TraderLoanShare);
+            TraderLoanKeepWeeks = Int(v, "traders.loan_keep_weeks", TraderLoanKeepWeeks);
+            TraderBankLoanShare = Permille(v, "traders.bank_loan_share_permille", TraderBankLoanShare);
+            TraderLoanInterest = Permille(v, "traders.loan_interest_permille", TraderLoanInterest);
+            TraderLoanWeeks = Int(v, "traders.loan_weeks", TraderLoanWeeks);
+            if (TraderLoanWeeks < 1) throw new FormatException("config.csv: traders.loan_weeks must be >= 1.");
+            TraderLoanRepayShare = Permille(v, "traders.loan_repay_permille", TraderLoanRepayShare);
             ProducerFloatShare = Permille(v, "markets.producer_float_permille", ProducerFloatShare);
             NobleRoyalShare = Permille(v, "noble.royal_share_permille", NobleRoyalShare);
             NobleCityShare = Permille(v, "noble.city_share_permille", NobleCityShare);
@@ -751,6 +846,37 @@ namespace FES.Data
             FacilityBankruptWeeks = Int(v, "facility.bankrupt_weeks", FacilityBankruptWeeks);
             MerchantTraitsEnabled = Int(v, "merchants.traits", MerchantTraitsEnabled ? 1 : 0) != 0;
             MerchantRumorsEnabled = Int(v, "merchants.rumors", MerchantRumorsEnabled ? 1 : 0) != 0;
+            MerchantWeighSales = Int(v, "merchants.weigh_sales", MerchantWeighSales ? 1 : 0) != 0;
+            MerchantJudgeHops = Int(v, "merchants.judge_hops", MerchantJudgeHops);
+            if (MerchantJudgeHops < 1) throw new FormatException("config.csv: merchants.judge_hops must be >= 1.");
+            MerchantBids = Int(v, "merchants.bids", MerchantBids ? 1 : 0) != 0;
+            MerchantBidsWhileLoaded = Int(v, "merchants.bids", MerchantBids ? 1 : 0) >= 2;
+            MerchantReturnHome = Int(v, "merchants.return_home", MerchantReturnHome ? 1 : 0) != 0;
+            MerchantJudgeCoinUnits = Int(v, "merchants.judge_coin_units", MerchantJudgeCoinUnits);
+            MerchantPortCrossers = Int(v, "merchants.port_crossers", MerchantPortCrossers ? 1 : 0) != 0;
+            InternationalBalance = Int(v, "bank.international_balance", InternationalBalance ? 1 : 0) != 0;
+            MerchantCrossLevel = Int(v, "merchants.cross_level", MerchantCrossLevel);
+            MerchantCrossFlow = Permille(v, "merchants.cross_flow_permille", MerchantCrossFlow);
+            ContinentalProducers = Int(v, "producers.per_continent", ContinentalProducers);
+            BillCapWeeks = Int(v, "credit.bill_cap_weeks", BillCapWeeks);
+            BillWeeks = Int(v, "credit.bill_weeks", BillWeeks);
+            BillDiscount = Permille(v, "credit.bill_discount_permille", BillDiscount);
+            BillRepayShare = Permille(v, "credit.bill_repay_permille", BillRepayShare);
+            BillDefaultWeeks = Int(v, "credit.bill_default_weeks", BillDefaultWeeks);
+            BillBankFloor = Permille(v, "credit.bill_bank_floor_permille", BillBankFloor);
+            BillProducers = Int(v, "credit.bill_producers", BillProducers ? 1 : 0) != 0;
+            BondBuyShare = Permille(v, "credit.bond_buy_permille", BondBuyShare);
+            BondKeepWeeks = Int(v, "credit.bond_keep_weeks", BondKeepWeeks);
+            BondGroupKeepTimes = Int(v, "credit.bond_group_keep_times", BondGroupKeepTimes);
+            StateDebtShare = Permille(v, "credit.state_debt_permille", StateDebtShare);
+            StateBondInterest = Permille(v, "credit.state_bond_interest_permille", StateBondInterest);
+            StateBondWeeks = Int(v, "credit.state_bond_weeks", StateBondWeeks);
+            CompanyDebtShare = Permille(v, "credit.company_debt_permille", CompanyDebtShare);
+            CompanyBondInterest = Permille(v, "credit.company_bond_interest_permille", CompanyBondInterest);
+            CompanyBondWeeks = Int(v, "credit.company_bond_weeks", CompanyBondWeeks);
+            CompanyDefaultWeeks = Int(v, "credit.company_default_weeks", CompanyDefaultWeeks);
+            WorkingWeeks = Int(v, "credit.working_weeks", WorkingWeeks);
+            if (BillWeeks < 1 || StateBondWeeks < 1 || CompanyBondWeeks < 1) throw new FormatException("config.csv: credit weeks must be >= 1.");
             MerchantGenerationShare = Permille(v, "merchants.generation_permille", MerchantGenerationShare);
             MerchantMutationShare = Permille(v, "merchants.mutation_permille", MerchantMutationShare);
             MerchantFitnessCapital = Permille(v, "merchants.fitness_capital_permille", MerchantFitnessCapital);

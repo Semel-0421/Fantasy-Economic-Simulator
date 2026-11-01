@@ -65,7 +65,7 @@ namespace FES.Economy
             _luxuryBudget = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _goodLuxuryShare = new NativeArray<long>(db.GoodCount, Allocator.Persistent);
             for (int g = 0; g < db.GoodCount; g++)
-                _goodLuxuryShare[g] = db.Goods[g].IsLuxury ? Fx.One.Raw : _config.GradeLuxuryShare[(int)db.Goods[g].Grade].Raw;
+                _goodLuxuryShare[g] = _config.LuxuryShare(db.Goods[g]).Raw;
         }
 
         public void Execute(SimContext ctx)
@@ -240,6 +240,7 @@ namespace FES.Economy
             builder.AddMigration(new HouseholdCashV1Migration());
             builder.AddMigration(new HouseholdCashV2Migration());
             builder.AddMigration(new HouseholdCashV3Migration());
+            builder.AddMigration(new HouseholdCashV4Migration());
         }
     }
 }

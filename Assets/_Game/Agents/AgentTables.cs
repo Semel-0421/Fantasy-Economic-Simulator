@@ -36,9 +36,11 @@ namespace FES.Agents
         public readonly NativeColumn<byte> Vehicle;
         /// <summary>The guild or company the group belongs to, or -1 (DEC-086); apart from its owner <see cref="Group"/>.</summary>
         public readonly NativeColumn<int> Association;
+        /// <summary>What the group paid for the goods on board, for its profit and loss (DEC-093).</summary>
+        public readonly NativeColumn<long> LoadCost;
 
         public override string Key => SectionKey;
-        public override int Version => 6;
+        public override int Version => 7;
 
         public AgentTable()
         {
@@ -56,6 +58,7 @@ namespace FES.Agents
             Memory = Column<NodeMemory>();
             Vehicle = Column<byte>();
             Association = Column<int>();
+            LoadCost = Column<long>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -74,6 +77,7 @@ namespace FES.Agents
             Memory.Add(NodeMemory.Empty);
             Vehicle.Add(MerchantVehicles.Pack);
             Association.Add(-1);
+            LoadCost.Add(0);
             return new AgentId(Count - 1);
         }
 
@@ -105,6 +109,26 @@ namespace FES.Agents
                 for (int r = 0; r < rows; r++) writer.Write(-1); // ArrivalTurn
                 writer.Write(rows);
                 for (int r = 0; r < rows; r++) writer.Write(0); // NegativeCashWeeks
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 6 kept no books: what is on board counts as paid for nothing until it is sold.</summary>
+    public sealed class AgentTableV6Migration : ISaveMigration
+    {
+        public string SectionKey => AgentTable.SectionKey;
+        public int FromVersion => 6;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0L);
             }
             return output.ToArray();
         }

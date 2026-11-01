@@ -17,7 +17,9 @@ namespace FES.Agents
     /// its routes and their travel turns, goods taken in cell order. The units leave the origin's stock (through its supply into its
     /// demand, like a purchase) and reach the destination's supply the same week, less the route's expected
     /// encounter loss ([Draft]: no transit time, no base fee). Between nations, the destination's traders pay the
-    /// origin's for the units at the origin price, and move no more than their float pays for (DEC-061).
+    /// origin's for the units at the origin price, and move no more than their float pays for (DEC-061). Between
+    /// continents the flow runs at a share of the normal one and the payment changes coins at both international
+    /// banks, as far as they hold them (DEC-066).
     /// Nodes run in order, so results are independent of Burst.
     /// </summary>
     [BurstCompile(CompileSynchronously = true)]
@@ -27,6 +29,14 @@ namespace FES.Agents
         public long FlowShareRaw;
         public long LicensedShareRaw;
         public int BaseGoodCount;
+        /// <summary>Share of the normal flow between continents (raw Fx); zero is none.</summary>
+        public long CrossFlowRaw;
+        public int ContinentCount;
+        /// <summary>Per (from, to) continent: coins of to for one of from (raw Fx).</summary>
+        [ReadOnly] public NativeArray<long> CoinRateRaw;
+        public long ExchangeFeeRaw;
+        /// <summary>Per continent: what its international bank holds.</summary>
+        public NativeArray<long> International;
 
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> NodeContinent;
@@ -77,12 +87,12 @@ namespace FES.Agents
                 int first = OutStart[n], last = first + OutCount[n];
                 int routes = 0;
                 for (int k = first; k < last; k++)
-                    if (NodeContinent[RouteTo[RouteIndex[k]]] == NodeContinent[n]) routes++;
+                    if (CrossFlowRaw > 0 || NodeContinent[RouteTo[RouteIndex[k]]] == NodeContinent[n]) routes++;
                 if (routes == 0) continue;
                 for (int k = first; k < last; k++)
                 {
                     int r = RouteIndex[k];
-                    RouteBudget[r] = NodeContinent[RouteTo[r]] != NodeContinent[n]
+                    RouteBudget[r] = CrossFlowRaw <= 0 && NodeContinent[RouteTo[r]] != NodeContinent[n]
                         ? 0
                         : NodeCapacity[n] / ((long)routes * Math.Max(1, RouteTurns[r]));
                 }
@@ -122,7 +132,16 @@ namespace FES.Agents
 
         void Move(int from, int fromCell, int toCell, int good, int to, long perUnitRaw, long expectedLossRaw, ref long budget)
         {
+            int fromCoin = NodeContinent[from], toCoin = NodeContinent[to];
+            bool cross = fromCoin != toCoin;
             long sell = Price[toCell];
+            // Valued in the origin's coin, after the exchange fee.
+            if (cross)
+            {
+                sell = Fx.MulIntRaw(sell, CoinRateRaw[toCoin * ContinentCount + fromCoin]);
+                sell -= Fx.MulIntRaw(sell, ExchangeFeeRaw);
+                if (sell <= 0) return;
+            }
             long rate = Tariff[to];
             if (NodeCategorySpecialty[to * CategoryCount + GoodCategory[good]] != 0) rate += SpecialtySurcharge[to];
             long marginRaw = ((sell - Price[fromCell] - Fx.MulIntRaw(sell, rate)) << Fx.FractionBits) - perUnitRaw;
@@ -131,17 +150,30 @@ namespace FES.Agents
             long quantity = Fx.MulIntRaw(Stock[fromCell], Fx.RoundShift(FlowShareRaw * NodeSpendRaw[from])) * marginRaw / (sell << Fx.FractionBits);
             if (Licensed[NodeLicenseRow[to] * BaseGoodCount + good / QualityGrades.Count] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
+            if (cross) quantity = Fx.MulIntRaw(quantity, CrossFlowRaw);
             quantity = Math.Min(quantity, Stock[fromCell]); // good vehicles can ask for more than there is
             int payer = NodeFloat[to], payee = NodeFloat[from];
             long buy = Price[fromCell];
-            if (payer != payee && buy > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / buy);
+            long pay = buy;
+            if (cross)
+            {
+                pay = Fx.MulIntRaw(buy, CoinRateRaw[fromCoin * ContinentCount + toCoin]);
+                pay += Fx.MulIntRaw(pay, ExchangeFeeRaw);
+                if (buy > 0) quantity = Math.Min(quantity, Math.Max(0, International[fromCoin]) / buy);
+            }
+            if (payer != payee && pay > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / pay);
             if (quantity <= 0) return;
             budget -= quantity * GoodWeight[good];
             if (payer != payee)
             {
-                Float[payer] -= quantity * buy;
+                Float[payer] -= quantity * pay;
                 Float[payee] += quantity * buy;
-                Imports[payer] += quantity * buy;
+                Imports[payer] += quantity * pay;
+            }
+            if (cross)
+            {
+                International[toCoin] += quantity * pay;
+                International[fromCoin] -= quantity * buy;
             }
 
             Stock[fromCell] -= (int)quantity;

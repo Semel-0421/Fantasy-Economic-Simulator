@@ -248,6 +248,7 @@ namespace FES.Agents
                 Distribute(_bank, _banks, _nodes, c, minted);
                 _bank.DistributedSupply[c] = _currency.CoinSupply[c];
             }
+            if (_db.Config.InternationalBalance) BalanceInternational();
 
             // Weekly share of the yearly rate; small deposits round down to no interest.
             for (int n = 0; n < _bank.PlayerDeposit.Length; n++)
@@ -258,6 +259,33 @@ namespace FES.Agents
             LendToNpcs(ctx);
             for (int a = _auctions.Count - 1; a >= 0; a--)
                 if (ctx.Turn >= _auctions.ClosesTurn[a]) Close(ctx, a);
+        }
+
+        // A surplus on trade leaves one international bank without its own coins and the other with too many, and stops the
+        // trade. The nations of a continent refill theirs to its starting share of the coin supply and take back what it
+        // holds above twice that (DEC-096).
+        void BalanceInternational()
+        {
+            for (int c = 0; c < _currency.ContinentCount; c++)
+            {
+                long target = _db.Config.InternationalBankReserveShare.MulInt(_currency.CoinSupply[c]);
+                long held = _bank.InternationalReserve[c];
+                if (held > 2 * target)
+                {
+                    _bank.InternationalReserve[c] = 2 * target;
+                    Distribute(_bank, _banks, _nodes, c, held - 2 * target);
+                    continue;
+                }
+                long need = target - held;
+                for (int n = 0; n < _banks.NationCount && need > 0; n++)
+                {
+                    if (_nodes.Continent[_banks.NationNode(n)] != c) continue;
+                    long take = Math.Min(need, _bank.Spendable(n));
+                    _bank.Reserve[n] -= take;
+                    _bank.InternationalReserve[c] += take;
+                    need -= take;
+                }
+            }
         }
 
         // The international bank hands coins on to the nations of its continent; the remainder stays with it.
@@ -419,6 +447,7 @@ namespace FES.Agents
             _cargo.Collect(holder, _items);
             foreach (var item in _items)
             {
+                if (_nodes.Continent[_agents.Node[a]] != _nodes.Continent[_agents.Home[a]]) break; // out of the bank's reach abroad
                 if (!_flows.TryFindNearestMarket(_agents.Node[a], item.Good, out _, out int cell)) continue;
                 // Only what the traders there can pay for is sold; the rest stays on board (DEC-061).
                 int units = _purses.Sellable(_agents.Node[a], item.Quantity, _markets.Price[cell]);
@@ -429,6 +458,7 @@ namespace FES.Agents
                 _bank.Reserve[nation] += (long)units * _markets.Price[cell];
                 _purses.ChangeFloat(_agents.Node[a], -(long)units * _markets.Price[cell]);
             }
+            _agents.LoadCost[a] = 0;
             _npcLoans.RemoveRow(r);
             ctx.Events.Publish(new NpcLoanDefaulted(FacilityId.None, new AgentId(a), new NodeId(_banks.NationNode(nation)), ctx.Turn));
         }
@@ -451,7 +481,7 @@ namespace FES.Agents
             for (int a = 0; a < _agents.Count; a++)
             {
                 if (_agents.Cash[a] >= 0 || _agents.Owner[a] != OwnerIds.Npc) continue;
-                int node = _agents.Node[a];
+                int node = MoneyLedger.MerchantSettlesAt(_nodes, _agents, a);
                 int nation = _banks.NationOf(node);
                 if (nation < 0 || _npcLoans.Find(NpcBorrowers.Merchant(a)) >= 0) continue;
                 long need = -_agents.Cash[a] + config.NpcLoanBufferWeeks * config.MerchantUpkeep[_agents.Scale[a]];

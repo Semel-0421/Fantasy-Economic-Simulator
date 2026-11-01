@@ -189,7 +189,6 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 
 ## Known gaps
 
-- Merchants trade only within their home continent until P17.
 - The map is hand-written data; the seeded hex map comes with P18 (DEC-075).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
 - Saves reject changed data instead of remapping ids by key.

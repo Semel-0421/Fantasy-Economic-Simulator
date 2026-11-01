@@ -36,11 +36,13 @@ namespace FES.Data
         public readonly bool RequiresLicense;
         /// <summary>The base good is a luxury rather than a necessity (DEC-045, DEC-048).</summary>
         public readonly bool IsLuxury;
+        /// <summary>A semi-necessity: its low grade is mostly needed, and from mid up it is closer to a luxury (DEC-091).</summary>
+        public readonly bool IsSemi;
         /// <summary>Made on request: buyers order it and collect it later (DEC-085).</summary>
         public readonly bool MadeToOrder;
 
         public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size,
-            bool requiresLicense, bool isLuxury = false, bool madeToOrder = false)
+            bool requiresLicense, bool isLuxury = false, bool madeToOrder = false, bool isSemi = false)
         {
             Id = id;
             BaseKey = baseKey;
@@ -51,6 +53,7 @@ namespace FES.Data
             Size = size;
             RequiresLicense = requiresLicense;
             IsLuxury = isLuxury;
+            IsSemi = isSemi;
             MadeToOrder = madeToOrder;
         }
 
@@ -98,6 +101,8 @@ namespace FES.Data
         public readonly IndustryTier Tier;
         /// <summary>The state grants its producers money to grow the industry (DEC-087).</summary>
         public bool Strategic;
+        /// <summary>The key of the only continent it can stand on, or null for any (DEC-096).</summary>
+        public string Continent;
         public readonly RecipeDef Recipe;
         /// <summary>Strategic: facilities of this type belong to their nation's state enterprise (DEC-055).</summary>
         public readonly bool StateOwned;

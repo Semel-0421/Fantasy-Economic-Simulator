@@ -28,6 +28,15 @@ namespace FES.Tests
             return data;
         }
 
+        /// <summary>The sample data with some config lines ("key,value") set.</summary>
+        public static IDataSource SampleConfig(params string[] lines)
+        {
+            string text = Sample().ReadText(GameDatabase.ConfigFile);
+            foreach (string line in lines)
+                text = System.Text.RegularExpressions.Regex.Replace(text, "(?m)^" + line.Split(',')[0] + ",.*\r?\n?", "");
+            return SampleWith(GameDatabase.ConfigFile, text.TrimEnd() + "\n" + string.Join("\n", lines) + "\n");
+        }
+
         /// <summary>
         /// Target scale: 5 continents x 5 nations x 2 regions x 5 cities x 5 villages
         /// (1,250 villages, 1,580 markets) and 20 categories x 50 goods x 4 grades (4,000 items).

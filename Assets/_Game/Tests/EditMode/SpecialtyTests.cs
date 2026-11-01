@@ -30,7 +30,7 @@ namespace FES.Tests
             return Enumerable.Range(0, facilities.Count).First(f =>
             {
                 var def = sim.Database.Facilities[facilities.DefIndex[f]];
-                return def.Tier == IndustryTier.Primary
+                return def.Tier == IndustryTier.Primary && def.Recipe.Outputs.Length == 1
                        && specialties.IsSpecialty(facilities.Node[f], def.Recipe.Outputs[0].Good.BaseIndex) == specialty;
             });
         }

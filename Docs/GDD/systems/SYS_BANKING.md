@@ -58,8 +58,26 @@ faster than its cash at the risk of losing what it owns.
     it. Households hold cash per node; wages and fees go to them (SYS-MARKETS).
   - At the start, each international bank gets 2% of its continent's coin supply
     (`bank.international_reserve_permille`); of the rest of the supply nobody holds, the nations' floats
-    get 10% (`markets.trader_float_permille`, split by the nations' population) and the households the
-    rest (by each node's population), so that each continent's money equals its coin supply.
+    get 90% (previous: 10%, DEC-094; `markets.trader_float_permille`, split by the nations' population) and
+    the households the rest (by each node's population), so that each continent's money equals its coin supply.
+  - Households lend to their nation's float while traders keep up their payments (DEC-092, DEC-094): 1% a week
+    of their cash beyond 26 weeks of spending, at 5% a year, paid back over 52 weeks within 25% of the float
+    (`traders.*`). The bank can lend the same way; it does not in the sample data.
+  - Credit among NPCs (DEC-097; the player has no commands for it yet):
+    - Traders who cannot pay a merchant give a bill, due in 8 weeks, up to 8 weeks of households' wishes less what
+      they owe. The bank pays the seller the face less 2% as far as it has coins above half its reserve target;
+      otherwise the seller holds it. Due bills are paid from at most 25% of the float a week, and a bill 26 weeks
+      overdue is protested at the holder's loss. Those lost claims are no coins, so a continent's money stands.
+    - A nation whose towns fall short of necessities sells bonds for the shortfall, up to 30% of its share of the
+      coin supply, and pays the towns with the coins: 4% a year over 20 years, from its spendable reserve. It sells none
+      while behind on them or in a credit crunch.
+    - A group feeds a facility short of 4 weeks of working cash, if its output is worth more than its inputs, from its
+      own money above its starting cash, then from bonds up to 50% of its facilities' value: 7% a year over 10 years.
+      26 weeks behind, it defaults and its holders lose what is left.
+    - Bonds are bought by households, 0.5% a week of their cash beyond 26 weeks of spending, and by groups, 0.5% a week of
+      their cash beyond twice their starting cash. `BillTable`, `BondTable` and `BillRoom` are saved.
+  - Nations keep their international bank between 2% and 4% of the coin supply, out of and into their reserves, so a
+    one-sided surplus on trade does not stop the trade (DEC-096).
   - Exchange takes the coins handed in into their continent's international bank and pays the coins
     handed out from theirs, and is refused when that bank lacks them. A payment that settles a debt in
     another continent's coin (seized deposits, cargo sold for a foreign lender, an auction abroad) moves

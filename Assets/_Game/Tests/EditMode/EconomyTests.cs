@@ -46,6 +46,21 @@ namespace FES.Tests
         }
 
         [Test]
+        public void PriceKernel_CoinBackToTheAnchor_DoesNotHideAShortageOrAGlut()
+        {
+            var p = Params;
+            p.AnchorRaw = Fx.FromPermille(20).Raw;
+            int price = 8, prev = 0, stock = 0, supply = 0, demand = 100;
+            PriceKernel.Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Assert.Greater(price, 8, "at this price the step rounds to one coin; the pull must not cancel it");
+            price = 5;
+            supply = 100;
+            demand = 0;
+            PriceKernel.Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Assert.Less(price, 5);
+        }
+
+        [Test]
         public void PriceKernel_MovesWithPressure_AndClampsStep()
         {
             Assert.Greater(StepPrice(supply: 10, demand: 30), 100);
@@ -78,9 +93,9 @@ namespace FES.Tests
             int village = nodes.LevelStart(WorldLevel.Village);
             int city = nodes.LevelStart(WorldLevel.City);
             int region = nodes.LevelStart(WorldLevel.Region);
-            Assert.AreEqual(7 * 2, markets.MarketCellCount[village]);  // 7 non-tool goods x low/mid
-            Assert.AreEqual(18 * 3, markets.MarketCellCount[city]);     // all goods x low/mid/high
-            Assert.AreEqual(18 * 4, markets.MarketCellCount[region]);   // everything
+            Assert.AreEqual(16 * 2, markets.MarketCellCount[village]);  // 16 goods, without tools, x low/mid
+            Assert.AreEqual(27 * 3, markets.MarketCellCount[city]);     // all goods x low/mid/high
+            Assert.AreEqual(27 * 4, markets.MarketCellCount[region]);   // everything
 
             db.TryGetGood("iron_tools", QualityGrade.Mid, out var tools);
             db.TryGetGood("wheat", QualityGrade.Low, out var wheat);
@@ -186,7 +201,8 @@ namespace FES.Tests
                 calm.AdvanceTurn();
             }
             int continent = boom.World.Get<NodeTable>().LevelStart(WorldLevel.Continent);
-            int cell = boom.World.Get<MarketStore>().MarketCellStart[continent];
+            Assert.IsTrue(boom.Database.TryGetGood("bread", QualityGrade.Mid, out var bread));
+            Assert.IsTrue(boom.World.Get<MarketStore>().TryFindCell(continent, bread, out int cell));
             Assert.Greater(boom.World.Get<MarketStore>().Demand[cell], calm.World.Get<MarketStore>().Demand[cell]);
         }
 

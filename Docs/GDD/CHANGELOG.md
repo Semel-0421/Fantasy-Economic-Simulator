@@ -1,6 +1,17 @@
 # Changelog
 
 ## 2026-11-01
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, 00_Architecture.md, systems/SYS_MERCHANTS.md, systems/SYS_BANKING.md] DEC-095 (market package), DEC-096 (continental goods and sea trade, P17 done), DEC-097 (bills, government and corporate bonds) and measurement
+- [04_Roadmap.md] Where supply sticks, and trials of remedies drawn from real economies
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_BANKING.md] DEC-094 (loans and a 90% start float switched on) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_MERCHANTS.md] DEC-093 (merchants weigh a sale against carrying the load on) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-092 (loans to the traders' float, on trial) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_MARKETS.md] DEC-091 (household-led plans, raw goods, semi-necessities, population at full supply) and traders' money analysis
+- [04_Roadmap.md] Demand satisfaction by participant and cause experiments
+- [04_Roadmap.md] City income test
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-090 (food grades) and measurement
+- [03_Decisions.md, 04_Roadmap.md] DEC-089 (more foods) and measurement
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-088 (contract terms, deposit), population check
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-087 contracts sized to demand and measurement
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-087 (strategic grants, supply contracts) and measurement
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md] DEC-086 (fewer merchants, associations) and measurement

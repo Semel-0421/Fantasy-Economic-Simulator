@@ -31,10 +31,14 @@ demand.city.weight_permille,4000
 demand.village.weight_permille,4950
 # Rural-urban migration over about fifteen years (DEC-079).
 migration.max_share_permille,80
-households.urban_penalty_permille,3
+# Population holds at full supply (DEC-091).
+households.base_growth_permille,0
+households.urban_penalty_permille,0
 # Factories can be expanded and NPC groups invest on every node (DEC-080).
 facility.expansion_bonus_permille,250
 investment.payback_years,8
+# Nobody builds to make a good whose makers already run below this share of capacity (DEC-091).
+investment.min_plan_permille,800
 # Emancipation waits for a settled labor shortage.
 migration.emancipation_earliest_years,5
 migration.vacancy_permille,300
@@ -50,6 +54,10 @@ merchants.vehicle1.start_permille,350
 merchants.vehicle2.start_permille,150
 # Orders, quarterly factory plans, and vehicle running costs and risks (DEC-085).
 production.forecast_enabled,1
+# Plans lean on what households want and reach raw goods (DEC-091).
+production.forecast_primary,1
+production.forecast_household_permille,700
+production.forecast_cover_permille,2000
 merchants.vehicle0.cost_permille,600
 merchants.vehicle1.cost_permille,1000
 merchants.vehicle2.cost_permille,1800
@@ -62,13 +70,44 @@ merchants.vehicle2.premium_permille,2000
 merchants.vehicle1.cash_times,6
 merchants.vehicle2.cash_times,20
 merchants.risk_aversion,4
-# A third as many merchants; many belong to associations as a safety net (DEC-086).
-merchants.continent,17
-merchants.nation,17
-merchants.region,10
-merchants.city,3
-merchants.village,1
+# Fewer merchants (DEC-086), most of them in the towns, where the goods are (DEC-095).
+merchants.continent,2
+merchants.nation,2
+merchants.region,8
+merchants.city,6
+merchants.village,2
 merchants.join_permille,300
 # Strategic grants and take-or-pay supply contracts (DEC-087).
 state.strategic_subsidy_permille,200
 contract.per_nation,8
+# Food grades: dearer and scarcer at the top (DEC-090).
+food.low.price_permille,700
+food.mid.price_permille,1000
+food.high.price_permille,2500
+food.best.price_permille,6000
+food.low.demand_permille,360
+food.mid.demand_permille,500
+food.high.demand_permille,100
+food.best.demand_permille,40
+# Groups weigh selling here against carrying the load on (DEC-093).
+merchants.weigh_sales,1
+# Traders start with most of the free money, and households lend them what they can spare (DEC-092).
+markets.trader_float_permille,900
+traders.loan_share_permille,10
+# Merchants judge three markets ahead, bid for what is missing even when they leave with something else, and come back down when stranded above their home; households spend faster (DEC-095, DEC-096).
+merchants.return_home,1
+merchants.judge_hops,3
+merchants.bids,2
+households.budget_weeks,13
+# Each continent makes its own goods; groups based at region level and above carry them across, and far trade flows at 65% (DEC-066, DEC-096).
+merchants.cross_level,2
+merchants.cross_flow_permille,650
+# A market whose traders cannot pay for 20 units is no market; groups based at a port may sail whatever their personality; nations keep their international bank in coins (DEC-096).
+merchants.judge_coin_units,20
+merchants.port_crossers,1
+bank.international_balance,1
+# Bills for what traders cannot pay, government and corporate bonds on idle money, groups keeping their facilities in working cash (DEC-097).
+credit.bill_cap_weeks,8
+credit.state_debt_permille,300
+credit.company_debt_permille,500
+credit.working_weeks,4

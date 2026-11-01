@@ -13,6 +13,10 @@ namespace FES.Agents
     /// </summary>
     public static class MoneyLedger
     {
+        /// <summary>Where a merchant group's dues are settled: where it is, or its home while abroad, since its coins are its home continent's.</summary>
+        public static int MerchantSettlesAt(NodeTable nodes, AgentTable agents, int agent) =>
+            nodes.Continent[agents.Node[agent]] == nodes.Continent[agents.Home[agent]] ? agents.Node[agent] : agents.Home[agent];
+
         /// <summary>A nation's reserve above its target and the player's deposits.</summary>
         public static long StateExcess(BankState bank, SimulationConfig config, CurrencyState currency, int nation, int continent, int nationsOnContinent)
         {
@@ -47,7 +51,7 @@ namespace FES.Agents
                 if (nodes.Continent[facilities.Node[f]] == continent) money += facilities.Cash[f];
             var agents = world.Get<AgentTable>();
             for (int a = 0; a < agents.Count; a++)
-                if (nodes.Continent[agents.Node[a]] == continent) money += agents.Cash[a];
+                if (nodes.Continent[agents.Home[a]] == continent) money += agents.Cash[a];
             var groups = world.Get<GroupTable>();
             for (int g = 0; g < groups.Count; g++)
                 if (nodes.Continent[groups.Node[g]] == continent) money += groups.Cash[g];
@@ -218,7 +222,8 @@ namespace FES.Agents
             households.Cash[first] += amount - given;
         }
 
-        static long TownShortfall(NodeTable levels, HouseholdCash households, SimulationConfig config, int node) =>
+        /// <summary>How far a town's weekly budget falls short of the necessities it would buy.</summary>
+        public static long TownShortfall(NodeTable levels, HouseholdCash households, SimulationConfig config, int node) =>
             levels.LevelOf(node) == WorldLevel.Village ? 0
                 : households.DesiredNecessity[node] - Math.Max(0, households.Cash[node]) / Math.Max(1, config.HouseholdBudgetWeeks);
 

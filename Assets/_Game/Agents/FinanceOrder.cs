@@ -24,6 +24,8 @@ namespace FES.Agents
         public const int MerchantMembership = SimOrder.Late + 25;
         public const int Contracts = SimOrder.Late + 26;
         public const int StrategicSubsidy = SimOrder.Late + 27;
+        public const int Credit = SimOrder.Late + 28;
+        public const int TraderLoans = SimOrder.Late + 29;
         public const int Policy = SimOrder.Late + 30;
         public const int MerchantGenerations = SimOrder.Late + 40;
     }

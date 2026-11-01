@@ -105,7 +105,7 @@ namespace FES.Agents
                 long buffer = _config.LaborMerchantBuffer.MulInt(_config.MerchantStartCash[_agents.Scale[a]]);
                 long excess = _agents.Cash[a] - buffer;
                 if (excess <= 0) continue;
-                int node = _agents.Node[a], purse = _purses.NodeFloat[node];
+                int node = MoneyLedger.MerchantSettlesAt(_nodes, _agents, a), purse = _purses.NodeFloat[node];
                 long wage = _labor.Rate(purse).MulInt(_config.LaborMerchantWage.MulInt(excess));
                 _agents.Cash[a] -= wage;
                 if (purse < _purses.NationCount) _wages[purse] += wage;

@@ -87,7 +87,7 @@ namespace FES.Agents
                 foreach (var line in def.Recipe.Outputs)
                 {
                     int good = line.Good.Value;
-                    if (Subsidized(nation, good)) continue;
+                    if (Subsidized(nation, good) || !FacilityPlaces.Allowed(def, _nodes, _banks.NationNode(nation))) continue;
                     long price = 0, anchor = 0;
                     NationMarkets.AddPrices(_markets, _purses.NationNodes[nation], line.Good, ref price, ref anchor);
                     if (anchor <= 0) continue;

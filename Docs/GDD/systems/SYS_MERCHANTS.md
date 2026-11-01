@@ -2,8 +2,8 @@
 doc: SYS-MERCHANTS
 title: NPC merchants
 status: draft
-updated: 2026-10-27
-related: [SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-PRODUCTION, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, DEC-003, DEC-024, DEC-026, DEC-034, DEC-037]
+updated: 2026-11-01
+related: [SYS-INVENTORY, SYS-TRAVEL-COSTS, SYS-PRODUCTION, SYS-LICENSES, SYS-ROUTE-HAZARDS, SYS-BANKING, DEC-003, DEC-024, DEC-026, DEC-034, DEC-037, DEC-093, DEC-095, DEC-096, DEC-097]
 ---
 
 # NPC merchants
@@ -32,14 +32,17 @@ without scripting. Their counts per node are already in config (`merchants.<leve
 - [Confirmed] A merchant group pledges deposits, warehouse cargo and cart cargo as collateral (DEC-038).
 - [Confirmed] Large merchant groups trade between continents, changing coins at international banks;
   flows on routes between continents run at 65% of the normal flow share (DEC-066).
-- [Draft] (Claude's reading of DEC-066) "Large" means groups based at nation or continent level; aggregate
-  flows also cross continents at 65%, the margin taken after the exchange rate and fee. Until built (P17)
-  groups stay on their home continent.
+- [Draft] (Claude's reading of DEC-066, DEC-096) "Large" means groups based at region level or above that are not
+  cautious, or are based at a port. Aggregate flows also cross continents at 65%, the margin taken after the
+  exchange rate and fee. Abroad a group goes anywhere, buys no guards or insurance, and sells for coins only; what it
+  earns and pays passes through both international banks. With nothing worth doing it sails home with what it holds.
+- [Confirmed] Each continent makes its own goods, which stand only there (DEC-096).
 - [Confirmed] The player can hire merchant groups (DEC-064, SYS-AUTOMATION).
 - [Draft] Claude's proposals, built in P5:
   - A detailed group carries one good per trip along one route out of its node, choosing the most
-    profitable load after the base fee, per-unit charge and toll; it sells the whole load on arrival.
-  - Groups stay on their home continent: their cash is one continent's coin and they do not exchange yet.
+    profitable load after the base fee, per-unit charge and toll; on arrival it sells the load or carries it on
+    (DEC-093).
+  - A group's cash is its home continent's coin, and it counts there wherever the group is (DEC-096).
   - Like facilities (DEC-051), a detailed group pays a weekly upkeep (50 / 40 / 30 / 20 / 10 per level of
     its home) and goes bankrupt after 5 weeks below zero (`merchants.<level>.upkeep`,
     `merchants.bankrupt_weeks`); aggregate groups pay none.
@@ -70,15 +73,18 @@ stateDiagram-v2
     [*] --> Idle
     Idle --> Buying: best route found (profit > 0)
     Buying --> Travelling: cargo loaded
-    Travelling --> Selling: arrival turn
-    Selling --> Idle: cargo sold
+    Travelling --> Weighing: arrival turn
+    Weighing --> Selling: worth most here, or would not last the trip
+    Weighing --> Travelling: worth more elsewhere after the trip
+    Selling --> Idle: cargo sold, or the traders cannot pay
     Idle --> Idle: no profitable route
     Idle --> Bankrupt: cash exhausted
     Bankrupt --> [*]: replaced by a new group
 ```
 
 ## Edge cases
-- Price gap closing while the merchant is still travelling: the sale happens at the arrival price.
+- Price gap closing while the merchant is still travelling: the group weighs the arrival price against the next
+  market, and sells below cost if that is still better (DEC-093).
 - Partial fill at purchase: the merchant travels with what it got if the trip is still profitable.
 
 ## Traits and generations ([Draft], from references/EconomySystemSpecification.md)
@@ -109,6 +115,21 @@ stateDiagram-v2
   merchants arriving later in the week can be paid.
 - [Confirmed] A group tries again each idle week to sell what no one could pay for. With nothing worth buying,
   or no cash, it carries what it holds to where that sells for most after costs, and rolls encounters as usual.
+- [Confirmed] A group weighs its sale (DEC-093, `merchants.weigh_sales`): it compares the load's worth here with its
+  worth on the best route, and does the better, selling below cost when that is still better. A group that would
+  not last the trip sells here, whatever it loses.
+- [Draft] Worth here: the value at the current price, as far as the traders here can pay. Worth elsewhere: the value
+  there, as far as the traders there can pay, less toll, base fee, per-unit charge, upkeep for the trip's weeks and
+  the expected cargo loss. A group waits when no trip is worth it, so it does not pay to reach traders with no coins.
+  `AgentTable.LoadCost` keeps what was paid for the load; `MerchantTripStats` counts sales below cost and their
+  loss, loads carried on and forced sales. Aggregate flows carry no load and do not weigh.
+- [Draft] A group values a load at the best price within three markets, after each hop's charge and toll, even through a
+  market that does not trade the good (DEC-095). A market whose traders cannot pay for 20 units, in coins or at home in
+  bills, counts for nothing in that valuation (DEC-096).
+- [Draft] A group bids for what it would carry if the market had it, when it has nothing to buy, or when that pays more
+  than what it leaves with. The bid raises the price and stops when the margin closes (DEC-095, DEC-096).
+- [Draft] A group stranded above its home with nothing to carry comes back down empty (DEC-095).
+- [Draft] Traders who cannot pay give a bill, at home only (DEC-097, SYS-BANKING).
 - [Confirmed] Groups pay wages from surplus cash (DEC-070); facilities and groups pay income tax (DEC-071).
 
 ## Unity implementation notes
@@ -119,8 +140,8 @@ stateDiagram-v2
 Implemented in P5.
 - `ArbitrageMerchantBehavior` is the default `IMerchantBehavior`. `MerchantSystem` calls `RunDetailed` for
   every group of a detailed node and every group on a trip, then `RunAggregate` once.
-- `AgentTable` (section version 2, `AgentTableV1Migration`) has `Home`, `Destination`, `ArrivalTurn` and
-  `NegativeCashWeeks`; loads are `CargoHolders.Merchant(agent)` rows in `CargoTable`. Replacement after
+- `AgentTable` (section version 7) has `Home`, `Destination`, `ArrivalTurn`, `NegativeCashWeeks` and
+  `LoadCost`, among others; loads are `CargoHolders.Merchant(agent)` rows in `CargoTable`. Replacement after
   bankruptcy reuses the row (`MerchantBankrupt` event), so ids stay stable.
 - Trip costs come from `TravelCosts.Quote`, the player's function (DEC-015); licensed goods follow
   `LicenseRules.MerchantHoldsLicenses`.

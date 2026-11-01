@@ -11,7 +11,8 @@ namespace FES.Agents
     /// <summary>
     /// Arbitrage merchants (SYS-MERCHANTS, DEC-003). A detailed group at a node picks the single most
     /// profitable load for one route out of it: buy at the current price, pay the trip's fee and toll, travel
-    /// the route's turns, sell everything at the destination's price on arrival (<see cref="DetailedMerchantJob"/>).
+    /// the route's turns, and on arrival sell at the destination's price unless the load is worth more elsewhere after
+    /// the next trip's costs (DEC-093, <see cref="DetailedMerchantJob"/>).
     /// It pays a weekly upkeep and goes bankrupt after weeks below zero, replaced by a new group at its home
     /// (DEC-011). Merchants of
     /// aggregate nodes move goods along routes as flows proportional to the price gap after unit costs.
@@ -32,6 +33,15 @@ namespace FES.Agents
         static readonly uint BankruptStream = DetHash.Of("agents.merchant_bankrupt");
 
         MerchantTraitTable _traits;
+        NativeArray<long> _coinRate;
+        NativeArray<long> _international;
+        NativeArray<int> _routeToward;
+        NativeArray<byte> _nodePort;
+        BankState _bank;
+        CurrencyState _currency;
+        BillTable _bills;
+        BillRoom _billRoom;
+        NativeArray<long> _billStats;
         NativeArray<long> _nodeSpend;
         NativeArray<long> _vehicleCapacity;
         NativeArray<long> _vehicleCost;
@@ -92,7 +102,7 @@ namespace FES.Agents
             _vehiclePremium = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
             _nodeVehicleCost = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _nodeVehicleDanger = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
-            _tripStats = new NativeArray<long>(4, Allocator.Persistent);
+            _tripStats = new NativeArray<long>(9, Allocator.Persistent);
             for (int k = 0; k < MerchantVehicles.Count; k++)
             {
                 _vehicleCapacity[k] = _db.Config.MerchantVehicleCapacity[k].Raw;
@@ -133,14 +143,72 @@ namespace FES.Agents
             _policy = ctx.World.Get<PolicyState>();
             _purses = ctx.World.Get<PurseState>();
             _world = ctx.World;
+            _bank = ctx.World.Get<BankState>();
+            _currency = ctx.World.Get<CurrencyState>();
+            _bills = ctx.World.Get<BillTable>();
+            _billRoom = ctx.World.Get<BillRoom>();
+            _billStats = new NativeArray<long>(2, Allocator.Persistent);
+            int continents = _nodes.ContinentCount;
+            _coinRate = new NativeArray<long>(continents * continents, Allocator.Persistent);
+            _international = new NativeArray<long>(continents, Allocator.Persistent);
+            _routeToward = new NativeArray<int>(_nodes.Count * continents, Allocator.Persistent);
+            _nodePort = new NativeArray<byte>(_nodes.Count, Allocator.Persistent);
+            for (int r = 0; r < _routes.Count; r++)
+                if (_db.Config.MerchantPortCrossers && _nodes.Continent[_routes.From[r]] != _nodes.Continent[_routes.To[r]]) _nodePort[_routes.From[r]] = 1;
+            PrepareWaysHome();
             var banks = ctx.World.Get<NodeBanks>();
             _nodeLicenseRow = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
             for (int n = 0; n < _nodes.Count; n++) _nodeLicenseRow[n] = _policy.Row(banks.NationOf(n));
         }
 
+        // Per node and continent: the first route of the fewest hops there, or -1.
+        void PrepareWaysHome()
+        {
+            int continents = _nodes.ContinentCount;
+            var frontier = new System.Collections.Generic.Queue<int>();
+            for (int c = 0; c < continents; c++)
+            {
+                for (int n = 0; n < _nodes.Count; n++) _routeToward[n * continents + c] = -1;
+                var seen = new bool[_nodes.Count];
+                for (int n = 0; n < _nodes.Count; n++)
+                    if (_nodes.Continent[n] == c)
+                    {
+                        seen[n] = true;
+                        frontier.Enqueue(n);
+                    }
+                while (frontier.Count > 0)
+                {
+                    int at = frontier.Dequeue();
+                    for (int r = 0; r < _routes.Count; r++)
+                    {
+                        if (_routes.To[r] != at || seen[_routes.From[r]]) continue;
+                        seen[_routes.From[r]] = true;
+                        _routeToward[_routes.From[r] * continents + c] = r;
+                        frontier.Enqueue(_routes.From[r]);
+                    }
+                }
+            }
+        }
+
+        // Coins of each continent in each other's, and what the international banks hold, for this step's job.
+        void PrepareCoins()
+        {
+            int continents = _nodes.ContinentCount;
+            for (int from = 0; from < continents; from++)
+                for (int to = 0; to < continents; to++)
+                    _coinRate[from * continents + to] = (_currency.ExchangeRate[from] / _currency.ExchangeRate[to]).Raw;
+            for (int c = 0; c < continents; c++) _international[c] = _bank.InternationalReserve[c];
+        }
+
+        void SettleCoins()
+        {
+            for (int c = 0; c < _international.Length; c++) _bank.InternationalReserve[c] = _international[c];
+        }
+
         public void RunDetailed(SimContext ctx)
         {
             PrepareRoutes();
+            PrepareCoins();
             if (_firstRow.Length != _agents.Count)
             {
                 _firstRow.DisposeIfCreated();
@@ -164,6 +232,30 @@ namespace FES.Agents
                 CargoLossRaw = _db.Config.EncounterCargoLoss.Raw,
                 DangerValueScale = _db.Config.DangerValueScale,
                 Rumors = _db.Config.MerchantRumorsEnabled,
+                WeighSales = _db.Config.MerchantWeighSales,
+                JudgeHops = _db.Config.MerchantJudgeHops,
+                Bids = _db.Config.MerchantBids,
+                BidsWhileLoaded = _db.Config.MerchantBidsWhileLoaded,
+                ReturnHome = _db.Config.MerchantReturnHome,
+                InputBid = _markets.InputBid,
+                CrossLevel = _db.Config.MerchantCrossLevel,
+                ContinentCount = _nodes.ContinentCount,
+                CoinRateRaw = _coinRate,
+                ExchangeFeeRaw = _db.Config.ExchangeFee.Raw,
+                International = _international,
+                RouteToward = _routeToward,
+                NodePort = _nodePort,
+                JudgeCoinUnits = _db.Config.MerchantJudgeCoinUnits,
+                BillRoom = _billRoom.Room,
+                BillBankRoom = _billRoom.BankRoom,
+                BillBankSpent = _billRoom.BankSpent,
+                BillDiscountRaw = _db.Config.BillDiscount.Raw,
+                BillWeeks = _db.Config.BillWeeks,
+                BillHolder = _bills.Holder.List,
+                BillPurse = _bills.Purse.List,
+                BillFace = _bills.Face.List,
+                BillDue = _bills.DueTurn.List,
+                BillStats = _billStats,
                 NodeDetail = _lod.Detail,
                 NodeContinent = _nodes.Continent,
                 NodeParent = _nodes.Parent,
@@ -222,6 +314,7 @@ namespace FES.Agents
                 AgentArrivalTurn = _agents.ArrivalTurn.AsArray(),
                 AgentNegativeWeeks = _agents.NegativeCashWeeks.AsArray(),
                 AgentCash = _agents.Cash.AsArray(),
+                AgentLoadCost = _agents.LoadCost.AsArray(),
                 Stock = _markets.Stock,
                 Supply = _markets.Supply,
                 Demand = _markets.Demand,
@@ -242,6 +335,13 @@ namespace FES.Agents
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
+            SettleCoins();
+            _billRoom.SettleBank(_bank);
+            var credit = _world.Get<CreditStats>();
+            credit.BillsIssued += _billStats[0];
+            credit.BillsDiscounted += _billStats[1];
+            _billStats[0] = 0;
+            _billStats[1] = 0;
 
             for (int n = 0; n < _tollsByNode.Length; n++)
             {
@@ -255,6 +355,11 @@ namespace FES.Agents
             stats.Guarded += _tripStats[1];
             stats.Insured += _tripStats[2];
             stats.Encounters += _tripStats[3];
+            stats.LossSales += _tripStats[4];
+            stats.LossAmount += _tripStats[5];
+            stats.CarriedOn += _tripStats[6];
+            stats.ForcedSales += _tripStats[7];
+            stats.Sold += _tripStats[8];
             for (int k = 0; k < _tripStats.Length; k++) _tripStats[k] = 0;
         }
 
@@ -262,6 +367,10 @@ namespace FES.Agents
         {
             ctx.World.Get<NpcLoanTable>().WriteOff(NpcBorrowers.Merchant(a)); // the bank loses what is still owed
             _cargo.Clear(CargoHolders.Merchant(new AgentId(a)));
+            for (int r = 0; r < _bills.Count; r++)
+                if (_bills.Holder[r] == a) _bills.Holder[r] = BillHolders.Households; // its bills pass to the people it owed
+            _world.Get<MerchantTripStats>().LostWithGroups += _agents.LoadCost[a];
+            _agents.LoadCost[a] = 0;
             _agents.Node[a] = _agents.Home[a];
             _agents.Destination[a] = -1;
             _agents.ArrivalTurn[a] = -1;
@@ -339,8 +448,14 @@ namespace FES.Agents
                 _nodeMinMargin[n] /= _nodeCapacity[n];
             }
 
+            PrepareCoins();
             var job = new MerchantFlowJob
             {
+                CrossFlowRaw = _db.Config.MerchantCrossFlow.Raw,
+                ContinentCount = _nodes.ContinentCount,
+                CoinRateRaw = _coinRate,
+                ExchangeFeeRaw = _db.Config.ExchangeFee.Raw,
+                International = _international,
                 CategoryCount = _flows.CategoryCount,
                 FlowShareRaw = _db.Config.MerchantFlowShare.Raw,
                 LicensedShareRaw = Fx.FromPermille(_db.Config.LicensedMerchantPermille).Raw,
@@ -380,11 +495,17 @@ namespace FES.Agents
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
+            SettleCoins();
         }
 
         public void Dispose()
         {
             _traits?.Dispose();
+            _coinRate.DisposeIfCreated();
+            _billStats.DisposeIfCreated();
+            _international.DisposeIfCreated();
+            _routeToward.DisposeIfCreated();
+            _nodePort.DisposeIfCreated();
             _nodeSpend.DisposeIfCreated();
             _vehicleCapacity.DisposeIfCreated();
             _vehicleCost.DisposeIfCreated();

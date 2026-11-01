@@ -35,7 +35,8 @@ namespace FES.Tests
             int villages = nodes.LevelCount(WorldLevel.Village), cities = nodes.LevelCount(WorldLevel.City);
             var facilities = sim.World.Get<FacilityTable>();
             // A slot whose inputs nobody makes nearby goes to a primary producer, so every slot is filled (P13d).
-            Assert.AreEqual(villages * 4 + cities * (6 + 8), facilities.Count);
+            int continental = sim.Database.Facilities.Count(d => d.Continent != null) * sim.Database.Config.ContinentalProducers;
+            Assert.AreEqual(villages * 4 + cities * (6 + 8) + continental, facilities.Count);
             int primaries = Enumerable.Range(0, facilities.Count).Count(f => sim.Database.Facilities[facilities.DefIndex[f]].Tier == IndustryTier.Primary);
             Assert.GreaterOrEqual(primaries, villages * 4);
             Assert.Greater(facilities.Count, primaries);
@@ -46,8 +47,8 @@ namespace FES.Tests
                     Assert.IsTrue(Enumerable.Range(0, facilities.Count).Any(g => sim.Database.Facilities[facilities.DefIndex[g]].Recipe.Outputs.Any(o => o.Good == input.Good)
                         && Within(nodes, facilities.Node[g], facilities.Node[f])), $"facility {f}");
 
-            int expectedMerchants = villages * 1 + cities * 3 + nodes.LevelCount(WorldLevel.Region) * 10
-                + nodes.LevelCount(WorldLevel.Nation) * 17 + nodes.LevelCount(WorldLevel.Continent) * 17;
+            int expectedMerchants = villages * 2 + cities * 6 + nodes.LevelCount(WorldLevel.Region) * 8
+                + nodes.LevelCount(WorldLevel.Nation) * 2 + nodes.LevelCount(WorldLevel.Continent) * 2;
             Assert.AreEqual(expectedMerchants, sim.World.Get<AgentTable>().Count);
         }
 

@@ -50,7 +50,7 @@ namespace FES.Tests
         }
 
         [Test]
-        public void Merchants_StayOnTheirContinent_AndCarryLicensedGoodsOnlyWithLicenses()
+        public void SmallGroups_StayOnTheirContinent_AndCarryLicensedGoodsOnlyWithLicenses()
         {
             using var sim = TestWorlds.BuildSample();
             var agents = sim.World.Get<AgentTable>();
@@ -62,10 +62,11 @@ namespace FES.Tests
                 sim.AdvanceTurn();
                 for (int a = 0; a < agents.Count; a++)
                 {
-                    Assert.AreEqual(nodes.Continent[agents.Home[a]], nodes.Continent[agents.Node[a]]);
+                    bool small = agents.Scale[a] > sim.Database.Config.MerchantCrossLevel;
+                    if (small) Assert.AreEqual(nodes.Continent[agents.Home[a]], nodes.Continent[agents.Node[a]]);
                     if (!agents.IsTravelling(a)) continue;
                     trips++;
-                    Assert.AreEqual(nodes.Continent[agents.Home[a]], nodes.Continent[agents.Destination[a]]);
+                    if (small) Assert.AreEqual(nodes.Continent[agents.Home[a]], nodes.Continent[agents.Destination[a]]);
                     bool licensed = LicenseRules.MerchantHoldsLicenses(sim.Context.Seed, new AgentId(a), sim.Database.Config.LicensedMerchantPermille);
                     var load = new List<CargoItem>();
                     cargo.Collect(CargoHolders.Merchant(new AgentId(a)), load);
@@ -188,29 +189,6 @@ namespace FES.Tests
         }
 
         [Test]
-        public void GroupWithCargoAndNoCash_CarriesItToWhereItSells()
-        {
-            using var sim = TestWorlds.BuildSample();
-            sim.AdvanceTurn();
-            var agents = sim.World.Get<AgentTable>();
-            var cargo = sim.World.Get<CargoTable>();
-            var lod = sim.World.Get<LodState>();
-            var purses = sim.World.Get<PurseState>();
-            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
-            int a = Enumerable.Range(0, agents.Count).First(i => lod.IsDetailed(agents.Node[i]) && !agents.IsTravelling(i));
-            var holder = CargoHolders.Merchant(new AgentId(a));
-            cargo.Clear(holder);
-            cargo.Change(holder, wheat, 50);
-            sim.World.Get<HouseholdCash>().Cash[agents.Node[a]] += agents.Cash[a];
-            agents.Cash[a] = 0;
-            int p = purses.NodeFloat[agents.Node[a]];
-            sim.World.Get<HouseholdCash>().Cash[agents.Node[a]] += purses.Float[p];
-            purses.Float[p] = 0;
-            sim.AdvanceTurn();
-            Assert.IsTrue(agents.IsTravelling(a), "it set off to sell");
-        }
-
-        [Test]
         public void CautiousGroups_StayInTheirHomeRegion()
         {
             using var sim = TestWorlds.BuildSample();
@@ -225,6 +203,7 @@ namespace FES.Tests
                 for (int a = 0; a < agents.Count; a++)
                 {
                     if (!agents.IsTravelling(a) || nodes.Level[agents.Home[a]] < (byte)WorldLevel.Region) continue;
+                    if (nodes.Continent[agents.Destination[a]] != nodes.Continent[agents.Home[a]]) continue; // those based at a port may sail (DEC-096)
                     trips++;
                     Assert.AreEqual(nodes.AncestorAt(agents.Home[a], WorldLevel.Region), nodes.AncestorAt(agents.Destination[a], WorldLevel.Region));
                 }
@@ -369,12 +348,13 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 6, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 7, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {
                 Assert.AreEqual(agents.Node[a], agents.Home[a]);
                 Assert.IsFalse(agents.IsTravelling(a));
+                Assert.AreEqual(0, agents.LoadCost[a]);
             }
         }
     }

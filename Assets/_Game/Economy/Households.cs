@@ -116,10 +116,12 @@ namespace FES.Economy
         public NativeArray<long> SpentYear;
         /// <summary>Per node: cash when the year began; with <see cref="SpentYear"/> it gives the year's income.</summary>
         public NativeArray<long> CashYearStart;
+        /// <summary>Per node: lent out since the year began, less what came back, with the interest earned: what income should not count as gone.</summary>
+        public NativeArray<long> SavedYear;
 
         public const string SectionKey = "economy.household_cash";
         public string Key => SectionKey;
-        public int Version => 4;
+        public int Version => 5;
 
         /// <summary>A good the market has never offered: older than any memory of it.</summary>
         public const int NeverOffered = -1000000;
@@ -135,10 +137,11 @@ namespace FES.Economy
             for (int c = 0; c < cellCount; c++) LastOffered[c] = NeverOffered;
             SpentYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
             CashYearStart = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            SavedYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
         }
 
         /// <summary>What a node's households received since the year began: wages, dividends, public wages and the like.</summary>
-        public long YearIncome(int node) => Cash[node] + Spent[node] - CashYearStart[node] + SpentYear[node];
+        public long YearIncome(int node) => Cash[node] + Spent[node] - CashYearStart[node] + SpentYear[node] + SavedYear[node];
 
         /// <summary>Starts measuring a new year's income.</summary>
         public void StartYear()
@@ -147,6 +150,7 @@ namespace FES.Economy
             {
                 CashYearStart[n] = Cash[n] + Spent[n];
                 SpentYear[n] = 0;
+                SavedYear[n] = 0;
             }
         }
 
@@ -179,6 +183,7 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, CashYearStart);
             NativeIO.WriteArray(writer, LastOffered);
             NativeIO.WriteArray(writer, DesiredNecessity);
+            NativeIO.WriteArray(writer, SavedYear);
         }
 
         public void Read(BinaryReader reader)
@@ -191,6 +196,7 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, CashYearStart);
             NativeIO.ReadArray(reader, LastOffered);
             NativeIO.ReadArray(reader, DesiredNecessity);
+            NativeIO.ReadArray(reader, SavedYear);
         }
 
         public void Dispose()
@@ -202,7 +208,28 @@ namespace FES.Economy
             PendingUnits.DisposeIfCreated();
             SpentYear.DisposeIfCreated();
             CashYearStart.DisposeIfCreated();
+            SavedYear.DisposeIfCreated();
             LastOffered.DisposeIfCreated();
+        }
+    }
+
+    /// <summary>Version 4 did not count lending: nothing was saved this year.</summary>
+    public sealed class HouseholdCashV4Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 4;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int nodes = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(nodes);
+                for (int n = 0; n < nodes; n++) writer.Write(0L);
+            }
+            return output.ToArray();
         }
     }
 
@@ -314,6 +341,15 @@ namespace FES.Economy
         {
             anchor = Fx.RoundShift(basePrice * valueMul);
             return Fx.RoundShift(Fx.RoundShift(baseDemand * levelWeight) * demandMul);
+        }
+
+        /// <summary>What a node's households would take of a good in a week at its anchor price, whatever the budget.</summary>
+        public static long AtAnchor(in DemandParams p, SimulationConfig config, HouseholdState households, int node, int level, GoodDef good, long priceIndex)
+        {
+            if (good.BaseDemand <= 0) return 0;
+            long weekly = CellBase(good.BaseDemand, good.BasePrice, config.LevelDemandWeight[level].Raw, Fx.OneRaw, priceIndex, out long anchor);
+            return Weekly(p, weekly, (int)Math.Min(anchor, int.MaxValue), anchor, config.LuxuryShare(good).Raw,
+                households.NecessityWeight(node, level, config).Raw, households.LuxuryWeight(node, level, config).Raw, out _, out _);
         }
 
         /// <param name="luxuryShare">How far the good is bought like a luxury (raw Q16, 0..1).</param>

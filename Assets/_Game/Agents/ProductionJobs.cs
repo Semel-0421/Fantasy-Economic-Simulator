@@ -22,6 +22,18 @@ namespace FES.Agents
         /// <summary><see cref="LineIsInput"/> of a tool or seed line; a required input is 1, an output 0.</summary>
         public const byte AidLine = 2;
 
+        /// <summary>Producers take bills for what traders cannot pay (DEC-097); see <see cref="DetailedMerchantJob"/>.</summary>
+        public bool BillProducers;
+        public NativeArray<long> BillRoom;
+        public NativeArray<long> BillBankRoom;
+        public NativeArray<long> BillBankSpent;
+        public long BillDiscountRaw;
+        public int BillWeeks;
+        public NativeList<int> BillHolder;
+        public NativeList<int> BillPurse;
+        public NativeList<long> BillFace;
+        public NativeList<int> BillDue;
+
         /// <summary>Per cell: <see cref="MarketStore.InputBid"/>.</summary>
         public NativeArray<int> InputBid;
         public ulong Seed;
@@ -194,6 +206,8 @@ namespace FES.Agents
             }
         }
 
+        static long Min(long a, long b) => a < b ? a : b;
+
         void Emit(int f, int good, int cell, int modifier, long quantity, bool playerOwned)
         {
             if (cell >= 0) quantity = Fx.MulIntRaw(quantity, ModifierMul[modifier]);
@@ -219,6 +233,26 @@ namespace FES.Agents
                 Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
                 FacilityCash[f] += paid;
                 Float[traders] -= paid;
+                if (BillProducers)
+                {
+                    long face = Min(clamped * Price[cell] - paid, BillRoom[traders]);
+                    if (face > 0)
+                    {
+                        BillRoom[traders] -= face;
+                        long discounted = face - Fx.MulIntRaw(face, BillDiscountRaw);
+                        bool bank = BillBankRoom[traders] >= discounted;
+                        BillHolder.Add(bank ? BillHolders.Bank : BillHolders.Facility(f));
+                        BillPurse.Add(traders);
+                        BillFace.Add(face);
+                        BillDue.Add(Turn + BillWeeks);
+                        if (bank)
+                        {
+                            BillBankRoom[traders] -= discounted;
+                            BillBankSpent[traders] += discounted;
+                            FacilityCash[f] += discounted;
+                        }
+                    }
+                }
                 long rate = SubsidyRate[traders * GoodCount + good];
                 if (rate > 0)
                 {

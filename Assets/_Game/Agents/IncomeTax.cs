@@ -172,7 +172,7 @@ namespace FES.Agents
             }
             for (int a = 0; a < _agents.Count; a++)
             {
-                long paid = Pay(_agents.Node[a], _agents.Cash[a] - _books.MerchantStart[a], _agents.Cash[a]);
+                long paid = Pay(MoneyLedger.MerchantSettlesAt(_nodes, _agents, a), _agents.Cash[a] - _books.MerchantStart[a], _agents.Cash[a]);
                 _agents.Cash[a] -= paid;
                 companies += paid;
             }

@@ -51,9 +51,11 @@ namespace FES.Agents
         public readonly NativeColumn<int> Quantity;
         public readonly NativeColumn<long> UnitPrice;
         public readonly NativeColumn<int> EndTurn;
+        /// <summary>What is left of the deposit the buyer paid the seller at signing; deliveries draw it down.</summary>
+        public readonly NativeColumn<long> Prepaid;
 
         public override string Key => "agents.contracts";
-        public override int Version => 1;
+        public override int Version => 2;
 
         public ContractTable()
         {
@@ -66,9 +68,10 @@ namespace FES.Agents
             Quantity = Column<int>();
             UnitPrice = Column<long>();
             EndTurn = Column<int>();
+            Prepaid = Column<long>();
         }
 
-        public void Add(int seller, int buyer, int fromCell, int toCell, int fromNode, int toNode, int quantity, long unitPrice, int endTurn)
+        public void Add(int seller, int buyer, int fromCell, int toCell, int fromNode, int toNode, int quantity, long unitPrice, int endTurn, long prepaid = 0)
         {
             Seller.Add(seller);
             Buyer.Add(buyer);
@@ -79,6 +82,7 @@ namespace FES.Agents
             Quantity.Add(quantity);
             UnitPrice.Add(unitPrice);
             EndTurn.Add(endTurn);
+            Prepaid.Add(prepaid);
         }
 
         internal void RemoveRow(int row) => RemoveRowSwapBack(row);
@@ -145,10 +149,15 @@ namespace FES.Agents
 
         void Deliver(SimContext ctx)
         {
+            var config = _db.Config;
             for (int r = _contracts.Count - 1; r >= 0; r--)
             {
                 if (ctx.Turn >= _contracts.EndTurn[r])
                 {
+                    // What the seller did not deliver goes back, as far as it holds. A buyer who broke off forfeits instead.
+                    long back = Math.Min(_contracts.Prepaid[r], Math.Max(0, Cash(_contracts.Seller[r])));
+                    Pay(_contracts.Seller[r], -back);
+                    Pay(_contracts.Buyer[r], back);
                     _contracts.RemoveRow(r);
                     continue;
                 }
@@ -157,7 +166,8 @@ namespace FES.Agents
                 long units = Math.Min(_contracts.Quantity[r], _markets.Stock[from]);
                 if (buy > 0) units = Math.Min(units, Math.Max(0, Cash(seller)) / buy);
                 if (units <= 0) continue;
-                if (Cash(buyer) + units * sell < units * unit)
+                long fromDeposit = Math.Min(_contracts.Prepaid[r], config.ContractDepositShare.MulInt(units * unit));
+                if (Cash(buyer) + units * sell < units * unit - fromDeposit)
                 {
                     ctx.Events.Publish(new SupplyContractBroken(seller, buyer));
                     _contracts.RemoveRow(r);
@@ -167,12 +177,14 @@ namespace FES.Agents
                 long floatThere = Math.Max(0, _purses.Float[_purses.NodeFloat[_contracts.ToNode[r]]]);
                 if (sell > 0) units = Math.Min(units, floatThere / sell);
                 if (units <= 0) continue;
+                fromDeposit = Math.Min(_contracts.Prepaid[r], config.ContractDepositShare.MulInt(units * unit));
+                _contracts.Prepaid[r] -= fromDeposit;
                 _markets.Stock[from] -= (int)units;
                 _markets.Supply[to] = MarketStore.ClampToNonNegativeInt(_markets.Supply[to] + units);
                 _purses.ChangeFloat(_contracts.FromNode[r], units * buy);
                 _purses.ChangeFloat(_contracts.ToNode[r], -units * sell);
-                Pay(seller, units * (unit - buy));
-                Pay(buyer, units * (sell - unit));
+                Pay(seller, units * (unit - buy) - fromDeposit);
+                Pay(buyer, units * (sell - unit) + fromDeposit);
             }
         }
 
@@ -187,16 +199,7 @@ namespace FES.Agents
         // What a market takes a week: its households at the settled price, or what left it lately if more.
         long WeeklyDemand(int node, int cell)
         {
-            var config = _db.Config;
-            var def = _db.Goods[_markets.CellGood[cell]];
-            int level = _nodes.Level[node];
-            long households = 0;
-            if (_markets.GoodBaseDemand[def.Id.Value] > 0)
-            {
-                long weekly = HouseholdDemand.CellBase(def.BaseDemand, def.BasePrice, config.LevelDemandWeight[level].Raw, Fx.OneRaw, IndexOf(node), out long anchor);
-                households = HouseholdDemand.Weekly(_demand, weekly, (int)Math.Min(anchor, int.MaxValue), anchor, def.IsLuxury ? Fx.OneRaw : 0,
-                    _population.NecessityWeight(node, level, config).Raw, _population.LuxuryWeight(node, level, config).Raw, out _, out _);
-            }
+            long households = HouseholdDemand.AtAnchor(_demand, _db.Config, _population, node, _nodes.Level[node], _db.Goods[_markets.CellGood[cell]], IndexOf(node));
             return Math.Max(households, _forecast.Forecast[cell] / OrderSystem.QuarterWeeks);
         }
 
@@ -248,12 +251,19 @@ namespace FES.Agents
             quantity = Math.Max(1, quantity);
             var discount = Fx.Min(config.ContractMaxDiscount, config.ContractBaseDiscount + config.ContractDiscountPerUnit * Fx.FromInt(quantity));
             long sell = SettledPrice(bestToNode, bestTo), unit = Math.Max(_markets.Price[bestFrom] + 1L, sell - discount.MulInt(sell));
-            if (unit >= sell || Cash(buyer) < quantity * unit * config.ContractCreditWeeks)
+            // The term fits both sides: as long as the seller's stock lasts and the buyer's money pays for it.
+            long weekly = quantity * unit;
+            long afford = Math.Max(0, Cash(buyer)) / Math.Max(1, config.ContractDepositShare.MulInt(weekly));
+            int term = (int)Math.Min(Math.Min(_markets.Stock[bestFrom] / quantity, afford), config.ContractMaxWeeks);
+            if (unit >= sell || term < config.ContractMinWeeks || Cash(buyer) < weekly * config.ContractCreditWeeks)
             {
                 _refused.Add(refuseKey);
                 return true;
             }
-            _contracts.Add(seller, buyer, bestFrom, bestTo, bestFromNode, bestToNode, quantity, unit, ctx.Turn + config.ContractTermWeeks);
+            long deposit = config.ContractDepositShare.MulInt(weekly * term);
+            Pay(buyer, -deposit);
+            Pay(seller, deposit);
+            _contracts.Add(seller, buyer, bestFrom, bestTo, bestFromNode, bestToNode, quantity, unit, ctx.Turn + term, deposit);
             ctx.Events.Publish(new SupplyContractSigned(seller, buyer, quantity, unit));
             return true;
         }
@@ -297,6 +307,26 @@ namespace FES.Agents
             for (int a = 0; a < _agents.Count; a++)
                 if (_agents.Home[a] == node && _agents.Owner[a] == OwnerIds.Npc && (best < 0 || _agents.Cash[a] > _agents.Cash[best])) best = a;
             return best < 0 ? int.MinValue : ContractParty.OfMerchant(best);
+        }
+    }
+
+    /// <summary>Version 1 had no deposits.</summary>
+    public sealed class ContractTableV1Migration : ISaveMigration
+    {
+        public string SectionKey => "agents.contracts";
+        public int FromVersion => 1;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new System.IO.BinaryReader(new System.IO.MemoryStream(section)).ReadInt32();
+            using var output = new System.IO.MemoryStream();
+            using (var writer = new System.IO.BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0L);
+            }
+            return output.ToArray();
         }
     }
 

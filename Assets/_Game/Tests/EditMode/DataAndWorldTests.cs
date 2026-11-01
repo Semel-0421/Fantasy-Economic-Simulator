@@ -74,8 +74,8 @@ namespace FES.Tests
         public void SampleDatabase_ExpandsGradesAndAppliesConfig()
         {
             var db = GameDatabase.Load(TestWorlds.Sample());
-            Assert.AreEqual(18 * QualityGrades.Count, db.GoodCount);
-            Assert.AreEqual(10, db.Categories.Count);
+            Assert.AreEqual(27 * QualityGrades.Count, db.GoodCount);
+            Assert.AreEqual(11, db.Categories.Count);
             Assert.IsTrue(db.TryGetGood("wheat", QualityGrade.High, out var wheatHigh));
             Assert.AreEqual(18, db.Good(wheatHigh).BasePrice); // 10 * 1.8
             Assert.AreEqual(string.Empty, db.Config.PlayerStartNode);

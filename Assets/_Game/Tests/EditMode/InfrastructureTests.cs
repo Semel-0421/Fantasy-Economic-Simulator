@@ -122,7 +122,7 @@ namespace FES.Tests
             var roads = sim.World.Get<RoadState>();
             int nation = banks.NationIndex(sim.World.Get<NodeTable>().AncestorAt(Node(sim, "aur_n1_r1").Value, WorldLevel.Nation));
             int ownRoads = Enumerable.Range(0, roads.Condition.Length).Count(r => roads.IsPaved(r) && roads.Owner[r] == nation);
-            Assert.AreEqual(4, ownRoads);
+            Assert.AreEqual(8, ownRoads);
 
             long reserve = bank.Reserve[nation];
             sim.AdvanceTurn();

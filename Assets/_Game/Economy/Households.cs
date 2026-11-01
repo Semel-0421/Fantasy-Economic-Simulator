@@ -31,6 +31,8 @@ namespace FES.Economy
         public string Key => "economy.households";
         public int Version => 1;
 
+        readonly Fx[] _demandScale;
+
         public HouseholdState(NodeTable nodes, MapDef map, SimulationConfig config)
         {
             NodeCount = nodes.Count;
@@ -46,16 +48,45 @@ namespace FES.Economy
             }
             foreach (var def in map.Nodes)
                 if (def.Population >= 0 && nodes.TryFind(def.Key, out var node)) Population[node.Value] = def.Population;
+            _demandScale = new Fx[NodeCount];
+            for (int n = 0; n < NodeCount; n++) _demandScale[n] = Fx.One;
+            if (nodes.Absorbed) AbsorbClasses(nodes, config);
+        }
+
+        // A core town takes the people of its classes, and their weight of demand, on top of what being a core draws (DEC-104).
+        void AbsorbClasses(NodeTable nodes, SimulationConfig config)
+        {
+            int city = (int)WorldLevel.City;
+            var weight = new long[NodeCount];
+            var people = new long[NodeCount];
+            for (int n = 0; n < NodeCount; n++)
+            {
+                if (nodes.Level[n] >= city) continue;
+                int core = nodes.Core[n];
+                if (nodes.Level[n] != (byte)WorldLevel.Continent && config.CoreDemandWeighted) weight[core] += config.LevelDemandWeight[nodes.Level[n]].Raw; // a continent has hardly any people
+                if (nodes.Level[n] != (byte)WorldLevel.Continent && config.CoreDemandWeighted) people[core] += config.DefaultPopulation[nodes.Level[n]];
+                if (core == n) continue;
+                Population[core] += Population[n];
+                Population[n] = 0;
+            }
+            for (int n = 0; n < NodeCount; n++)
+            {
+                if (!nodes.IsSeat(n)) continue;
+                int level = nodes.Level[n];
+                var byWeight = Fx.FromRatio(weight[n] + config.LevelDemandWeight[level].Raw, config.LevelDemandWeight[level].Raw);
+                var byPeople = Fx.FromRatio(config.DefaultPopulation[level], people[n] + config.DefaultPopulation[level]);
+                _demandScale[n] = byWeight * byPeople * (Fx.One + Fx.FromInt(nodes.CoreStrength[n]) * config.CoreDemandPerPoint);
+            }
         }
 
         /// <summary>Necessity demand relative to a default node of the level: population over the default.</summary>
         public Fx NecessityWeight(int node, int level, SimulationConfig config) =>
-            Fx.FromRatio(Population[node], config.DefaultPopulation[level]);
+            Fx.FromRatio(Population[node], config.DefaultPopulation[level]) * _demandScale[node];
 
         /// <summary>Luxury demand relative to a default node of the level: total income over the default.</summary>
         public Fx LuxuryWeight(int node, int level, SimulationConfig config) =>
             Fx.FromRatio(Population[node] * IncomePerHead[node],
-                config.DefaultPopulation[level] * config.DefaultIncomePerHead[level].Raw);
+                config.DefaultPopulation[level] * config.DefaultIncomePerHead[level].Raw) * _demandScale[node];
 
         public void Write(BinaryWriter writer)
         {

@@ -46,7 +46,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var routes = sim.World.Get<RouteTable>();
-            int mountain = Route(sim, "aur_n1_r1", "aur_n1_r2");
+            int mountain = Route(sim, "aur_n1_r1_c1", "aur_n1_r2_c1");
             Assert.AreEqual(RouteTerrain.Mountain, (RouteTerrain)routes.Terrain[mountain]);
             Assert.AreEqual(3 + 1, routes.TravelTurns[mountain]);
             Assert.AreEqual(30, routes.BaseFee[mountain]); // 20 x 1.5
@@ -54,7 +54,7 @@ namespace FES.Tests
             int road = Route(sim, "aur_n1_r1_c1_v1", "aur_n1_r1_c1");
             Assert.AreEqual(RouteTerrain.Road, (RouteTerrain)routes.Terrain[road]);
             Assert.AreEqual(1, routes.TravelTurns[road]);
-            Assert.IsTrue(((RouteTerrain)routes.Terrain[Route(sim, "aur_n1_r2", "bor_n1_r1")]).IsWater());
+            Assert.IsTrue(((RouteTerrain)routes.Terrain[Route(sim, "aur_n1_r2_c1", "bor_n1_r1_c2")]).IsWater());
 
             var nodes = TestWorlds.Sample().ReadText(CsvMapSource.NodesFile)
                 .Replace("aur_n1_r1_c1,Aurelia City 1-1,City,aur_n1_r1,smithing,50,100,1,", "aur_n1_r1_c1,Aurelia City 1-1,City,aur_n1_r1,smithing,50,100,1,900");
@@ -66,8 +66,8 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
-            PlaceAt(sim, "aur_n1_r1", 10_000, ("wheat", 20));
-            var target = Node(sim, "aur_n1_r2");
+            PlaceAt(sim, "aur_n1_r1_c1", 10_000, ("wheat", 20));
+            var target = Node(sim, "aur_n1_r2_c1");
 
             Assert.IsTrue(sim.View.TryQuoteTrip(target, out var plain));
             var danger = config.TerrainDanger[(int)RouteTerrain.Mountain] * Fx.FromPermille(1500); // the region's own factor
@@ -126,9 +126,9 @@ namespace FES.Tests
         {
             using var sim = WithConfig("terrain.sea.danger_permille,0\nterrain.road.danger_permille,0\n");
             var config = sim.Database.Config;
-            var player = PlaceAt(sim, "aur_n1_r2", 20_000, ("iron_ore", 40)); // 480 weight: more than the cart's 400
-            player.Coins[sim.View.ContinentOf(Node(sim, "bor_n1_r1"))] = 20_000;
-            var abroad = Node(sim, "bor_n1_r1");
+            var player = PlaceAt(sim, "aur_n1_r2_c1", 20_000, ("iron_ore", 40)); // 480 weight: more than the cart's 400
+            player.Coins[sim.View.ContinentOf(Node(sim, "bor_n1_r1_c2"))] = 20_000;
+            var abroad = Node(sim, "bor_n1_r1_c2");
 
             Assert.IsTrue(sim.View.TryQuoteTrip(abroad, out var passage));
             Assert.AreEqual(config.PassageBaseFee + 40 * config.PassagePerUnit, passage.Passage);
@@ -160,7 +160,7 @@ namespace FES.Tests
             sim.AdvanceTurn();
             Assert.IsFalse(sim.View.OwnsShip); // a city, but not a port
 
-            PlaceAt(sim, "aur_n1_r2", config.ShipPrice);
+            PlaceAt(sim, "aur_n1_r2_c1", config.ShipPrice);
             sim.Actions.BuyShip();
             sim.Actions.BuyShip();
             sim.AdvanceTurn();

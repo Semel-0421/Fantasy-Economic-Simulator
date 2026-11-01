@@ -94,8 +94,8 @@ namespace FES.Tests
             int city = nodes.LevelStart(WorldLevel.City);
             int region = nodes.LevelStart(WorldLevel.Region);
             Assert.AreEqual(16 * 2, markets.MarketCellCount[village]);  // 16 goods, without tools, x low/mid
-            Assert.AreEqual(27 * 3, markets.MarketCellCount[city]);     // all goods x low/mid/high
-            Assert.AreEqual(27 * 4, markets.MarketCellCount[region]);   // everything
+            Assert.AreEqual(27 * 4, markets.MarketCellCount[city]);     // everything
+            Assert.AreEqual(0, markets.MarketCellCount[region]);        // a class has no market of its own (DEC-104)
 
             db.TryGetGood("iron_tools", QualityGrade.Mid, out var tools);
             db.TryGetGood("wheat", QualityGrade.Low, out var wheat);
@@ -186,24 +186,6 @@ namespace FES.Tests
             Assert.AreEqual(4, modifiers.Active.Count);
             sim.AdvanceTurn(); // first wave expires at turn 2
             Assert.AreEqual(4, modifiers.Active.Count);
-        }
-
-        [Test]
-        public void ShortDemandEvent_ReachesSlowTierMarkets()
-        {
-            // A one-turn event on a continent that only reprices every 4 turns must still change its flows.
-            var data = TestWorlds.SampleWith(GameDatabase.EventsFile, EventsHeader + "boom,Continent,*,Demand,3000,1,1000\n");
-            using var boom = SimulationBuilder.FromData(data, 1).Build();
-            using var calm = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.EventsFile, EventsHeader), 1).Build();
-            for (int t = 0; t < 2; t++)
-            {
-                boom.AdvanceTurn();
-                calm.AdvanceTurn();
-            }
-            int continent = boom.World.Get<NodeTable>().LevelStart(WorldLevel.Continent);
-            Assert.IsTrue(boom.Database.TryGetGood("bread", QualityGrade.Mid, out var bread));
-            Assert.IsTrue(boom.World.Get<MarketStore>().TryFindCell(continent, bread, out int cell));
-            Assert.Greater(boom.World.Get<MarketStore>().Demand[cell], calm.World.Get<MarketStore>().Demand[cell]);
         }
 
         [Test]

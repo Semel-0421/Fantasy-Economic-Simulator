@@ -129,7 +129,7 @@ namespace FES.Tests
             var before = PlanOf(sim, "dairy");
             Assert.Less(before.Raw, Fx.One.Raw);
             for (int n = 0; n < nodes.Count; n++)
-                if (nodes.LevelOf(n) == WorldLevel.Nation) population[n] *= 20;
+                if (nodes.IsSeat(n)) population[n] *= 20;
             Plan(sim);
             Assert.Greater(PlanOf(sim, "dairy").Raw, before.Raw);
         }

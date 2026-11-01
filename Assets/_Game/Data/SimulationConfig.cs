@@ -250,6 +250,16 @@ namespace FES.Data
         public Fx MerchantMemberPremium = Fx.FromPermille(500);
         /// <summary>0: detail around the player. 1: every node detailed. 2: every node aggregate.</summary>
         public int LodMode = 1;
+        /// <summary>Continents, nations and regions are classes only: their people, producers and groups stand at their core towns (DEC-104).</summary>
+        public bool CoreAbsorb = true;
+        /// <summary>Per class level, continent to region: what being its core is worth. A town that is core of several takes the highest, or with stacking the sum (DEC-104).</summary>
+        public readonly int[] CoreWeight = { 3, 2, 1 };
+        public bool CoreStacking = false;
+        /// <summary>A core town keeps the demand per head of the classes it took in; off, its people buy like any town's.</summary>
+        public bool CoreDemandWeighted = true;
+        /// <summary>Per point of a core's strength: more wages per head, more demand.</summary>
+        public Fx CoreWagePerPoint = Fx.FromPermille(100);
+        public Fx CoreDemandPerPoint = Fx.FromPermille(50);
         /// <summary>How many times the expected loss a merchant weighs when deciding on guards.</summary>
         public int MerchantRiskAversion = 1;
         /// <summary>Per personality: how many times a loss weighs against the same gain (DEC-099); 0 uses <see cref="MerchantRiskAversion"/>.</summary>
@@ -661,6 +671,14 @@ namespace FES.Data
             MerchantSupportShare = Permille(v, "merchants.support_share_permille", MerchantSupportShare);
             MerchantMemberPremium = Permille(v, "merchants.member_premium_permille", MerchantMemberPremium);
             LodMode = Int(v, "lod.mode", LodMode);
+            CoreAbsorb = Int(v, "core.absorb", CoreAbsorb ? 1 : 0) != 0;
+            CoreStacking = Int(v, "core.stacking", CoreStacking ? 1 : 0) != 0;
+            CoreDemandWeighted = Int(v, "core.demand_weighted", CoreDemandWeighted ? 1 : 0) != 0;
+            CoreWeight[0] = Int(v, "core.continent.weight", CoreWeight[0]);
+            CoreWeight[1] = Int(v, "core.nation.weight", CoreWeight[1]);
+            CoreWeight[2] = Int(v, "core.region.weight", CoreWeight[2]);
+            CoreWagePerPoint = Permille(v, "core.wage_permille", CoreWagePerPoint);
+            CoreDemandPerPoint = Permille(v, "core.demand_permille", CoreDemandPerPoint);
             MerchantRiskAversion = Int(v, "merchants.risk_aversion", MerchantRiskAversion);
             MerchantCountTripCosts = Int(v, "merchants.count_trip_costs", MerchantCountTripCosts ? 1 : 0) != 0;
             HedgeFloor = Permille(v, "merchants.hedge_floor_permille", HedgeFloor);

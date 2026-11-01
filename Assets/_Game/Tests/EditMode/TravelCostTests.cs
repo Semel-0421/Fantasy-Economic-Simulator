@@ -97,16 +97,16 @@ namespace FES.Tests
         public void TripAcrossContinents_PaysTheTollInTheDestinationsCoin()
         {
             using var sim = TestWorlds.BuildSample();
-            PlacePlayer(sim, "aur_n1_r2", ("wheat", 10));
+            PlacePlayer(sim, "aur_n1_r2_c1", ("wheat", 10));
             var player = sim.World.Get<PlayerState>();
-            var abroad = Node(sim, "bor_n1_r1");
+            var abroad = Node(sim, "bor_n1_r1_c2");
             int home = sim.View.ContinentOf(sim.View.PlayerNode), away = sim.View.ContinentOf(abroad);
             Assert.AreNotEqual(home, away);
 
             Assert.IsTrue(sim.View.TryQuoteTrip(abroad, out var quote));
             Assert.AreEqual(home, quote.FeeContinent);
             Assert.AreEqual(away, quote.TollContinent);
-            Assert.AreEqual(Fx.FromPermille(30).MulInt(10L * PriceAt(sim, abroad, Good(sim, "wheat"))), quote.Toll);
+            Assert.AreEqual(Fx.FromPermille(50).MulInt(10L * PriceAt(sim, abroad, Good(sim, "wheat"))), quote.Toll);
 
             sim.Actions.Travel(abroad); // no coins of the other continent yet
             sim.AdvanceTurn();

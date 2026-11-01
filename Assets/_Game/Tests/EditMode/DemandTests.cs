@@ -148,7 +148,7 @@ namespace FES.Tests
             // The city's households measurably received nothing this year; the region's a great deal.
             var cash = sim.World.Get<HouseholdCash>();
             cash.CashYearStart[city.Value] = 1L << 40;
-            var region = Node(sim, "aur_n1_r1");
+            var region = Node(sim, "aur_n1_r1_c2");
             var regionIncome = sim.View.IncomePerHead(region);
             cash.CashYearStart[region.Value] = -(1L << 40);
             var limit = config.IncomeMaxChange * income;

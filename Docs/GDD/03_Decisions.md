@@ -368,9 +368,16 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Resolved: DEC-011
 
 ### Q-043 What a core node does
-- Open, from DEC-101: its weight in play, and whether nation and region nodes keep their own markets and people.
+- Resolved by DEC-104.
 
 ## Decision log
+
+### DEC-104 Classes hold no market; core towns take them on and carry five roles
+- Date: 2026-11-02
+- Decision: [Confirmed] continents, nations and regions are classes only: their markets, people and routes move to their core towns. Core towns carry administration, finance, trade, infrastructure and workshops. [Draft] Details: a core takes its classes' people, producers and groups, and their demand per head, the continent's excepted. Wages per head +10% and demand +5% per point of strength. Bank branches and license sales stand only at cores; prices at cores are known to all merchants; roads touching a core are kept first; smithies, coppersmiths, cartwrights and wagonworks stand only at cores, while food and clothing workshops stay in every town. Strength: continent 3, nation 2, region 1. [Confirmed] A town that is core of several classes takes the highest (user's choice after comparing both); [Draft] stacking stays a config option, off.
+- Reason: the user's instruction. The user had the two strength rules measured and chose the highest.
+- Limits: people fall 0.29% a year at year 30, against 0.13% before, and core towns are less well supplied than ordinary ones.
+- Impact: 00_Architecture, 02_Data_Formats, SYS-BANKING, SYS-LICENSES, SYS-PRODUCTION, SYS-MERCHANTS, SYS-INFRASTRUCTURE, sample map_nodes.csv, map_routes.csv, market_profiles.csv, facilities.csv
 
 ### DEC-103 Special goods are no necessity
 - Date: 2026-11-02

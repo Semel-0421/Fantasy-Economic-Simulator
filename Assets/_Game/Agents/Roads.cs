@@ -68,8 +68,12 @@ namespace FES.Agents
 
         public void Execute(SimContext ctx)
         {
+            // Roads to the core towns are kept first (DEC-104).
+            for (int pass = 0; pass < 2; pass++)
             for (int r = 0; r < _routes.Count; r++)
             {
+                bool seat = _nodes.IsSeat(_routes.From[r]) || _nodes.IsSeat(_routes.To[r]);
+                if (seat != (pass == 0)) continue;
                 if (_roads.BuildDoneTurn[r] >= 0 && ctx.Turn >= _roads.BuildDoneTurn[r])
                 {
                     _roads.BuildDoneTurn[r] = -1;

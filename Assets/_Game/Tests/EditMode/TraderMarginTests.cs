@@ -95,7 +95,7 @@ namespace FES.Tests
                 var routes = sim.World.Get<RouteTable>();
                 var purses = sim.World.Get<PurseState>();
                 Assert.IsTrue(sim.Database.TryGetGood("bread", QualityGrade.Mid, out var bread));
-                int route = Enumerable.Range(0, routes.Count).First(r => nodes.LevelOf(routes.From[r]) == WorldLevel.City && nodes.LevelOf(routes.To[r]) == WorldLevel.Region
+                int route = Enumerable.Range(0, routes.Count).First(r => nodes.LevelOf(routes.From[r]) == WorldLevel.Village && nodes.LevelOf(routes.To[r]) == WorldLevel.City
                     && markets.TryFindCell(routes.From[r], bread, out _) && markets.TryFindCell(routes.To[r], bread, out _));
                 int from = routes.From[route], to = routes.To[route];
                 Assert.IsTrue(markets.TryFindCell(from, bread, out int cell));

@@ -253,10 +253,11 @@ namespace FES.Tests
             int laden = inNation[0], empty = inNation[1];
             Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
             cargo.Change(CargoHolders.Merchant(new AgentId(laden)), wheat, 200);
+            agents.Association[laden] = -1; // no association tides it over
             agents.Cash[laden] = -1_000;
             agents.Cash[empty] = -1_000;
             sim.AdvanceTurn();
-            Assert.GreaterOrEqual(loans.Find(NpcBorrowers.Merchant(laden)), 0);
+            Assert.GreaterOrEqual(loans.Find(NpcBorrowers.Merchant(laden)), 0, $"cash {agents.Cash[laden]} node {nodes.KeyOf(agents.Node[laden])} travelling {agents.IsTravelling(laden)} load {cargo.Quantity.Length}");
             Assert.AreEqual(-1, loans.Find(NpcBorrowers.Merchant(empty)));
         }
 

@@ -23,6 +23,8 @@ namespace FES.World
         public NativeArray<int> Continent;
         /// <summary>The town or village at the heart of this node's class; a town or village is its own.</summary>
         public NativeArray<int> Core;
+        /// <summary>What a town's being a core is worth; 0 elsewhere, and everywhere unless classes are absorbed (DEC-104).</summary>
+        public NativeArray<int> CoreStrength;
         /// <summary>CSR child list: children of n are Children[ChildStart[n] .. ChildStart[n] + ChildCount[n]).</summary>
         public NativeArray<int> ChildStart;
         public NativeArray<int> ChildCount;
@@ -45,6 +47,7 @@ namespace FES.World
             Parent = new NativeArray<int>(count, Allocator.Persistent);
             Continent = new NativeArray<int>(count, Allocator.Persistent);
             Core = new NativeArray<int>(count, Allocator.Persistent);
+            CoreStrength = new NativeArray<int>(count, Allocator.Persistent);
             ChildStart = new NativeArray<int>(count, Allocator.Persistent);
             ChildCount = new NativeArray<int>(count, Allocator.Persistent);
             Children = new NativeArray<int>(Math.Max(0, count), Allocator.Persistent);
@@ -64,6 +67,20 @@ namespace FES.World
         public string KeyOf(int node) => _keys[node];
         public string NameOf(int node) => _names[node];
         public bool IsCoreOf(int node, int classNode) => Core[classNode] == node;
+        public bool Absorbed { get; private set; }
+        public bool IsSeat(int node) => CoreStrength[node] > 0;
+
+        /// <summary>Classes hold no market of their own now; each core town takes on its strength (DEC-104).</summary>
+        public void Absorb(int[] weights, bool stacking)
+        {
+            Absorbed = true;
+            for (int n = 0; n < Count; n++)
+            {
+                if (Level[n] >= weights.Length) continue;
+                int core = Core[n];
+                CoreStrength[core] = stacking ? CoreStrength[core] + weights[Level[n]] : Math.Max(CoreStrength[core], weights[Level[n]]);
+            }
+        }
 
         /// <summary>The classes a node falls in, largest first, ending with itself: continent/nation/region/city/village.</summary>
         public string ClassPath(int node)
@@ -119,6 +136,7 @@ namespace FES.World
             Parent.DisposeIfCreated();
             Continent.DisposeIfCreated();
             Core.DisposeIfCreated();
+            CoreStrength.DisposeIfCreated();
             ChildStart.DisposeIfCreated();
             ChildCount.DisposeIfCreated();
             Children.DisposeIfCreated();

@@ -196,6 +196,7 @@ namespace FES.World
             var map = builder.Services.Get<MapDef>();
             var db = builder.Services.Get<GameDatabase>();
             var nodes = builder.World.Add(WorldBuilder.BuildNodes(map));
+            if (db.Config.CoreAbsorb) nodes.Absorb(db.Config.CoreWeight, db.Config.CoreStacking);
             var routes = builder.World.Add(WorldBuilder.BuildRoutes(map, nodes, db.Config));
             builder.World.Add(new NodeSpecialties(map, nodes, db));
             builder.World.Add(new NodeTolls(map, nodes, db.Config));

@@ -5,7 +5,4 @@ Village,ore,Low|Mid
 Village,textile,Low|Mid
 Village,provisions,Low|Mid
 Village,exotic,Low|Mid
-City,*,Low|Mid|High
-Region,*,*
-Nation,*,*
-Continent,*,*
+City,*,*

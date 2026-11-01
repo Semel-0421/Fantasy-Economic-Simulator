@@ -140,7 +140,7 @@ namespace FES.Tests
             var config = sim.Database.Config;
             PlaceAt(sim, City, 10_000);
             sim.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good(sim, "wheat"), 20);
-            var region = Node(sim, "aur_n1_r1");
+            var region = Node(sim, "aur_n1_r1_c2");
             Assert.IsTrue(sim.View.TryQuoteTrip(region, false, true, out var before));
             long licenseBefore = sim.View.LicensePrice(Good(sim, "iron_tools"));
 

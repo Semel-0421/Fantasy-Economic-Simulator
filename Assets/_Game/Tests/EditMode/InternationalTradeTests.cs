@@ -266,16 +266,17 @@ namespace FES.Tests
         [Test]
         public void GroupStrandedAboveItsHome_ComesBack_OnlyWhenTheRuleIsOn()
         {
+            int Village(Port p) => Enumerable.Range(0, p.Routes.Count).Where(r => p.Routes.From[r] == p.Here && p.Nodes.LevelOf(p.Routes.To[r]) == WorldLevel.Village).Select(r => p.Routes.To[r]).First();
             using var on = new Port();
-            int nation = on.Nodes.AncestorAt(on.Here, WorldLevel.Nation);
-            on.Agents.Node[on.A] = nation;
-            on.ClearStock(nation);
+            int village = Village(on);
+            on.Agents.Home[on.A] = village;
+            on.ClearStock(on.Here);
             on.Run();
-            Assert.AreEqual(on.Here, on.Agents.Destination[on.A]);
+            Assert.AreEqual(village, on.Agents.Destination[on.A]);
 
             using var off = new Port(config: "lod.mode,1\nmerchants.return_home,0");
-            off.Agents.Node[off.A] = nation;
-            off.ClearStock(nation);
+            off.Agents.Home[off.A] = Village(off);
+            off.ClearStock(off.Here);
             off.Run();
             Assert.IsFalse(off.Agents.IsTravelling(off.A));
         }
@@ -428,12 +429,12 @@ namespace FES.Tests
             Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
             int village = nodes.LevelStart(WorldLevel.Village);
             int city = nodes.Parent[village];
-            int region = nodes.Parent[city];
-            int nation = nodes.Parent[region];
+            int sibling = Enumerable.Range(0, routes.Count).Where(r => routes.From[r] == city && nodes.LevelOf(routes.To[r]) == WorldLevel.City).Select(r => routes.To[r]).First();
+            int farVillage = Enumerable.Range(0, routes.Count).Where(r => routes.From[r] == sibling && nodes.LevelOf(routes.To[r]) == WorldLevel.Village).Select(r => routes.To[r]).First();
             for (int n = 0; n < nodes.Count; n++)
                 if (markets.TryFindCell(n, wheat, out int c)) markets.Price[c] = 5;
-            // Three hops up: village, city, region, nation.
-            Assert.IsTrue(markets.TryFindCell(nation, wheat, out int dear));
+            // Three hops: village, city, the next city, its village.
+            Assert.IsTrue(markets.TryFindCell(farVillage, wheat, out int dear));
             markets.Price[dear] = far;
             int a = Enumerable.Range(0, agents.Count).First(i => agents.Owner[i] == OwnerIds.Npc);
             for (int i = 0; i < agents.Count; i++)

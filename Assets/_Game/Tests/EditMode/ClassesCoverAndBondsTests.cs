@@ -61,6 +61,57 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Classes_HoldNoPeopleOrMarket_TheirCoresTakeThemOn()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            var people = sim.World.Get<HouseholdState>().Population;
+            var markets = sim.World.Get<MarketStore>();
+            var agents = sim.World.Get<AgentTable>();
+            var facilities = sim.World.Get<FacilityTable>();
+            Assert.IsTrue(nodes.TryFind("aur_n1_r1_c1", out var capital));
+            Assert.IsTrue(nodes.TryFind("aur_n1_r1_c2", out var town));
+            Assert.Greater(people[capital.Value], people[town.Value]);
+            Assert.AreEqual(3, nodes.CoreStrength[capital.Value]);
+            Assert.AreEqual(0, nodes.CoreStrength[town.Value]);
+            for (int n = 0; n < nodes.Count; n++)
+                if (nodes.Level[n] < (byte)WorldLevel.City)
+                {
+                    Assert.AreEqual(0, people[n]);
+                    Assert.AreEqual(0, markets.MarketCellCount[n]);
+                }
+            for (int a = 0; a < agents.Count; a++) Assert.GreaterOrEqual(nodes.Level[agents.Node[a]], (byte)WorldLevel.City);
+            for (int f = 0; f < facilities.Count; f++) Assert.GreaterOrEqual(nodes.Level[facilities.Node[f]], (byte)WorldLevel.City);
+        }
+
+        [Test]
+        public void Stacking_AddsTheClassesACoreHolds()
+        {
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("core.stacking,1"), 42).Build();
+            var nodes = sim.World.Get<NodeTable>();
+            Assert.IsTrue(nodes.TryFind("aur_n1_r1_c1", out var capital));
+            Assert.AreEqual(6, nodes.CoreStrength[capital.Value]);
+        }
+
+        [Test]
+        public void CoreRoles_BanksLicensesAndFineWorkshopsStandAtCores()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            var banks = sim.World.Get<NodeBanks>();
+            Assert.IsTrue(nodes.TryFind("aur_n1_r1_c1", out var capital));
+            Assert.IsTrue(nodes.TryFind("aur_n1_r1_c2", out var town));
+            Assert.IsTrue(banks.IsBranch(capital.Value));
+            Assert.IsFalse(banks.IsBranch(town.Value));
+            var facilities = sim.World.Get<FacilityTable>();
+            for (int f = 0; f < facilities.Count; f++)
+                if (sim.Database.Facilities[facilities.DefIndex[f]].CoreOnly) Assert.IsTrue(nodes.IsSeat(facilities.Node[f]));
+            var smithy = System.Array.Find(sim.Database.Facilities.ToArray(), d => d.Key == "smithy");
+            Assert.IsFalse(FacilityPlaces.Allowed(smithy, nodes, town.Value));
+            Assert.IsTrue(FacilityPlaces.Allowed(smithy, nodes, capital.Value));
+        }
+
+        [Test]
         public void ACoreOutsideItsClass_IsRefused()
         {
             var map = new MapDef();

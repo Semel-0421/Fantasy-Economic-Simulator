@@ -140,7 +140,7 @@ namespace FES.Tests
             Step(sim, "exchange");
             sim.Actions.BuildRoad(Node(sim, "aur_n1_r1_c1_v1"));
             Step(sim, "road");
-            sim.Actions.Travel(Node(sim, "aur_n1_r1"), guards: true, insurance: true);
+            sim.Actions.Travel(Node(sim, "aur_n1_r1_c2"), guards: true, insurance: true);
             Step(sim, "travel");
             for (int t = 0; t < 12; t++) Step(sim, $"after, week {t}");
         }
@@ -364,7 +364,7 @@ namespace FES.Tests
             var households = sim.World.Get<HouseholdCash>();
             int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc && facilities.Group[i] >= 0
                 && groups.KindOf(facilities.Group[i]) != GroupKind.StateEnterprise);
-            int g = facilities.Group[f], home = groups.Node[g];
+            int g = facilities.Group[f], home = sim.World.Get<NodeTable>().Core[groups.Node[g]];
             // The households of the group's home hand the facility ten million coins of profit.
             facilities.Cash[f] += 10_000_000;
             households.Cash[home] -= 10_000_000;
@@ -444,7 +444,7 @@ namespace FES.Tests
             var nodes = sim.World.Get<NodeTable>();
             var markets = sim.World.Get<MarketStore>();
             var cash = sim.World.Get<HouseholdCash>();
-            int nation = nodes.AncestorAt(Node(sim, City).Value, WorldLevel.Nation);
+            int nation = nodes.Core[nodes.AncestorAt(Node(sim, City).Value, WorldLevel.Nation)];
             long start = cash.Cash[nation];
             for (int t = 0; t < 2 * SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
             Assert.Greater(cash.SpentYear[nation], 0, "the nation's households bought something this year");

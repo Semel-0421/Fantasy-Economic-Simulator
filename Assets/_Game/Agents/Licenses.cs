@@ -159,6 +159,7 @@ namespace FES.Agents
             var player = ctx.World.Get<PlayerState>();
             if (player.IsTravelling) return CommandResult.Fail("Licenses are bought in a nation, not on the road.");
             if (Nation(ctx) < 0) return CommandResult.Fail("No nation issues licenses here.");
+            if (!AtASeat(ctx)) return CommandResult.Fail("Licenses are issued at the core towns.");
             if (!PolicyRules.NeedsLicense(ctx.World, Good, player.Node)) return CommandResult.Fail("This good needs no license here.");
             return player.LocalCoins >= Price(ctx) ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }
@@ -173,6 +174,12 @@ namespace FES.Agents
             licenses.Extend(Good.BaseIndex, nation, ctx.Turn);
             int expires = licenses.ExpiresTurn[licenses.Find(Good.BaseIndex, nation)];
             ctx.Events.Publish(new LicenseBought(Good.BaseIndex, new NodeId(nation), expires, price));
+        }
+
+        static bool AtASeat(SimContext ctx)
+        {
+            var nodes = ctx.World.Get<NodeTable>();
+            return !nodes.Absorbed || nodes.IsSeat(ctx.World.Get<PlayerState>().Node);
         }
 
         int Nation(SimContext ctx) => ctx.World.Get<NodeTable>().AncestorAt(ctx.World.Get<PlayerState>().Node, WorldLevel.Nation);

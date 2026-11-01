@@ -108,6 +108,8 @@ changing a default in code does.
 | facility.output_wage_permille, state.public_wage_permille | 0, 0 | wages by output and public town wages (DEC-082) |
 | merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle{0,1,2}.start_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 0, 3, 100 | merchant vehicles (DEC-084) |
 | merchants.vehicle{0,1,2}.cost_permille, .danger_permille, .premium_permille, .cash_times; merchants.risk_aversion; orders.lead_weeks, orders.expiry_weeks; production.forecast_enabled, production.forecast_min_permille | 1000, 1000, 1000, 3; 1; 8, 52; 0, 100 | DEC-085; goods.csv gains made_to_order |
+| core.absorb, core.stacking, core.demand_weighted | 1, 0, 1 (DEC-104) | classes hold no market; strength by highest or sum; cores keep their classes' demand per head ([Draft]) |
+| core.continent.weight, core.nation.weight, core.region.weight, core.wage_permille, core.demand_permille | 3, 2, 1, 100, 50 (DEC-104) | a core's strength, and what a point is worth ([Draft]) |
 | lod.mode | 1 (DEC-100) | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
 | merchants.join_permille, merchants.member_fee_permille, merchants.support_floor_permille, merchants.support_share_permille, merchants.member_premium_permille | 0, 50, 200, 100, 500 | merchant associations (DEC-086) |
 | state.strategic_subsidy_permille; contract.per_nation, contract.min_stock, contract.stock_weeks, contract.term_weeks, contract.base_discount_permille, contract.discount_per_unit_permille, contract.max_discount_permille | 0; 0, 200, 26, 52, 50, 1, 250 | DEC-087; facilities.csv gains strategic |

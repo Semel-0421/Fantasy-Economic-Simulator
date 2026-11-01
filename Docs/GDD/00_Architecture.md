@@ -196,3 +196,4 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 - `SimulationView` has no view of merchants or world events yet.
 
 Every node is detailed in play (DEC-100). Each node is also a class with one core node, `NodeTable.Core` (DEC-101).
+Continents, nations and regions hold no market or people: their core towns take them on (DEC-104).

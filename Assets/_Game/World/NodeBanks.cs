@@ -55,6 +55,7 @@ namespace FES.World
 
         public bool IsBranch(int node)
         {
+            if (_nodes.Absorbed) return _nodes.IsSeat(node); // banks stand at the core towns (DEC-104)
             var level = _nodes.LevelOf(node);
             return level >= WorldLevel.Nation && level <= WorldLevel.City;
         }

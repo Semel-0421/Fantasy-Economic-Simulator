@@ -9,8 +9,11 @@ namespace FES.Agents
     /// <summary>Where a facility type may stand: a continent's own goods are made nowhere else (DEC-096).</summary>
     public static class FacilityPlaces
     {
-        public static bool Allowed(FacilityDef def, NodeTable nodes, int node) =>
-            def.Continent == null || def.Continent == nodes.KeyOf(nodes.AncestorAt(node, WorldLevel.Continent));
+        public static bool Allowed(FacilityDef def, NodeTable nodes, int node)
+        {
+            if (nodes.Absorbed && def.CoreOnly && nodes.Level[node] >= (byte)WorldLevel.City && !nodes.IsSeat(node)) return false; // DEC-104
+            return def.Continent == null || def.Continent == nodes.KeyOf(nodes.AncestorAt(node, WorldLevel.Continent));
+        }
     }
 
     public sealed class FacilityExpanded : ISimEvent

@@ -30,9 +30,12 @@ namespace FES.Agents
         public string Key => "agents.purses";
         public int Version => 2;
 
+        readonly NodeTable _nodes;
+
         public PurseState(NodeTable nodes, NodeBanks banks, HouseholdCash households)
         {
             _households = households;
+            _nodes = nodes;
             NationCount = banks.NationCount;
             ContinentCount = nodes.ContinentCount;
             Float = new NativeArray<long>(NationCount + ContinentCount, Allocator.Persistent);
@@ -61,7 +64,7 @@ namespace FES.Agents
         public void ChangeFloat(int node, long amount) => Float[NodeFloat[node]] += amount;
 
         /// <summary>Wages, fees and other money paid to the households of <paramref name="node"/> (negative: paid by them).</summary>
-        public void PayHouseholds(int node, long amount) => _households.Cash[node] += amount;
+        public void PayHouseholds(int node, long amount) => _households.Cash[_nodes.Absorbed ? _nodes.Core[node] : node] += amount; // a class's people live at its core
 
         /// <summary>How much of <paramref name="value"/> the float of <paramref name="node"/> can pay a seller.</summary>
         public long Payable(int node, long value) => Math.Min(value, Math.Max(0, Float[NodeFloat[node]]));

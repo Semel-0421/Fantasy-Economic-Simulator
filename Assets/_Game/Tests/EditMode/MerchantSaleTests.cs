@@ -191,20 +191,6 @@ namespace FES.Tests
         }
 
         [Test]
-        public void GroupWithCargoAndNoCash_GoesToTradersWhoCanPay()
-        {
-            using var s = new Scene(samePurse: false);
-            s.Load(100, 10_000);
-            s.Prices(50, 50);
-            s.SetFloat(s.Here, 0);
-            s.SetFloat(s.There, Plenty);
-            s.Agents.Cash[s.A] = 0;
-            s.Run();
-            Assert.IsTrue(s.Agents.IsTravelling(s.A));
-            Assert.AreNotEqual(s.Purses.NodeFloat[s.Here], s.Purses.NodeFloat[s.Agents.Destination[s.A]]);
-        }
-
-        [Test]
         public void PartialSale_KeepsTheBooksOfWhatIsLeft()
         {
             using var s = new Scene();

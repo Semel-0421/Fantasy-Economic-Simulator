@@ -123,6 +123,7 @@ namespace FES.Agents
             _groups.PrivateAt(site, config);
             for (int g = groupsBefore; g < _groupTable.Count; g++) _bank.Reserve[policy.Nation] -= _groupTable.Cash[g];
             _bank.Reserve[policy.Nation] -= facilityCash;
+            if (!FacilityPlaces.Allowed(def, _nodes, site)) site = _nodes.Core[_banks.NationNode(policy.Nation)]; // fine workshops stand at a core (DEC-104)
             var id = _facilities.Add(site, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, facilityCash);
             _facilities.Group[id.Value] = group;
         }

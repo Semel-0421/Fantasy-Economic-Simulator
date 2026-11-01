@@ -162,6 +162,10 @@ namespace FES.Agents
             cash[first] += amount - given;
         }
 
+        // Government sits at the core towns, and pays there (DEC-104).
+        static Fx WageWeight(NodeTable levels, SimulationConfig config, int node) =>
+            config.LevelWageWeight[levels.Level[node]] * (Fx.One + Fx.FromInt(levels.CoreStrength[node]) * config.CoreWagePerPoint);
+
         /// <summary>Wages for a nation's households: by population, weighted so towns earn more per head (DEC-076).</summary>
         public static void PayNationWages(WorldState world, SimulationConfig config, int nation, long amount)
         {
@@ -174,7 +178,7 @@ namespace FES.Agents
             foreach (int node in nodes)
             {
                 if (population[node] <= 0) continue;
-                total += config.LevelWageWeight[levels.Level[node]].MulInt(population[node]);
+                total += WageWeight(levels, config, node).MulInt(population[node]);
                 if (first < 0) first = node;
             }
             if (first < 0) return;
@@ -182,8 +186,8 @@ namespace FES.Agents
             foreach (int node in nodes)
             {
                 if (population[node] <= 0) continue;
-                long share = amount / total * config.LevelWageWeight[levels.Level[node]].MulInt(population[node])
-                    + amount % total * config.LevelWageWeight[levels.Level[node]].MulInt(population[node]) / total;
+                long share = amount / total * WageWeight(levels, config, node).MulInt(population[node])
+                    + amount % total * WageWeight(levels, config, node).MulInt(population[node]) / total;
                 cash[node] += share;
                 given += share;
             }

@@ -124,3 +124,5 @@ merchants.count_trip_costs,1
 merchants.hedge_fee_permille,8
 merchants.hedge_floor_permille,900
 merchants.hedge_chance_permille,60
+# Classes hold no market; core towns take their people and roles (DEC-104).
+core.absorb,1

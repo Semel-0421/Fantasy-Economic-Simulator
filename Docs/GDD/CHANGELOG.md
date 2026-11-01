@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-02
+- [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, 00_Architecture.md] DEC-104 (classes absorbed by core towns, five core roles)
 - [03_Decisions.md, 02_Data_Formats.md, 00_Architecture.md, 04_Roadmap.md, systems/SYS_MERCHANTS.md, systems/SYS_BANKING.md, systems/SYS_MARKETS.md] DEC-099 to DEC-103 (merchant spending and price cover, every node detailed, class nodes with a core, player bonds only, special goods no necessity)
 
 ## 2026-11-01

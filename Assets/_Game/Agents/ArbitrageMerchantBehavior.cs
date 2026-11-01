@@ -302,6 +302,7 @@ namespace FES.Agents
                 MemberPremiumRaw = _db.Config.MerchantMemberPremium.Raw,
                 AgentAssociation = _agents.Association.AsArray(),
                 TraitLossAversion = _traits.LossAversion,
+                NodeCoreStrength = _nodes.CoreStrength,
                 AgentOwner = _agents.Owner.AsArray(),
                 CountTripCosts = _db.Config.MerchantCountTripCosts,
                 HedgeFloorRaw = _db.Config.HedgeFloor.Raw,

@@ -190,6 +190,7 @@ namespace FES.Data
                     facilities.GetIntOr(r, "state_owned", 0) != 0)
                 {
                     Strategic = facilities.GetIntOr(r, "strategic", 0) != 0,
+                    CoreOnly = facilities.GetIntOr(r, "core_only", 0) != 0,
                     Continent = string.IsNullOrEmpty(facilities.GetStringOr(r, "continent", "")) ? null : facilities.GetString(r, "continent"),
                 });
             }

@@ -126,6 +126,8 @@ namespace FES.Agents
         public long MemberPremiumRaw;
         [ReadOnly] public NativeArray<int> AgentAssociation;
         [ReadOnly] public NativeArray<int> TraitLossAversion;
+        /// <summary>Everyone knows what a core town pays (DEC-104).</summary>
+        [ReadOnly] public NativeArray<int> NodeCoreStrength;
         [ReadOnly] public NativeArray<int> AgentOwner;
         public bool CountTripCosts;
         public long HedgeFloorRaw;
@@ -599,7 +601,7 @@ namespace FES.Agents
                     long baseFee = Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]);
                     long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]);
                     // A node nobody told the group about is judged at the anchor price.
-                    long sell = !Rumors || memory.Knows(to) ? Earn(a, to, OfferAt(toCell)) : Fx.RoundShift(GoodBasePrice[good] * indexRaw);
+                    long sell = !Rumors || memory.Knows(to) || NodeCoreStrength[to] > 0 ? Earn(a, to, OfferAt(toCell)) : Fx.RoundShift(GoodBasePrice[good] * indexRaw);
                     long toll = Fx.MulIntRaw(sell, TollRate(to, good));
                     if (!TradersPay(a, to, Price[toCell])) sell = 0;
                     sell = Max(sell, Beyond(a, to, node, good, licensed, anchor, inRange, JudgeHops - 1));

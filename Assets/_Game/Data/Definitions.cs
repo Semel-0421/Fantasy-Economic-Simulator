@@ -101,6 +101,8 @@ namespace FES.Data
         public readonly IndustryTier Tier;
         /// <summary>The state grants its producers money to grow the industry (DEC-087).</summary>
         public bool Strategic;
+        /// <summary>Stands only at a core town (DEC-104).</summary>
+        public bool CoreOnly;
         /// <summary>The key of the only continent it can stand on, or null for any (DEC-096).</summary>
         public string Continent;
         public readonly RecipeDef Recipe;

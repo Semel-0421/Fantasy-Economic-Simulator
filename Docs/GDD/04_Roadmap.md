@@ -176,6 +176,8 @@ Around the player, six seeds, year 30: 15.64M, -0.35%, 52/86/88/122%, failures 0
 
 ## Remaining work
 
+Classes absorbed (DEC-104), six seeds, year 30. Highest strength: 15.55M, -0.29%, city/village supply 85/146%, failures 4.7%, bills 2.3M issued a year, 14% lost. Stacking: 15.36M, -0.38%, 82/152%, 4.7%, bills 1.9M, 19% lost. By strength, highest, three seeds: ordinary town 1.18M people, 93% of necessities met; region core 1.70M, 82%; capital 2.25M, 78%. Stacking: 1.11M, 96%; 1.60M, 86%; 2.61M, 75%.
+
 Where merchants' coins go, every node detailed, three seeds, a year at year 30, before DEC-099 (thousands; sales 12,508): goods 5,278, wages 3,496, tolls 1,440, fees 1,312, guards 436, theft 379, upkeep 173, policies 104 less 127 paid back, loans 56, income tax 38, discount 33, association fees 32, vehicles 3. With DEC-099 (sales 11,804): goods 4,845, wages 3,311, tolls 1,434, fees 1,214, guards 367, theft 317, upkeep 177, policies 512 less 377 paid back, loans 70, tax 40, discount 27, association fees 31, price cover 6 less 5 paid. What failed groups lost: 11, against about 21.
 Result with DEC-099 to DEC-103. Six seeds, year 30: 15.25M, -0.13%, 52/92/95/145%, failures 6.3%, within noise of 15.26M, -0.09%, 46/92/98/146%. Bills lost 22k of 1,171k a year, against 220k of 2,238k. Three seeds, year 60: 15.95M, +0.11%, 74/99/100/158%, 7.0%, against 15.54M, +0.12%; bills lost 335k of 2,723k.
 Order agreed: refactoring, then balance, then the phases.
@@ -198,7 +200,7 @@ Gaps
 
 Margin trials under DEC-099 to DEC-103, three seeds, year 30, reading people, growth, supply, share of bills lost. 15%: 14.96M, -0.01%, 40/94/102/142%, 30%. 20%: 15.09M, -0.08%, 33/94/99/138%, 25%. 25%: 15.11M, -0.09%, 49/91/99/146%, 11%. 30%: 15.30M, -0.04%, 60/94/98/149%, 3%. Chosen 25%. Six seeds, year 30: 15.33M, -0.14%, 49/92/96/147%, failures 7.4%, bills 3.5M issued a year, 11% lost. Three seeds, year 60: 15.69M, +0.15%, 82/100/101/155%, bills 4.7M, 30% lost.
 
-Open, from DEC-101: what a core node does (Q-043).
+Open, from DEC-104: household coins left at region nodes with no people (235k at year 60), source not found; core towns the worst supplied; people falling 0.15% a year at year 60.
 
 Balance, from DEC-095 to DEC-103
 - The traders' margin works within a narrow range, and swells floats at 35%.

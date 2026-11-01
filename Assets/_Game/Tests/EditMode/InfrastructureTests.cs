@@ -37,14 +37,14 @@ namespace FES.Tests
         public void WaterRoutes_RunBetweenPorts()
         {
             using var sim = TestWorlds.BuildSample();
-            Assert.IsTrue(sim.View.IsPort(Node(sim, "aur_n1_r2")));
-            Assert.IsFalse(sim.View.IsPort(Node(sim, "aur_n1_r1")));
+            Assert.IsTrue(sim.View.IsPort(Node(sim, "aur_n1_r2_c1")));
+            Assert.IsFalse(sim.View.IsPort(Node(sim, "aur_n1_r1_c1")));
 
             var nodes = TestWorlds.Sample().ReadText(CsvMapSource.NodesFile);
-            int at = nodes.IndexOf("aur_n1_r2,Aurelia Region 2");
+            int at = nodes.IndexOf("aur_n1_r2_c1,Aurelia City 2-1");
             int end = nodes.IndexOf('\n', at);
             string line = nodes.Substring(at, end - at).TrimEnd('\r');
-            string noPort = nodes.Replace(line, line.Replace(",1,aur_n1_r2_c1", ",,aur_n1_r2_c1")); // drop the port flag
+            string noPort = nodes.Replace(line, line.Substring(0, line.Length - 2) + ","); // drop the port flag
             Assert.AreNotEqual(nodes, noPort);
             var e = Assert.Throws<System.FormatException>(() =>
                 SimulationBuilder.FromData(TestWorlds.SampleWith(CsvMapSource.NodesFile, noPort), 1).Build());
@@ -56,9 +56,9 @@ namespace FES.Tests
         {
             using var sim = SafeRoads();
             var config = sim.Database.Config;
-            var player = PlaceAt(sim, "aur_n1_r2", config.ShipPrice + 1_000);
-            var home = Node(sim, "aur_n1_r2");
-            var abroad = Node(sim, "bor_n1_r1");
+            var player = PlaceAt(sim, "aur_n1_r2_c1", config.ShipPrice + 1_000);
+            var home = Node(sim, "aur_n1_r2_c1");
+            var abroad = Node(sim, "bor_n1_r1_c2");
             player.Coins[sim.View.ContinentOf(abroad)] = 1_000;
             sim.Actions.BuyShip();
             sim.AdvanceTurn();
@@ -93,7 +93,7 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
             var costs = new TravelCosts(sim.World, sim.Database);
-            int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1");
+            int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1_c2");
             int unpaved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1_c1_v1");
             var roads = sim.World.Get<RoadState>();
             Assert.AreEqual(RoadState.MaxCondition, roads.Condition[paved]);
@@ -120,15 +120,15 @@ namespace FES.Tests
             var banks = sim.World.Get<NodeBanks>();
             var bank = sim.World.Get<BankState>();
             var roads = sim.World.Get<RoadState>();
-            int nation = banks.NationIndex(sim.World.Get<NodeTable>().AncestorAt(Node(sim, "aur_n1_r1").Value, WorldLevel.Nation));
+            int nation = banks.NationIndex(sim.World.Get<NodeTable>().AncestorAt(Node(sim, "aur_n1_r1_c1").Value, WorldLevel.Nation));
             int ownRoads = Enumerable.Range(0, roads.Condition.Length).Count(r => roads.IsPaved(r) && roads.Owner[r] == nation);
-            Assert.AreEqual(8, ownRoads);
+            Assert.AreEqual(4, ownRoads);
 
             long reserve = bank.Reserve[nation];
             sim.AdvanceTurn();
             Assert.AreEqual(reserve - ownRoads * config.RoadUpkeep, bank.Reserve[nation]);
 
-            int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1");
+            int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1_c2");
             config.LodMode = 2; // detailed merchants' tolls would fill the reserve
             bank.Reserve[nation] = 0;
             sim.AdvanceTurn();
@@ -179,8 +179,8 @@ namespace FES.Tests
         public void WaterRoutes_CannotBePaved()
         {
             using var sim = TestWorlds.BuildSample();
-            PlaceAt(sim, "aur_n1_r2", 100_000);
-            sim.Actions.BuildRoad(Node(sim, "bor_n1_r1"));
+            PlaceAt(sim, "aur_n1_r2_c1", 100_000);
+            sim.Actions.BuildRoad(Node(sim, "bor_n1_r1_c2"));
             sim.AdvanceTurn();
             Assert.AreEqual(1, Rejected(sim));
         }

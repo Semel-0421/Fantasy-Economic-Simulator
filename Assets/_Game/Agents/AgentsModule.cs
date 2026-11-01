@@ -166,7 +166,10 @@ namespace FES.Agents
                     {
                         var def = Draw(defsByTier, made, n, t, k, seed);
                         if (def == null) continue;
-                        table.Add(n, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, db.Config.FacilityStartCash[(int)def.Tier]);
+                        // Classes' producers stand at their core, and fine workshops only at a core (DEC-104).
+                        int at = nodes.Core[n];
+                        if (nodes.Absorbed && def.CoreOnly && !nodes.IsSeat(at)) at = nodes.Core[nodes.AncestorAt(n, WorldLevel.Region)];
+                        table.Add(at, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, db.Config.FacilityStartCash[(int)def.Tier]);
                     }
                 }
             }
@@ -208,7 +211,7 @@ namespace FES.Agents
                 var level = nodes.LevelOf(n);
                 for (int k = 0; k < config.MerchantsPerNode[(int)level]; k++)
                 {
-                    var id = table.Add(n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
+                    var id = table.Add(nodes.Absorbed ? nodes.Core[n] : n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
                     if (config.MerchantTraitsEnabled) table.Trait[id.Value] = (byte)DetRandom.For(seed, 0, TraitStream, id.Value).NextInt(MerchantTraits.Count);
                     table.Vehicle[id.Value] = MerchantVehicles.AtStart(config, seed, id.Value);
                 }

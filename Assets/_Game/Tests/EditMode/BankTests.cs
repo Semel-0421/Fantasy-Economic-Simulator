@@ -59,8 +59,8 @@ namespace FES.Tests
             using var sim = Build();
             var view = sim.View;
             Assert.IsTrue(view.IsBankBranch(Node(sim, City)));
-            Assert.IsTrue(view.IsBankBranch(Node(sim, "aur_n1_r1")));
-            Assert.IsTrue(view.IsBankBranch(Node(sim, "aur_n1")));
+            Assert.IsFalse(view.IsBankBranch(Node(sim, "aur_n1_r1_c2"))); // banks stand at core towns (DEC-104)
+            Assert.IsFalse(view.IsBankBranch(Node(sim, "aur_n1")));
             Assert.IsFalse(view.IsBankBranch(Node(sim, "aur_n1_r1_c1_v1")));
             Assert.IsFalse(view.IsBankBranch(Node(sim, "aur")));
             Assert.AreEqual(Node(sim, City), view.InternationalBankOf(view.ContinentOf(Node(sim, City))));

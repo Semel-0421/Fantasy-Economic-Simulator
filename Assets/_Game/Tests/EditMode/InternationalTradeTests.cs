@@ -28,7 +28,7 @@ namespace FES.Tests
             public readonly GoodId Good;
             public readonly int A, Here, There;
 
-            public Port(string goodKey = "wheat", string config = "lod.mode,1")
+            public Port(string goodKey = "wheat", string config = "lod.mode,1\nmarkets.trader_spread_permille,0")
             {
                 Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig(config.Split('\n')), 42).Build();
                 Sim.AdvanceTurn();

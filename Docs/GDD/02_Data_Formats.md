@@ -57,7 +57,7 @@ grades may be a list such as `Low|Mid`. Drives the sparse market layout and ther
 
 ## map_nodes.csv / map_routes.csv
 
-- Nodes: `key,name,level,parent,tags`. Continents have an empty parent. A node's parent must be one level
+- Nodes: `key,name,level,parent,tags`. `core` (optional, DEC-101) names the town or village at the heart of a continent, nation or region; empty takes its first town. Continents have an empty parent. A node's parent must be one level
   up, except villages, which may hang off a city or a region. `tags` (optional) lists terrain tags
   separated by `|`; every tag must appear in `specialties.csv`. `tariff_permille` and
   `specialty_surcharge_permille` (optional, empty = config default) set the node's toll rates.
@@ -108,7 +108,7 @@ changing a default in code does.
 | facility.output_wage_permille, state.public_wage_permille | 0, 0 | wages by output and public town wages (DEC-082) |
 | merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle{0,1,2}.start_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 0, 3, 100 | merchant vehicles (DEC-084) |
 | merchants.vehicle{0,1,2}.cost_permille, .danger_permille, .premium_permille, .cash_times; merchants.risk_aversion; orders.lead_weeks, orders.expiry_weeks; production.forecast_enabled, production.forecast_min_permille | 1000, 1000, 1000, 3; 1; 8, 52; 0, 100 | DEC-085; goods.csv gains made_to_order |
-| lod.mode | 0 | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
+| lod.mode | 1 (DEC-100) | 0 detail around the player, 1 every node detailed, 2 every node aggregate; for measuring |
 | merchants.join_permille, merchants.member_fee_permille, merchants.support_floor_permille, merchants.support_share_permille, merchants.member_premium_permille | 0, 50, 200, 100, 500 | merchant associations (DEC-086) |
 | state.strategic_subsidy_permille; contract.per_nation, contract.min_stock, contract.stock_weeks, contract.term_weeks, contract.base_discount_permille, contract.discount_per_unit_permille, contract.max_discount_permille | 0; 0, 200, 26, 52, 50, 1, 250 | DEC-087; facilities.csv gains strategic |
 | contract.min_weeks, contract.max_weeks, contract.deposit_permille (replacing contract.term_weeks) | 8, 104, 200 | contract term and deposit (DEC-088) |
@@ -139,6 +139,12 @@ changing a default in code does.
 | merchants.return_home | 0, sample data 1 (DEC-095) | a group stranded above its home with nothing to carry comes back down empty |
 | merchants.cross_level | -1, sample data 2 (DEC-096) | the lowest level whose groups sail between continents; -1 none |
 | merchants.cross_flow_permille | 0, sample data 650 (DEC-066) | share of the normal flow that aggregate trade moves between continents |
+| markets.trader_spread_permille | 0, sample data 250 (DEC-098) | traders pay sellers the price less this margin |
+| traders.float_keep_weeks, traders.float_payout_permille | 0 off, sample data 8; 20 (DEC-098) | weeks of households' wishes a float keeps; share of the excess paid to the nation's households a week ([Draft]) |
+| merchants.flow_wage_permille | 0, sample data 1000 (DEC-098) | share of an aggregate flow's margin paid as wages at the origin ([Draft]) |
+| merchants.cautious/normal/aggressive.loss_aversion | 0 uses merchants.risk_aversion; sample data 3, 2, 1 (DEC-099) | how many times a loss weighs against the same gain ([Draft]) |
+| merchants.count_trip_costs | 0, sample data 1 (DEC-099) | a trip's upkeep and expected losses count when choosing a load ([Draft]) |
+| merchants.hedge_fee_permille, hedge_floor_permille, hedge_fall_permille, hedge_chance_permille, hedge_bank_share_permille | 0 off, 850, 150, 300, 100; sample data 8, 900, 150, 60, 100 (DEC-099) | price cover ([Draft]) |
 | merchants.judge_coin_units | 0, sample data 20 (DEC-096) | a market whose traders cannot pay for this many units is no market when judging a load; 0 off |
 | merchants.port_crossers | 0, sample data 1 (DEC-096) | a large enough group based at a port sails whatever its personality |
 | bank.international_balance | 0, sample data 1 (DEC-096) | nations keep their international bank between its starting share of the coin supply and twice that |

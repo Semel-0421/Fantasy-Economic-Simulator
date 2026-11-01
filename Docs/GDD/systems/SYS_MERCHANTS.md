@@ -21,6 +21,8 @@ without scripting. Their counts per node are already in config (`merchants.<leve
   approximated as flows proportional to price gaps (DEC-003).
 - [Confirmed] Merchants trade at the current price, their volumes feed supply and demand, and orders beyond
   stock fill partially, like the player (DEC-006, DEC-020).
+- [Confirmed] When selling, traders pay the price less their margin, 25% in the sample data, and groups judge markets by that
+  offer (previous: the price; DEC-098).
 - [Confirmed] Merchants pay the same base fees, per-unit charges and tolls as the player (DEC-015).
 - [Confirmed] A merchant group whose cash runs out goes bankrupt and is replaced by a new group (DEC-011).
 - [Draft] Merchant capacity per level starts as placeholder config values (DEC-013).
@@ -129,7 +131,9 @@ stateDiagram-v2
 - [Draft] A group bids for what it would carry if the market had it, when it has nothing to buy, or when that pays more
   than what it leaves with. The bid raises the price and stops when the margin closes (DEC-095, DEC-096).
 - [Draft] A group stranded above its home with nothing to carry comes back down empty (DEC-095).
-- [Draft] Traders who cannot pay give a bill, at home only (DEC-097, SYS-BANKING).
+- [Draft] Traders who cannot pay give a bill, at home only (DEC-097, SYS-BANKING), and never to the player's groups (DEC-102).
+- [Draft] Loss aversion by personality; trip costs count in choosing a load; policy first, then guards; price cover as a hedge (DEC-099).
+- [Draft] Aggregate flows pay their whole margin as wages at the origin, as far as the float can (DEC-098).
 - [Confirmed] Groups pay wages from surplus cash (DEC-070); facilities and groups pay income tax (DEC-071).
 
 ## Unity implementation notes

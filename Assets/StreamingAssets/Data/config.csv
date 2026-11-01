@@ -1,5 +1,6 @@
 # Tunables. Missing keys use code defaults (see SimulationConfig).
 key,value
+lod.mode,1
 tier.continent.period,4
 tier.nation.period,4
 tier.nation.offset,1
@@ -106,8 +107,20 @@ merchants.cross_flow_permille,650
 merchants.judge_coin_units,20
 merchants.port_crossers,1
 bank.international_balance,1
+# Traders pay sellers the price less their margin and spend what they hold beyond eight weeks of trade; far flows pay carriers their margin as wages (DEC-098).
+markets.trader_spread_permille,250
+traders.float_keep_weeks,8
+merchants.flow_wage_permille,1000
 # Bills for what traders cannot pay, government and corporate bonds on idle money, groups keeping their facilities in working cash (DEC-097).
 credit.bill_cap_weeks,8
 credit.state_debt_permille,300
 credit.company_debt_permille,500
 credit.working_weeks,4
+# Merchants weigh losses by personality, count a trip's costs when choosing a load, and may cover a load's price (DEC-099).
+merchants.cautious.loss_aversion,3
+merchants.normal.loss_aversion,2
+merchants.aggressive.loss_aversion,1
+merchants.count_trip_costs,1
+merchants.hedge_fee_permille,8
+merchants.hedge_floor_permille,900
+merchants.hedge_chance_permille,60

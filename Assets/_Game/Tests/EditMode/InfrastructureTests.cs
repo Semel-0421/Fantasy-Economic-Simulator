@@ -44,7 +44,7 @@ namespace FES.Tests
             int at = nodes.IndexOf("aur_n1_r2,Aurelia Region 2");
             int end = nodes.IndexOf('\n', at);
             string line = nodes.Substring(at, end - at).TrimEnd('\r');
-            string noPort = nodes.Replace(line, line.Substring(0, line.Length - 1)); // drop the port flag
+            string noPort = nodes.Replace(line, line.Replace(",1,aur_n1_r2_c1", ",,aur_n1_r2_c1")); // drop the port flag
             Assert.AreNotEqual(nodes, noPort);
             var e = Assert.Throws<System.FormatException>(() =>
                 SimulationBuilder.FromData(TestWorlds.SampleWith(CsvMapSource.NodesFile, noPort), 1).Build());
@@ -129,6 +129,7 @@ namespace FES.Tests
             Assert.AreEqual(reserve - ownRoads * config.RoadUpkeep, bank.Reserve[nation]);
 
             int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1");
+            config.LodMode = 2; // detailed merchants' tolls would fill the reserve
             bank.Reserve[nation] = 0;
             sim.AdvanceTurn();
             Assert.AreEqual(RoadState.MaxCondition - config.RoadDecayPermille, roads.Condition[paved]);

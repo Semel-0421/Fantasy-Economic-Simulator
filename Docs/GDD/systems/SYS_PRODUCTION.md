@@ -30,6 +30,7 @@ raw materials propagate to finished goods, and each node's specialties give ever
   - a lower local price
 - [Confirmed] Starting cash per industry tier comes from config (DEC-028).
 - [Confirmed] NPC output is sold at the market's current price, which is the facility's income (DEC-028).
+- [Confirmed] Traders pay the price less their margin, 25% in the sample data (previous: the price; DEC-098).
 - [Confirmed] A facility whose cash runs out goes bankrupt and gets a new operator (DEC-028).
 - [Confirmed] This applies to player-owned facilities too: the player loses the facility (DEC-035).
 - [Confirmed] Facilities can borrow from banks, pledging facilities as collateral (DEC-037).

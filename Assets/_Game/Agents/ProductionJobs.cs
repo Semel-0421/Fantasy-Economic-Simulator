@@ -24,6 +24,8 @@ namespace FES.Agents
 
         /// <summary>Producers take bills for what traders cannot pay (DEC-097); see <see cref="DetailedMerchantJob"/>.</summary>
         public bool BillProducers;
+        /// <summary>Traders pay sellers the price less this margin (raw Fx, DEC-098).</summary>
+        public long SpreadRaw;
         public NativeArray<long> BillRoom;
         public NativeArray<long> BillBankRoom;
         public NativeArray<long> BillBankSpent;
@@ -227,15 +229,17 @@ namespace FES.Agents
                 // All of it reaches the market; the producer is paid only as far as the traders can pay (DEC-061),
                 // from what the float keeps free of this week's merchants.
                 int traders = NodeFloat[FacilityNode[f]];
-                long paid = clamped * Price[cell];
+                long worth = clamped * Price[cell];
+                worth -= Fx.MulIntRaw(worth, SpreadRaw);
+                long paid = worth;
                 long payable = Float[traders] - FloatReserve[traders];
                 if (paid > payable) paid = payable > 0 ? payable : 0;
                 Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
                 FacilityCash[f] += paid;
                 Float[traders] -= paid;
-                if (BillProducers)
+                if (BillProducers && FacilityOwner[f] != OwnerIds.Player) // only bonds are open to the player (DEC-102)
                 {
-                    long face = Min(clamped * Price[cell] - paid, BillRoom[traders]);
+                    long face = Min(worth - paid, BillRoom[traders]);
                     if (face > 0)
                     {
                         BillRoom[traders] -= face;

@@ -213,6 +213,7 @@ namespace FES.Agents
                 NodeFloat = _purses.NodeFloat,
                 Float = _purses.Float,
                 FloatReserve = _floatReserve,
+                SpreadRaw = _db.Config.TraderSpread.Raw,
                 GoodCount = _markets.GoodBasePrice.Length,
                 SubsidyRate = development.SubsidyRate,
                 SubsidyLeft = development.SubsidyLeft,
@@ -311,11 +312,12 @@ namespace FES.Agents
                 int overflow = quantity - stored;
                 if (overflow == 0 || cell < 0) continue; // no market for the good: the overflow is lost
                 // As much as the traders can pay for is sold; the rest is lost too (DEC-061).
-                overflow = _purses.Sellable(_facilities.Node[f], overflow, _markets.Price[cell]);
+                int offer = _db.Config.TraderOffer(_markets.Price[cell]);
+                overflow = _purses.Sellable(_facilities.Node[f], overflow, offer);
                 if (overflow == 0) continue;
                 _flows.Sell(cell, overflow);
-                _facilities.Cash[f] += (long)overflow * _markets.Price[cell];
-                _purses.ChangeFloat(_facilities.Node[f], -(long)overflow * _markets.Price[cell]);
+                _facilities.Cash[f] += (long)overflow * offer;
+                _purses.ChangeFloat(_facilities.Node[f], -(long)overflow * offer);
             }
         }
 

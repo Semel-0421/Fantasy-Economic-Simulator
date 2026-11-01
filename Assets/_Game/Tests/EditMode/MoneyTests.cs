@@ -192,6 +192,7 @@ namespace FES.Tests
         public void Selling_IsCappedByTheTradersFloat()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.TraderSpread = Fx.Zero;
             var city = Node(sim, City);
             SetCoins(sim, city, 0);
             Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));

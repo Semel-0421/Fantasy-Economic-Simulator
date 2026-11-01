@@ -108,6 +108,7 @@ namespace FES.Agents
                 int node = MoneyLedger.MerchantSettlesAt(_nodes, _agents, a), purse = _purses.NodeFloat[node];
                 long wage = _labor.Rate(purse).MulInt(_config.LaborMerchantWage.MulInt(excess));
                 _agents.Cash[a] -= wage;
+                _world.Get<MerchantTripStats>().SpentWages += wage;
                 if (purse < _purses.NationCount) _wages[purse] += wage;
                 else _purses.PayHouseholds(node, wage);
             }

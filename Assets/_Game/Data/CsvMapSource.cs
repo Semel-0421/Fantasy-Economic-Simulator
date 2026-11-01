@@ -24,6 +24,7 @@ namespace FES.Data
                     Name = nodes.GetStringOr(r, "name", nodes.GetString(r, "key")),
                     Level = nodes.GetEnum<WorldLevel>(r, "level"),
                     ParentKey = nodes.GetString(r, "parent"),
+                    CoreKey = nodes.GetStringOr(r, "core", string.Empty),
                     Tags = ParseTags(nodes.GetStringOr(r, "tags", string.Empty)),
                     TariffPermille = nodes.GetIntOr(r, "tariff_permille", -1),
                     SpecialtySurchargePermille = nodes.GetIntOr(r, "specialty_surcharge_permille", -1),

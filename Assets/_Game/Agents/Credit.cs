@@ -109,7 +109,7 @@ namespace FES.Agents
     {
         /// <summary>A group, or <see cref="OfState"/> of a nation.</summary>
         public readonly NativeColumn<int> Issuer;
-        /// <summary>The households of a node, or <see cref="OfGroup"/> of a group.</summary>
+        /// <summary>The households of a node, <see cref="OfGroup"/> of a group, or <see cref="PlayerHolder"/>.</summary>
         public readonly NativeColumn<int> Holder;
         public readonly NativeColumn<long> Face;
         public readonly NativeColumn<long> Interest;
@@ -126,6 +126,20 @@ namespace FES.Agents
         public static bool IsState(int issuer) => issuer < 0;
         public static int OfGroup(int group) => ~group;
         public static bool IsGroup(int holder) => holder < 0;
+        /// <summary>The player's holding (DEC-102); what it earns goes to their account with the issuer's bank.</summary>
+        public const int PlayerHolder = int.MinValue;
+
+        public long Held(int issuer, int holder)
+        {
+            BuildIndex();
+            return _rowOf.TryGetValue(Pair(issuer, holder), out int row) ? Face[row] : 0;
+        }
+
+        public void Reduce(int issuer, int holder, long face)
+        {
+            BuildIndex();
+            Face[_rowOf[Pair(issuer, holder)]] -= face;
+        }
 
         public BondTable()
         {
@@ -280,6 +294,18 @@ namespace FES.Agents
             return raised;
         }
 
+        /// <summary>How much more a nation may owe: a share of its part of the continent's coins.</summary>
+        public static long StateRoom(WorldState world, SimulationConfig config, int nation)
+        {
+            var nodes = world.Get<NodeTable>();
+            var banks = world.Get<NodeBanks>();
+            int continent = nodes.Continent[banks.NationNode(nation)], nations = 0;
+            for (int n = 0; n < banks.NationCount; n++)
+                if (nodes.Continent[banks.NationNode(n)] == continent) nations++;
+            long limit = config.StateDebtShare.MulInt(world.Get<CurrencyState>().CoinSupply[continent] / Math.Max(1, nations));
+            return Math.Max(0, limit - world.Get<BondTable>().DebtOf(BondTable.OfState(nation)));
+        }
+
         /// <summary>How much more a group may owe: a share of the value of its facilities.</summary>
         public static long CompanyRoom(WorldState world, GameDatabase db, int group)
         {
@@ -417,7 +443,7 @@ namespace FES.Agents
                 _bonds.Interest[r] -= toInterest;
                 long toFace = paid - toInterest;
                 _bonds.Face[r] -= toFace;
-                PayBondHolder(_bonds.Holder[r], paid, toFace);
+                PayBondHolder(_bonds.Holder[r], issuer, paid, toFace);
                 _stats.BondsPaid += paid;
                 if (paid >= due) _bonds.BehindWeeks[r] = 0;
                 else
@@ -443,8 +469,15 @@ namespace FES.Agents
             }
         }
 
-        void PayBondHolder(int holder, long paid, long face)
+        void PayBondHolder(int holder, int issuer, long paid, long face)
         {
+            if (holder == BondTable.PlayerHolder)
+            {
+                int nation = BondTable.IsState(issuer) ? ~issuer : _purses.NodeFloat[_groups.Node[issuer]];
+                _bank.PlayerDeposit[nation] += paid;
+                _bank.Reserve[nation] += paid;
+                return;
+            }
             if (BondTable.IsGroup(holder))
             {
                 _groups.Cash[~holder] += paid;
@@ -497,9 +530,7 @@ namespace FES.Agents
             for (int n = 0; n < _banks.NationCount; n++)
             {
                 if (_stateBehind[n] || _finance.EventOf(n) == FinancialEventKind.CreditCrunch) continue;
-                int continent = _nodes.Continent[_banks.NationNode(n)];
-                long limit = config.StateDebtShare.MulInt(_currency.CoinSupply[continent] / Math.Max(1, _nationsOnContinent[continent]));
-                long room = limit - _bonds.DebtOf(BondTable.OfState(n));
+                long room = BondDesk.StateRoom(_world, config, n);
                 if (room <= 0) continue;
                 long shortfall = 0;
                 foreach (int node in _purses.NationNodes[n]) shortfall += Math.Max(0, MoneyLedger.TownShortfall(_nodes, _cash, config, node));

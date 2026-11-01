@@ -194,3 +194,5 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 - Saves reject changed data instead of remapping ids by key.
 - Sections missing from an older save keep the freshly built state.
 - `SimulationView` has no view of merchants or world events yet.
+
+Every node is detailed in play (DEC-100). Each node is also a class with one core node, `NodeTable.Core` (DEC-101).

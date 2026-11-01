@@ -242,6 +242,7 @@ namespace FES.Tests
         public void NpcMerchant_BorrowsAgainstTheCargoItCarries()
         {
             using var sim = BuildCalm();
+            sim.Database.Config.LodMode = 2; // a detailed group would just sell the load
             var agents = sim.World.Get<AgentTable>();
             var nodes = sim.World.Get<NodeTable>();
             var cargo = sim.World.Get<CargoTable>();

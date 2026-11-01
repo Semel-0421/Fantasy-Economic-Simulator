@@ -215,6 +215,7 @@ namespace FES.Tests
         public void GroupBasedInTheDetailedArea_IsSteppedAwayFromIt()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.LodMode = 0;
             sim.AdvanceTurn();
             var agents = sim.World.Get<AgentTable>();
             var nodes = sim.World.Get<NodeTable>();
@@ -348,7 +349,7 @@ namespace FES.Tests
                 agents.Mode.Write(writer);
                 agents.Cash.Write(writer);
             }
-            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 7, v1.ToArray());
+            var migrated = sim.Migrations.Upgrade(AgentTable.SectionKey, 1, 8, v1.ToArray());
             agents.Read(new BinaryReader(new MemoryStream(migrated)));
             for (int a = 0; a < agents.Count; a++)
             {

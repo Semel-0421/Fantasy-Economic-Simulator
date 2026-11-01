@@ -55,6 +55,7 @@ namespace FES.Agents
                 {
                     long fee = _config.MerchantMemberFee.MulInt(_agents.Cash[a] - start);
                     _agents.Cash[a] -= fee;
+                    ctx.World.Get<MerchantTripStats>().SpentFeesToAssociations += fee;
                     _groups.Cash[association] += fee;
                 }
                 long floor = _config.MerchantSupportFloor.MulInt(start);

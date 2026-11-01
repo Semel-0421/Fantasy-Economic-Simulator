@@ -68,7 +68,43 @@ namespace FES.World
             // Children of a parent may sit in different levels (a village can hang off a region);
             // CSR fills in item order, which keeps each child list sorted by index.
             BuildCsr(parents, table.ChildStart, table.ChildCount, table.Children);
+            AssignCores(table, ordered, newIndex);
             return table;
+        }
+
+        // A town or village is its own core. A larger class names a town or village inside it, or takes its first town,
+        // or else its first village (DEC-101).
+        static void AssignCores(NodeTable table, List<MapNodeDef> ordered, Dictionary<string, int> newIndex)
+        {
+            for (int i = 0; i < table.Count; i++)
+            {
+                if (table.Level[i] >= (byte)WorldLevel.City)
+                {
+                    if (!string.IsNullOrEmpty(ordered[i].CoreKey) && ordered[i].CoreKey != ordered[i].Key)
+                        throw new FormatException($"Node '{ordered[i].Key}': a {table.LevelOf(i)} is its own core.");
+                    table.Core[i] = i;
+                    continue;
+                }
+                int core = -1;
+                string named = ordered[i].CoreKey;
+                if (!string.IsNullOrEmpty(named))
+                {
+                    if (!newIndex.TryGetValue(named, out core) || !table.IsAncestorOrSelf(i, core) || table.Level[core] < (byte)WorldLevel.City)
+                        throw new FormatException($"Node '{ordered[i].Key}': core '{named}' is not a town or village inside it.");
+                }
+                else
+                {
+                    foreach (var level in new[] { WorldLevel.City, WorldLevel.Village })
+                    {
+                        int start = table.LevelStart(level), end = start + table.LevelCount(level);
+                        for (int n = start; n < end && core < 0; n++)
+                            if (table.IsAncestorOrSelf(i, n)) core = n;
+                        if (core >= 0) break;
+                    }
+                    if (core < 0) core = i; // a class with nothing under it yet
+                }
+                table.Core[i] = core;
+            }
         }
 
         /// <summary>

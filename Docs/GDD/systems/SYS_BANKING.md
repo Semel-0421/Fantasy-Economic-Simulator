@@ -63,6 +63,8 @@ faster than its cash at the risk of losing what it owns.
   - Households lend to their nation's float while traders keep up their payments (DEC-092, DEC-094): 1% a week
     of their cash beyond 26 weeks of spending, at 5% a year, paid back over 52 weeks within 25% of the float
     (`traders.*`). The bank can lend the same way; it does not in the sample data.
+  - Traders pay sellers the price less their margin. A float above eight weeks of households' wishes pays 2% a week of
+    the excess to the nation's households (DEC-098).
   - Credit among NPCs (DEC-097; the player has no commands for it yet):
     - Traders who cannot pay a merchant give a bill, due in 8 weeks, up to 8 weeks of households' wishes less what
       they owe. The bank pays the seller the face less 2% as far as it has coins above half its reserve target;
@@ -74,6 +76,8 @@ faster than its cash at the risk of losing what it owns.
     - A group feeds a facility short of 4 weeks of working cash, if its output is worth more than its inputs, from its
       own money above its starting cash, then from bonds up to 50% of its facilities' value: 7% a year over 10 years.
       26 weeks behind, it defaults and its holders lose what is left.
+    - The player trades bonds only, at the issuer's bank, never bills; what they pay goes to the player's account (DEC-102).
+    - Banks sell merchants price cover (DEC-099, SYS-MERCHANTS).
     - Bonds are bought by households, 0.5% a week of their cash beyond 26 weeks of spending, and by groups, 0.5% a week of
       their cash beyond twice their starting cash. `BillTable`, `BondTable` and `BillRoom` are saved.
   - Nations keep their international bank between 2% and 4% of the coin supply, out of and into their reserves, so a

@@ -25,6 +25,7 @@ warehouses at owned sites as the business expands.
 - [Confirmed] Output of player-owned facilities always goes to that site's warehouse (DEC-005).
 - [Confirmed] The player buys and sells at the market's current price; the traded quantity is added to
   that market's demand (buy) or supply (sell) and moves the price at the next repricing (DEC-006).
+- [Confirmed] When selling, traders pay the price less their margin, 25% in the sample data (previous: the price; DEC-098).
 - [Confirmed] An order larger than the market stock fills up to the stock (DEC-020).
 - [Confirmed] Selling special goods needs a license (DEC-021, DEC-024); details in SYS-LICENSES.
 - [Confirmed] Output that does not fit a warehouse is sold at the market (DEC-029).

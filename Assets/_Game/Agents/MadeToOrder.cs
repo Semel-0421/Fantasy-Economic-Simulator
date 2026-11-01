@@ -14,6 +14,12 @@ namespace FES.Agents
         public long Trips, Guarded, Insured, Encounters;
         /// <summary>DEC-093: sales below what the goods cost and the coins lost on them, loads carried on instead of sold, sales made because the group would not last the trip, all coins from sales, and what failed groups had paid for the goods they lost.</summary>
         public long LossSales, LossAmount, CarriedOn, ForcedSales, Sold, LostWithGroups;
+        /// <summary>DEC-099: where merchants' coins go. What they pay for goods, on fees, tolls, guards, cover, upkeep and to thieves; what cover paid back; lost on bills' discount and foreign exchange.</summary>
+        public long SpentGoods, SpentFees, SpentTolls, SpentGuards, SpentCover, SpentUpkeep, SpentStolen, CoverRefunds, SpentDiscount;
+        /// <summary>DEC-099: what merchants pay outside their trips: wages, income tax, association fees, loans, vehicles.</summary>
+        public long SpentWages, SpentTax, SpentFeesToAssociations, SpentLoans, SpentVehicles;
+        /// <summary>DEC-099: price cover bought, and what banks paid on it.</summary>
+        public long SpentHedge, HedgePaid;
     }
 
     /// <summary>
@@ -142,6 +148,7 @@ namespace FES.Agents
             else
             {
                 _agents.Cash[buyer] -= cost;
+                ctx.World.Get<MerchantTripStats>().SpentVehicles += cost;
                 if (_orders.Vehicle[r] > _agents.Vehicle[buyer])
                 {
                     _agents.Vehicle[buyer] = _orders.Vehicle[r];

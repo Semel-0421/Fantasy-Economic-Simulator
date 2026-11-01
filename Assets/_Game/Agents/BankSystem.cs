@@ -424,7 +424,11 @@ namespace FES.Agents
             long cash = merchant ? _agents.Cash[a] : _facilities.Cash[borrower];
             _npcLoans.Due[r] = Math.Min(_npcLoans.Balance[r], _npcLoans.Due[r] + _npcLoans.WeeklyPayment[r]);
             long paid = Math.Min(_npcLoans.Due[r], Math.Max(0, cash));
-            if (merchant) _agents.Cash[a] -= paid;
+            if (merchant)
+            {
+                _agents.Cash[a] -= paid;
+                ctx.World.Get<MerchantTripStats>().SpentLoans += paid;
+            }
             else _facilities.Cash[borrower] -= paid;
             _npcLoans.Balance[r] -= paid;
             _npcLoans.Due[r] -= paid;

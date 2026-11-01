@@ -32,6 +32,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
+            config.TraderFloatKeepWeeks = 0;
             var (node, nation) = Town(sim);
             var cash = sim.World.Get<HouseholdCash>();
             var loans = sim.World.Get<TraderLoans>();
@@ -57,6 +58,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
+            config.TraderFloatKeepWeeks = 0;
             var (node, nation) = Town(sim);
             var cash = sim.World.Get<HouseholdCash>();
             var loans = sim.World.Get<TraderLoans>();
@@ -100,6 +102,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
+            config.TraderFloatKeepWeeks = 0;
             var (node, nation) = Town(sim);
             var cash = sim.World.Get<HouseholdCash>();
             var loans = sim.World.Get<TraderLoans>();
@@ -123,6 +126,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
+            config.TraderFloatKeepWeeks = 0;
             var (node, nation) = Town(sim);
             var cash = sim.World.Get<HouseholdCash>();
             var loans = sim.World.Get<TraderLoans>();
@@ -152,6 +156,7 @@ namespace FES.Tests
         {
             using var sim = TestWorlds.BuildSample();
             var config = sim.Database.Config;
+            config.TraderFloatKeepWeeks = 0;
             var bank = sim.World.Get<BankState>();
             var loans = sim.World.Get<TraderLoans>();
             var purses = sim.World.Get<PurseState>();

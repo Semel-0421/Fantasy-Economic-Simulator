@@ -81,6 +81,7 @@ namespace FES.Agents
             builder.AddMigration(new AgentTableV4Migration());
             builder.AddMigration(new AgentTableV5Migration());
             builder.AddMigration(new AgentTableV6Migration());
+            builder.AddMigration(new AgentTableV7Migration());
             builder.AddMigration(new ContractTableV1Migration());
             builder.AddMigration(new AuctionTableV1Migration());
             builder.AddMigration(new GroupColumnMigration(FacilityTable.SectionKey, 2));

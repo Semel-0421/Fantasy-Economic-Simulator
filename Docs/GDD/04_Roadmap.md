@@ -167,7 +167,17 @@ Sea trade (DEC-096). In one seed, ten years to year 30, as first built: 6 ships 
 Result with all of it (DEC-095 to DEC-097), every node detailed. Six seeds, year 30: 14.30M, -0.31%, 30/85/95/141%, failures 6.9%, sales 19.3M a year, groups idle at continent and nation 4 and 2. The same without groups coming home: 14.53M, -0.34%, 19/84/94/136%, 5.7%, idle 4 and 14. Without groups coming home and with credit off: 14.12M, -0.59%, 23/78/84/134%, 16.5%, sales 6.4M. Six other seeds, year 30: 13.90M, -0.41%, 27/89/89/142%, 6.4%. Three seeds, year 60: 13.97M, +0.06%, 51/95/104/151%, 7.2%, city bread, ale and clothes at 55, 32 and 134% of anchor, with city supply past 100% and people no longer falling. Sea, six seeds, year 30: 34.5 ships out and 33.2 back a year, 2,950 units of special goods and 7,668 of others; year 60: 4,336 and 7,207. Special goods stay dear abroad: in city markets, spice 83% of anchor at home and 165% abroad, silk 72% and 154%, fur 72% and 163%, amber 66% and 159%. Bills: 7.7M issued a year, 4.1M protested at year 30; 10.1M and 6.2M at year 60. Reserves 3.5M at year 30 and 4.1M at year 60.
 Around the player, three seeds, year 30: 14.39M, -0.68%, 48/79/76/120%, failures 0.5%, float 7.4M idle, 0.6M bills a year. Far trade runs through aggregate flows: spice 15% of anchor at home and 32% abroad, silk 13% and 26%, fur 12% and 73%, amber 13% and 55%. With those flows not crossing: 14.71M, -0.57%, 55/91/78/118%, foreign prices 56-78%. Why this mode falls short of every node detailed is not traced; the float sits idle there, and special goods are in glut on both continents.
 
+Where the money goes, under DEC-097, two seeds, year 30 (before DEC-098). Every node detailed: households hold 7.1-8.4M coins, 4.4-6.0M of them at nation nodes with 5% of the people and supply of 22-26%, and spend 11.3M a year; floats average 0.2M; bills lost 3.7-4.1M a year; stock grows 0.2M a year. Around the player: households hold 1.3-1.6M and spend 5.7-7.1M; floats average 5.8-6.5M. Bakeries are not the difference, at 63-102 with plans of 80-100% in both.
+Trials (DEC-098), every node detailed, three seeds, year 30, reading people, growth, supply, failures, share of bills lost. No margin: 14.06M, -0.32%, 32/85/95/139%, 6.0%, 51%. Margin 5%: 14.25M, -0.15%, 25/92/101/143%, 7.1%, 50%. 10%: 14.52M, -0.15%, 40/95/98/141%, 5.1%, 44%. 20%: 14.92M, -0.13%, 39/91/98/146%, 5.6%, 18%. 25%: 15.13M, -0.14%, 45/92/96/145%, 6.1%, 10%. 30%: 15.11M, -0.05%, 55/94/98/153%, 5.9%, 2%. 35%: 15.08M, +0.01%, 48/97/100/148%, 8.6%, no bills, float 7.8M. 40%: 14.50M, +0.07%, 61/100/101/138%, 11.5%, float 13.7M, groups 0.4M. Keeping eight weeks at 30%: 15.21M, -0.05%, 52/94/99/141%, 6.8%; at 40%: 14.90M, +0.02%, 8.7%, float 8.8M. 20% with group payouts of 50%: 14.64M, -0.08%, 43/95/99/141%.
+Trials, around the player, three seeds, year 30. Unchanged: 14.39M, -0.68%, 48/79/76/120%, float 7.4M. Flows paying wages of 100%: 15.60M, -0.47%, 55/85/84/126%, float 0.2M, groups 12.9M; 50%: 14.93M, -0.55%. Keeping eight weeks: 15.04M, -0.54%, 56/88/79/124%, float 1.5M, groups 13.3M; four weeks: 15.10M, -0.54%. Wages and eight weeks: 15.41M, -0.40%, 52/88/86/124%. Wages with a margin and nothing kept: 10% 15.02M, -0.59%; 20% 14.49M, -0.74%, float 8.9M. Wages, margin 30%, eight weeks: 15.50M, -0.34%, 58/86/88/118%, float 6.3M. With four weeks: 15.39M, -0.41%; paying 5% a week: 15.49M, -0.36%, float 4.5M; group payouts of 50%: 15.61M, -0.31%, 56/86/88/119%. Larger flows of 75% and 100%: 15.42M, 15.40M. None of those last four kept.
+
+Result with DEC-098. Every node detailed, six seeds, year 30: 15.26M, -0.09%, 46/92/98/146%, failures 6.3%, against 14.30M, -0.31%, 30/85/95/141%, 6.9%. Six other seeds: 15.30M, -0.16%, 56/92/93/148%, 6.2%, against 13.90M, -0.41%. Three seeds, year 60: 15.54M, +0.12%, 74/99/103/149%, 6.7%, city bread, ale and clothes at 69, 27 and 105% of anchor, against 13.97M, +0.06%, 51/95/104/151%. Bills: 2.2M issued a year, 0.2M lost at year 30; 3.1M and 0.46M at year 60. Reserves 6.5M and 8.2M, against 3.5M and 4.1M. Sea, year 30: 33.4 ships out, 33.2 back, 4,210 units of special goods and 6,839 of others; year 60: 7,499 and 6,501. City prices against anchor, at home and abroad: spice 44 and 143%, silk 46 and 138%, fur 57 and 151%, amber 72 and 151%.
+Around the player, six seeds, year 30: 15.64M, -0.35%, 52/86/88/122%, failures 0.8%, against 14.39M, -0.68%, 48/79/76/120%, 0.5% (three seeds). Six other seeds: 15.72M, -0.37%, 51/83/89/124%. Three seeds, year 60: 14.27M, -0.19%, 67/90/93/127%, 0.9%. Special goods are no longer in glut abroad: spice 27 and 108%, silk 33 and 135%, fur 37 and 142%, amber 33 and 112%. A city's week of budget is 86-94k against necessities of 111-124k, where with every node detailed it is 115-126k against 109-116k; floats still average 5.6-6.1M.
+
 ## Remaining work
+
+Where merchants' coins go, every node detailed, three seeds, a year at year 30, before DEC-099 (thousands; sales 12,508): goods 5,278, wages 3,496, tolls 1,440, fees 1,312, guards 436, theft 379, upkeep 173, policies 104 less 127 paid back, loans 56, income tax 38, discount 33, association fees 32, vehicles 3. With DEC-099 (sales 11,804): goods 4,845, wages 3,311, tolls 1,434, fees 1,214, guards 367, theft 317, upkeep 177, policies 512 less 377 paid back, loans 70, tax 40, discount 27, association fees 31, price cover 6 less 5 paid. What failed groups lost: 11, against about 21.
+Result with DEC-099 to DEC-103. Six seeds, year 30: 15.25M, -0.13%, 52/92/95/145%, failures 6.3%, within noise of 15.26M, -0.09%, 46/92/98/146%. Bills lost 22k of 1,171k a year, against 220k of 2,238k. Three seeds, year 60: 15.95M, +0.11%, 74/99/100/158%, 7.0%, against 15.54M, +0.12%; bills lost 335k of 2,723k.
 Order agreed: refactoring, then balance, then the phases.
 
 Balance
@@ -186,11 +196,13 @@ Gaps
 - The player's facilities get no subsidy; whether that is intended is undecided.
 - Q-030, the price index basket, is deferred by the user.
 
-Balance, from DEC-095 to DEC-097
-- About half of bills are protested, a subsidy from banks to merchants in all but name. Traders' floats are still too small for the trade they carry.
-- Around the player falls short of every node detailed: 76% city supply against 89-95%, and a float of 7.4M idle.
-- Special goods reach few foreign buyers with every node detailed, and far too many around the player.
-- Nation households still hold the largest share of household money: 62% at year 30, 41% at year 60.
+Margin trials under DEC-099 to DEC-103, three seeds, year 30, reading people, growth, supply, share of bills lost. 15%: 14.96M, -0.01%, 40/94/102/142%, 30%. 20%: 15.09M, -0.08%, 33/94/99/138%, 25%. 25%: 15.11M, -0.09%, 49/91/99/146%, 11%. 30%: 15.30M, -0.04%, 60/94/98/149%, 3%. Chosen 25%. Six seeds, year 30: 15.33M, -0.14%, 49/92/96/147%, failures 7.4%, bills 3.5M issued a year, 11% lost. Three seeds, year 60: 15.69M, +0.15%, 82/100/101/155%, bills 4.7M, 30% lost.
+
+Open, from DEC-101: what a core node does (Q-043).
+
+Balance, from DEC-095 to DEC-103
+- The traders' margin works within a narrow range, and swells floats at 35%.
+- Nation supply is 46-56% at year 30, the lowest of any level.
 
 Gaps
 - The player has no commands for bills or bonds (DEC-097).

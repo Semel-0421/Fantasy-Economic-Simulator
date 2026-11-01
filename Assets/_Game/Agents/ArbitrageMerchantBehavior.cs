@@ -50,6 +50,8 @@ namespace FES.Agents
         NativeArray<long> _nodeVehicleCost;
         NativeArray<long> _nodeVehicleDanger;
         NativeArray<long> _tripStats;
+        NativeArray<long> _hedgeRoom;
+        NativeArray<long> _hedgeNet;
         long[] _nodeVehicles;
         int[] _nodeGroups;
         NativeArray<long> _nodeMinMargin;
@@ -102,7 +104,9 @@ namespace FES.Agents
             _vehiclePremium = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
             _nodeVehicleCost = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _nodeVehicleDanger = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
-            _tripStats = new NativeArray<long>(9, Allocator.Persistent);
+            _tripStats = new NativeArray<long>(20, Allocator.Persistent);
+            _hedgeRoom = new NativeArray<long>(ctx.World.Get<PurseState>().Count, Allocator.Persistent);
+            _hedgeNet = new NativeArray<long>(ctx.World.Get<PurseState>().Count, Allocator.Persistent);
             for (int k = 0; k < MerchantVehicles.Count; k++)
             {
                 _vehicleCapacity[k] = _db.Config.MerchantVehicleCapacity[k].Raw;
@@ -216,6 +220,8 @@ namespace FES.Agents
             }
             for (int c = 0; c < _continentIndex.Length; c++) _continentIndex[c] = _world.Get<CurrencyState>().PriceIndex[c].Raw;
             _bankrupt.Clear();
+            for (int p = 0; p < _hedgeRoom.Length; p++)
+                _hedgeRoom[p] = _db.Config.HedgeFee.Raw > 0 && p < _purses.NationCount ? _db.Config.HedgeBankShare.MulInt(_bank.Spendable(p)) : 0;
 
             var job = new DetailedMerchantJob
             {
@@ -244,6 +250,7 @@ namespace FES.Agents
                 ExchangeFeeRaw = _db.Config.ExchangeFee.Raw,
                 International = _international,
                 RouteToward = _routeToward,
+                SpreadRaw = _db.Config.TraderSpread.Raw,
                 NodePort = _nodePort,
                 JudgeCoinUnits = _db.Config.MerchantJudgeCoinUnits,
                 BillRoom = _billRoom.Room,
@@ -294,7 +301,16 @@ namespace FES.Agents
                 GuardBaseCost = _db.Config.GuardBaseCost,
                 MemberPremiumRaw = _db.Config.MerchantMemberPremium.Raw,
                 AgentAssociation = _agents.Association.AsArray(),
-                RiskAversion = _db.Config.MerchantRiskAversion,
+                TraitLossAversion = _traits.LossAversion,
+                AgentOwner = _agents.Owner.AsArray(),
+                CountTripCosts = _db.Config.MerchantCountTripCosts,
+                HedgeFloorRaw = _db.Config.HedgeFloor.Raw,
+                HedgeFeeRaw = _db.Config.HedgeFee.Raw,
+                HedgeFallRaw = _db.Config.HedgeFall.Raw,
+                HedgeChanceRaw = _db.Config.HedgeFallChance.Raw,
+                HedgeRoom = _hedgeRoom,
+                HedgeNet = _hedgeNet,
+                AgentHedge = _agents.HedgeFloor.AsArray(),
                 GuardCostShareRaw = _db.Config.GuardCostShare.Raw,
                 GuardReductionRaw = _db.Config.GuardReduction.Raw,
                 InsurancePremiumRaw = _db.Config.InsurancePremium.Raw,
@@ -337,6 +353,11 @@ namespace FES.Agents
             else job.Schedule().Complete();
             SettleCoins();
             _billRoom.SettleBank(_bank);
+            for (int p = 0; p < _hedgeNet.Length; p++)
+            {
+                if (_hedgeNet[p] != 0) _bank.Reserve[p] += _hedgeNet[p];
+                _hedgeNet[p] = 0;
+            }
             var credit = _world.Get<CreditStats>();
             credit.BillsIssued += _billStats[0];
             credit.BillsDiscounted += _billStats[1];
@@ -360,6 +381,17 @@ namespace FES.Agents
             stats.CarriedOn += _tripStats[6];
             stats.ForcedSales += _tripStats[7];
             stats.Sold += _tripStats[8];
+            stats.SpentGoods += _tripStats[9];
+            stats.SpentFees += _tripStats[10];
+            stats.SpentTolls += _tripStats[11];
+            stats.SpentGuards += _tripStats[12];
+            stats.SpentCover += _tripStats[13];
+            stats.SpentUpkeep += _tripStats[14];
+            stats.SpentStolen += _tripStats[15];
+            stats.SpentDiscount += _tripStats[16];
+            stats.CoverRefunds += _tripStats[17];
+            stats.SpentHedge += _tripStats[18];
+            stats.HedgePaid += _tripStats[19];
             for (int k = 0; k < _tripStats.Length; k++) _tripStats[k] = 0;
         }
 
@@ -371,6 +403,7 @@ namespace FES.Agents
                 if (_bills.Holder[r] == a) _bills.Holder[r] = BillHolders.Households; // its bills pass to the people it owed
             _world.Get<MerchantTripStats>().LostWithGroups += _agents.LoadCost[a];
             _agents.LoadCost[a] = 0;
+            _agents.HedgeFloor[a] = 0;
             _agents.Node[a] = _agents.Home[a];
             _agents.Destination[a] = -1;
             _agents.ArrivalTurn[a] = -1;
@@ -451,6 +484,8 @@ namespace FES.Agents
             PrepareCoins();
             var job = new MerchantFlowJob
             {
+                WageRaw = _db.Config.MerchantFlowWage.Raw,
+                HouseholdCash = _world.Get<HouseholdCash>().Cash,
                 CrossFlowRaw = _db.Config.MerchantCrossFlow.Raw,
                 ContinentCount = _nodes.ContinentCount,
                 CoinRateRaw = _coinRate,
@@ -514,6 +549,8 @@ namespace FES.Agents
             _nodeVehicleCost.DisposeIfCreated();
             _nodeVehicleDanger.DisposeIfCreated();
             _tripStats.DisposeIfCreated();
+            _hedgeRoom.DisposeIfCreated();
+            _hedgeNet.DisposeIfCreated();
             _nodeMinMargin.DisposeIfCreated();
             _tollsByNode.DisposeIfCreated();
             _continentIndex.DisposeIfCreated();

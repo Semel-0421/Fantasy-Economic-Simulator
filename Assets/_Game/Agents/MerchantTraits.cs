@@ -73,6 +73,8 @@ namespace FES.Agents
         public NativeArray<int> DistancePower;
         /// <summary>The world level whose ancestor of the group's home bounds where it trades.</summary>
         public NativeArray<int> RangeLevel;
+        /// <summary>How many times a loss weighs against the same gain (DEC-099).</summary>
+        public NativeArray<int> LossAversion;
 
         public MerchantTraitTable(SimulationConfig config)
         {
@@ -82,6 +84,7 @@ namespace FES.Agents
             UpkeepRaw = new NativeArray<long>(MerchantTraits.Count, Allocator.Persistent);
             DistancePower = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
             RangeLevel = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
+            LossAversion = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
             for (int t = 0; t < MerchantTraits.Count; t++)
             {
                 int personality = (int)MerchantTraits.PersonalityOf(t), occupation = (int)MerchantTraits.OccupationOf(t);
@@ -92,6 +95,7 @@ namespace FES.Agents
                 UpkeepRaw[t] = on ? config.OccupationUpkeep[occupation].Raw : Fx.OneRaw;
                 DistancePower[t] = on ? config.OccupationDistancePower[occupation] : 0;
                 RangeLevel[t] = (int)(on ? config.PersonalityRange[personality] : WorldLevel.Continent);
+                LossAversion[t] = on && config.PersonalityLossAversion[personality] > 0 ? config.PersonalityLossAversion[personality] : config.MerchantRiskAversion;
             }
         }
 
@@ -103,6 +107,7 @@ namespace FES.Agents
             UpkeepRaw.DisposeIfCreated();
             DistancePower.DisposeIfCreated();
             RangeLevel.DisposeIfCreated();
+            LossAversion.DisposeIfCreated();
         }
     }
 

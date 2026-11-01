@@ -249,9 +249,20 @@ namespace FES.Data
         public Fx MerchantSupportShare = Fx.FromPermille(100);
         public Fx MerchantMemberPremium = Fx.FromPermille(500);
         /// <summary>0: detail around the player. 1: every node detailed. 2: every node aggregate.</summary>
-        public int LodMode = 0;
+        public int LodMode = 1;
         /// <summary>How many times the expected loss a merchant weighs when deciding on guards.</summary>
         public int MerchantRiskAversion = 1;
+        /// <summary>Per personality: how many times a loss weighs against the same gain (DEC-099); 0 uses <see cref="MerchantRiskAversion"/>.</summary>
+        public readonly int[] PersonalityLossAversion = new int[3];
+        /// <summary>A group counts the trip's upkeep and expected losses when it chooses a load (DEC-099).</summary>
+        public bool MerchantCountTripCosts = false;
+        /// <summary>Price cover (DEC-099): the share of a load's value the bank guarantees, its fee, the fall and its chance groups expect. A zero fee turns it off.</summary>
+        public Fx HedgeFloor = Fx.FromPermille(850);
+        public Fx HedgeFee = Fx.Zero;
+        public Fx HedgeFall = Fx.FromPermille(150);
+        public Fx HedgeFallChance = Fx.FromPermille(300);
+        /// <summary>The share of its spendable reserve a bank may pay on cover in a week.</summary>
+        public Fx HedgeBankShare = Fx.FromPermille(100);
         public int OrderExpiryWeeks = 52;
         /// <summary>Quarterly factory planning (DEC-085), and the least share of capacity a factory keeps running.</summary>
         public bool ForecastEnabled = false;
@@ -442,6 +453,15 @@ namespace FES.Data
         public bool MerchantPortCrossers = false;
         /// <summary>Nations keep their international bank between its starting share of the coin supply and twice that (DEC-096).</summary>
         public bool InternationalBalance = false;
+        /// <summary>Traders pay sellers the price less this margin (DEC-098).</summary>
+        public Fx TraderSpread = Fx.Zero;
+        /// <summary>What traders pay a seller for a unit at this price.</summary>
+        public int TraderOffer(int price) => price - (int)TraderSpread.MulInt(price);
+        /// <summary>Weeks of households' wishes a float keeps; a share of what is above goes to the nation's households a week; 0 off (DEC-098).</summary>
+        public int TraderFloatKeepWeeks = 0;
+        public Fx TraderFloatPayout = Fx.FromPermille(20);
+        /// <summary>Share of an aggregate flow's margin the traders pay as wages at the origin (DEC-098).</summary>
+        public Fx MerchantFlowWage = Fx.Zero;
         /// <summary>The lowest level whose groups trade between continents (DEC-096): 0 continent, 1 nation, 2 region; below 0 none.</summary>
         public int MerchantCrossLevel = -1;
         /// <summary>The share of the normal flow that aggregate trade runs at between continents (DEC-066); zero is none.</summary>
@@ -642,6 +662,12 @@ namespace FES.Data
             MerchantMemberPremium = Permille(v, "merchants.member_premium_permille", MerchantMemberPremium);
             LodMode = Int(v, "lod.mode", LodMode);
             MerchantRiskAversion = Int(v, "merchants.risk_aversion", MerchantRiskAversion);
+            MerchantCountTripCosts = Int(v, "merchants.count_trip_costs", MerchantCountTripCosts ? 1 : 0) != 0;
+            HedgeFloor = Permille(v, "merchants.hedge_floor_permille", HedgeFloor);
+            HedgeFee = Permille(v, "merchants.hedge_fee_permille", HedgeFee);
+            HedgeFall = Permille(v, "merchants.hedge_fall_permille", HedgeFall);
+            HedgeFallChance = Permille(v, "merchants.hedge_chance_permille", HedgeFallChance);
+            HedgeBankShare = Permille(v, "merchants.hedge_bank_share_permille", HedgeBankShare);
             OrderExpiryWeeks = Int(v, "orders.expiry_weeks", OrderExpiryWeeks);
             ForecastEnabled = Int(v, "production.forecast_enabled", ForecastEnabled ? 1 : 0) != 0;
             ForecastMinPlan = Permille(v, "production.forecast_min_permille", ForecastMinPlan);
@@ -855,6 +881,10 @@ namespace FES.Data
             MerchantJudgeCoinUnits = Int(v, "merchants.judge_coin_units", MerchantJudgeCoinUnits);
             MerchantPortCrossers = Int(v, "merchants.port_crossers", MerchantPortCrossers ? 1 : 0) != 0;
             InternationalBalance = Int(v, "bank.international_balance", InternationalBalance ? 1 : 0) != 0;
+            TraderSpread = Permille(v, "markets.trader_spread_permille", TraderSpread);
+            TraderFloatKeepWeeks = Int(v, "traders.float_keep_weeks", TraderFloatKeepWeeks);
+            TraderFloatPayout = Permille(v, "traders.float_payout_permille", TraderFloatPayout);
+            MerchantFlowWage = Permille(v, "merchants.flow_wage_permille", MerchantFlowWage);
             MerchantCrossLevel = Int(v, "merchants.cross_level", MerchantCrossLevel);
             MerchantCrossFlow = Permille(v, "merchants.cross_flow_permille", MerchantCrossFlow);
             ContinentalProducers = Int(v, "producers.per_continent", ContinentalProducers);
@@ -885,6 +915,7 @@ namespace FES.Data
             {
                 PersonalitySpend[i] = Permille(v, $"merchants.{personalities[i]}.spend_permille", PersonalitySpend[i]);
                 PersonalityMinMargin[i] = Permille(v, $"merchants.{personalities[i]}.min_margin_permille", PersonalityMinMargin[i]);
+                PersonalityLossAversion[i] = Int(v, $"merchants.{personalities[i]}.loss_aversion", PersonalityLossAversion[i]);
                 string rangeKey = $"merchants.{personalities[i]}.range_level";
                 if (v.TryGetValue(rangeKey, out var range))
                     PersonalityRange[i] = CsvTable.TryParseEnumName(range, out WorldLevel rangeLevel)

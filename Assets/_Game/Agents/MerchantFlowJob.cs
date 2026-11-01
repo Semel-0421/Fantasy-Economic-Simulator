@@ -37,6 +37,9 @@ namespace FES.Agents
         public long ExchangeFeeRaw;
         /// <summary>Per continent: what its international bank holds.</summary>
         public NativeArray<long> International;
+        /// <summary>Share of a flow's margin the traders pay as wages at the origin (raw Fx, DEC-098).</summary>
+        public long WageRaw;
+        public NativeArray<long> HouseholdCash;
 
         [ReadOnly] public NativeArray<byte> NodeDetail;
         [ReadOnly] public NativeArray<int> NodeContinent;
@@ -174,6 +177,14 @@ namespace FES.Agents
             {
                 International[toCoin] += quantity * pay;
                 International[fromCoin] -= quantity * buy;
+            }
+            if (WageRaw > 0)
+            {
+                int purse = cross ? payee : payer;
+                long wage = Fx.MulIntRaw(Fx.MulIntRaw(quantity, marginRaw), WageRaw);
+                if (wage > Float[purse]) wage = Float[purse] > 0 ? Float[purse] : 0;
+                Float[purse] -= wage;
+                HouseholdCash[from] += wage;
             }
 
             Stock[fromCell] -= (int)quantity;

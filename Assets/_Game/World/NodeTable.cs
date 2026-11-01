@@ -6,7 +6,8 @@ using Unity.Collections;
 namespace FES.World
 {
     /// <summary>
-    /// The world hierarchy (continent > nation > region > city > village) as one flat SoA table.
+    /// The world hierarchy (continent > nation > region > city > village) as one flat SoA table. Each node is also a
+    /// class of the nodes under it, with one core node where the class's seat stands (DEC-101).
     /// Nodes are sorted by level, then parent, then key, so each level is a contiguous index range
     /// and tier jobs can run over [LevelStart, LevelStart + LevelCount). Every node owns exactly one
     /// market whose index equals the node index.
@@ -20,6 +21,8 @@ namespace FES.World
         public NativeArray<int> Parent;
         /// <summary>Ordinal of the continent this node belongs to (0..ContinentCount-1).</summary>
         public NativeArray<int> Continent;
+        /// <summary>The town or village at the heart of this node's class; a town or village is its own.</summary>
+        public NativeArray<int> Core;
         /// <summary>CSR child list: children of n are Children[ChildStart[n] .. ChildStart[n] + ChildCount[n]).</summary>
         public NativeArray<int> ChildStart;
         public NativeArray<int> ChildCount;
@@ -41,6 +44,7 @@ namespace FES.World
             Level = new NativeArray<byte>(count, Allocator.Persistent);
             Parent = new NativeArray<int>(count, Allocator.Persistent);
             Continent = new NativeArray<int>(count, Allocator.Persistent);
+            Core = new NativeArray<int>(count, Allocator.Persistent);
             ChildStart = new NativeArray<int>(count, Allocator.Persistent);
             ChildCount = new NativeArray<int>(count, Allocator.Persistent);
             Children = new NativeArray<int>(Math.Max(0, count), Allocator.Persistent);
@@ -59,6 +63,15 @@ namespace FES.World
         public WorldLevel LevelOf(int node) => (WorldLevel)Level[node];
         public string KeyOf(int node) => _keys[node];
         public string NameOf(int node) => _names[node];
+        public bool IsCoreOf(int node, int classNode) => Core[classNode] == node;
+
+        /// <summary>The classes a node falls in, largest first, ending with itself: continent/nation/region/city/village.</summary>
+        public string ClassPath(int node)
+        {
+            string path = _keys[node];
+            for (int n = Parent[node]; n >= 0; n = Parent[n]) path = _keys[n] + "/" + path;
+            return path;
+        }
 
         public bool TryFind(string key, out NodeId node)
         {
@@ -105,6 +118,7 @@ namespace FES.World
             Level.DisposeIfCreated();
             Parent.DisposeIfCreated();
             Continent.DisposeIfCreated();
+            Core.DisposeIfCreated();
             ChildStart.DisposeIfCreated();
             ChildCount.DisposeIfCreated();
             Children.DisposeIfCreated();

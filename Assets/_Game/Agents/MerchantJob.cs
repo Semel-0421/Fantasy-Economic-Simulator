@@ -60,6 +60,8 @@ namespace FES.Agents
         public NativeArray<long> International;
         /// <summary>Per (node, continent): the first route of the way there, or -1.</summary>
         [ReadOnly] public NativeArray<int> RouteToward;
+        /// <summary>Traders pay sellers the price less this margin (raw Fx, DEC-098).</summary>
+        public long SpreadRaw;
         /// <summary>Per node: a large enough group based here may sail whatever its personality.</summary>
         [ReadOnly] public NativeArray<byte> NodePort;
         /// <summary>A market whose traders cannot pay for this many units is no market to a group judging a load; 0 off.</summary>
@@ -123,7 +125,17 @@ namespace FES.Agents
         public long GuardBaseCost;
         public long MemberPremiumRaw;
         [ReadOnly] public NativeArray<int> AgentAssociation;
-        public int RiskAversion;
+        [ReadOnly] public NativeArray<int> TraitLossAversion;
+        [ReadOnly] public NativeArray<int> AgentOwner;
+        public bool CountTripCosts;
+        public long HedgeFloorRaw;
+        public long HedgeFeeRaw;
+        public long HedgeFallRaw;
+        public long HedgeChanceRaw;
+        /// <summary>Per float: what its bank may still pay on price cover, and what cover has added to or taken from its reserve.</summary>
+        public NativeArray<long> HedgeRoom;
+        public NativeArray<long> HedgeNet;
+        public NativeArray<long> AgentHedge;
         public long GuardCostShareRaw;
         public long GuardReductionRaw;
         public long InsurancePremiumRaw;
@@ -290,10 +302,13 @@ namespace FES.Agents
                 int good = CargoGood[Rows[i]];
                 if (!licensed && NeedsLicense(node, good)) continue;
                 int cell = FindCell(node, good);
-                if (cell >= 0) value += (long)CargoQuantity[Rows[i]] * Price[cell];
+                if (cell >= 0) value += (long)CargoQuantity[Rows[i]] * OfferAt(cell);
             }
             return Earn(a, node, Payable(a, node, value));
         }
+
+        // What traders pay a seller per unit: the price less their margin (DEC-098).
+        long OfferAt(int cell) => Price[cell] - Fx.MulIntRaw(Price[cell], SpreadRaw);
 
         bool Abroad(int a, int node) => NodeContinent[node] != NodeContinent[AgentHome[a]];
 
@@ -375,7 +390,7 @@ namespace FES.Agents
         {
             long held = Float[NodeFloat[node]];
             long coins = Min(value, held > 0 ? held : 0);
-            if (Abroad(a, node)) return coins;
+            if (Abroad(a, node) || NoBills(a)) return coins;
             long billed = Min(value - coins, BillRoom[NodeFloat[node]]);
             return coins + billed - Fx.MulIntRaw(billed, BillDiscountRaw);
         }
@@ -406,7 +421,44 @@ namespace FES.Agents
             if (JudgeCoinUnits <= 0) return true;
             long lot = JudgeCoinUnits * price;
             int purse = NodeFloat[node];
-            return Float[purse] >= lot || (!Abroad(a, node) && BillRoom[purse] >= lot);
+            return Float[purse] >= lot || (!Abroad(a, node) && !NoBills(a) && BillRoom[purse] >= lot);
+        }
+
+        // The player's groups deal in coins: only bonds are open to the player (DEC-102).
+        bool NoBills(int a) => AgentOwner[a] == OwnerIds.Player;
+
+        // The bank makes up what a sale brings below the part of the guarantee on these units (DEC-099).
+        void ClaimCover(int a, int purse, long units, long carried, long proceeds, bool abroad)
+        {
+            if (AgentHedge[a] <= 0 || carried <= 0) return;
+            long share = AgentHedge[a] * units / carried;
+            AgentHedge[a] -= share;
+            if (abroad || proceeds >= share) return;
+            long paid = Min(share - proceeds, HedgeRoom[purse]);
+            if (paid <= 0) return;
+            HedgeRoom[purse] -= paid;
+            HedgeNet[purse] -= paid;
+            AgentCash[a] += paid;
+            TripStats[19] += paid;
+        }
+
+        // A group covers a load when the fall it fears, weighed by how it feels about a loss, is worth more than the fee (DEC-099).
+        void BuyCover(int a, int destination, long value, long chanceOfFallRaw)
+        {
+            if (HedgeFeeRaw <= 0 || AgentHedge[a] > 0 || Abroad(a, destination)) return;
+            int purse = NodeFloat[destination];
+            if (HedgeRoom[purse] <= 0) return;
+            long offer = value - Fx.MulIntRaw(value, SpreadRaw);
+            long fee = Fx.MulIntRaw(offer, HedgeFeeRaw);
+            if (fee <= 0 || AgentCash[a] < fee) return;
+            long floor = Fx.MulIntRaw(offer, HedgeFloorRaw);
+            bool wouldLose = offer - Fx.MulIntRaw(offer, HedgeFallRaw) < AgentLoadCost[a];
+            long fear = Fx.MulIntRaw(offer - floor, chanceOfFallRaw) * (wouldLose ? TraitLossAversion[AgentTrait[a]] : 1);
+            if (fear <= fee) return;
+            AgentCash[a] -= fee;
+            HedgeNet[purse] += fee;
+            AgentHedge[a] = floor;
+            TripStats[18] += fee;
         }
 
         void BookSale(int a, long units, long proceeds, ref long carried)
@@ -423,7 +475,7 @@ namespace FES.Agents
         bool LastsTheTrip(int a, int route, long tripCost) =>
             AgentCash[a] >= tripCost || AgentNegativeWeeks[a] + RouteTurns[route] < BankruptWeeks;
 
-        // Sells at the current price (DEC-006), as far as the traders here can pay (DEC-061); unsellable goods stay on board.
+        // Sells at what the traders here offer (DEC-006, DEC-098), as far as they can pay (DEC-061); unsellable goods stay on board.
         void SellHere(int a, int node)
         {
             CollectRows(a);
@@ -435,7 +487,7 @@ namespace FES.Agents
                 if (NeedsLicense(node, good) && !HoldsLicenses(a)) continue;
                 int cell = FindCell(node, good);
                 if (cell < 0) continue;
-                long price = Price[cell];
+                long price = OfferAt(cell);
                 long units = CargoQuantity[row];
                 if (price > 0)
                 {
@@ -463,10 +515,11 @@ namespace FES.Agents
                     }
                     CargoQuantity[row] -= (int)units;
                     TripStats[8] += proceeds;
+                    ClaimCover(a, NodeFloat[node], units, carried, proceeds, abroad);
                     BookSale(a, units, proceeds, ref carried);
                 }
                 int purse = NodeFloat[node];
-                if (abroad || price <= 0 || CargoQuantity[row] <= 0) continue;
+                if (abroad || NoBills(a) || price <= 0 || CargoQuantity[row] <= 0) continue;
                 long billed = Min(CargoQuantity[row], BillRoom[purse] / price);
                 if (billed <= 0) continue;
                 long received = SellForBill(a, purse, billed * price);
@@ -474,7 +527,9 @@ namespace FES.Agents
                 AgentCash[a] += received;
                 CargoQuantity[row] -= (int)billed;
                 TripStats[8] += billed * price;
+                ClaimCover(a, purse, billed, carried, billed * price - Fx.MulIntRaw(billed * price, BillDiscountRaw), false);
                 BookSale(a, billed, billed * price - Fx.MulIntRaw(billed * price, BillDiscountRaw), ref carried);
+                TripStats[16] += Fx.MulIntRaw(billed * price, BillDiscountRaw);
             }
         }
 
@@ -544,7 +599,7 @@ namespace FES.Agents
                     long baseFee = Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]);
                     long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]);
                     // A node nobody told the group about is judged at the anchor price.
-                    long sell = !Rumors || memory.Knows(to) ? Earn(a, to, Price[toCell]) : Fx.RoundShift(GoodBasePrice[good] * indexRaw);
+                    long sell = !Rumors || memory.Knows(to) ? Earn(a, to, OfferAt(toCell)) : Fx.RoundShift(GoodBasePrice[good] * indexRaw);
                     long toll = Fx.MulIntRaw(sell, TollRate(to, good));
                     if (!TradersPay(a, to, Price[toCell])) sell = 0;
                     sell = Max(sell, Beyond(a, to, node, good, licensed, anchor, inRange, JudgeHops - 1));
@@ -556,6 +611,12 @@ namespace FES.Agents
                     long quantity = Min(quantityCap, affordable);
                     if (quantity <= 0) continue;
                     long profit = Fx.MulIntRaw(quantity, marginRaw) - baseFee;
+                    if (CountTripCosts)
+                    {
+                        long worth = quantity * sell;
+                        profit -= RouteTurns[r] * Upkeep(a) + Fx.MulIntRaw(Fx.MulIntRaw(worth, CargoLossRaw), EncounterChance(a, r, worth)) / 2;
+                        if (profit <= 0) continue;
+                    }
                     long score = profit;
                     if (profit > 0 && power > 0)
                     {
@@ -603,6 +664,7 @@ namespace FES.Agents
             long own = Spend(a, node, cost);
             AgentCash[a] -= own;
             AgentLoadCost[a] += own;
+            TripStats[9] += own;
             Float[NodeFloat[node]] += cost;
             if (abroad)
             {
@@ -626,7 +688,7 @@ namespace FES.Agents
                 int next = RouteTo[r];
                 if (next == from || !MayGo(a, at, next, anchor, inRange)) continue;
                 int cell = FindCell(next, good);
-                long here = cell >= 0 ? Earn(a, next, Price[cell]) : 0;
+                long here = cell >= 0 ? Earn(a, next, OfferAt(cell)) : 0;
                 long direct = (licensed || !NeedsLicense(next, good)) && cell >= 0 && TradersPay(a, next, Price[cell]) ? here : 0;
                 long worth = Max(direct, Beyond(a, next, at, good, licensed, anchor, inRange, hops - 1));
                 if (worth <= 0) continue;
@@ -665,7 +727,7 @@ namespace FES.Agents
                     if (toCell < 0 || (!licensed && NeedsLicense(to, good))) continue;
                     long baseFee = Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]);
                     long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]);
-                    long there = Earn(a, to, Price[toCell]);
+                    long there = Earn(a, to, OfferAt(toCell));
                     long toll = Fx.MulIntRaw(there, TollRate(to, good));
                     if (!TradersPay(a, to, Price[toCell])) there = 0;
                     long sell = Max(there, Beyond(a, to, node, good, licensed, anchor, inRange, JudgeHops - 1));
@@ -720,7 +782,7 @@ namespace FES.Agents
                     if (!licensed && NeedsLicense(to, good)) continue;
                     int cell = FindCell(to, good);
                     if (cell < 0) continue;
-                    long itemValue = (long)CargoQuantity[Rows[i]] * Price[cell];
+                    long itemValue = (long)CargoQuantity[Rows[i]] * OfferAt(cell);
                     value += itemValue;
                     cost += Spend(a, to, Fx.MulIntRaw(itemValue, TollRate(to, good)));
                 }
@@ -774,6 +836,8 @@ namespace FES.Agents
             value = Earn(a, destination, value);
             tollTotal = Spend(a, destination, tollTotal);
             AgentCash[a] -= fee + tollTotal;
+            TripStats[10] += fee;
+            TripStats[11] += tollTotal;
             HouseholdCash[node] += PayThere(a, node, fee); // fees are wages at the origin (DEC-061)
             TollsByNode[destination] += PayThere(a, destination, tollTotal);
             AgentDestination[a] = destination;
@@ -782,27 +846,34 @@ namespace FES.Agents
             // Detailed merchants roll encounters like the player.
             long chanceRaw = EncounterChance(a, bestRoute, value);
             TripStats[0]++;
-            // A group hires guards and insures when the expected cargo loss they save, half of encounters at the cargo share, beats their cost.
+            // Half of encounters take the cargo share. A group buys the cheaper protection first, the policy, and hires guards
+            // only for what it still fears after that, weighed by how it feels about a loss (DEC-099).
             long expectedLoss = Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), chanceRaw) / 2;
-            long guardCost = GuardBaseCost + Fx.MulIntRaw(value, GuardCostShareRaw);
-            // [Draft] Abroad a group hires no guards and buys no cover.
-            if (!abroad && Fx.MulIntRaw(expectedLoss, GuardReductionRaw) * RiskAversion > guardCost && AgentCash[a] >= guardCost)
-            {
-                AgentCash[a] -= guardCost;
-                HouseholdCash[node] += guardCost;
-                chanceRaw -= Fx.RoundShift(chanceRaw * GuardReductionRaw);
-                expectedLoss -= Fx.MulIntRaw(expectedLoss, GuardReductionRaw);
-                TripStats[1]++;
-            }
+            int aversion = TraitLossAversion[AgentTrait[a]];
             long premium = Fx.MulIntRaw(Fx.MulIntRaw(value, InsurancePremiumRaw), VehiclePremiumRaw[AgentVehicle[a]]);
             if (AgentAssociation[a] >= 0 && AgentVehicle[a] > MerchantVehicles.Pack) premium = Fx.MulIntRaw(premium, MemberPremiumRaw);
-            bool insured = !abroad && Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw) > premium && AgentCash[a] >= premium;
+            // [Draft] Abroad a group hires no guards and buys no cover.
+            bool insured = !abroad && Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw) * aversion > premium && AgentCash[a] >= premium;
             if (insured)
             {
                 AgentCash[a] -= premium;
+                TripStats[13] += premium;
                 HouseholdCash[node] += premium;
+                expectedLoss -= Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw);
                 TripStats[2]++;
             }
+            long guardCost = GuardBaseCost + Fx.MulIntRaw(value, GuardCostShareRaw);
+            // The policy covers no coins: the other half of encounters take a share of those, and only guards keep them safe.
+            long coinsAtRisk = Fx.MulIntRaw(Fx.MulIntRaw(AgentCash[a] > 0 ? AgentCash[a] : 0, CashLossRaw), chanceRaw) / 2;
+            if (!abroad && Fx.MulIntRaw(expectedLoss + coinsAtRisk, GuardReductionRaw) * aversion > guardCost && AgentCash[a] >= guardCost)
+            {
+                AgentCash[a] -= guardCost;
+                TripStats[12] += guardCost;
+                HouseholdCash[node] += guardCost;
+                chanceRaw -= Fx.RoundShift(chanceRaw * GuardReductionRaw);
+                TripStats[1]++;
+            }
+            BuyCover(a, destination, value, HedgeChanceRaw);
             var rng = DetRandom.For(Seed, Turn, EncounterStream, a, 1);
             if (rng.NextFx01().Raw >= chanceRaw) return;
             TripStats[3]++;
@@ -811,17 +882,20 @@ namespace FES.Agents
                 // [Draft] Stolen coins end up spent where the trip began.
                 long stolen = Fx.MulIntRaw(AgentCash[a] > 0 ? AgentCash[a] : 0, CashLossRaw);
                 AgentCash[a] -= stolen;
+                TripStats[15] += stolen;
                 HouseholdCash[node] += PayThere(a, node, stolen);
                 return;
             }
             for (int i = 0; i < Rows.Length; i++)
                 CargoQuantity[Rows[i]] -= (int)Fx.MulIntRaw(CargoQuantity[Rows[i]], CargoLossRaw);
+            AgentHedge[a] -= Fx.MulIntRaw(AgentHedge[a], CargoLossRaw);
             if (!insured) return;
             // [Draft] The households at the origin stand behind the policy, as far as they hold.
             long refund = Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), InsuranceRefundRaw);
             if (refund > HouseholdCash[node]) refund = HouseholdCash[node] > 0 ? HouseholdCash[node] : 0;
             HouseholdCash[node] -= refund;
             AgentCash[a] += refund;
+            TripStats[17] += refund;
         }
 
         void AddCargo(int a, int good, int quantity)
@@ -844,6 +918,7 @@ namespace FES.Agents
         {
             long upkeep = Upkeep(a);
             AgentCash[a] -= upkeep;
+            TripStats[14] += upkeep;
             HouseholdCash[AgentNode[a]] += PayThere(a, AgentNode[a], upkeep);
             if (AgentCash[a] >= 0)
             {

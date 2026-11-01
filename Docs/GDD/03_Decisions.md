@@ -367,7 +367,49 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Impact: SYS-MERCHANTS
 - Resolved: DEC-011
 
+### Q-043 What a core node does
+- Open, from DEC-101: its weight in play, and whether nation and region nodes keep their own markets and people.
+
 ## Decision log
+
+### DEC-103 Special goods are no necessity
+- Date: 2026-11-02
+- Decision: [Confirmed] the continents' special goods sit between semi-necessities and luxuries and are never necessities, and a wide price gap while they are scarce abroad is expected. [Draft] All four stay in the luxury class at every grade, because the semi class counts part of a good as a necessity.
+- Reason: the user's instruction.
+- Impact: SYS-MARKETS; goods.csv unchanged
+
+### DEC-102 The player trades bonds only
+- Date: 2026-11-02
+- Decision: [Confirmed] bonds are the only credit open to the player; bills are closed to them, against abuse and error. [Draft] The player buys new bonds of the state or of a group based in the nation at that nation's bank, within the issuer's debt limit and not in a credit crunch; the coins go where a sale's would. They sell at face to those with idle money that week, as far as those offer. What bonds pay goes to the player's account with that bank. Traders never pay the player's merchant groups or facilities in bills. The player's own group cannot be dealt with.
+- Reason: the user's instruction.
+- Impact: SYS-BANKING
+
+### DEC-101 Nodes are classes with one core node
+- Date: 2026-11-02
+- Decision: [Confirmed] nodes are classified large to small: continent, nation, region, city, village. Each class has one core node, where its seat stands, such as a capital or city hall. [Draft] A core is a town or village inside the class, named in the `core` column of map_nodes.csv, or else its first town. A town or village is its own core. What a core does is not decided (Q-043): for now it is only recorded, and nation and region nodes keep their own markets and people.
+- Reason: the user's instruction; the weight of a core is to be discussed separately.
+- Impact: 00_Architecture, 02_Data_Formats, sample map_nodes.csv
+
+### DEC-100 Every node is detailed in play
+- Date: 2026-11-02
+- Decision: [Confirmed] the game calculates every node in detail; the mode around the player is no longer used. `lod.mode` defaults to 1. [Draft] The aggregate code stays for now, and some tests use it.
+- Reason: the user's instruction.
+- Impact: 00_Architecture, 02_Data_Formats, sample config.csv
+
+### DEC-099 Merchant spending, loss aversion and price cover
+- Date: 2026-11-02
+- Decision: [Draft] merchants' spending is counted by item. Loss aversion is by personality: cautious 3, normal 2, bold 1. A group counts a trip's upkeep and expected losses when it chooses a load. It buys the policy first and hires guards for what it still fears, coins at risk included. As a hedge it may buy price cover from the bank at its destination: for 0.8% of a load's offer the bank makes up a sale below 90% of that offer, as far as 10% of its spendable reserve goes in a week. It buys when the 6% chance it expects, weighted by its aversion if a 15% fall would mean a loss, beats the fee. Not abroad.
+- Reason: the user asked what merchants spend, for an algorithm that spends less, and for hedges following loss aversion. The details are Claude's proposal.
+- Limits: this does not make merchants' spending clearly smaller. Protection and theft come to 819k a year, 6.9% of sales, against 792k, 6.3%; the mix moved to policies. The largest costs are goods at 41% and wages at 28%, and wages are paid out of cash above a buffer, as households' income. Price cover is little used, at 6k of fees and 5k of claims a year.
+- Impact: SYS-MERCHANTS, SYS-BANKING, 02_Data_Formats, sample config.csv
+
+### DEC-098 Traders keep a margin and spend what they do not need; far flows pay their carriers
+- Date: 2026-11-01
+- Decision: [Confirmed] traders pay any seller the price less 25% (first 30%; the user asked to adjust it, and at 30% bills nearly stopped): merchants, producers and the player. Buyers still pay the price. A float above eight weeks of households' wishes pays 2% a week of the excess to the nation's households. Aggregate flows pay their whole margin as wages at the origin, out of the float. This changes the selling side of DEC-006 and DEC-028, which paid sellers the current price.
+- Reason: Claude's proposal, under the user's instruction to analyze the remaining problems and act on them; the user confirmed the margin of 25%.
+- Causes found. With every node detailed, producers and merchants were paid about 4M a year more than households paid for the same goods, and banks covered the gap through protested bills. Stock is not the cause, growing only 0.2M a year. A seller was paid the price standing before its load arrived, and households paid the lower price after, and traders had no margin to cover that. Around the player, aggregate flows took no margin and paid no wages, so traders kept the whole gap between village and city prices and held 6-7M idle while households held 1.3-1.6M.
+- Limits: the margin has a narrow range. At 25% 10% of bills are lost, at 30% 2-15%, and at 35% bills stop and floats swell to 7.8M while groups fall to 3.6M. Around the player cities remain short of money, with a week's budget of 86-94k against 111-124k of necessities, and floats still hold about 6M; a lower keep or faster payout sends the coins to facilities and groups, not to cities.
+- Impact: SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-BANKING, 02_Data_Formats, sample config.csv
 
 ### DEC-097 Bills of exchange, government and corporate bonds
 - Date: 2026-11-01
@@ -377,7 +419,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - [Draft] Government bonds. A nation whose towns fall short of necessities sells bonds up to that shortfall, up to 30% of its share of the coin supply, and pays the towns with the coins. 4% a year, paid off over 20 years from the bank's spendable reserve. It sells none while it is behind on its bonds or in a credit crunch.
 - [Draft] Corporate bonds. A group feeds a facility short of 4 weeks of working cash, if its output is worth more than its inputs: from its own money above its starting cash, then from bonds, up to 50% of the value of its facilities. New facilities may be part paid the same way. 7% a year, paid off over 10 years. A group 26 weeks behind defaults and its holders lose what is left.
 - [Draft] Holders. Households offer 0.5% a week of their cash beyond 26 weeks of spending, and groups 0.5% a week of their cash beyond twice their starting cash.
-- Limits: at year 30 about half of the bills' face is protested, and at year 60 about 60%. The traders' float does not cover what they owe, so banks in effect pay merchants out of reserves, which taxes and minting refill: reserves were 3.2-3.5M at year 30, against 7.0M without credit, and 4.1M at year 60. A higher repayment share drains the floats and does worse: 50% 13.31M, 100% 12.56M, against 14.49M at 25% (three seeds). Bonds change supply little on their own; bills and working cash do most of the work (04_Roadmap).
+- Limits, before DEC-098 cut protests to 8-15%: at year 30 about half of the bills' face is protested, and at year 60 about 60%. The traders' float does not cover what they owe, so banks in effect pay merchants out of reserves, which taxes and minting refill: reserves were 3.2-3.5M at year 30, against 7.0M without credit, and 4.1M at year 60. A higher repayment share drains the floats and does worse: 50% 13.31M, 100% 12.56M, against 14.49M at 25% (three seeds). Bonds change supply little on their own; bills and working cash do most of the work (04_Roadmap).
 - Impact: SYS-BANKING, 02_Data_Formats, sample config.csv
 
 ### DEC-096 Each continent makes its own goods, and groups carry them across the sea

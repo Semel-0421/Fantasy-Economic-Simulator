@@ -27,9 +27,9 @@ namespace FES.Tests
             public readonly int A, Here, There;
             readonly RouteTable _routes;
 
-            public Scene(bool samePurse = true, bool bills = false)
+            public Scene(bool samePurse = true, bool bills = false, int spread = 0)
             {
-                Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", bills ? "credit.bill_cap_weeks,8" : "credit.bill_cap_weeks,0"), 42).Build();
+                Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", bills ? "credit.bill_cap_weeks,8" : "credit.bill_cap_weeks,0", "markets.trader_spread_permille," + spread), 42).Build();
                 Sim.AdvanceTurn(); // LOD is set on the first turn
                 Agents = Sim.World.Get<AgentTable>();
                 Markets = Sim.World.Get<MarketStore>();
@@ -260,6 +260,69 @@ namespace FES.Tests
             Assert.AreEqual(0, s.Carried());
             Assert.AreEqual(s.A, bills.Holder[before]);
             Assert.Less(s.Agents.Cash[s.A], cash + 1, "nothing until it falls due");
+        }
+
+        [Test]
+        public void PriceCover_MakesUpASaleBelowTheFloor()
+        {
+            using var s = new Scene();
+            s.Load(100, 500);
+            s.Prices(10, 10);
+            s.SetFloat(s.Here, Plenty);
+            var agents = s.Sim.World.Get<AgentTable>();
+            var bank = s.Sim.World.Get<BankState>();
+            s.Sim.Database.Config.HedgeFee = Fx.FromPermille(50);
+            int nation = s.Purses.NodeFloat[s.Here];
+            bank.Reserve[nation] = 1_000_000;
+            agents.HedgeFloor[s.A] = 1_500;
+            long cash = agents.Cash[s.A], money = s.Money(), reserve = bank.Reserve[nation];
+            s.Run();
+            Assert.AreEqual(0, s.Carried());
+            Assert.AreEqual(0, agents.HedgeFloor[s.A]);
+            Assert.AreEqual(reserve - 500, bank.Reserve[nation], "the bank pays the 500 short");
+            Assert.Greater(agents.Cash[s.A], cash + 1_400);
+            Assert.AreEqual(money, s.Money());
+        }
+
+        [Test]
+        public void Traders_PayTheSellerThePriceLessTheirMargin()
+        {
+            using var s = new Scene(spread: 300);
+            s.Load(100, 500);
+            s.Prices(10, 10);
+            s.SetFloat(s.Here, Plenty);
+            long cash = s.Agents.Cash[s.A], money = s.Money();
+            s.Run();
+            Assert.AreEqual(0, s.Carried());
+            Assert.AreEqual(Plenty - 100 * 7, s.Purses.Float[s.Purses.NodeFloat[s.Here]], "seven of the ten");
+            Assert.Greater(s.Agents.Cash[s.A], cash + 600);
+            Assert.Less(s.Agents.Cash[s.A], cash + 701);
+            Assert.AreEqual(money, s.Money());
+        }
+
+        [Test]
+        public void Margin_CountsWhenJudgingAMarket()
+        {
+            // The price here pays for the trip only before the margin.
+            void Stage(Scene scene)
+            {
+                for (int n = 0; n < scene.Sim.World.Get<NodeTable>().Count; n++)
+                    if (scene.Markets.TryFindCell(n, scene.Wheat, out int any)) scene.Markets.Price[any] = 19;
+                scene.Prices(10, 19);
+                Assert.IsTrue(scene.Markets.TryFindCell(scene.Here, scene.Wheat, out int cell));
+                scene.Markets.Stock[cell] = 100;
+                for (int f = 0; f < scene.Purses.Count; f++) scene.Purses.Float[f] = Plenty;
+            }
+
+            using var s = new Scene(spread: 500);
+            Stage(s);
+            s.Run();
+            Assert.AreEqual(0, s.Carried(), "ten coins for a unit that costs ten");
+
+            using var none = new Scene();
+            Stage(none);
+            none.Run();
+            Assert.Greater(none.Carried(), 0);
         }
 
         [Test]

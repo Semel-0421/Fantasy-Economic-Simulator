@@ -198,6 +198,8 @@ namespace FES.Data
         public WorldLevel Level;
         /// <summary>Parent node key; empty for continents.</summary>
         public string ParentKey;
+        /// <summary>The node at the heart of this class: where its seat stands (DEC-101). Empty: the first town in it.</summary>
+        public string CoreKey;
         /// <summary>Terrain tags (coast, mountain, ...); specialties follow from them (DEC-016).</summary>
         public string[] Tags = System.Array.Empty<string>();
         /// <summary>Toll on entering the node, in permille of the cargo's value; -1 = config default.</summary>
@@ -241,6 +243,7 @@ namespace FES.Data
             {
                 h = DetHash.Combine(h, DetHash.Combine(DetHash.Of(n.Key), DetHash.Combine((ulong)n.Level, DetHash.Of(n.ParentKey ?? string.Empty))));
                 foreach (var tag in n.Tags) h = DetHash.Combine(h, DetHash.Of(tag));
+                if (!string.IsNullOrEmpty(n.CoreKey)) h = DetHash.Combine(h, DetHash.Of(n.CoreKey));
                 h = DetHash.Combine(h, DetHash.Combine((ulong)(uint)n.TariffPermille, (ulong)(uint)n.SpecialtySurchargePermille));
                 if (n.InternationalBank) h = DetHash.Combine(h, DetHash.Of("international_bank"));
                 h = DetHash.Combine(h, (ulong)(uint)n.DangerPermille);

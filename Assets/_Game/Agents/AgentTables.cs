@@ -38,9 +38,11 @@ namespace FES.Agents
         public readonly NativeColumn<int> Association;
         /// <summary>What the group paid for the goods on board, for its profit and loss (DEC-093).</summary>
         public readonly NativeColumn<long> LoadCost;
+        /// <summary>What the bank guarantees the goods on board will bring, in the group's coins (DEC-099).</summary>
+        public readonly NativeColumn<long> HedgeFloor;
 
         public override string Key => SectionKey;
-        public override int Version => 7;
+        public override int Version => 8;
 
         public AgentTable()
         {
@@ -59,6 +61,7 @@ namespace FES.Agents
             Vehicle = Column<byte>();
             Association = Column<int>();
             LoadCost = Column<long>();
+            HedgeFloor = Column<long>();
         }
 
         public AgentId Add(int node, int owner, WorldLevel scale, ControlMode mode, long cash)
@@ -78,6 +81,7 @@ namespace FES.Agents
             Vehicle.Add(MerchantVehicles.Pack);
             Association.Add(-1);
             LoadCost.Add(0);
+            HedgeFloor.Add(0);
             return new AgentId(Count - 1);
         }
 
@@ -119,6 +123,26 @@ namespace FES.Agents
     {
         public string SectionKey => AgentTable.SectionKey;
         public int FromVersion => 6;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0L);
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 7 had no price cover.</summary>
+    public sealed class AgentTableV7Migration : ISaveMigration
+    {
+        public string SectionKey => AgentTable.SectionKey;
+        public int FromVersion => 7;
 
         public byte[] Migrate(byte[] section)
         {

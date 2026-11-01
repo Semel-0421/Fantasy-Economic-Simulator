@@ -73,7 +73,24 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             for (int nation = 0; nation < _banks.NationCount; nation++)
+            {
                 if (Repay(nation)) Lend(nation);
+                PayOutExcess(nation);
+            }
+        }
+
+        // What traders hold beyond the weeks of trade they need is their income, and they spend it like anyone (DEC-098).
+        void PayOutExcess(int nation)
+        {
+            var config = _db.Config;
+            if (config.TraderFloatKeepWeeks <= 0) return;
+            long wishes = 0;
+            foreach (int node in _purses.NationNodes[nation]) wishes += _cash.Desired[node];
+            long excess = _purses.Float[nation] - config.TraderFloatKeepWeeks * wishes;
+            if (excess <= 0) return;
+            long paid = config.TraderFloatPayout.MulInt(excess);
+            _purses.Float[nation] -= paid;
+            MoneyLedger.PayNationHouseholds(_world, nation, paid);
         }
 
         // Whether the float paid all that fell due.

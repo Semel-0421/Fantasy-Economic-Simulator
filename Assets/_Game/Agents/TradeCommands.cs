@@ -128,7 +128,7 @@ namespace FES.Agents
             PlayerTrade.Check(ctx, Good, Quantity, out int cell);
             int filled = Fill(ctx, cell);
             var player = ctx.World.Get<PlayerState>();
-            int price = ctx.World.Get<MarketStore>().Price[cell];
+            int price = Offer(ctx, cell);
             player.LocalCoins += (long)filled * price;
             ctx.World.Get<PurseState>().ChangeFloat(player.Node, -(long)filled * price);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, -filled);
@@ -137,7 +137,10 @@ namespace FES.Agents
         }
 
         int Fill(SimContext ctx, int cell) => ctx.World.Get<PurseState>().Sellable(ctx.World.Get<PlayerState>().Node,
-            Math.Min(Quantity, ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good)), ctx.World.Get<MarketStore>().Price[cell]);
+            Math.Min(Quantity, ctx.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good)), Offer(ctx, cell));
+
+        // Traders keep their margin on the player too (DEC-098).
+        static int Offer(SimContext ctx, int cell) => ctx.Services.Get<GameDatabase>().Config.TraderOffer(ctx.World.Get<MarketStore>().Price[cell]);
     }
 
     static class PlayerTrade

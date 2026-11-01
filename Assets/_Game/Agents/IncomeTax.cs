@@ -174,6 +174,7 @@ namespace FES.Agents
             {
                 long paid = Pay(MoneyLedger.MerchantSettlesAt(_nodes, _agents, a), _agents.Cash[a] - _books.MerchantStart[a], _agents.Cash[a]);
                 _agents.Cash[a] -= paid;
+                _world.Get<MerchantTripStats>().SpentTax += paid;
                 companies += paid;
             }
             OpenBooks();

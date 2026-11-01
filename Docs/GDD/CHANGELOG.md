@@ -1,6 +1,10 @@
 # Changelog
 
+## 2026-11-02
+- [03_Decisions.md, 02_Data_Formats.md, 00_Architecture.md, 04_Roadmap.md, systems/SYS_MERCHANTS.md, systems/SYS_BANKING.md, systems/SYS_MARKETS.md] DEC-099 to DEC-103 (merchant spending and price cover, every node detailed, class nodes with a core, player bonds only, special goods no necessity)
+
 ## 2026-11-01
+- [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_MERCHANTS.md, systems/SYS_PRODUCTION.md, systems/SYS_INVENTORY.md, systems/SYS_BANKING.md] DEC-098 (traders' margin, excess float paid out, far flows paying wages), where the money goes, and measurement
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, 00_Architecture.md, systems/SYS_MERCHANTS.md, systems/SYS_BANKING.md] DEC-095 (market package), DEC-096 (continental goods and sea trade, P17 done), DEC-097 (bills, government and corporate bonds) and measurement
 - [04_Roadmap.md] Where supply sticks, and trials of remedies drawn from real economies
 - [03_Decisions.md, 02_Data_Formats.md, 04_Roadmap.md, systems/SYS_BANKING.md] DEC-094 (loans and a 90% start float switched on) and measurement

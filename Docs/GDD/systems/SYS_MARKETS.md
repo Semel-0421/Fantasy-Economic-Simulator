@@ -123,3 +123,4 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
   what the market holds (DEC-072), scaled on Victorian Europe (DEC-074).
 - [Draft] 0.8% a year at full supply (from memory, not checked), falling 4% per full shortfall, at most 1.3% (England and
   Wales 1851-1901, checked) and at least -4% (Ireland's famine, from memory, not checked).
+- [Confirmed] Special goods are never necessities; they may be far dearer where they are scarce (DEC-103).

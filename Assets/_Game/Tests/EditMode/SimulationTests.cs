@@ -449,6 +449,7 @@ namespace FES.Tests
         public void BuyingFacility_MakesItsNodeDetailed()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.LodMode = 0;
             var nodes = sim.World.Get<NodeTable>();
             var facilities = sim.World.Get<FacilityTable>();
             var lod = sim.World.Get<LodState>();

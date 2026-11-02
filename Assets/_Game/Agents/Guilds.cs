@@ -117,7 +117,7 @@ namespace FES.Agents
             int to = ToHall ? hall : CargoHolders.PlayerCart;
             var capacity = ToHall
                 ? new CargoCapacity(config.GuildHallMaxWeight, config.GuildHallMaxSize)
-                : new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
+                : PlayerTrade.LoadCapacity(ctx);
             int held = cargo.QuantityOf(ToHall ? CargoHolders.PlayerCart : hall, Good);
             int room = capacity.MaxAdditional(cargo.LoadOf(to, markets.GoodWeight, markets.GoodSize),
                 markets.GoodWeight[Good.Value], markets.GoodSize[Good.Value]);

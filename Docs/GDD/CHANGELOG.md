@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-11-03
+- `RecurringDefectTests` refuses unchecked command enums, citations of unrecorded decisions and leftover temporary tests. `Tools/pre-commit.sh` refuses a commit unless all tests passed on exactly that code and data (`Tools/verify.sh`), and refuses temporary tests, recovery files, assets without a `.meta`, new golden hashes without a changelog entry, and a review changed in one language.
+- [03_Decisions.md] DEC-114 (a facility's price follows its earnings)
+- [03_Decisions.md, systems/SYS_ROUTE_HAZARDS.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md] DEC-113 (player rule gates: presence, state facilities, bank run, insurance, ship load)
 - [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, systems/SYS_MARKETS.md, systems/SYS_INTEREST_GROUPS.md, reviews/PROPOSAL_STEP5_2026-11-03.md, reviews/PROPOSAL_STEP5_2026-11-03.ko.md] DEC-112 (direction A: margin in decisions and recipes, payout 50%, documented income, elasticity 0.6, gentler population rule)
 - [03_Decisions.md, 04_Roadmap.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md, reviews/PROPOSAL_STEP5_2026-11-03.md, reviews/PROPOSAL_STEP5_2026-11-03.ko.md] DEC-111 (guarded loading, warehouse claims, defense from thin stock), proposal for step 5
 

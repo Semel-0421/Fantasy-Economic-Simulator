@@ -41,7 +41,7 @@ Choosing a route trades speed and cost against risk.
   - Passage: 20 + 2 per cargo unit. Ship: 5,000, carrying 3,000 weight / 2,400 size.
 - [Draft] Claude's proposals, built in P8:
   - The roll happens and its loss applies when the trip starts.
-  - A cash loss takes from the departure coins left after paying; the insurance refund is paid in them.
+  - A cash loss takes from the departure coins left after paying; insurance refunds cargo losses only (DEC-113), and is paid in them.
   - The region of a route is the destination's region.
   - Ships are sold in any node of city level or above (no ports yet); the ship travels with the player,
     is used only on water routes, and on land the cart's limits still apply. (Replaced by DEC-053: ships

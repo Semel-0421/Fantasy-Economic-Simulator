@@ -83,7 +83,7 @@ namespace FES.Tests
         }
 
         [Test]
-        public void Encounter_TakesCashOrCargo_AndInsuranceRefundsPart()
+        public void Encounter_TakesCashOrCargo_AndInsuranceRefundsPartOfTheCargo()
         {
             // Certain encounters on roads.
             using var sim = WithConfig("terrain.road.danger_permille,1000\n");
@@ -96,7 +96,8 @@ namespace FES.Tests
             sim.Actions.Travel(city, insurance: true);
             sim.AdvanceTurn();
             var encounter = sim.LastTurnEvents.OfType<TripEncounter>().Single();
-            Assert.AreEqual(sim.Database.Config.InsuranceRefund.MulInt(encounter.LossValue), encounter.Refund);
+            long covered = encounter.Loss == EncounterLoss.Cargo ? encounter.LossValue : 0;
+            Assert.AreEqual(sim.Database.Config.InsuranceRefund.MulInt(covered), encounter.Refund);
             long paid = quote.DepartureCost + quote.Toll;
             if (encounter.Loss == EncounterLoss.Cash)
             {
@@ -108,6 +109,27 @@ namespace FES.Tests
                 Assert.AreEqual(14, sim.World.Get<CargoTable>().QuantityOf(CargoHolders.PlayerCart, Good(sim, "wheat"))); // 30% of 20 lost
                 Assert.AreEqual(coins - paid + encounter.Refund, player.LocalCoins);
             }
+        }
+
+        // The premium is on the cargo, so the policy covers no coins, as for merchants.
+        [Test]
+        public void Insurance_RefundsNoCoins()
+        {
+            using var sim = WithConfig("terrain.road.danger_permille,1000\n");
+            PlaceAt(sim, "aur_n1_r1_c1_v1", 100_000, ("wheat", 20));
+            var there = Node(sim, "aur_n1_r1_c1");
+            var back = Node(sim, "aur_n1_r1_c1_v1");
+            TripEncounter cash = null;
+            for (int trip = 0; trip < 40 && cash == null; trip++)
+            {
+                sim.Actions.Travel(trip % 2 == 0 ? there : back, insurance: true);
+                sim.AdvanceTurn();
+                cash = sim.LastTurnEvents.OfType<TripEncounter>().FirstOrDefault(e => e.Loss == EncounterLoss.Cash);
+                while (sim.World.Get<PlayerState>().IsTravelling) sim.AdvanceTurn();
+            }
+            Assert.IsNotNull(cash, "a cash encounter within forty trips");
+            Assert.Greater(cash.LossValue, 0);
+            Assert.AreEqual(0, cash.Refund);
         }
 
         [Test]

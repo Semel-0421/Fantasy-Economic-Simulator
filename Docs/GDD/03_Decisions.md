@@ -372,6 +372,20 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-114 A facility's price follows its earnings
+- Date: 2026-11-03
+- Decision: [Confirmed] A seller's price follows what the facility earns, by the user's choice. [Draft] It asks the facility's value, two years of weekly earnings at today's nearest prices, offer basis, and its cash. Losses count as zero.
+- Reason: closes the price part of C17: a wheat farm paid for itself in about five weeks.
+- Limits: two years is unmeasured. At anchor a level one wheat farm asks about 63,000 against 500 starting coins, so early play may change; the first purchase may now need a loan or trading. Warehouse overflow still sells against the whole float. Prices are read when asked and can move before a queued order applies, when the order is refused.
+- Impact: 04_Roadmap
+
+### DEC-113 The player acts on the spot and on the same terms
+- Date: 2026-11-03
+- Decision: [Draft] Buying a facility, bidding at auction and founding a company need the player standing there, not travelling, like every other act on a place. The state does not sell its facilities until privatization (P12c). During a bank run, paying from a deposit is held to the same share and once-a-week limit as a withdrawal (DEC-044). Insurance refunds cargo only, since its premium is on the cargo, as for merchants. An owned ship docked at the player's node sets how much the load may hold (DEC-034); a load too big for the cart can then leave only by ship. Guidance axes and control modes outside their range are refused.
+- Reason: step 6 of [META_2026-11-02](reviews/META_2026-11-02.md) (C05, C06, C07, C16, C17), at the user's request. That report lists presence, the ship and insurance as the owner's to decide; these are Claude's choices following the rules already there, and easily changed.
+- Limits: the asking price was unchanged here (see DEC-114). A warehouse overflow still sells against the whole float. No golden hash changes, since those runs issue no player commands.
+- Impact: SYS-ROUTE-HAZARDS, SYS-INVENTORY, SYS-BANKING, SYS-INTEREST-GROUPS
+
 ### DEC-112 The margin reaches decisions and recipes; people grow below full supply
 - Date: 2026-11-03
 - Decision: [Confirmed] Direction A of [PROPOSAL_STEP5_2026-11-03](reviews/PROPOSAL_STEP5_2026-11-03.md): the 25% margin stays. Group payout 50%. Starting income as documented: 0.3 / 0.3 / 0.3 / 0.5 / 2.0 coins. Necessity elasticity from real cases. Population turns to growth within 20 years, with a gentler rule. [Draft] The numbers that carry these out: output is valued at the traders' offer in investment, working cash, input bids and aids, and seized cargo and contract deliveries are paid the offer. Seven processing recipes and the copper smelter give more per input, so every recipe pays at anchor prices, which a test holds. Necessity elasticity 0.6, as the mean over quintiles, where the old curves acted as about 0.97. Population change is base +0.5% a year plus 2% of the supply gap (was 0 and 4%), so it breaks even at 75% of necessities met.

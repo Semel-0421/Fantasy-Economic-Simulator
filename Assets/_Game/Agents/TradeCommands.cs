@@ -69,6 +69,7 @@ namespace FES.Agents
                 int nation = ctx.World.Get<NodeBanks>().BranchNation(player.Node);
                 bank.PlayerDeposit[nation] -= cost - fromCoins;
                 bank.Reserve[nation] -= cost - fromCoins;
+                ctx.World.Get<FinanceState>().LastWithdrawTurn[nation] = ctx.Turn;
             }
             ctx.World.Get<PurseState>().ChangeFloat(player.Node, cost);
             ctx.World.Get<CargoTable>().Change(CargoHolders.PlayerCart, Good, filled);
@@ -81,7 +82,7 @@ namespace FES.Agents
             var markets = ctx.World.Get<MarketStore>();
             var load = ctx.World.Get<CargoTable>().LoadOf(CargoHolders.PlayerCart, markets.GoodWeight, markets.GoodSize);
             long fill = Math.Min(Quantity, markets.Stock[cell]);
-            fill = Math.Min(fill, PlayerTrade.CartCapacity(ctx)
+            fill = Math.Min(fill, PlayerTrade.LoadCapacity(ctx)
                 .MaxAdditional(load, markets.GoodWeight[Good.Value], markets.GoodSize[Good.Value]));
             fill = Math.Min(fill, Funds(ctx) / markets.Price[cell]);
             return (int)Math.Max(0, fill);
@@ -93,8 +94,7 @@ namespace FES.Agents
             long funds = player.LocalCoins;
             int nation = PayFromDeposit ? ctx.World.Get<NodeBanks>().BranchNation(player.Node) : -1;
             if (nation < 0) return funds;
-            var bank = ctx.World.Get<BankState>();
-            return funds + Math.Min(bank.PlayerDeposit[nation], bank.Reserve[nation]);
+            return funds + Math.Min(PlayerBank.Withdrawable(ctx, nation), ctx.World.Get<BankState>().Reserve[nation]);
         }
     }
 
@@ -156,10 +156,13 @@ namespace FES.Agents
             return ctx.World.Get<MarketStore>().TryFindCell(player.Node, good, out cell) ? null : "This market does not trade that good.";
         }
 
-        public static CargoCapacity CartCapacity(SimContext ctx)
+        /// <summary>What the player's load may come to here: an owned ship docked here carries more than the cart (DEC-034).</summary>
+        public static CargoCapacity LoadCapacity(SimContext ctx)
         {
             var config = ctx.Services.Get<GameDatabase>().Config;
-            return new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
+            return ctx.World.Get<PlayerShip>().AvailableAt(ctx.World.Get<PlayerState>().Node)
+                ? new CargoCapacity(config.ShipMaxWeight, config.ShipMaxSize)
+                : new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
         }
     }
 
@@ -230,7 +233,7 @@ namespace FES.Agents
             int to = ToWarehouse ? warehouse : CargoHolders.PlayerCart;
             var capacity = ToWarehouse
                 ? new CargoCapacity(config.WarehouseMaxWeight, config.WarehouseMaxSize)
-                : new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
+                : PlayerTrade.LoadCapacity(ctx);
             int held = cargo.QuantityOf(ToWarehouse ? CargoHolders.PlayerCart : warehouse, Good);
             int room = capacity.MaxAdditional(cargo.LoadOf(to, markets.GoodWeight, markets.GoodSize),
                 markets.GoodWeight[Good.Value], markets.GoodSize[Good.Value]);

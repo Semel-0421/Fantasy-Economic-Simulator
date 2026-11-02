@@ -340,6 +340,7 @@ namespace FES.Tests
             // Instalments keep coming out of the coins carried, so bring more than the bid.
             long coins = auction.ReservePrice[a] + 10_000;
             player.LocalCoins = coins;
+            player.Node = sim.World.Get<FacilityTable>().Node[f]; // bids are made on the spot
             sim.Actions.Bid(new FacilityId(f), auction.ReservePrice[a] - 1); // below the reserve price
             sim.Actions.Bid(new FacilityId(f), auction.ReservePrice[a]);
             AuctionClosed closed = null;

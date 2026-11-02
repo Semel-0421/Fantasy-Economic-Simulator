@@ -297,7 +297,7 @@ namespace FES.Simulation
         }
 
         /// <summary>The least its seller takes for an NPC facility.</summary>
-        public long FacilityAskingPrice(FacilityId facility) => BuyFacilityCommand.AskingPrice(Database, _facilities, facility.Value);
+        public long FacilityAskingPrice(FacilityId facility) => BuyFacilityCommand.AskingPrice(_world, Database, facility.Value);
 
         /// <summary>The warehouse of a facility, sorted by good id. Holds goods while the player owns it.</summary>
         public void GetWarehouse(FacilityId facility, List<CargoItem> into) => _cargo.Collect(CargoHolders.Warehouse(facility), into);

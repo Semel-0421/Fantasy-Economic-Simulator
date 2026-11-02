@@ -59,9 +59,13 @@ namespace FES.Agents
             if (!facility.IsValid || facility.Value >= facilities.Count) return "Unknown facility.";
             bool claim = allowLostWarehouse && facilities.WarehouseClaimUntil[facility.Value] >= 0;
             if (facilities.Owner[facility.Value] != OwnerIds.Player && !claim) return "Facility is not owned by the player.";
+            return IsAt(ctx, facilities.Node[facility.Value]) ? null : "The player is not at the facility.";
+        }
+
+        public static bool IsAt(SimContext ctx, int node)
+        {
             var player = ctx.World.Get<PlayerState>();
-            if (player.IsTravelling || player.Node != facilities.Node[facility.Value]) return "The player is not at the facility.";
-            return null;
+            return !player.IsTravelling && player.Node == node;
         }
     }
 
@@ -81,6 +85,7 @@ namespace FES.Agents
         {
             var facilities = ctx.World.Get<FacilityTable>();
             if (!Facility.IsValid || Facility.Value >= facilities.Count) return CommandResult.Fail("Unknown facility.");
+            if (Mode != ControlMode.Manual && Mode != ControlMode.Automated) return CommandResult.Fail("Unknown control mode.");
             return facilities.Owner[Facility.Value] == OwnerIds.Player
                 ? CommandResult.Success
                 : CommandResult.Fail("Facility is not owned by the player.");
@@ -103,17 +108,48 @@ namespace FES.Agents
             Axis = axis;
         }
 
-        /// <summary>What a seller asks: the facility's value and the cash that goes with it (DEC-107).</summary>
-        public static long AskingPrice(GameDatabase db, FacilityTable facilities, int f) =>
-            NpcLending.FacilityValue(db, facilities, f) + Math.Max(0, facilities.Cash[f]);
+        const int EarningsYearsAsked = 2;
+
+        /// <summary>What a seller asks: the facility's value, two years of what it earns at today's prices, and the cash that goes with it (DEC-107, DEC-114).</summary>
+        public static long AskingPrice(WorldState world, GameDatabase db, int f)
+        {
+            var facilities = world.Get<FacilityTable>();
+            long earnings = Math.Max(0, WeeklyEarnings(world, db, f)) * SimClock.WeeksPerYear * EarningsYearsAsked;
+            return NpcLending.FacilityValue(db, facilities, f) + earnings + Math.Max(0, facilities.Cash[f]);
+        }
+
+        /// <summary>A week at the facility's level and the nearest prices: output at the traders' offer, less wages, inputs, aids and upkeep.</summary>
+        public static long WeeklyEarnings(WorldState world, GameDatabase db, int f)
+        {
+            var facilities = world.Get<FacilityTable>();
+            var flows = world.Get<MarketFlows>();
+            var markets = world.Get<MarketStore>();
+            var recipe = db.Facilities[facilities.DefIndex[f]].Recipe;
+            int node = facilities.Node[f];
+            long Worth(RecipeLine[] lines)
+            {
+                long sum = 0;
+                foreach (var line in lines)
+                    if (flows.TryFindNearestMarket(node, line.Good, out _, out int cell)) sum += line.Quantity * (long)markets.Price[cell];
+                return sum;
+            }
+            long wages = 0;
+            foreach (var line in recipe.Outputs) wages += db.Config.FacilityOutputWage.MulInt(line.Quantity * (long)markets.GoodBasePrice[line.Good.Value]);
+            long week = db.Config.TraderOffer(Worth(recipe.Outputs)) - wages - Worth(recipe.Inputs) - Worth(recipe.Aids);
+            return FacilityExpansion.OutputScale(facilities.Level[f], db.Config).MulInt(week) - NpcLending.FacilityUpkeep(db, facilities, f);
+        }
 
         public CommandResult Validate(SimContext ctx)
         {
             var facilities = ctx.World.Get<FacilityTable>();
             if (!Facility.IsValid || Facility.Value >= facilities.Count) return CommandResult.Fail("Unknown facility.");
             if (Price < 0) return CommandResult.Fail("Price must not be negative.");
+            if (!GuidanceAxes.IsValid(Axis)) return CommandResult.Fail("Unknown guidance axis.");
             if (facilities.Owner[Facility.Value] != OwnerIds.Npc) return CommandResult.Fail("Facility is not for sale.");
-            if (Price < AskingPrice(ctx.Services.Get<GameDatabase>(), facilities, Facility.Value)) return CommandResult.Fail("The seller asks more.");
+            if (!PlayerSite.IsAt(ctx, facilities.Node[Facility.Value])) return CommandResult.Fail("The player is not at the facility.");
+            var db = ctx.Services.Get<GameDatabase>();
+            if (db.Facilities[facilities.DefIndex[Facility.Value]].StateOwned) return CommandResult.Fail("The state does not sell this facility.");
+            if (Price < AskingPrice(ctx.World, db, Facility.Value)) return CommandResult.Fail("The seller asks more.");
             if (ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) < Price) return CommandResult.Fail("Not enough cash.");
             return CommandResult.Success;
         }
@@ -169,6 +205,8 @@ namespace FES.Agents
             var nodes = ctx.World.Get<NodeTable>();
             if (!Headquarters.IsValid || Headquarters.Value >= nodes.Count) return CommandResult.Fail("Unknown headquarters node.");
             if (Cost < 0) return CommandResult.Fail("Cost must not be negative.");
+            if (!GuidanceAxes.IsValid(Focus)) return CommandResult.Fail("Unknown guidance axis.");
+            if (!PlayerSite.IsAt(ctx, Headquarters.Value)) return CommandResult.Fail("The player is not at the headquarters.");
             if (ctx.World.Get<GroupTable>().PlayerCompany() >= 0) return CommandResult.Fail("The company is already founded.");
             return ctx.World.Get<PlayerState>().CoinsAt(Headquarters.Value) >= Cost ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
         }

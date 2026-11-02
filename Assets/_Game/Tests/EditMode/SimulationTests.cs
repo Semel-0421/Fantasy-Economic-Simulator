@@ -197,8 +197,8 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             var facilities = sim.World.Get<FacilityTable>();
             var player = sim.World.Get<PlayerState>();
-            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Node[i] == player.Node);
-            long asked = NpcLending.FacilityValue(sim.Database, facilities, f) + facilities.Cash[f];
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Node[i] == player.Node && !sim.Database.Facilities[facilities.DefIndex[i]].StateOwned);
+            long asked = BuyFacilityCommand.AskingPrice(sim.World, sim.Database, f);
             player.LocalCoins = asked * 2;
 
             sim.Enqueue(new BuyFacilityCommand(new FacilityId(f), 0, GuidanceAxis.Industry));
@@ -207,7 +207,7 @@ namespace FES.Tests
             Assert.AreEqual(2, sim.LastTurnEvents.OfType<CommandRejected>().Count());
             Assert.AreEqual(OwnerIds.Npc, facilities.Owner[f]);
 
-            asked = NpcLending.FacilityValue(sim.Database, facilities, f) + facilities.Cash[f];
+            asked = BuyFacilityCommand.AskingPrice(sim.World, sim.Database, f);
             sim.Enqueue(new BuyFacilityCommand(new FacilityId(f), asked, GuidanceAxis.Industry));
             sim.AdvanceTurn();
             Assert.AreEqual(OwnerIds.Player, facilities.Owner[f]);

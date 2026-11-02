@@ -43,7 +43,9 @@ namespace FES.Tests
         public static void BuyFacility(GameSimulation sim, int facility, GuidanceAxis axis)
         {
             long asked = sim.View.FacilityAskingPrice(new FacilityId(facility));
-            sim.World.Get<PlayerState>().CoinsAt(sim.World.Get<FacilityTable>().Node[facility]) += asked;
+            var player = sim.World.Get<PlayerState>();
+            player.Node = sim.World.Get<FacilityTable>().Node[facility];
+            player.CoinsAt(player.Node) += asked;
             sim.Actions.BuyFacility(new FacilityId(facility), asked, axis);
         }
 

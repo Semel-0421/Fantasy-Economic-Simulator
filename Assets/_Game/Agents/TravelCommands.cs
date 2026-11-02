@@ -82,7 +82,8 @@ namespace FES.Agents
                 var lostQuote = new TravelCosts(ctx.World, ctx.Services.Get<GameDatabase>()).Quote(quote.Route, lost);
                 value = ctx.World.Get<CurrencyState>().Convert(lostQuote.CargoValue, quote.TollContinent, quote.FeeContinent);
             }
-            long refund = Insurance ? config.InsuranceRefund.MulInt(value) : 0;
+            // The premium is on the cargo: the policy covers no coins, as for merchants.
+            long refund = Insurance && loss == EncounterLoss.Cargo ? config.InsuranceRefund.MulInt(value) : 0;
             player.Coins[quote.FeeContinent] += refund;
             // [Draft] The insuring guild pays what its cash covers, the households at the origin the rest.
             MoneyLedger.PayFromGroup(ctx.World, MoneyLedger.InsuranceGuild(ctx.World, player.Node), player.Node, refund);

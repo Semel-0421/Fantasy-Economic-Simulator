@@ -76,6 +76,8 @@ namespace FES.Core
     public static class GuidanceAxes
     {
         public const int Count = 5;
+
+        public static bool IsValid(GuidanceAxis axis) => axis >= 0 && (int)axis < Count;
     }
 
     /// <summary>Simulation level of detail: per-entity stepping or summarized node-level flows.</summary>

@@ -19,11 +19,15 @@ namespace FES.Tests
             return Enumerable.Range(0, facilities.Count).Where(f => sim.Database.Facilities[facilities.DefIndex[f]].Tier == tier);
         }
 
-        static IEnumerable<int> FacilitiesAtPlayer(GameSimulation sim, IndustryTier tier)
+        // A farm for sale with a single output; buying it takes the player there.
+        static int FarmForSale(GameSimulation sim)
         {
             var facilities = sim.World.Get<FacilityTable>();
-            int node = sim.World.Get<PlayerState>().Node;
-            return FacilitiesOf(sim, tier).Where(f => facilities.Node[f] == node);
+            return FacilitiesOf(sim, IndustryTier.Primary).First(f =>
+            {
+                var def = sim.Database.Facilities[facilities.DefIndex[f]];
+                return !def.StateOwned && def.Recipe.Outputs.Length == 1;
+            });
         }
 
         static List<FacilityBankrupt> RunCollecting(GameSimulation sim, int turns)
@@ -140,7 +144,7 @@ namespace FES.Tests
             using var sim = TestWorlds.BuildSample();
             sim.Database.Config.FacilityOutputWage = Fx.Zero;
             var facilities = sim.World.Get<FacilityTable>();
-            int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
+            int farm = FarmForSale(sim);
             long cash = facilities.Cash[farm];
             TestWorlds.BuyFacility(sim, farm, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
@@ -159,7 +163,7 @@ namespace FES.Tests
             const string config = "key,value\ncargo.warehouse.max_weight,20\ncargo.warehouse.max_size,20\n";
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, config), 42).Build();
             var facilities = sim.World.Get<FacilityTable>();
-            int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
+            int farm = FarmForSale(sim);
             long cash = facilities.Cash[farm];
             TestWorlds.BuyFacility(sim, farm, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
@@ -243,14 +247,16 @@ namespace FES.Tests
             sim.Database.Config.FacilityOutputWage = Fx.Zero;
             var view = sim.View;
             var facilities = sim.World.Get<FacilityTable>();
-            int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
+            int farm = FarmForSale(sim);
             var id = new FacilityId(farm);
             long facilityCash = facilities.Cash[farm];
+            sim.World.Get<PlayerState>().Node = facilities.Node[farm];
             sim.Actions.MoveFacilityCash(id, 50); // rejected: not owned yet
             TestWorlds.BuyFacility(sim, id.Value, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
             Assert.AreEqual(1, sim.LastTurnEvents.OfType<CommandRejected>().Count());
 
+            sim.World.Get<PlayerState>().LocalCoins += 1_000;
             long coins = view.PlayerCash;
             var stored = new List<CargoItem>();
             view.GetWarehouse(id, stored);

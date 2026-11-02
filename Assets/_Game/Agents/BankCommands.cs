@@ -16,6 +16,18 @@ namespace FES.Agents
             error = nation < 0 ? "There is no bank branch here." : null;
             return nation;
         }
+
+        /// <summary>What may leave a deposit this week: all of it, or during a run a share, once (DEC-044).</summary>
+        public static long Withdrawable(SimContext ctx, int nation)
+        {
+            long deposit = ctx.World.Get<BankState>().PlayerDeposit[nation];
+            var finance = ctx.World.Get<FinanceState>();
+            if (finance.EventOf(nation) != FinancialEventKind.BankRun) return deposit;
+            return finance.LastWithdrawTurn[nation] == ctx.Turn ? 0 : RunCap(ctx, nation);
+        }
+
+        public static long RunCap(SimContext ctx, int nation) =>
+            ctx.Services.Get<GameDatabase>().Config.BankRunWithdrawShare.MulInt(ctx.World.Get<BankState>().PlayerDeposit[nation]);
     }
 
     /// <summary>
@@ -42,7 +54,7 @@ namespace FES.Agents
             {
                 // During a run the bank pays out a share of the deposit, once a week (DEC-044).
                 if (finance.LastWithdrawTurn[nation] == ctx.Turn) return CommandResult.Fail("During a bank run, one withdrawal a week.");
-                long cap = ctx.Services.Get<GameDatabase>().Config.BankRunWithdrawShare.MulInt(bank.PlayerDeposit[nation]);
+                long cap = PlayerBank.RunCap(ctx, nation);
                 if (-Amount > cap) return CommandResult.Fail($"During a bank run, at most {cap} can be withdrawn.");
             }
             return bank.Reserve[nation] >= -Amount ? CommandResult.Success : CommandResult.Fail("The bank cannot pay that out now.");
@@ -230,6 +242,7 @@ namespace FES.Agents
             var auctions = ctx.World.Get<AuctionTable>();
             int a = auctions.Find(Facility);
             if (a < 0) return CommandResult.Fail("That facility is not up for auction.");
+            if (!PlayerSite.IsAt(ctx, ctx.World.Get<FacilityTable>().Node[Facility.Value])) return CommandResult.Fail("The player is not at the facility.");
             if (Amount < auctions.ReservePrice[a]) return CommandResult.Fail("The bid is below the reserve price.");
             return Amount > auctions.PlayerBid[a] ? CommandResult.Success : CommandResult.Fail("The bid must beat the current one.");
         }

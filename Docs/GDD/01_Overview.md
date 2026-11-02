@@ -10,7 +10,7 @@ related: [SYS-PROGRESSION, SYS-AUTOMATION, SYS-PLAYER-START, DEC-040, DEC-063, D
 
 ## Pitch
 A peddler in one kingdom grows into a five-continent trading power; lower tiers automate as the business
-scales. Turn-based (one turn is one week), 2D pixel art, Android and Windows.
+scales. Turn-based (one turn is one week), 2D pixel art, Android, Windows and the web.
 
 ## Goal
 - [Confirmed] An endless sandbox: the game has no victory and no fixed end (DEC-063).

@@ -48,7 +48,7 @@ flowchart LR
 - [Confirmed] A nation spends a fixed 5% of its budget on a standing army and mercenaries, with maintenance on top,
   directly in its own markets (DEC-072). Safety grows in proportion to the spending; a war system comes later (DEC-074, P19).
 - [Draft] The budget is the reserve at the year's start less the player's deposits; maintenance is 20% on top. Purchases
-  run every 4 weeks across all stock by value. Safety is yearly defense per route over 15,000, cutting at most 60% of danger.
+  run every 4 weeks across all stock by value. The goods leave the stock once (DEC-109). Safety is yearly defense per route over 15,000, cutting at most 60% of danger.
 
 ## Land development
 - [Confirmed] Nations build ports, coast-to-inland highways, paved roads between towns, mines and farmland, choosing from

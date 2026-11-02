@@ -18,7 +18,7 @@ what a run saves: a refactoring does not change a single byte of `GoldenRunTests
 
 ## Procedure
 1. **Record the starting point.** All EditMode tests pass. Before touching a hot path, run
-   `FullScale_MemoryAndTurnTime` (explicit) and keep its turn time.
+   `FullScale_ShippedRules_StayWithinTurnBudget` (explicit) and keep its turn time.
 2. **Change the structure only, in small batches.** No rule, number or bug fix goes in with it, not even a bug found on the way:
    note it and fix it in its own change.
 3. **After each batch**, recompile and run `GoldenRunTests`. A changed hash means the batch changed behaviour: find out why and

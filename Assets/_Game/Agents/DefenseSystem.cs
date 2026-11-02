@@ -72,6 +72,7 @@ namespace FES.Agents
                 MarketCellCount = _markets.MarketCellCount,
                 Price = _markets.Price,
                 Stock = _markets.Stock,
+                Supply = _markets.Supply,
                 Demand = _markets.Demand,
                 Spend = _spend,
                 Paid = _paid,
@@ -103,6 +104,7 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> Price;
         [ReadOnly] public NativeArray<long> Spend;
         public NativeArray<int> Stock;
+        public NativeArray<int> Supply;
         public NativeArray<int> Demand;
         public NativeArray<long> Paid;
         /// <summary>Scratch, per nation: the value of its stock.</summary>
@@ -137,7 +139,9 @@ namespace FES.Agents
             {
                 long units = value <= spend ? Stock[c] : Stock[c] * spend / value;
                 if (units <= 0) continue;
+                // Through this turn's supply into its demand, like every purchase, so repricing does not clear them again.
                 Stock[c] -= (int)units;
+                Supply[c] = MarketStore.ClampToNonNegativeInt(Supply[c] + units);
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + units);
                 Paid[nation] += units * Price[c];
             }

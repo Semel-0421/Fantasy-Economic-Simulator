@@ -230,7 +230,7 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
 - Commands: `BankTransferCommand` (deposit / withdraw), `ExchangeCommand`, `TakeLoanCommand`,
   `RepayLoanCommand`, `BidCommand`; `BuyGoodsCommand` can pay from the deposit at a branch.
   `PlayerBalanceSheet` values collateral and debt for limits and seizure. A seized facility belongs to
-  `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility.
+  `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility. It cannot go bankrupt while held (DEC-109).
 - `NpcLoanTable` (persistent, with a borrower lookup) holds NPC loans; `BankSystem` services them and lends
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the
   shared lending and seizure steps; `AuctionTable` (version 2) marks whether a sale repays the player's

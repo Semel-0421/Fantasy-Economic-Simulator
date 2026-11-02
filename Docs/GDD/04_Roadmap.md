@@ -188,6 +188,10 @@ Order agreed: refactoring, then balance, then the phases.
 
 Refactoring done to the enforced limits (DEC-108). Over each limit, before and after: cognitive complexity 48 and 0 methods, cyclomatic 4 and 0, lines 8 and 0, nesting 13 and 0, parameters 9 and 0, files over 1,000 lines 2 and 0; 778 production methods became 905. Saved states of all eight golden runs unchanged, and the scale test ends with the same loans, auctions and reserves. Scale test in the Editor, settled turn: 286.7 ms before (one run), 287.0 and 293.2 ms after (two runs); merchants 106.3 ms before, 109.7 and 112.2 ms after, the only step that clearly rose. A full EditMode pass went from 47 s to 70 s with the new tests.
 
+Turn budget set (DEC-110): one second on a web build, everything computed. Shipped rules at full scale: Editor 7.9 s on average, web player about 5.2 s, merchants about 4.5 s of it. The earlier 287 ms was code defaults.
+
+Fixes from the meta-analysis (DEC-109): defense purchases, bank-held facilities, old-save cash. All eight golden hashes changed with the defense fix; balance figures above predate it and were not measured again.
+
 Balance
 - Population falls 0.8 to 1.2% a year. Year 10 necessity supply by level: nation 4%, region 10%, city 18%, village 89%.
   With unlimited town cash (experiment) region and city reach only about 45% and nation 0%, so towns lack both income and goods.

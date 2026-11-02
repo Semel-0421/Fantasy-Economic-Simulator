@@ -37,6 +37,29 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Defense_PassesWhatItBuysThroughSupply_SoStockFallsOnce()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var markets = sim.World.Get<MarketStore>();
+            var bank = sim.World.Get<BankState>();
+            for (int n = 0; n < bank.Reserve.Length; n++) bank.Reserve[n] = 1_000_000_000_000;
+            for (int c = 0; c < markets.Stock.Length; c++) markets.Stock[c] = 1000;
+            var stock = markets.Stock.ToArray();
+            var supply = markets.Supply.ToArray();
+            var demand = markets.Demand.ToArray();
+            sim.Systems.OfType<DefenseSystem>().Single().Execute(sim.Context);
+            long bought = 0;
+            for (int c = 0; c < stock.Length; c++)
+            {
+                int units = stock[c] - markets.Stock[c];
+                bought += units;
+                Assert.AreEqual(supply[c] + units, markets.Supply[c], $"supply of cell {c}");
+                Assert.AreEqual(demand[c] + units, markets.Demand[c], $"demand of cell {c}");
+            }
+            Assert.Greater(bought, 0);
+        }
+
+        [Test]
         public void Projects_AreFundedAndFinished_AndConserveMoney()
         {
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile, "key,value\nfacility.bankrupt_weeks,100000\nbank.npc_max_reserve_share_permille,0\nbank.state_reserve_target_permille,0\nstate.project_weeks,4\nstate.subsidy_max_per_nation,0\n"), 42).Build();

@@ -1,0 +1,142 @@
+{
+  "reviewer": "codex",
+  "lens": "L2",
+  "verdict": "The central price, production, household, and merchant flows mostly implement their documented rules, but the published money total is incomplete and starting luxury demand is far below the documented sample values. The measured population decline is consistent with the configured rule: growth is zero at full supply and each necessity shortfall reduces population, while the roadmap records persistent shortages in towns and at nation markets.",
+  "coverage": {
+    "read_in_full": [
+      "Assets/_Game/Agents/HouseholdGrowth.cs",
+      "Assets/_Game/Agents/Migration.cs",
+      "Assets/_Game/Agents/IncomeTax.cs",
+      "Assets/_Game/Agents/Nobles.cs",
+      "Assets/_Game/Agents/Purses.cs",
+      "Assets/_Game/Agents/MoneyTotals.cs",
+      "Assets/StreamingAssets/Data/config.csv",
+      "Docs/GDD/systems/SYS_AUTOMATION.md",
+      "Docs/GDD/systems/SYS_INFRASTRUCTURE.md",
+      "Docs/GDD/systems/SYS_INVENTORY.md",
+      "Docs/GDD/systems/SYS_LICENSES.md",
+      "Docs/GDD/systems/SYS_MARKETS.md",
+      "Docs/GDD/systems/SYS_MERCHANTS.md",
+      "Docs/GDD/systems/SYS_PLAYER_START.md",
+      "Docs/GDD/systems/SYS_PRODUCTION.md",
+      "Docs/GDD/systems/SYS_PROGRESSION.md",
+      "Docs/GDD/systems/SYS_ROUTE_HAZARDS.md",
+      "Docs/GDD/systems/SYS_STATE_ECONOMY.md",
+      "Docs/GDD/systems/SYS_TRAVEL_COSTS.md"
+    ],
+    "skimmed": [
+      "Docs/GDD/03_Decisions.md (reviewed all decision sections by sequential slices; focused on DEC-042, DEC-061 through DEC-108 and confirmed rules tied to the systems docs)",
+      "Docs/GDD/systems/SYS_BANKING.md (including confirmed money-total rules and implementation notes)",
+      "Docs/GDD/systems/SYS_INTEREST_GROUPS.md (including confirmed ownership, dividend and policy rules)",
+      "Docs/GDD/04_Roadmap.md (population, supply, cash distribution, and phase status)",
+      "Assets/_Game/Agents/ProductionSystem.cs and ProductionJobs.cs (production, payment, mode, and bankruptcy paths)",
+      "Assets/_Game/Agents/MerchantJob.cs and ArbitrageMerchantBehavior.cs (action and forced-trip paths)",
+      "Assets/_Game/Agents/TradeCommands.cs, TravelCosts.cs, TravelCommands.cs, FacilityCommands.cs, TraderLoans.cs, MoneyLedger.cs, FinanceSystem.cs, and MoneyTotals.cs (relevant flow sections; MoneyTotals.cs also read in full)",
+      "Assets/_Game/Economy/Households.cs, MarketSystems.cs, MarketFlows.cs, PriceKernel.cs, Currency.cs, and relevant SimulationConfig / SimulationConfigReader sections",
+      "Assets/_Game/Agents/BankSystem.cs, BankCommands.cs, NpcLending.cs, Credit.cs, StateProjectSystem.cs, SubsidySystem.cs, PolicySystem.cs, LaborMarket.cs, InvestmentSystem, and related agent systems (search and targeted flow tracing)",
+      "Assets/_Game/Tests/EditMode/ (selected references only)",
+      "Assets/StreamingAssets/Data/ (config.csv read in full; map_nodes.csv and selected data references skimmed)"
+    ],
+    "not_read": [
+      "Docs/GDD/reviews/ (intentionally not read)",
+      "The entirety of every file under Assets/_Game/Agents and Assets/_Game/Economy; files outside the named full-read list were inspected by targeted sections and searches, not all read from first to last line",
+      "Most files under Assets/_Game/Core, Data, World, Persistence, Simulation, and Unity",
+      "Most EditMode test files and most sample data files"
+    ]
+  },
+  "findings": [
+    {
+      "id": "L2-01",
+      "title": "Forced movement leaves unaffordable automated merchant groups idle",
+      "severity": "medium",
+      "confidence": 98,
+      "category": "confirmed-rule-mismatch",
+      "locations": [
+        "Assets/_Game/Agents/MerchantJob.cs:233",
+        "Assets/_Game/Agents/MerchantJob.cs:267",
+        "Docs/GDD/03_Decisions.md:391",
+        "Docs/GDD/03_Decisions.md:384"
+      ],
+      "evidence": "After normal trade processing, MustAct invokes SetOff only when the group remains idle. SetOff skips every candidate route when fee plus tolls exceeds AgentCash and returns without an action. DEC-106 confirms every merchant group must act each turn; DEC-107 describes the unaffordable-trip exception as Draft and explicitly records that it breaks DEC-106.",
+      "failure_scenario": "An automated merchant has no sale or profitable trade this turn and its cash is below the cost of every reachable route. SetOff finds no affordable route and returns, so the group stays idle despite the confirmed must-act rule.",
+      "fix": "Resolve the DEC-107 exception against DEC-106; if the confirmed rule stands, give an otherwise-idle group a non-trip action when it cannot afford a route."
+    },
+    {
+      "id": "L2-02",
+      "title": "The sample starts with luxury incomes 60 to 1,000 times below the documented values",
+      "severity": "medium",
+      "confidence": 99,
+      "category": "config-design-mismatch",
+      "locations": [
+        "Assets/StreamingAssets/Data/config.csv:19",
+        "Assets/StreamingAssets/Data/config.csv:23",
+        "Assets/_Game/Data/SimulationConfigReader.cs:45",
+        "Assets/_Game/Economy/Households.cs:87",
+        "Docs/GDD/02_Data_Formats.md:92",
+        "Docs/GDD/systems/SYS_MARKETS.md:40"
+      ],
+      "evidence": "The reader converts each income_permille value directly to thousandths of a coin. The sample therefore starts continents, nations, and regions at 0.005 coins per head/week, cities at 0.004, and villages at 0.002. The documented sample values are 0.3 / 0.3 / 0.3 / 0.5 / 2.0 coins. LuxuryWeight scales demand directly by IncomePerHead.",
+      "failure_scenario": "At new-game initialization, before yearly income convergence, a city starts at 0.004 rather than 0.5 coins per head/week and a village at 0.002 rather than 2.0. Their initial luxury demand is correspondingly 125 and 1,000 times lower than the documented starting values, skewing market demand and prices from turn one.",
+      "fix": "Set the five sample income_permille values to the documented 300 / 300 / 300 / 500 / 2000, or update the design and balancing evidence if the lower starting incomes are intended."
+    },
+    {
+      "id": "L2-03",
+      "title": "Published money totals omit noble-house cash",
+      "severity": "medium",
+      "confidence": 97,
+      "category": "incomplete-accounting",
+      "locations": [
+        "Assets/_Game/Agents/MoneyTotals.cs:62",
+        "Assets/_Game/Agents/MoneyTotals.cs:82",
+        "Assets/_Game/Agents/MoneyTotals.cs:89",
+        "Assets/_Game/Agents/MoneyLedger.cs:74",
+        "Assets/_Game/Agents/MoneyLedger.cs:77",
+        "Docs/GDD/systems/SYS_BANKING.md:44",
+        "Assets/_Game/Agents/FinanceSystem.cs:155"
+      ],
+      "evidence": "MoneyLedger.ContinentMoney counts NobleState.Cash alongside household cash, but MoneyTotals.Recompute adds household cash and spent without adding NobleState.Cash. The confirmed banking rule says the total counts held cash, and FinanceSystem publishes that computed total as the input to the continent price index.",
+      "failure_scenario": "When income tax is collected, Nobles.CollectTax routes its noble shares into NobleState.Cash. For that period, the conservation audit still counts those coins, but MoneyTotals omits them; the published total and following price index therefore understate actual held money by the noble balances. The omission persists until those purses spend the coins.",
+      "fix": "Add each continent's NobleState.Cash to MoneyTotals during recomputation, using the same node-to-continent attribution as MoneyLedger.ContinentMoney."
+    },
+    {
+      "id": "L2-04",
+      "title": "Setting a player facility to automated still sends its output to storage",
+      "severity": "medium",
+      "confidence": 99,
+      "category": "unimplemented-confirmed-rule",
+      "locations": [
+        "Assets/_Game/Agents/FacilityCommands.cs:68",
+        "Assets/_Game/Agents/ProductionJobs.cs:262",
+        "Assets/_Game/Agents/ProductionSystem.cs:325",
+        "Docs/GDD/systems/SYS_AUTOMATION.md:37",
+        "Docs/GDD/04_Roadmap.md:66"
+      ],
+      "evidence": "SetFacilityControlCommand changes the facility's Mode, but ProductionJob receives no mode column and routes every player-owned output row to PlayerOutputFacility. ProductionSystem then stores that output in the facility warehouse and only sells overflow. SYS-AUTOMATION confirms production ignores the mode flag; P15 remains marked Ready.",
+      "failure_scenario": "The player owns a facility, issues SetFacilityControlCommand with Automated, and advances a turn. The facility still buys inputs from its cash but output accumulates in its warehouse instead of being sold, so the manager setting does not automate the facility or pay its manager wage.",
+      "fix": "Pass the facility mode to production and route automated player output through the NPC market-sale path, with the documented management wage."
+    },
+    {
+      "id": "L2-05",
+      "title": "The confirmed ranks and ruin rules have no registered implementation",
+      "severity": "medium",
+      "confidence": 96,
+      "category": "missing-confirmed-system",
+      "locations": [
+        "Docs/GDD/systems/SYS_PROGRESSION.md:15",
+        "Docs/GDD/systems/SYS_PROGRESSION.md:18",
+        "Docs/GDD/systems/SYS_PROGRESSION.md:33",
+        "Assets/_Game/Agents/AgentsModule.cs:96",
+        "Assets/_Game/Agents/AgentsModule.cs:130",
+        "Docs/GDD/04_Roadmap.md:65"
+      ],
+      "evidence": "SYS-PROGRESSION marks seven ranks and ruin as Confirmed, but its implementation note says Not built (P14). The agent module registers the current simulation systems without a RankSystem or ruin check; roadmap P14 is still Ready.",
+      "failure_scenario": "A player reaches a rank threshold, or holds debts above collateral and no continent coins for eight weeks. No system publishes a rank change or game-over state, so the player receives neither the confirmed progress measure nor the confirmed ruin ending.",
+      "fix": "Implement and register the yearly rank update and weekly ruin check described in SYS-PROGRESSION."
+    }
+  ],
+  "strengths": [
+    "Population decline is mechanically traceable rather than an unexplained drift: config sets zero base growth and zero urban penalty, DEC-091 sets a 4% supply-gap response, and HouseholdGrowthSystem applies response times (necessity met / wanted - 1), clamped at -4%. The roadmap records year-60 population near-flat but still falling, with shortages concentrated in towns and core towns; this is a balance problem, not a contradictory formula.",
+    "The settlement path is mostly closed: household consumption moves from Spent into the local traders' float, producer sales are capped by the float remaining after the producer reserve, and seller proceeds are debited from that float. The conservation audit explicitly counts cash at households, business, state and floats.",
+    "Production checks every required input's stock and total cost before buying any inputs, then performs the purchases and production in facility order, preserving the all-or-nothing rule and deterministic competition for stock."
+  ]
+}

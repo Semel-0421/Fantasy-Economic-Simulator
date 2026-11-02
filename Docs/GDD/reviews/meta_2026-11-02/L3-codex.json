@@ -1,0 +1,157 @@
+{
+  "reviewer": "codex",
+  "lens": "L3",
+  "verdict": "The layer boundaries and presentation facade are coherent, but the measured systems do full-population scans each turn and merchant route scoring compounds per-group work with route branching. The source-level standards checks are materially bypassable, and load-listener failure escapes GameSimulation's advertised rollback path.",
+  "coverage": {
+    "read_in_full": [
+      "Assets/_Game/Agents/NpcLending.cs",
+      "Assets/_Game/Agents/MerchantJobTrips.cs",
+      "Assets/_Game/Agents/MerchantFlowJob.cs",
+      "Assets/_Game/Agents/MoneyLedger.cs",
+      "Assets/_Game/Core/Pipeline.cs",
+      "Assets/_Game/Simulation/GameSimulation.cs",
+      "Assets/_Game/Unity/SimulationRunner.cs",
+      "Assets/_Game/Unity/StreamingAssetsData.cs",
+      "Assets/_Game/Tests/EditMode/ArchitectureTests.cs",
+      "Assets/_Game/Tests/EditMode/CodeStandardsTests.cs",
+      "Assets/_Game/Tests/EditMode/GoldenRunTests.cs",
+      "Assets/_Game/Tests/EditMode/PolicyTests.cs"
+    ],
+    "skimmed": [
+      "Assets/_Game/Agents/BankSystem.cs (read in sections; reviewed Execute, NPC servicing/lending and seizure flows)",
+      "Assets/_Game/Agents/Credit.cs (bonds, bills and credit system reviewed in sections)",
+      "Assets/_Game/Agents/ArbitrageMerchantBehavior.cs (read in sections; setup, preparation, dispatch, pooling and disposal reviewed)",
+      "Assets/_Game/Agents/MerchantJob.cs (read in sections; main loop, sale, trip and cargo flows reviewed)",
+      "Assets/_Game/Agents/PolicySystem.cs",
+      "Assets/_Game/Agents/MadeToOrder.cs",
+      "Assets/_Game/Agents/Contracts.cs",
+      "Assets/_Game/Tests/EditMode/SourceMetrics.cs (first 200 lines reviewed; interpolated-string handling checked)",
+      "Assets/_Game/Tests/EditMode/SourceMetricsTests.cs",
+      "Assets/_Game/Tests/EditMode/CreditTests.cs",
+      "Assets/_Game/Tests/EditMode/FinanceTests.cs",
+      "Assets/_Game/Tests/EditMode/MerchantTests.cs",
+      "Assets/_Game/Tests/EditMode/MerchantSaleTests.cs",
+      "Assets/_Game/Tests/EditMode/SimulationTests.cs",
+      "relevant test names and callsites across Assets/_Game/Tests/EditMode",
+      "all Assets/_Game assembly definitions",
+      "Docs/GDD/INDEX.md, Docs/GDD/03_Decisions.md, Docs/GDD/01_Extension_Guide.md, Docs/GDD/05_Refactoring_Standards.md",
+      "Commit 485b660 diff"
+    ],
+    "not_read": [
+      "Most EditMode test files were not read in full, including non-credit, non-finance, non-merchant and non-policy suites",
+      "Assets/StreamingAssets/Data/",
+      "Docs/GDD/reviews/ (excluded by brief)",
+      "GDD documents beyond INDEX.md and the named decision, extension and standards documents"
+    ]
+  },
+  "findings": [
+    {
+      "id": "L3-01",
+      "title": "Standards metrics erase executable expressions inside interpolated strings",
+      "severity": "medium",
+      "confidence": 97,
+      "category": "test-coverage",
+      "locations": [
+        "Assets/_Game/Tests/EditMode/SourceMetrics.cs:51-60",
+        "Assets/_Game/Tests/EditMode/CodeStandardsTests.cs:56-58"
+      ],
+      "evidence": "StripCommentsAndStrings sees an interpolated prefix as a string and blanks through its closing quote. AllMethods then measures only this stripped representation, dropping all interpolation expressions from complexity, nesting, parameter and line metrics.",
+      "failure_scenario": "A production method can put enough nested conditional expressions inside $\"...{(a ? (b ? x : y) : z)}...\" to exceed a configured complexity limit. Those executable branches are removed before Measure runs, so the standards test reports no violation.",
+      "fix": "Keep and tokenize interpolation expression bodies while blanking literal text, and add a metric test with nested branches inside interpolation."
+    },
+    {
+      "id": "L3-02",
+      "title": "Merchant way-home setup rescans the complete route table for every BFS node and continent",
+      "severity": "medium",
+      "confidence": 96,
+      "category": "performance",
+      "locations": [
+        "Assets/_Game/Agents/ArbitrageMerchantBehavior.cs:169-172",
+        "Assets/_Game/Agents/ArbitrageMerchantBehavior.cs:175-196"
+      ],
+      "evidence": "PrepareWaysHome calls FindWaysToward once per continent. Each dequeued BFS node loops from route 0 through _routes.Count and filters by destination, giving O(C × V × E) route checks on a connected map during simulation initialization.",
+      "failure_scenario": "Building the 1,580-market world with multiple continents visits most nodes in each BFS, and for each visit scans every route even though only incoming routes can extend the search. Larger maps multiply this work before the first turn, affecting Android startup.",
+      "fix": "Build/reuse incoming-route adjacency once and traverse only the dequeued node's incoming routes."
+    },
+    {
+      "id": "L3-03",
+      "title": "The bank turn spends time scanning every borrower candidate and every live NPC loan each week",
+      "severity": "medium",
+      "confidence": 86,
+      "category": "performance",
+      "locations": [
+        "Assets/_Game/Agents/BankSystem.cs:244-261",
+        "Assets/_Game/Agents/BankSystem.cs:502-529"
+      ],
+      "evidence": "Every Execute services every NPC loan row, then LendToNpcs loops all facilities and all agents. At the stated scale those candidate loops touch 8,500 facilities plus 9,250 merchant groups each turn, even when most have nonnegative cash; eligible merchants additionally collect and price each cargo item. The source shows the work, though the aggregate timer does not isolate each loop's contribution to 144 ms.",
+      "failure_scenario": "In a settled full-scale world, even if only a small fraction of facilities and groups are short of cash, every bank turn still visits all 17,750 rows and checks balances/ownership before deciding no action is needed.",
+      "fix": "For a behavior-preserving cut, track negative-cash borrowers as they cross below zero and service only that candidate set; the immediate zero-code feature cut is setting npc_loan_max_reserve_share to 0, which takes the existing early return but disables NPC lending."
+    },
+    {
+      "id": "L3-04",
+      "title": "Detailed merchant work is one serial job with per-group nested market and route searches",
+      "severity": "medium",
+      "confidence": 95,
+      "category": "performance",
+      "locations": [
+        "Assets/_Game/Agents/ArbitrageMerchantBehavior.cs:214-237",
+        "Assets/_Game/Agents/MerchantJob.cs:187-193",
+        "Assets/_Game/Agents/MerchantJobTrips.cs:68-82",
+        "Assets/_Game/Agents/MerchantJobTrips.cs:146-174",
+        "Assets/_Game/Agents/MerchantJobTrips.cs:251-269",
+        "Assets/_Game/Agents/MerchantJobTrips.cs:292-310"
+      ],
+      "evidence": "RunDetailed schedules a single IJob and immediately completes it. Execute visits every agent row; each stepped idle group scans its stocked cells against outgoing routes, and WeighUnit can call recursive Beyond, which branches over outgoing routes for each remaining JudgeHops level. Bid and carry evaluation repeat route work. BurstCompile does not parallelize this IJob.",
+      "failure_scenario": "With 9,250 groups at full scale, a turn where many are stepped and idle repeatedly evaluates candidate cell-route combinations; a node with branching routes multiplies Beyond calls for each candidate, accounting for substantial agents.merchants time (about 110 ms in the supplied Editor measurement).",
+      "fix": "The cheapest behavior-preserving cut is memoizing per-turn destination/good/hops route values so candidates reuse Beyond results. If a behavior tradeoff is acceptable, lower merchants.judge_hops or move more groups to aggregate LOD; converting to parallel jobs is not a cheap safe cut because the job mutates shared markets, purses and cargo in row order."
+    },
+    {
+      "id": "L3-05",
+      "title": "A load-listener exception occurs after the save has committed and bypasses rollback",
+      "severity": "medium",
+      "confidence": 99,
+      "category": "persistence",
+      "locations": [
+        "Assets/_Game/Simulation/GameSimulation.cs:72-88",
+        "Assets/_Game/Core/Pipeline.cs:240-246"
+      ],
+      "evidence": "GameSimulation.Load restores its backup only for exceptions thrown by SaveSerializer.Read. It sets _newlyBuilt false and calls NotifyLoaded after the try/catch; NotifyLoaded invokes arbitrary registered ILoadListener implementations, any of which can throw after persistent state has been replaced.",
+      "failure_scenario": "A module adds an ILoadListener whose OnLoaded throws while rebuilding derived state. Load propagates an exception, but the simulation retains the loaded save rather than the pre-call state despite the documented atomic-load contract.",
+      "fix": "Include NotifyLoaded in the rollback-protected operation, and restore _newlyBuilt as well as saved state if notification fails."
+    },
+    {
+      "id": "L3-06",
+      "title": "The duplicate-block check misses duplicated logic when local identifiers differ",
+      "severity": "medium",
+      "confidence": 94,
+      "category": "test-coverage",
+      "locations": [
+        "Assets/_Game/Tests/EditMode/CodeStandardsTests.cs:99-115"
+      ],
+      "evidence": "The test keys a block by its exact normalized source lines. It token-counts the block but does not normalize identifiers or compare token sequences with renamed identifiers, unlike the documented duplicated-block rule.",
+      "failure_scenario": "Copy a 10-line, 100-token block into another production method and rename a local variable consistently. The second block is semantically duplicated but its exact string key differs, so Code_HasNoDuplicatedBlocks passes.",
+      "fix": "Use token-based clone matching that tolerates identifier renames, or narrow the documentation to state that only exact text clones are checked."
+    },
+    {
+      "id": "L3-07",
+      "title": "The determinism standards check misses Single and Double aliases",
+      "severity": "low",
+      "confidence": 99,
+      "category": "test-coverage",
+      "locations": [
+        "Assets/_Game/Tests/EditMode/ArchitectureTests.cs:30-39",
+        "Docs/GDD/01_Extension_Guide.md:63-66"
+      ],
+      "evidence": "The test bans only the source substrings \"float \" and \"double \" on each line. It does not check System.Single/System.Double or aliases, although the guide forbids float/double simulation math.",
+      "failure_scenario": "Add `System.Single price = 1;` to a simulation source file. The type is floating point but neither banned substring occurs, so SimulationAssemblies_DoNotUseNonDeterministicApis passes.",
+      "fix": "Check parsed type syntax or also ban fully qualified Single/Double (and aliases) with a test proving the equivalent spellings are rejected."
+    }
+  ],
+  "strengths": [
+    "Assembly references reviewed: Core is foundational; Data, World and Economy depend downward; Agents depends on those layers; Simulation composes them; Unity references the Simulation facade.",
+    "Unity presentation bridge reviewed in both Unity source files and GameSimulation/SimulationView: UI-facing queries return copies and player actions enqueue commands.",
+    "GoldenRunTests pins eight seeds/settings/spans to saved-state hashes; the relevant credit, finance, merchant and policy tests exercise representative behavior, and merchant tests include Burst-versus-managed parity.",
+    "FullScale_MemoryAndTurnTime logs per-system timings and memory and asserts full market/good counts; it is Explicit, and was not run as the brief forbids Unity execution.",
+    "MerchantFlowJob is also one serial IJob, but it uses outgoing-route adjacency and binary search over sorted market cells; no distinct defect was verified there."
+  ]
+}

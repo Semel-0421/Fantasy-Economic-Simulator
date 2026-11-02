@@ -47,6 +47,10 @@ namespace FES.Tests
             sim.Actions.BuyFacility(new FacilityId(facility), asked, axis);
         }
 
+        /// <summary>The target-scale world under the rules the game ships with.</summary>
+        public static IDataSource FullScaleShipped() =>
+            ((InMemoryDataSource)FullScale()).Add(GameDatabase.ConfigFile, Sample().ReadText(GameDatabase.ConfigFile));
+
         /// <summary>
         /// Target scale: 5 continents x 5 nations x 2 regions x 5 cities x 5 villages
         /// (1,250 villages, 1,580 markets) and 20 categories x 50 goods x 4 grades (4,000 items).

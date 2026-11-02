@@ -364,7 +364,8 @@ namespace FES.Agents
                     if (FacilityGroup[f] >= 0) GroupDividend[FacilityGroup[f]] += dividend;
                     else HouseholdCash[FacilityNode[f]] += dividend;
                 }
-                if (FacilityCash[f] >= 0) FacilityNegativeCashWeeks[f] = 0;
+                // A facility held for auction has no operator to fail; its sale settles the arrears.
+                if (FacilityCash[f] >= 0 || FacilityOwner[f] == OwnerIds.Bank) FacilityNegativeCashWeeks[f] = 0;
                 else if (++FacilityNegativeCashWeeks[f] >= BankruptWeeks) Bankrupt.Add(f);
             }
         }

@@ -210,6 +210,26 @@ namespace FES.Tests
         }
 
         [Test]
+        public void FacilityHeldForAuction_CannotGoBankrupt()
+        {
+            using var sim = Build();
+            PlaceAt(sim, City, 0);
+            var facilities = sim.World.Get<FacilityTable>();
+            int f = OwnCityFacility(sim);
+            facilities.Owner[f] = OwnerIds.Bank;
+            facilities.Cash[f] = -100_000;
+            facilities.NegativeCashWeeks[f] = sim.Database.Config.FacilityBankruptWeeks;
+            sim.World.Get<AuctionTable>().Add(f, 0, sim.Turn + 10, 1);
+
+            sim.AdvanceTurn();
+
+            Assert.IsEmpty(sim.LastTurnEvents.OfType<FacilityBankrupt>());
+            Assert.AreEqual(OwnerIds.Bank, facilities.Owner[f]);
+            Assert.AreEqual(0, facilities.NegativeCashWeeks[f]);
+            Assert.AreEqual(1, sim.World.Get<AuctionTable>().Count);
+        }
+
+        [Test]
         public void UnpaidLoan_LeadsToSeizure_AndAuctionToAnNpc()
         {
             using var sim = Build();

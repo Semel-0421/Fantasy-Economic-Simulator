@@ -17,7 +17,7 @@ updated: 2026-11-01
 | Pitch | A peddler in one kingdom grows into a five-continent trading power; lower tiers automate as the business scales |
 | Genre | Turn-based economic simulation |
 | Visual style | 2D pixel art |
-| Platforms | Android, Windows |
+| Platforms | Android, Windows, web |
 | Unity version | 6000.6.6f1 (URP 2D) |
 | Turn | 1 week (52 turns per year) |
 | Start | A random village, no bank access (DEC-040) |

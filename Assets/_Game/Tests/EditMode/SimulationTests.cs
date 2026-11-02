@@ -566,49 +566,66 @@ namespace FES.Tests
             Assert.IsTrue(lod.IsDetailed(facilities.Node[far]));
         }
 
-        [Test, Explicit("Builds the full 1,580-market / 4,000-item world; run manually to measure.")]
+        /// <summary>The target on a web build, where nothing may be left out to reach it (DEC-110). Tested here as a necessary condition.</summary>
+        const double TurnBudgetMs = 1000;
+
+        [Test, Explicit("Builds the full 1,580-market / 4,000-item world with the shipped rules; run manually to measure.")]
         [Category("Scale")]
-        public void FullScale_MemoryAndTurnTime()
+        [Timeout(1800000)]
+        public void FullScale_ShippedRules_StayWithinTurnBudget()
         {
             var build = Stopwatch.StartNew();
-            using var sim = SimulationBuilder.FromData(TestWorlds.FullScale(), 1).Build();
+            using var sim = SimulationBuilder.FromData(TestWorlds.FullScaleShipped(), 1).Build();
             build.Stop();
+            Assert.AreEqual(1, sim.Database.Config.LodMode, "Every node is computed in full.");
             var markets = sim.World.Get<MarketStore>();
-
-            sim.AdvanceTurn(); // warm-up (Burst compile, first allocation)
-            const int turns = 12;
-            var run = Stopwatch.StartNew();
-            for (int t = 0; t < turns; t++) sim.AdvanceTurn();
-            run.Stop();
-
-            var perSystem = string.Join(", ", sim.Systems.Select((s, i) => $"{s.Id}={sim.LastSystemDuration(i).TotalMilliseconds:0.0}ms"));
             Debug.Log($"[FES scale] markets={markets.MarketCount} cells={markets.CellCount} " +
-                      $"marketMB={markets.NativeBytes / (1024.0 * 1024.0):0.0} " +
-                      $"facilities={sim.World.Get<FacilityTable>().Count} merchants={sim.World.Get<AgentTable>().Count} " +
-                      $"build={build.ElapsedMilliseconds}ms avgTurn={run.Elapsed.TotalMilliseconds / turns:0.0}ms | {perSystem}");
+                $"marketMB={markets.NativeBytes / (1024.0 * 1024.0):0.0} " +
+                $"facilities={sim.World.Get<FacilityTable>().Count} merchants={sim.World.Get<AgentTable>().Count} build={build.ElapsedMilliseconds}ms");
 
-            // After a year the NPC loans and trade are in full swing; the first weeks flatter the turn.
-            while (sim.Turn < 60) sim.AdvanceTurn();
+            // Through a new year, whose systems an ordinary turn does not run, and on into a settled quarter.
+            int lastTurn = SimClock.WeeksPerYear + SimClock.WeeksPerQuarter;
             var totals = new double[sim.Systems.Count];
-            var settled = Stopwatch.StartNew();
-            for (int t = 0; t < SimClock.WeeksPerQuarter; t++)
+            double all = 0, worst = 0, newYear = 0;
+            int worstTurn = 0;
+            string newYearSystems = "";
+            sim.AdvanceTurn(); // warm-up (Burst compile, first allocation)
+            while (sim.Turn <= lastTurn)
             {
+                bool isNewYear = sim.Turn % SimClock.WeeksPerYear == 0;
+                int turn = sim.Turn;
+                var one = Stopwatch.StartNew();
                 sim.AdvanceTurn();
+                double ms = one.Elapsed.TotalMilliseconds;
+                all += ms;
+                if (ms > worst) (worst, worstTurn) = (ms, turn);
                 for (int i = 0; i < totals.Length; i++) totals[i] += sim.LastSystemDuration(i).TotalMilliseconds;
+                if (isNewYear)
+                {
+                    newYear = ms;
+                    newYearSystems = SlowestSystems(sim, i => sim.LastSystemDuration(i).TotalMilliseconds);
+                }
             }
-            settled.Stop();
-            var scaleBank = sim.World.Get<BankState>();
-            long scaleReserves = 0, scaleDeposits = 0;
-            for (int n = 0; n < sim.World.Get<NodeBanks>().NationCount; n++)
-            {
-                scaleReserves += scaleBank.Reserve[n];
-                scaleDeposits += scaleBank.PlayerDeposit[n];
-            }
-            Debug.Log($"[FES scale settled] npcLoans={sim.World.Get<NpcLoanTable>().Count} auctions={sim.World.Get<AuctionTable>().Count} reserves={scaleReserves} deposits={scaleDeposits} avgTurn={settled.Elapsed.TotalMilliseconds / SimClock.WeeksPerQuarter:0.0}ms | " +
-                      string.Join(", ", sim.Systems.Select((s, i) => $"{s.Id}={totals[i] / SimClock.WeeksPerQuarter:0.0}ms")));
+            Debug.Log($"[FES scale shipped] turns=1-{lastTurn} avgTurn={all / lastTurn:0.0}ms worst={worst:0.0}ms at turn {worstTurn} newYear={newYear:0.0}ms ({newYearSystems}) | " +
+                SlowestSystems(sim, i => totals[i] / lastTurn));
 
             Assert.AreEqual(1580, markets.MarketCount);
             Assert.AreEqual(4000, sim.Database.GoodCount);
+            Assert.LessOrEqual(worst, TurnBudgetMs, $"Worst turn {worstTurn}.");
+        }
+
+        static string SlowestSystems(GameSimulation sim, System.Func<int, double> ms) =>
+            string.Join(", ", sim.Systems.Select((s, i) => (s.Id, ms: ms(i))).OrderByDescending(x => x.ms).Take(8).Select(x => $"{x.Id}={x.ms:0.0}ms"));
+
+        [Test, Explicit("Writes the full-scale data for the web benchmark player into StreamingAssets; delete the folder after building.")]
+        [Category("Scale")]
+        public void FullScale_WritesWebBenchmarkData()
+        {
+            string folder = Path.Combine(UnityEngine.Application.streamingAssetsPath, "Benchmark");
+            Directory.CreateDirectory(folder);
+            var data = TestWorlds.FullScaleShipped();
+            foreach (string file in DataFiles.All)
+                if (data.Exists(file)) File.WriteAllText(Path.Combine(folder, file), data.ReadText(file));
         }
     }
 }

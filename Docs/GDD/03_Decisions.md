@@ -372,6 +372,20 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-110 One second a turn on a web build, with everything computed
+- Date: 2026-11-02
+- Decision: [Confirmed] The target is one second a turn on a web build. Every node and agent is computed: the budget is not reached by aggregating nodes or by cutting what merchants weigh, because lumped calculation stops the system working as intended. The web joins the platforms. [Draft] Speed-ups keep the results, so golden hashes stay; `FullScale_ShippedRules_StayWithinTurnBudget` tests the shipped rules through a new year, and `TurnBenchmark` measures a real web player.
+- Reason: the user's instruction. The scale test had measured code defaults, not the shipped game.
+- Limits: not met yet. A web player in Chrome on the development desktop averages about 5.2 s a turn, worst 11.3 s; merchants take about 4.5 s and credit 0.5 s. Weaker devices are unmeasured. The shipped config has 4,460 merchant groups on the full-scale map, against 9,250 in the target table.
+- Impact: 00_Architecture, 01_Overview, INDEX, 01_Extension_Guide, 05_Refactoring_Standards, 04_Roadmap
+
+### DEC-109 Fixes from the meta-analysis: defense purchases, bank-held facilities, old-save cash
+- Date: 2026-11-02
+- Decision: [Draft] Defense purchases pass through the turn's supply into its demand like every other purchase, so the goods leave once. A facility held by the bank counts no weeks toward bankruptcy; its sale settles any arrears. The old-save migration marks unset facility cash with a value no facility can reach, so a real cash of -1 survives loading.
+- Reason: reproduced defects C01, C03 and C02 of [META_2026-11-02](reviews/META_2026-11-02.md), fixed at the user's request.
+- Limits: all eight golden hashes change, from the defense fix. Its effect on balance was not measured, and roadmap balance figures predate it. Related C11 and C12 are not fixed.
+- Impact: SYS-STATE-ECONOMY, SYS-BANKING, 04_Roadmap
+
 ### DEC-108 Refactoring follows published standards, and tests enforce them
 - Date: 2026-11-02
 - Decision: [Confirmed] Refactoring is checked against standards from outside the project, and enforced. [Draft] The standards are Fowler's definition (behaviour unchanged, small steps) and the default limits of Sonar's and Microsoft's rules, in 05_Refactoring_Standards. `CodeStandardsTests` fails on a method or file over a limit, a duplicated block or an unused private method; `GoldenRunTests` fails when a seeded run's saved state changes by a byte, so a change meant to alter the simulation records new hashes in the same commit. Exemptions need a reason in the test, and none are in use.

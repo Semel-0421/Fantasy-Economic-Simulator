@@ -1,0 +1,105 @@
+{
+    "reviewer":  "codex",
+    "lens":  "L1",
+    "verdict":  "Three verified correctness defects remain in save rollback, contract term accounting, and large-value fixed-point scaling. The money ledger and inspected transfers balance through the normal sized sample-world paths, but several simulation files and tests remain outside this pass.",
+    "coverage":  {
+                     "read_in_full":  [
+                                          "Assets/_Game/Simulation/GameSimulation.cs",
+                                          "Assets/_Game/Persistence/SaveSerializer.cs",
+                                          "Assets/_Game/Core/Pipeline.cs",
+                                          "Assets/_Game/Core/Fx.cs",
+                                          "Assets/_Game/Economy/Currency.cs",
+                                          "Assets/_Game/Agents/MoneyLedger.cs",
+                                          "Assets/_Game/Agents/BankSystem.cs",
+                                          "Assets/_Game/Agents/Credit.cs",
+                                          "Assets/_Game/Agents/Contracts.cs",
+                                          "Assets/_Game/Agents/FacilityCommands.cs",
+                                          "Assets/_Game/Agents/IncomeTax.cs",
+                                          "Assets/_Game/Agents/Migration.cs",
+                                          "Assets/_Game/Agents/Purses.cs"
+                                      ],
+                     "skimmed":  [
+                                     "Assets/_Game/Agents/BankCommands.cs",
+                                     "Assets/_Game/Agents/TradeCommands.cs",
+                                     "Assets/_Game/Agents/ProductionJobs.cs",
+                                     "Assets/_Game/Agents/MerchantJob.cs",
+                                     "Assets/_Game/Agents/MerchantJobTrips.cs",
+                                     "Assets/_Game/Agents/AgentsModule.cs",
+                                     "Assets/_Game/Agents/AgentTables.cs (PlayerState)",
+                                     "Assets/_Game/Agents/Lod.cs",
+                                     "Assets/_Game/World/NodeTable.cs",
+                                     "Assets/_Game/Agents/ArbitrageMerchantBehavior.cs",
+                                     "Assets/_Game/Economy/Households.cs",
+                                     "Assets/_Game/Economy/MarketFlows.cs",
+                                     "Assets/_Game/Tests/EditMode (searched targeted references, tests not executed)",
+                                     "Docs/GDD/INDEX.md",
+                                     "Docs/GDD/03_Decisions.md",
+                                     "Docs/GDD/00_Architecture.md",
+                                     "Docs/GDD/systems/SYS_BANKING.md",
+                                     "Assets/StreamingAssets/Data/config.csv (targeted keys)"
+                                 ],
+                     "not_read":  [
+                                      "The remaining production files under Assets/_Game/Core, Assets/_Game/Economy, Assets/_Game/Persistence, Assets/_Game/Simulation, and Assets/_Game/Agents; in particular the full contents of SimulationView.cs, most agent systems, and several portions of MerchantJob.cs and ProductionJobs.cs",
+                                      "Most files under Assets/_Game/Tests/EditMode",
+                                      "Most design documents and sample data files under Assets/StreamingAssets/Data",
+                                      "Docs/GDD/reviews/"
+                                  ]
+                 },
+    "findings":  [
+                     {
+                         "id":  "L1-01",
+                         "title":  "Load failures during derived-state rebuild bypass rollback",
+                         "severity":  "medium",
+                         "confidence":  97,
+                         "category":  "save-atomicity",
+                         "locations":  [
+                                           "Assets/_Game/Simulation/GameSimulation.cs:76",
+                                           "Assets/_Game/Simulation/GameSimulation.cs:87",
+                                           "Assets/_Game/Agents/AgentTables.cs:294",
+                                           "Assets/_Game/Agents/Lod.cs:59",
+                                           "Assets/_Game/World/NodeTable.cs:120"
+                                       ],
+                         "evidence":  "The try/catch restores the backup only around SaveSerializer.Read (GameSimulation.cs:76-85); NotifyLoaded runs afterward at line 87. PlayerState.Read assigns Node without checking its range (AgentTables.cs:296), and the load listener evaluates LOD; with an invalid node, CollectSubtree indexes ChildStart[n] at NodeTable.cs:120.",
+                         "failure_scenario":  "A save with PlayerState.Node set to -2 passes PlayerState.Read. On a default LOD configuration, Load then throws while CollectSubtree accesses ChildStart[-2]. Since NotifyLoaded is outside the catch, the backup is not read and the simulation remains loaded with the invalid player node; _newlyBuilt has also already been set false.",
+                         "fix":  "Include NotifyLoaded in the rollback-protected operation, and validate loaded player node and travel fields before accepting the section."
+                     },
+                     {
+                         "id":  "L1-02",
+                         "title":  "Supply contracts expire before delivering the final contracted week",
+                         "severity":  "medium",
+                         "confidence":  99,
+                         "category":  "contract-accounting",
+                         "locations":  [
+                                           "Assets/_Game/Agents/Contracts.cs:153",
+                                           "Assets/_Game/Agents/Contracts.cs:167",
+                                           "Assets/_Game/Agents/Contracts.cs:180",
+                                           "Assets/_Game/Agents/Contracts.cs:238",
+                                           "Assets/_Game/Agents/Contracts.cs:241",
+                                           "Assets/StreamingAssets/Data/config.csv:83"
+                                       ],
+                         "evidence":  "Each finance execution calls Deliver before signing contracts (Contracts.cs:153-161). A contract is signed with EndTurn = ctx.Turn + term (line 241); Deliver removes it as soon as ctx.Turn \u003e= EndTurn (lines 169-175), before attempting that turn units. The deposit is calculated for quantity × unit price × term (line 238), and the sample config enables eight contracts per nation.",
+                         "failure_scenario":  "A contract signed on turn T for term 8 is not delivered on T because delivery runs before signing. It delivers on T+1 through T+7, then is removed at the start of T+8 before sale. With stock available throughout, the buyer receives seven weekly quantities although the deposit and agreed term cover eight.",
+                         "fix":  "Make the expiry boundary include the final delivery turn, or store an exclusive end turn consistent with the term and deposit calculation."
+                     },
+                     {
+                         "id":  "L1-03",
+                         "title":  "Large raw fixed-point scaling returns a false saturated value",
+                         "severity":  "medium",
+                         "confidence":  99,
+                         "category":  "fixed-point-overflow",
+                         "locations":  [
+                                           "Assets/_Game/Core/Fx.cs:60",
+                                           "Assets/_Game/Core/Fx.cs:63",
+                                           "Assets/_Game/Core/Fx.cs:64",
+                                           "Assets/_Game/Agents/MerchantJobTrips.cs:122"
+                                       ],
+                         "evidence":  "MulIntRaw returns long.MaxValue \u003e\u003e FractionBits (or long.MinValue \u003e\u003e FractionBits) whenever either argument lies outside the safe range, regardless of whether the scaled result actually overflows (Fx.cs:63-65). Merchant trip budget uses this helper for non-unit spend traits (MerchantJobTrips.cs:122).",
+                         "failure_scenario":  "With merchant cash 3,000,000,000 and a 0.5 spend trait, NewSearch should set Budget to 1,500,000,000. MulIntRaw instead returns 140,737,488,355,327, so trip selection treats the merchant as able to fund loads far beyond its cash; BuyLoad can then subtract a larger actual cost and push the cash negative. Such values are reachable when long-valued starting cash and coin supply config are set above the int threshold.",
+                         "fix":  "Scale without overflowing the intermediate (for example, split integer and fractional parts or use a Burst-safe wide multiply) and saturate only when the final scaled result exceeds long range."
+                     }
+                 ],
+    "strengths":  [
+                      "MoneyLedger.ContinentMoney explicitly includes player, facilities, merchant groups, banks, traders, household balances/spending, and noble cash; inspected exchange, travel and trade paths move value between holders. Files inspected: Assets/_Game/Agents/MoneyLedger.cs, Assets/_Game/Agents/BankCommands.cs, Assets/_Game/Agents/TravelCommands.cs, Assets/_Game/Agents/TradeCommands.cs.",
+                      "SaveSerializer stages and migrates recognized sections before applying them, and GameSimulation restores a serialized backup when component application fails. Files inspected: Assets/_Game/Persistence/SaveSerializer.cs, Assets/_Game/Simulation/GameSimulation.cs."
+                  ]
+}

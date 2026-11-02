@@ -219,12 +219,12 @@ namespace FES.Agents
     }
 
     /// <summary>
-    /// Version 1 had no cash or warehouse-claim columns. The migration cannot see the facility types, so it writes a negative
-    /// cash that <see cref="ProductionSystem"/> replaces with the tier's starting cash after loading.
+    /// Version 1 had no cash or warehouse-claim columns. The migration cannot see the facility types, so it writes a cash
+    /// that no facility can reach, which <see cref="ProductionSystem"/> replaces with the tier's starting cash after loading.
     /// </summary>
     public sealed class FacilityTableV1Migration : ISaveMigration
     {
-        public const long UnsetCash = -1;
+        public const long UnsetCash = long.MinValue;
 
         public string SectionKey => FacilityTable.SectionKey;
         public int FromVersion => 1;

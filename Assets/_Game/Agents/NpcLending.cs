@@ -150,8 +150,7 @@ namespace FES.Agents
             var facilities = ctx.World.Get<FacilityTable>();
             facilities.Owner[facility] = OwnerIds.Bank;
             facilities.Mode[facility] = (byte)ControlMode.Automated;
-            // The bank runs it until the sale without the old arrears, so it cannot go bankrupt meanwhile; the
-            // arrears are wages and bills the households there never get (DEC-061).
+            // The bank runs it until the sale without the old arrears; the arrears are wages and bills the households there never get (DEC-061).
             if (facilities.Cash[facility] < 0) MoneyLedger.PayLocalHouseholds(ctx.World, facilities.Node[facility], facilities.Cash[facility]);
             facilities.Cash[facility] = Math.Max(0, facilities.Cash[facility]);
             ctx.World.Get<IncomeTaxState>().RestartFacility(facility, facilities.Cash[facility]);

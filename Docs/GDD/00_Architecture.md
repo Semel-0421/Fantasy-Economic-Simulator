@@ -13,7 +13,7 @@ Status: economy simulation implemented (2026-11-01). Code: `Assets/_Game/`. Test
 
 - One turn = one week (52 turns/year). The player starts as a peddler in one kingdom and grows from
   village markets to a five-continent market economy, automating lower tiers along the way.
-- Ships on Android and Windows: memory and per-turn cost are budgeted from day one.
+- Ships on Android, Windows and the web: memory and per-turn cost are budgeted from day one.
 - A stable skeleton that later fine-grained systems plug into without editing existing code.
 
 ## Assemblies
@@ -59,7 +59,7 @@ assemblies cannot, because `NativeArray` and the job system live in `UnityEngine
 folder (Windows, Editor) and fetches `DataFiles.All` with `UnityWebRequest` where it is a URL (Android
 APK). `SimulationRunner.Simulation` is null until loading finishes (`IsReady`).
 
-Target scale (measured by `FullScale_MemoryAndTurnTime`):
+Target scale (measured by `FullScale_ShippedRules_StayWithinTurnBudget`; the shipped `config.csv` has 4,460 merchant groups on this map, not 9,250):
 
 | Item | Count |
 |---|---|
@@ -135,8 +135,12 @@ are consumed at Late.
 
 Default cadence (`config.csv`): village 1, city 1, region 2, nation 4 (offset 1), continent 4.
 
-Measured on the full-scale world (Editor, Windows desktop, safety checks on): **33.6 ms/turn** on average from
-turn 60 to 182 (`[FES scale settled]`). Not yet profiled on Android.
+Budget: **one second a turn on a web build**, every node and agent computed (DEC-110). Not met yet. Full-scale world, shipped rules:
+Editor (Windows desktop, Burst and safety checks on) 7.9 s on average over turns 1 to 65, new-year turn 9.8 s; web player in Chrome on
+the same desktop, single-threaded, about 5.2 s, worst 11.3 s, new-year turn 5.9 s. Not yet profiled on Android.
+
+To measure the web: run the explicit `FullScale_WritesWebBenchmarkData`, build WebGL with the scripting define `FES_BENCHMARK`, delete
+`StreamingAssets/Benchmark`, serve the build and keep its page in view (a hidden page stops advancing). `TurnBenchmark` logs each turn.
 
 Production is a single-threaded Burst job: facilities share market cells and cells clamp after every
 add, so facility order must stay fixed. Each facility's target cells and modifier slots are resolved

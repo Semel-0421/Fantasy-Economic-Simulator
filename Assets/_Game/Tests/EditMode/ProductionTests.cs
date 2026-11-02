@@ -274,6 +274,22 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Loading_KeepsACashOfMinusOne_AndConjuresNoCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            int continent = sim.World.Get<NodeTable>().Continent[facilities.Node[0]];
+            facilities.Cash[0] = -1;
+            long money = MoneyLedger.ContinentMoney(sim.World, continent);
+            using var buffer = new MemoryStream();
+            sim.Save(buffer);
+            buffer.Position = 0;
+            sim.Load(buffer);
+            Assert.AreEqual(-1, facilities.Cash[0]);
+            Assert.AreEqual(money, MoneyLedger.ContinentMoney(sim.World, continent));
+        }
+
+        [Test]
         public void Recipes_RejectTheSameGoodTwiceInOneRole()
         {
             const string recipes = "recipe,role,good,grade,qty\nr,in,wheat,Mid,1\nr,in,wheat,Mid,2\nr,out,bread,Mid,1\n";

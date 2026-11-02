@@ -118,7 +118,6 @@ namespace FES.Agents
         GroupDirectory _directory;
         DemandForecast _forecast;
         CompanyRooms _rooms;
-        bool _roomsStale;
         // Scanning the tables for each of 1,580 nodes is most of a new-year turn.
         List<int>[] _facilitiesAt;
         List<int>[] _groupsAt;
@@ -166,7 +165,7 @@ namespace FES.Agents
             for (int f = 0; f < _facilities.Count; f++) _facilitiesAt[_facilities.Node[f]].Add(f);
             _groupsListed = 0;
             ListNewGroups();
-            _roomsStale = true;
+            _rooms.Refresh();
         }
 
         void ListNewGroups()
@@ -198,7 +197,7 @@ namespace FES.Agents
             int nation = _purses.NodeFloat[_groups.Node[group]];
             long cash = own;
             if (config.CompanyDebtShare.Raw > 0 && nation < _purses.NationCount)
-                cash += Math.Min(RoomOf(group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
+                cash += Math.Min(_rooms.Room(group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
 
             var best = new Project { Facility = -1, Def = -1 };
             int count = WeighExpansions(node, group, cash, ref best);
@@ -208,7 +207,7 @@ namespace FES.Agents
             if (best.Cost > own)
             {
                 long raised = BondDesk.Raise(ctx.World, config, ctx.Turn, group, nation, best.Cost - own);
-                _roomsStale = true;
+                _rooms.AddDebt(group, raised);
                 _groups.Cash[group] += raised;
                 ctx.World.Get<CreditStats>().CompanyRaised += raised;
                 if (raised < best.Cost - own) return false;
@@ -216,15 +215,8 @@ namespace FES.Agents
             _groups.Cash[group] -= best.Cost;
             if (best.Facility >= 0) Expand(ctx, node, in best);
             else Found(ctx, node, group, in best);
-            _roomsStale = true;
+            _rooms.AddValue(group, config.FacilityValue[(int)_db.Facilities[best.Def].Tier]);
             return true;
-        }
-
-        long RoomOf(int group)
-        {
-            if (_roomsStale) _rooms.Refresh();
-            _roomsStale = false;
-            return _rooms.Room(group);
         }
 
         // Returns how many facilities stand at the node.
@@ -238,8 +230,8 @@ namespace FES.Agents
                 if (_facilities.Group[f] != group || _facilities.Owner[f] != OwnerIds.Npc) continue;
                 var def = _db.Facilities[_facilities.DefIndex[f]];
                 int at = _facilities.Level[f];
-                if (!FacilityExpansion.Possible(def, at, config) || !Wanted(node, def, FacilityExpansion.OutputScale(at + 1, config))) continue;
                 long cost = FacilityExpansion.Cost(def, at, config);
+                if (cost > cash || !FacilityExpansion.Possible(def, at, config) || !Wanted(node, def, FacilityExpansion.OutputScale(at + 1, config))) continue;
                 long gain = (FacilityExpansion.OutputScale(at + 1, config) - FacilityExpansion.OutputScale(at, config)).MulInt(UnitMargin(node, def))
                     - config.FacilityUpkeep[(int)def.Tier];
                 if (Better(gain, cost, best.Gain, best.Cost, cash))
@@ -254,8 +246,8 @@ namespace FES.Agents
             int level = _nodes.Level[node];
             foreach (var def in _db.Facilities)
             {
-                if (def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
                 long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier];
+                if (cost > cash || def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
                 long gain = UnitMargin(node, def) - config.FacilityUpkeep[(int)def.Tier];
                 if (Better(gain, cost, best.Gain, best.Cost, cash))
                     best = new Project { Facility = -1, Def = def.Index, Cost = cost, Gain = gain };

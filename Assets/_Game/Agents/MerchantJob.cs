@@ -189,6 +189,10 @@ namespace FES.Agents
         public NativeArray<bool> BidLinked;
         /// <summary>Scratch, per node's continent, home continent and good: the most a unit could earn a group, in its own coins.</summary>
         public NativeArray<long> BidBound;
+        long BidTopPrice;
+        /// <summary>Per market and 64 goods: which it trades, and how many of its cells come before those.</summary>
+        public NativeArray<ulong> CellBits;
+        public NativeArray<int> CellsBefore;
 
         public void Execute()
         {
@@ -201,6 +205,7 @@ namespace FES.Agents
         void ResetScratch()
         {
             for (int n = 0; n < StockedStart.Length; n++) StockedStart[n] = -1;
+            IndexCells();
             StockedCells.Clear();
             if (Bids || BidsWhileLoaded) PrepareBidBounds();
             for (int a = 0; a < FirstRow.Length; a++) FirstRow[a] = -1;
@@ -784,18 +789,39 @@ namespace FES.Agents
             return -1;
         }
 
+        // A market's cells run in the order of their goods, so a cell's place is how many of its goods come before.
         int FindCell(int market, int good)
         {
-            int lo = MarketCellStart[market], hi = lo + MarketCellCount[market] - 1;
-            while (lo <= hi)
+            int word = market * (CellBits.Length / MarketCellStart.Length) + (good >> 6);
+            ulong bits = CellBits[word], bit = 1UL << (good & 63);
+            if ((bits & bit) == 0) return -1;
+            return MarketCellStart[market] + CellsBefore[word] + CountBits(bits & (bit - 1));
+        }
+
+        static int CountBits(ulong v)
+        {
+            v -= (v >> 1) & 0x5555555555555555UL;
+            v = (v & 0x3333333333333333UL) + ((v >> 2) & 0x3333333333333333UL);
+            v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FUL;
+            return (int)((v * 0x0101010101010101UL) >> 56);
+        }
+
+        void IndexCells()
+        {
+            int words = CellBits.Length / MarketCellStart.Length;
+            for (int w = 0; w < CellBits.Length; w++) CellBits[w] = 0;
+            for (int market = 0; market < MarketCellStart.Length; market++)
             {
-                int mid = (lo + hi) >> 1;
-                int g = CellGood[mid];
-                if (g == good) return mid;
-                if (g < good) lo = mid + 1;
-                else hi = mid - 1;
+                int start = MarketCellStart[market], end = start + MarketCellCount[market], row = market * words;
+                for (int c = start; c < end; c++)
+                    CellBits[row + (CellGood[c] >> 6)] |= 1UL << (CellGood[c] & 63);
+                int before = 0;
+                for (int w = 0; w < words; w++)
+                {
+                    CellsBefore[row + w] = before;
+                    before += CountBits(CellBits[row + w]);
+                }
             }
-            return -1;
         }
 
         static long Min(long a, long b) => a < b ? a : b;

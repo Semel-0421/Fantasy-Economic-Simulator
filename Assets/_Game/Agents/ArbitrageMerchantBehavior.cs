@@ -67,6 +67,8 @@ namespace FES.Agents
         NativeArray<long> _bidBest;
         NativeArray<bool> _bidLinked;
         NativeArray<long> _bidBound;
+        NativeArray<ulong> _cellBits;
+        NativeArray<int> _cellsBefore;
         NativeList<int> _nextRow;
         NativeList<int> _rows;
         NativeList<int> _bankrupt;
@@ -176,6 +178,9 @@ namespace FES.Agents
             _bidBest = new NativeArray<long>(continents * _db.GoodCount, Allocator.Persistent);
             _bidLinked = new NativeArray<bool>(continents * continents, Allocator.Persistent);
             _bidBound = new NativeArray<long>(continents * continents * _db.GoodCount, Allocator.Persistent);
+            int cellWords = _nodes.Count * ((_db.GoodCount + 63) / 64);
+            _cellBits = new NativeArray<ulong>(cellWords, Allocator.Persistent);
+            _cellsBefore = new NativeArray<int>(cellWords, Allocator.Persistent);
         }
 
         void PrepareWaysHome()
@@ -439,6 +444,8 @@ namespace FES.Agents
             job.BidBest = _bidBest;
             job.BidLinked = _bidLinked;
             job.BidBound = _bidBound;
+            job.CellBits = _cellBits;
+            job.CellsBefore = _cellsBefore;
         }
 
         void GoBankrupt(SimContext ctx, int a)
@@ -614,6 +621,8 @@ namespace FES.Agents
             _bidBest.DisposeIfCreated();
             _bidLinked.DisposeIfCreated();
             _bidBound.DisposeIfCreated();
+            _cellBits.DisposeIfCreated();
+            _cellsBefore.DisposeIfCreated();
             if (_nextRow.IsCreated) _nextRow.Dispose();
             if (_rows.IsCreated) _rows.Dispose();
             if (_bankrupt.IsCreated) _bankrupt.Dispose();

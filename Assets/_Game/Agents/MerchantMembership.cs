@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using FES.Core;
 using FES.Data;
@@ -22,6 +23,8 @@ namespace FES.Agents
         GroupTable _groups;
         NodeTable _nodes;
         GroupDirectory _directory;
+        // Per node, the groups a merchant could join there, in table order.
+        List<int>[] _openAt;
 
         public string Id => "agents.merchant_membership";
         public SimPhase Phase => SimPhase.Finance;
@@ -34,12 +37,15 @@ namespace FES.Agents
             _groups = ctx.World.Get<GroupTable>();
             _nodes = ctx.World.Get<NodeTable>();
             _directory = new GroupDirectory(_groups, _nodes);
+            _openAt = new List<int>[_nodes.Count];
+            for (int n = 0; n < _openAt.Length; n++) _openAt[n] = new List<int>();
         }
 
         public void Execute(SimContext ctx)
         {
             if (_config.MerchantJoinShare.Raw <= 0) return;
             bool year = ctx.Clock.IsNewYear;
+            if (year) ListOpenGroups();
             for (int a = 0; a < _agents.Count; a++)
             {
                 if (_agents.Owner[a] != OwnerIds.Npc) continue;
@@ -71,16 +77,21 @@ namespace FES.Agents
 
         int Find(int home)
         {
-            int city = _directory.CityOf(home), nation = _nodes.AncestorAt(home, WorldLevel.Nation), best = -1;
+            int city = _directory.CityOf(home), best = -1;
+            var kind = city >= 0 ? GroupKind.Guild : GroupKind.Company;
+            foreach (int g in _openAt[city >= 0 ? city : _nodes.AncestorAt(home, WorldLevel.Nation)])
+                if (_groups.KindOf(g) == kind && (best < 0 || _groups.Cash[g] > _groups.Cash[best])) best = g;
+            return best;
+        }
+
+        void ListOpenGroups()
+        {
+            foreach (var list in _openAt) list.Clear();
             for (int g = 0; g < _groups.Count; g++)
             {
-                if (_groups.IsPlayer[g] != 0) continue;
-                bool may = city >= 0
-                    ? _groups.KindOf(g) == GroupKind.Guild && _groups.Node[g] == city
-                    : _groups.KindOf(g) == GroupKind.Company && _groups.Node[g] == nation;
-                if (may && (best < 0 || _groups.Cash[g] > _groups.Cash[best])) best = g;
+                var kind = _groups.KindOf(g);
+                if (_groups.IsPlayer[g] == 0 && (kind == GroupKind.Guild || kind == GroupKind.Company)) _openAt[_groups.Node[g]].Add(g);
             }
-            return best;
         }
     }
 

@@ -260,9 +260,31 @@ namespace FES.Agents
                 if (!BondTable.IsState(_bonds.Issuer[r])) _debt[_bonds.Issuer[r]] += _bonds.Face[r];
         }
 
-        public long Room(int group) => BondDesk.CompanyRoom(_db.Config, _value[group], _debt[group]);
+        public long Room(int group)
+        {
+            Reach(group);
+            return BondDesk.CompanyRoom(_db.Config, _value[group], _debt[group]);
+        }
 
-        public void AddDebt(int group, long face) => _debt[group] += face;
+        public void AddDebt(int group, long face)
+        {
+            Reach(group);
+            _debt[group] += face;
+        }
+
+        public void AddValue(int group, long value)
+        {
+            Reach(group);
+            _value[group] += value;
+        }
+
+        // A group founded since the last refresh has no facilities and no debt yet.
+        void Reach(int group)
+        {
+            if (group < _value.Length) return;
+            Array.Resize(ref _value, group + 64);
+            Array.Resize(ref _debt, group + 64);
+        }
     }
 
     public static class BondDesk

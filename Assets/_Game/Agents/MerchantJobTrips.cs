@@ -260,8 +260,7 @@ namespace FES.Agents
                 if (next == from || !MayGo(a, at, next, in reach)) continue;
                 int cell = FindCell(next, good);
                 long here = cell >= 0 ? Earn(a, next, OfferAt(cell)) : 0;
-                long direct = (reach.Licensed || !NeedsLicense(next, good)) && cell >= 0 && TradersPay(a, next, Price[cell]) ? here : 0;
-                long worth = Max(direct, Beyond(a, next, at, good, in reach, hops - 1));
+                long worth = Max(SoldAt(a, next, cell, good, here, in reach), hops > 1 ? Beyond(a, next, at, good, in reach, hops - 1) : 0);
                 if (worth <= 0) continue;
                 long net = worth - Fx.MulIntRaw(cell >= 0 ? here : worth, TollRate(next, good))
                     - Fx.MulIntRaw(1, Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]));
@@ -269,6 +268,9 @@ namespace FES.Agents
             }
             return best;
         }
+
+        long SoldAt(int a, int node, int cell, int good, long worth, in GroupReach reach) =>
+            cell >= 0 && (reach.Licensed || !NeedsLicense(node, good)) && TradersPay(a, node, Price[cell]) ? worth : 0;
 
         void AddBid(int cell, long units) => InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + units);
 
@@ -279,19 +281,39 @@ namespace FES.Agents
             var bid = new BestBid { Cell = -1, Profit = beat };
             int node = search.Node;
             int boundRow = (NodeContinent[node] * ContinentCount + NodeContinent[AgentHome[a]]) * BaseGoodCount * QualityGrades.Count;
+            long paid = JudgeCoinUnits > 0 ? MostPaidNearby(a, node, -1, in search.Reach, JudgeHops) : long.MaxValue;
             int cellEnd = MarketCellStart[node] + MarketCellCount[node];
             for (int cell = MarketCellStart[node]; cell < cellEnd; cell++)
             {
                 if (Stock[cell] > 0) continue;
                 int good = CellGood[cell];
-                long fit = Fit(good, search.RoomWeight, search.RoomSize);
-                if (fit <= 0) continue;
                 long buy = Spend(a, node, Price[cell]);
-                long sell = BidBound[boundRow + good];
-                if (CouldShowMargin(sell, buy, search.MinMarginRaw) && CouldBeatBid(sell, buy, fit, search.Budget, bid.Profit))
+                long sell = Min(BidBound[boundRow + good], paid);
+                if (!CouldShowMargin(sell, buy, search.MinMarginRaw)) continue;
+                long fit = Fit(good, search.RoomWeight, search.RoomSize);
+                if (fit > 0 && CouldBeatBid(sell, buy, fit, search.Budget, bid.Profit))
                     WeighBid(a, new CellOffer(cell, good, buy, fit, fit), in search, ref bid);
             }
             if (bid.Cell >= 0) AddBid(bid.Cell, bid.Units);
+        }
+
+        // No trader pays more for a unit than a fair lot of it fits the purse (TradersPay), and purses hold still during one
+        // group's weighing, so this bounds its sales at this moment, whatever the good.
+        long MostPaidNearby(int a, int at, int from, in GroupReach reach, int hops)
+        {
+            long best = 0;
+            int first = OutStart[at], last = first + OutCount[at];
+            for (int k = first; k < last; k++)
+            {
+                int next = RouteTo[RouteIndex[k]];
+                if (next == from || !MayGo(a, at, next, in reach)) continue;
+                int purse = NodeFloat[next];
+                long held = Max(Float[purse], !Abroad(a, next) && !NoBills(a) ? BillRoom[purse] : 0);
+                long price = Min(held / JudgeCoinUnits, BidTopPrice);
+                best = Max(best, Earn(a, next, price - Fx.MulIntRaw(price, SpreadRaw)));
+                if (hops > 1) best = Max(best, MostPaidNearby(a, next, at, in reach, hops - 1));
+            }
+            return best;
         }
 
         // WeighUnit's test with no tolls or carriage, which only lower a margin: what fails here fails on every route.
@@ -311,11 +333,15 @@ namespace FES.Agents
             int goods = BaseGoodCount * QualityGrades.Count;
             for (int i = 0; i < BidBest.Length; i++) BidBest[i] = 0;
             for (int i = 0; i < BidLinked.Length; i++) BidLinked[i] = false;
+            BidTopPrice = 0;
             for (int node = 0; node < NodeContinent.Length; node++)
             {
                 int continent = NodeContinent[node], cellEnd = MarketCellStart[node] + MarketCellCount[node];
                 for (int c = MarketCellStart[node]; c < cellEnd; c++)
+                {
                     BidBest[continent * goods + CellGood[c]] = Max(BidBest[continent * goods + CellGood[c]], OfferAt(c));
+                    BidTopPrice = Max(BidTopPrice, Price[c]);
+                }
                 for (int k = OutStart[node]; k < OutStart[node] + OutCount[node]; k++)
                     if (CrossLevel >= 0) BidLinked[continent * ContinentCount + NodeContinent[RouteTo[RouteIndex[k]]]] = true;
             }

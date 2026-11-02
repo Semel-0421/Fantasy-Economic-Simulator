@@ -273,8 +273,10 @@ namespace FES.Agents
         DemandParams _demand;
         readonly System.Collections.Generic.List<Makers> _makers = new System.Collections.Generic.List<Makers>();
         readonly System.Collections.Generic.List<int> _lines = new System.Collections.Generic.List<int>();
+        // Cells some maker buys from: the only ones whose needs a pass can change.
+        readonly System.Collections.Generic.List<int> _fedCells = new System.Collections.Generic.List<int>();
         int[] _cellPurse, _makersAt;
-        bool[] _madeToOrder;
+        bool[] _madeToOrder, _isFed;
         // Per cell, units a quarter.
         long[] _households, _ordered, _industry, _nextIndustry, _capacity, _need;
         // Per purse and good, units a quarter.
@@ -302,6 +304,7 @@ namespace FES.Agents
             for (int g = 0; g < _madeToOrder.Length; g++) _madeToOrder[g] = _db.Goods[g].MadeToOrder;
             _cellPurse = new int[cells];
             _makersAt = new int[cells];
+            _isFed = new bool[cells];
             for (int n = 0; n < _nodes.Count; n++)
             {
                 int end = _markets.MarketCellStart[n] + _markets.MarketCellCount[n];
@@ -324,7 +327,12 @@ namespace FES.Agents
             MeasureMarkets();
             ListMakers();
             Array.Clear(_industry, 0, _industry.Length);
-            for (int pass = 0; pass < ChainPasses; pass++) PlanMakers();
+            MeasureNeeds();
+            for (int pass = 0; pass < ChainPasses; pass++)
+            {
+                if (pass > 0) MeasureFedCells();
+                PlanMakers();
+            }
             foreach (var makers in _makers) _state.Plan[makers.Cell] = makers.Plan;
         }
 
@@ -355,6 +363,8 @@ namespace FES.Agents
         {
             _makers.Clear();
             _lines.Clear();
+            foreach (int cell in _fedCells) _isFed[cell] = false;
+            _fedCells.Clear();
             Array.Fill(_makersAt, -1);
             Array.Clear(_capacity, 0, _capacity.Length);
             for (int f = 0; f < _facilities.Count; f++) ListMaker(f);
@@ -383,8 +393,8 @@ namespace FES.Agents
                 at = _makersAt[cell] = _makers.Count;
                 _makers.Add(new Makers { Cell = cell, Def = def, FirstLine = _lines.Count });
                 AddLines(node, def.Recipe.Outputs);
-                AddLines(node, def.Recipe.Inputs);
-                AddLines(node, def.Recipe.Aids);
+                AddFedLines(node, def.Recipe.Inputs);
+                AddFedLines(node, def.Recipe.Aids);
             }
             var makers = _makers[at];
             makers.Runs += FacilityExpansion.OutputScale(_facilities.Level[f], config).Raw * OrderSystem.QuarterWeeks;
@@ -397,11 +407,23 @@ namespace FES.Agents
                 _lines.Add(_flows.TryFindNearestMarket(node, line.Good, out _, out int cell) ? cell : -1);
         }
 
+        void AddFedLines(int node, RecipeLine[] lines)
+        {
+            int first = _lines.Count;
+            AddLines(node, lines);
+            for (int k = first; k < _lines.Count; k++)
+            {
+                int cell = _lines[k];
+                if (cell < 0 || _isFed[cell]) continue;
+                _isFed[cell] = true;
+                _fedCells.Add(cell);
+            }
+        }
+
         // One step up the chain: plans from what is wanted now, and what those plans will want.
         void PlanMakers()
         {
-            MeasureNeeds();
-            Array.Clear(_nextIndustry, 0, _nextIndustry.Length);
+            foreach (int cell in _fedCells) _nextIndustry[cell] = 0;
             var config = _db.Config;
             for (int m = 0; m < _makers.Count; m++)
             {
@@ -427,28 +449,39 @@ namespace FES.Agents
 
         void MeasureNeeds()
         {
-            var config = _db.Config;
             Array.Clear(_unmet, 0, _unmet.Length);
             Array.Clear(_spare, 0, _spare.Length);
             Array.Clear(_surplus, 0, _surplus.Length);
-            var households = config.ForecastHouseholdWeight;
-            var lately = Fx.One - households;
-            var cover = config.ForecastCover;
-            int goods = _db.GoodCount;
-            long[] past = _state.Forecast;
-            var cellGood = _markets.CellGood;
-            var stocks = _markets.Stock;
-            for (int c = 0; c < _need.Length; c++)
+            Array.Clear(_nextIndustry, 0, _nextIndustry.Length);
+            for (int c = 0; c < _need.Length; c++) Tally(c, Wanted(c, _industry[c]), 1);
+        }
+
+        // After a pass _nextIndustry holds what the cells were measured with.
+        void MeasureFedCells()
+        {
+            foreach (int c in _fedCells)
             {
-                int good = cellGood[c], k = _cellPurse[c] * goods + good;
-                long forecast = households.MulInt(_households[c] + _industry[c]) + lately.MulInt(past[c]);
-                long wanted = forecast + (_madeToOrder[good] ? 0 : cover.MulInt(forecast)) + _ordered[c];
-                long stock = stocks[c];
-                _need[c] = Math.Max(0, wanted - stock);
-                _surplus[k] += Math.Max(0, stock - wanted);
-                _unmet[k] += Math.Max(0, _need[c] - _capacity[c]);
-                _spare[k] += Math.Max(0, _capacity[c] - _need[c]);
+                if (_industry[c] == _nextIndustry[c]) continue;
+                Tally(c, Wanted(c, _nextIndustry[c]), -1);
+                Tally(c, Wanted(c, _industry[c]), 1);
             }
+        }
+
+        long Wanted(int c, long industry)
+        {
+            var households = _db.Config.ForecastHouseholdWeight;
+            long forecast = households.MulInt(_households[c] + industry) + (Fx.One - households).MulInt(_state.Forecast[c]);
+            return forecast + (_madeToOrder[_markets.CellGood[c]] ? 0 : _db.Config.ForecastCover.MulInt(forecast)) + _ordered[c];
+        }
+
+        void Tally(int c, long wanted, int sign)
+        {
+            int k = _cellPurse[c] * _db.GoodCount + _markets.CellGood[c];
+            long stock = _markets.Stock[c], need = Math.Max(0, wanted - stock);
+            _need[c] = need;
+            _surplus[k] += sign * Math.Max(0, stock - wanted);
+            _unmet[k] += sign * Math.Max(0, need - _capacity[c]);
+            _spare[k] += sign * Math.Max(0, _capacity[c] - need);
         }
 
         // What the makers selling at a cell should make: its own need, and their part of what the nation's other markets lack.

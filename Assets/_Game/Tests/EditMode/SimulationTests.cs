@@ -566,7 +566,7 @@ namespace FES.Tests
             Assert.IsTrue(lod.IsDetailed(facilities.Node[far]));
         }
 
-        /// <summary>The target on a web build, where nothing may be left out to reach it (DEC-110). Tested here as a necessary condition.</summary>
+        /// <summary>The target on a web build, where nothing may be left out to reach it (DEC-110). The Editor runs slower than the web player, so failing here does not mean the web misses it.</summary>
         const double TurnBudgetMs = 1000;
 
         [Test, Explicit("Builds the full 1,580-market / 4,000-item world with the shipped rules; run manually to measure.")]

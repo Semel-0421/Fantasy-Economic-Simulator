@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-111 Loading is one guarded step; lost warehouses stay claimable; defense buys from thin stock
+- Date: 2026-11-03
+- Decision: [Draft] A load is atomic through the rebuilding of derived state: a failing listener restores the previous state and rebuilds from it. A save with the player off the map is refused. Directories, money totals and the week's bond offers do not outlive a load. Loading leaves bank-held facilities without an owner, and a family founded for an older save is staked by the households. A later operator's failure keeps the player's warehouse claim; an NPC buying a facility seized from the player starts one, and the player buying it back ends it. A defense purchase carries the part of a unit a cell did not reach to the next cell, within what the nation has to spend.
+- Reason: the user asked for steps 3 and 4 of [META_2026-11-02](reviews/META_2026-11-02.md) (C08, C11, C12, C15, C40). The stale bond offers and the claim running on after a buy-back were found while fixing them. Before this, a nation whose purchase came to under a unit per cell bought nothing.
+- Limits: all eight golden hashes change, from the defense purchase. Its effect on balance was not measured apart from the rest. With stock even across cells the carried units can fall on the cheaper goods: a test nation spent 78% of its share, never more than all of it.
+- Impact: SYS-STATE-ECONOMY, SYS-BANKING, 00_Architecture, 04_Roadmap
+
 ### DEC-110 One second a turn on a web build, with everything computed
 - Date: 2026-11-02
 - Decision: [Confirmed] The target is one second a turn on a web build. Every node and agent is computed: the budget is not reached by aggregating nodes or by cutting what merchants weigh, because lumped calculation stops the system working as intended. The web joins the platforms. [Draft] Speed-ups keep the results, so golden hashes stay; `FullScale_ShippedRules_StayWithinTurnBudget` tests the shipped rules through a new year, and `TurnBenchmark` measures a real web player.

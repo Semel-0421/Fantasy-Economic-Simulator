@@ -54,6 +54,11 @@ namespace FES.Agents
             return Count - 1;
         }
 
+        /// <summary>Changes with each load, when the same row numbers may come to mean other groups.</summary>
+        public int LoadCount { get; private set; }
+
+        protected override void OnRead() => LoadCount++;
+
         public GroupKind KindOf(int group) => (GroupKind)Kind[group];
 
         /// <summary>The player's company, or -1 before it is founded.</summary>
@@ -121,7 +126,7 @@ namespace FES.Agents
         readonly Dictionary<int, int> _stateByNation = new Dictionary<int, int>();
         readonly Dictionary<int, List<int>> _companiesByNation = new Dictionary<int, List<int>>();
         readonly Dictionary<(int city, int category), int> _guilds = new Dictionary<(int, int), int>();
-        int _builtFor = -1;
+        int _builtFor = -1, _builtAtLoad = -1;
 
         public GroupDirectory(GroupTable groups, NodeTable nodes)
         {
@@ -131,7 +136,7 @@ namespace FES.Agents
 
         void Refresh()
         {
-            if (_builtFor == _groups.Count) return;
+            if (_builtFor == _groups.Count && _builtAtLoad == _groups.LoadCount) return;
             _privateByNode.Clear();
             _stateByNation.Clear();
             _companiesByNation.Clear();
@@ -152,6 +157,7 @@ namespace FES.Agents
                 }
             }
             _builtFor = _groups.Count;
+            _builtAtLoad = _groups.LoadCount;
         }
 
         /// <summary>The node's private enterprise, created when the node has none yet.</summary>
@@ -234,7 +240,7 @@ namespace FES.Agents
             var directory = new GroupDirectory(groups, nodes);
             for (int f = 0; f < facilities.Count; f++)
             {
-                if (facilities.Group[f] >= 0 || facilities.Owner[f] == OwnerIds.Player) continue;
+                if (facilities.Group[f] >= 0 || facilities.Owner[f] == OwnerIds.Player || facilities.Owner[f] == OwnerIds.Bank) continue;
                 int node = facilities.Node[f];
                 int group = FacilityOwnerFrom(directory, db.Facilities[facilities.DefIndex[f]], nodes.AncestorAt(node, WorldLevel.Nation), f);
                 facilities.Group[f] = group >= 0 ? group : directory.PrivateAt(node, db.Config);
@@ -284,9 +290,15 @@ namespace FES.Agents
             }
         }
 
-        public void OnLoaded(SimContext ctx) =>
-            GroupSetup.AssignOwners(ctx.World.Get<GroupTable>(), ctx.World.Get<NodeTable>(), ctx.Services.Get<GameDatabase>(),
+        public void OnLoaded(SimContext ctx)
+        {
+            var groups = ctx.World.Get<GroupTable>();
+            int before = groups.Count;
+            GroupSetup.AssignOwners(groups, ctx.World.Get<NodeTable>(), ctx.Services.Get<GameDatabase>(),
                 ctx.World.Get<FacilityTable>(), ctx.World.Get<AgentTable>());
+            // A family founded for an older save is staked by the households, so no coins appear (DEC-072).
+            for (int g = before; g < groups.Count; g++) MoneyLedger.PayLocalHouseholds(ctx.World, groups.Node[g], -groups.Cash[g]);
+        }
     }
 
     /// <summary>Appends an owner column of -1 (no group yet) to a v2 facility or v2 merchant table section.</summary>

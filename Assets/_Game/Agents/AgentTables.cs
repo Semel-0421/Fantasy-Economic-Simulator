@@ -293,8 +293,11 @@ namespace FES.Agents
 
         public void Read(BinaryReader reader)
         {
-            Node = reader.ReadInt32();
-            TravelDestination = reader.ReadInt32();
+            int node = reader.ReadInt32(), destination = reader.ReadInt32();
+            if (node < 0 || node >= _nodes.Count || destination < -1 || destination >= _nodes.Count)
+                throw new InvalidDataException($"Saved player position {node} or destination {destination} is off the map.");
+            Node = node;
+            TravelDestination = destination;
             ArrivalTurn = reader.ReadInt32();
             int count = reader.ReadInt32();
             System.Array.Clear(Coins, 0, Coins.Length);

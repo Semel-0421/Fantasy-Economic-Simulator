@@ -36,6 +36,52 @@ namespace FES.Tests
             Assert.AreEqual(sim.World.Get<CurrencyState>().CoinSupply[0], MoneyLedger.ContinentMoney(sim.World, 0));
         }
 
+        // A nation buying a twentieth of its stock from cells holding ten units still buys. Its coins go on whichever
+        // cells a whole unit falls to, so with stocks this even it falls somewhat short of the share, never over it.
+        [Test]
+        public void Defense_SpendsItsShare_WhereEachCellHoldsLessThanAWholeUnitOfIt()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var markets = sim.World.Get<MarketStore>();
+            var purses = sim.World.Get<PurseState>();
+            for (int c = 0; c < markets.Stock.Length; c++) markets.Stock[c] = 10;
+            int nations = purses.NationCount;
+            using var spend = new global::Unity.Collections.NativeArray<long>(nations, global::Unity.Collections.Allocator.TempJob);
+            using var paid = new global::Unity.Collections.NativeArray<long>(nations, global::Unity.Collections.Allocator.TempJob);
+            using var value = new global::Unity.Collections.NativeArray<long>(nations, global::Unity.Collections.Allocator.TempJob);
+            using var carry = new global::Unity.Collections.NativeArray<long>(nations, global::Unity.Collections.Allocator.TempJob);
+            var worth = new long[nations];
+            for (int node = 0; node < purses.NodeFloat.Length; node++)
+            {
+                int nation = purses.NodeFloat[node], end = markets.MarketCellStart[node] + markets.MarketCellCount[node];
+                if (nation >= nations) continue;
+                for (int c = markets.MarketCellStart[node]; c < end; c++) worth[nation] += (long)markets.Stock[c] * markets.Price[c];
+            }
+            var spendable = spend;
+            for (int n = 0; n < nations; n++) spendable[n] = worth[n] / 20;
+
+            new DefensePurchaseJob
+            {
+                NodeFloat = purses.NodeFloat,
+                MarketCellStart = markets.MarketCellStart,
+                MarketCellCount = markets.MarketCellCount,
+                Price = markets.Price,
+                Stock = markets.Stock,
+                Supply = markets.Supply,
+                Demand = markets.Demand,
+                Spend = spend,
+                Paid = paid,
+                Value = value,
+                Carry = carry,
+            }.Execute();
+
+            for (int n = 0; n < nations; n++)
+            {
+                Assert.LessOrEqual(paid[n], spend[n], $"nation {n}");
+                Assert.GreaterOrEqual(paid[n], spend[n] / 2, $"nation {n}");
+            }
+        }
+
         [Test]
         public void Defense_PassesWhatItBuysThroughSupply_SoStockFallsOnce()
         {

@@ -210,6 +210,39 @@ namespace FES.Tests
         }
 
         [Test]
+        public void AFacilitySeizedFromThePlayer_LeavesAClaimOnItsWarehouse_WhenAnNpcBuysIt()
+        {
+            using var sim = Build();
+            var facilities = sim.World.Get<FacilityTable>();
+            facilities.Owner[0] = OwnerIds.Bank;
+            sim.World.Get<AuctionTable>().Add(0, 0, sim.Turn, 1);
+
+            sim.AdvanceTurn();
+
+            Assert.AreEqual(OwnerIds.Npc, facilities.Owner[0]);
+            Assert.GreaterOrEqual(facilities.WarehouseClaimUntil[0], sim.Turn);
+        }
+
+        [Test]
+        public void AFacilityTheOwnerBuysBack_NoLongerHasAClaimRunning()
+        {
+            using var sim = Build();
+            var facilities = sim.World.Get<FacilityTable>();
+            var auctions = sim.World.Get<AuctionTable>();
+            facilities.Owner[0] = OwnerIds.Bank;
+            facilities.WarehouseClaimUntil[0] = sim.Turn + 100;
+            auctions.Add(0, 0, sim.Turn, 1);
+            auctions.PlayerBid[0] = 1;
+            var player = sim.World.Get<PlayerState>();
+            for (int c = 0; c < player.Coins.Length; c++) player.Coins[c] = 1_000_000;
+
+            sim.AdvanceTurn();
+
+            Assert.AreEqual(OwnerIds.Player, facilities.Owner[0]);
+            Assert.AreEqual(-1, facilities.WarehouseClaimUntil[0]);
+        }
+
+        [Test]
         public void FacilityHeldForAuction_CannotGoBankrupt()
         {
             using var sim = Build();

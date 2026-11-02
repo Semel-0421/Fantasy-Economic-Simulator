@@ -63,8 +63,8 @@ namespace FES.Simulation
 
         /// <summary>
         /// Loads a save into this simulation, replacing all persistent state (including the seed).
-        /// It must have been built from the same definitions and map. Atomic: if anything fails, the
-        /// previous state is restored and the exception is rethrown. Queued commands and undelivered
+        /// It must have been built from the same definitions and map. Atomic: if anything fails, reading or
+        /// rebuilding what is derived from it, the previous state is restored and the exception is rethrown. Queued commands and undelivered
         /// events are discarded, and derived state (LOD, modifier multipliers) is rebuilt. A save without
         /// a section for every component loads only into a newly built simulation, whose fresh state those
         /// components keep; anywhere else they would keep the running game's state, so it is refused.
@@ -73,18 +73,21 @@ namespace FES.Simulation
         {
             using var backup = new MemoryStream();
             Save(backup);
+            bool read = false;
             try
             {
                 SaveSerializer.Read(stream, World, _dataHash, Migrations, requireEverySection: !_newlyBuilt);
+                read = true;
+                _pipeline.NotifyLoaded(Context);
             }
             catch
             {
                 backup.Position = 0;
                 SaveSerializer.Read(backup, World, _dataHash, Migrations);
+                if (read) _pipeline.NotifyLoaded(Context); // listeners before the failure rebuilt from the save
                 throw;
             }
             _newlyBuilt = false;
-            _pipeline.NotifyLoaded(Context);
         }
 
         public void Dispose()

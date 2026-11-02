@@ -400,7 +400,7 @@ namespace FES.Agents
     /// their bonds; groups keep their facilities in working cash, from their own money and then from corporate bonds; and a
     /// nation whose towns cannot afford their necessities sells bonds to the idle money and pays the towns with it.
     /// </summary>
-    public sealed class CreditSystem : ISimSystem
+    public sealed class CreditSystem : ISimSystem, ILoadListener
     {
         GameDatabase _db;
         WorldState _world;
@@ -428,6 +428,9 @@ namespace FES.Agents
         public string Id => "agents.credit";
         public SimPhase Phase => SimPhase.Finance;
         public int Order => FinanceOrder.Credit;
+
+        // The week's offers are kept by turn number, which a load can bring back with other cash behind it.
+        public void OnLoaded(SimContext ctx) => _world.Get<BondOffers>().Turn = -1;
 
         public void Initialize(SimContext ctx)
         {

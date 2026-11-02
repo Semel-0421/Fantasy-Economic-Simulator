@@ -46,7 +46,7 @@ namespace FES.Agents
     /// the money totals are recorded (DEC-043), loan rates follow the reserve ratio (DEC-042) and events start or
     /// end (DEC-044, DEC-047); at each new year the statistics of the year before are published.
     /// </summary>
-    public sealed class FinanceSystem : ISimSystem
+    public sealed class FinanceSystem : ISimSystem, ILoadListener
     {
         static readonly uint EventStream = DetHash.Of("agents.finance.events");
 
@@ -76,6 +76,8 @@ namespace FES.Agents
             _totals = ctx.World.Get<MoneyTotals>();
             _currency = ctx.World.Get<CurrencyState>();
         }
+
+        public void OnLoaded(SimContext ctx) => _totals.Invalidate();
 
         public void Execute(SimContext ctx)
         {

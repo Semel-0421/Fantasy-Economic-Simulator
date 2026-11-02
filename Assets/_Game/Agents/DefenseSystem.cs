@@ -25,6 +25,7 @@ namespace FES.Agents
         NativeArray<long> _spend;
         NativeArray<long> _paid;
         NativeArray<long> _value;
+        NativeArray<long> _carry;
         int[] _nationRoutes;
 
         public string Id => "agents.defense";
@@ -42,6 +43,7 @@ namespace FES.Agents
             _spend = new NativeArray<long>(nations, Allocator.Persistent);
             _paid = new NativeArray<long>(nations, Allocator.Persistent);
             _value = new NativeArray<long>(nations, Allocator.Persistent);
+            _carry = new NativeArray<long>(nations, Allocator.Persistent);
             _nationRoutes = new int[nations];
             var routes = ctx.World.Get<RouteTable>();
             for (int r = 0; r < routes.Count; r++)
@@ -77,6 +79,7 @@ namespace FES.Agents
                 Spend = _spend,
                 Paid = _paid,
                 Value = _value,
+                Carry = _carry,
             }.Schedule().Complete();
             for (int n = 0; n < _paid.Length; n++)
             {
@@ -91,6 +94,7 @@ namespace FES.Agents
             _spend.DisposeIfCreated();
             _paid.DisposeIfCreated();
             _value.DisposeIfCreated();
+            _carry.DisposeIfCreated();
         }
     }
 
@@ -109,6 +113,8 @@ namespace FES.Agents
         public NativeArray<long> Paid;
         /// <summary>Scratch, per nation: the value of its stock.</summary>
         public NativeArray<long> Value;
+        /// <summary>Scratch, per nation: the part of a unit its last cell did not reach, in units of its stock's value.</summary>
+        public NativeArray<long> Carry;
 
         public void Execute()
         {
@@ -116,6 +122,7 @@ namespace FES.Agents
             {
                 Value[n] = 0;
                 Paid[n] = 0;
+                Carry[n] = 0;
             }
             for (int node = 0; node < NodeFloat.Length; node++)
             {
@@ -133,11 +140,10 @@ namespace FES.Agents
 
         void Buy(int node, int nation)
         {
-            long spend = Spend[nation], value = Value[nation];
             int end = MarketCellStart[node] + MarketCellCount[node];
             for (int c = MarketCellStart[node]; c < end; c++)
             {
-                long units = value <= spend ? Stock[c] : Stock[c] * spend / value;
+                long units = UnitsAt(c, nation);
                 if (units <= 0) continue;
                 // Through this turn's supply into its demand, like every purchase, so repricing does not clear them again.
                 Stock[c] -= (int)units;
@@ -145,6 +151,24 @@ namespace FES.Agents
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + units);
                 Paid[nation] += units * Price[c];
             }
+        }
+
+        // A cell's share of the nation's purchase. What falls short of a whole unit carries on to the next cell, or cells
+        // holding little would buy nothing at all; never past what the nation has to spend.
+        long UnitsAt(int c, int nation)
+        {
+            long spend = Spend[nation], value = Value[nation];
+            if (value <= spend) return Stock[c];
+            long share = Stock[c] * spend;
+            long units = share / value;
+            Carry[nation] += share % value;
+            if (Carry[nation] >= value)
+            {
+                Carry[nation] -= value;
+                units++;
+            }
+            long left = (spend - Paid[nation]) / (Price[c] > 0 ? Price[c] : 1);
+            return units < left ? units : left;
         }
     }
 }

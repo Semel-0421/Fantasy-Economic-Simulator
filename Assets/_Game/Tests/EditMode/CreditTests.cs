@@ -251,6 +251,24 @@ namespace FES.Tests
         }
 
         [Test]
+        public void ReloadingInPlace_ReplaysTheSameTurns_WithCreditActive()
+        {
+            using var sim = Build("credit.bill_cap_weeks,8", "credit.state_debt_permille,300", "credit.working_weeks,4",
+                "markets.trader_float_permille,100", "lod.mode,1");
+            for (int t = 0; t < SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
+            using var buffer = new System.IO.MemoryStream();
+            sim.Save(buffer);
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+            ulong after = sim.ComputeHash();
+
+            buffer.Position = 0;
+            sim.Load(buffer);
+            for (int t = 0; t < 3; t++) sim.AdvanceTurn();
+
+            Assert.AreEqual(after, sim.ComputeHash());
+        }
+
+        [Test]
         public void ALoadedGame_GoesOnAsTheOriginal_WithCreditActive()
         {
             string[] on = { "credit.bill_cap_weeks,8", "credit.state_debt_permille,300", "credit.working_weeks,4", "credit.company_debt_permille,500",

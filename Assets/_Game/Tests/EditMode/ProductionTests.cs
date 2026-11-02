@@ -218,6 +218,25 @@ namespace FES.Tests
         }
 
         [Test]
+        public void ANewOperatorsBankruptcy_KeepsThePlayersClaimOnTheWarehouse()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            int bakery = FacilitiesOf(sim, IndustryTier.Tertiary).First();
+            int until = sim.Turn + 100;
+            facilities.WarehouseClaimUntil[bakery] = until;
+            facilities.Owner[bakery] = OwnerIds.Npc;
+            facilities.Cash[bakery] = -1_000_000_000;
+            facilities.NegativeCashWeeks[bakery] = sim.Database.Config.FacilityBankruptWeeks;
+
+            var bankrupt = RunCollecting(sim, 1).Where(b => b.Facility.Value == bakery).ToList();
+
+            Assert.AreEqual(1, bankrupt.Count);
+            Assert.AreEqual(until, bankrupt[0].WarehouseClaimUntil);
+            Assert.AreEqual(until, facilities.WarehouseClaimUntil[bakery]);
+        }
+
+        [Test]
         public void Player_MovesCashAndCargo_AtOwnFacility()
         {
             using var sim = TestWorlds.BuildSample();

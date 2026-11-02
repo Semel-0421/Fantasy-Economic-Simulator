@@ -376,7 +376,8 @@ namespace FES.Agents
                 NpcLending.SeizeFacility(ctx, f);
                 return;
             }
-            int claimUntil = wasPlayer ? ctx.Turn + _db.Config.LostWarehouseWeeks : -1;
+            // A later operator's failure leaves a claim the player already has.
+            int claimUntil = wasPlayer ? ctx.Turn + _db.Config.LostWarehouseWeeks : _facilities.WarehouseClaimUntil[f];
             _facilities.Owner[f] = OwnerIds.Npc;
             _facilities.Mode[f] = (byte)ControlMode.Automated;
             // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.

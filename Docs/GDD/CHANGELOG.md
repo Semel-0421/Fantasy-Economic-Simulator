@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-03
+- [03_Decisions.md, 04_Roadmap.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md, reviews/PROPOSAL_STEP5_2026-11-03.md, reviews/PROPOSAL_STEP5_2026-11-03.ko.md] DEC-111 (guarded loading, warehouse claims, defense from thin stock), proposal for step 5
+
 ## 2026-11-02
 - [03_Decisions.md, 00_Architecture.md, 01_Overview.md, INDEX.md, 01_Extension_Guide.md, 05_Refactoring_Standards.md, 04_Roadmap.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md] DEC-110 (one second a turn on a web build, everything computed; met on the development desktop)
 - [03_Decisions.md, 04_Roadmap.md, systems/SYS_BANKING.md, systems/SYS_STATE_ECONOMY.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md] DEC-109 (fixes C01, C02, C03 from the meta-analysis)

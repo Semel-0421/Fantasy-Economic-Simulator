@@ -590,6 +590,9 @@ namespace FES.Agents
             _facilities.Mode[f] = (byte)(won ? ControlMode.Manual : ControlMode.Automated);
             // [Draft] Without a winning bid a local family buys it.
             _facilities.Group[f] = won ? _groupTable.PlayerCompany() : MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
+            // What the player left in the warehouse stays theirs for a while, or until they buy it back (DEC-052).
+            if (won) _facilities.WarehouseClaimUntil[f] = -1;
+            else if (forPlayerLoan) _facilities.WarehouseClaimUntil[f] = ctx.Turn + _db.Config.LostWarehouseWeeks;
             if (!won)
             {
                 // The buyer pays the price, and its new manager's starting cash, from its cash (DEC-061).

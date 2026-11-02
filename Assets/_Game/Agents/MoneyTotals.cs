@@ -38,6 +38,9 @@ namespace FES.Agents
 
         public long NationTotal(int nation) => NationCash[nation] + NationReserve[nation];
 
+        /// <summary>A load may bring a save of the same turn.</summary>
+        public void Invalidate() => _computedTurn = -1;
+
         /// <summary>Recomputes unless already done this turn.</summary>
         public void Refresh(WorldState world)
         {

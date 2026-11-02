@@ -205,6 +205,7 @@ namespace FES.Tests
                 sim.AdvanceTurn();
                 for (int a = 0; a < agents.Count; a++)
                 {
+                    if (agents.Trait[a] != MerchantTraits.Of(MerchantPersonality.Cautious, MerchantOccupation.Expedition)) continue; // a failed group's successor has its own
                     if (!agents.IsTravelling(a) || nodes.Level[agents.Home[a]] < (byte)WorldLevel.Region) continue;
                     if (nodes.Continent[agents.Destination[a]] != nodes.Continent[agents.Home[a]]) continue; // those based at a port may sail (DEC-096)
                     trips++;

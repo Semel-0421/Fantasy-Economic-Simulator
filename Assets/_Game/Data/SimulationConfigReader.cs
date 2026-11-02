@@ -368,6 +368,10 @@ namespace FES.Data
         {
             LicensePriceMultiplier = Permille(v, "license.price_permille", LicensePriceMultiplier);
             LicensedMerchantPermille = Int(v, "license.merchant_share_permille", LicensedMerchantPermille);
+            InternationalMerchantPermille = Int(v, "license.international_merchant_share_permille", InternationalMerchantPermille);
+            IntercontinentalMerchantPermille = Int(v, "license.intercontinental_merchant_share_permille", IntercontinentalMerchantPermille);
+            InternationalLicensePrice = Long(v, "license.international_price", InternationalLicensePrice);
+            IntercontinentalLicensePrice = Long(v, "license.intercontinental_price", IntercontinentalLicensePrice);
             TollRate = Permille(v, "toll.tariff_permille", TollRate);
             TollSpecialtySurcharge = Permille(v, "toll.specialty_surcharge_permille", TollSpecialtySurcharge);
             SpecialtyOutputMultiplier = Permille(v, "specialty.output_permille", SpecialtyOutputMultiplier);

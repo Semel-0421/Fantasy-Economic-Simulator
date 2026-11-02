@@ -142,6 +142,7 @@ namespace FES.Economy
         [NativeDisableParallelForRestriction] public NativeArray<long> Desired;
         [NativeDisableParallelForRestriction] public NativeArray<int> PendingUnits;
         [NativeDisableParallelForRestriction] public NativeArray<int> LastOffered;
+        [NativeDisableParallelForRestriction] public NativeArray<int> HomeGrown;
 
         [NativeDisableParallelForRestriction] public NativeArray<int> Price;
         [NativeDisableParallelForRestriction] public NativeArray<int> PrevPrice;
@@ -158,6 +159,14 @@ namespace FES.Economy
         {
             long left = (long)supply + stock - demand;
             return left <= 0 ? 0 : left < met ? left : met;
+        }
+
+        /// <summary>Households eat what they grew before they buy (DEC-117): takes it from the cell's home crop.</summary>
+        public static long EatHomeGrown(ref NativeArray<int> homeGrown, int c, long needed)
+        {
+            long eaten = homeGrown[c] < needed ? homeGrown[c] : needed;
+            homeGrown[c] -= (int)eaten;
+            return eaten;
         }
 
         public static long Deliverable(long wished, int supply, int stock, int demand)
@@ -226,16 +235,17 @@ namespace FES.Economy
                 ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
             var wish = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                 MarketNecessityWeight[market], MarketLuxuryWeight[market]);
-            tally.Desired += Deliverable(wish.Units, Supply[c], Stock[c], Demand[c]) * Price[c];
-            tally.DesiredNecessity += Deliverable(wish.Met, Supply[c], Stock[c], Demand[c]) * Price[c];
-            long luxuries = wish.Units - wish.Met;
-            long cellMet = Fx.RoundShift(wish.Met * MarketBudget[market]);
+            long eaten = EatHomeGrown(ref HomeGrown, c, wish.Met);
+            long toBuy = wish.Met - eaten, luxuries = wish.Units - wish.Met;
+            tally.Desired += Deliverable(toBuy + luxuries, Supply[c], Stock[c], Demand[c]) * Price[c];
+            tally.DesiredNecessity += Deliverable(toBuy, Supply[c], Stock[c], Demand[c]) * Price[c];
+            long cellMet = Fx.RoundShift(toBuy * MarketBudget[market]);
             long consumed = cellMet + Fx.RoundShift(luxuries * MarketLuxuryBudget[market]);
-            if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
+            if ((long)Supply[c] + Stock[c] + eaten > 0) LastOffered[c] = Turn;
             if (LastOffered[c] >= Turn - NeedMemoryWeeks)
             {
                 tally.Wanted += wish.Wanted;
-                tally.Met += Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
+                tally.Met += eaten + Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
             }
             Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
             return MarketStore.ClampToNonNegativeInt(consumed);
@@ -273,6 +283,7 @@ namespace FES.Economy
         public long SpecialtyAnchorMulRaw;
         public int Turn;
         public int NeedMemoryWeeks;
+        [NativeDisableParallelForRestriction] public NativeArray<int> HomeGrown;
         [ReadOnly] public NativeArray<byte> MarketLevel;
         [ReadOnly] public NativeArray<int> MarketCellStart;
         [ReadOnly] public NativeArray<int> MarketCellCount;
@@ -325,17 +336,17 @@ namespace FES.Economy
                     ModifierMul[k + (int)ModifierTarget.Demand], valueMul, out long anchor);
                 var wish = HouseholdDemand.Weekly(Consumption, weekly, Price[c], anchor, GoodLuxuryShare[good],
                     MarketNecessityWeight[market], MarketLuxuryWeight[market]);
-                long consumed = wish.Units, cellWanted = wish.Wanted, cellMet = wish.Met;
-                desired += PriceUpdateJob.Deliverable(consumed, Supply[c], Stock[c], Demand[c]) * Price[c];
-                desiredNecessity += PriceUpdateJob.Deliverable(cellMet, Supply[c], Stock[c], Demand[c]) * Price[c];
-                long luxuries = consumed - cellMet;
-                cellMet = Fx.RoundShift(cellMet * budget);
-                consumed = cellMet + Fx.RoundShift(luxuries * luxuryBudget);
-                if ((long)Supply[c] + Stock[c] > 0) LastOffered[c] = Turn;
+                long eaten = PriceUpdateJob.EatHomeGrown(ref HomeGrown, c, wish.Met);
+                long luxuries = wish.Units - wish.Met, toBuy = wish.Met - eaten;
+                desired += PriceUpdateJob.Deliverable(toBuy + luxuries, Supply[c], Stock[c], Demand[c]) * Price[c];
+                desiredNecessity += PriceUpdateJob.Deliverable(toBuy, Supply[c], Stock[c], Demand[c]) * Price[c];
+                long cellMet = Fx.RoundShift(toBuy * budget);
+                long consumed = cellMet + Fx.RoundShift(luxuries * luxuryBudget);
+                if ((long)Supply[c] + Stock[c] + eaten > 0) LastOffered[c] = Turn;
                 if (LastOffered[c] >= Turn - NeedMemoryWeeks)
                 {
-                    wanted += cellWanted;
-                    met += PriceUpdateJob.Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
+                    wanted += wish.Wanted;
+                    met += eaten + PriceUpdateJob.Supplied(cellMet, Supply[c], Stock[c], Demand[c]);
                 }
                 Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + consumed);
                 PendingUnits[c] = MarketStore.ClampToNonNegativeInt(PendingUnits[c] + consumed);

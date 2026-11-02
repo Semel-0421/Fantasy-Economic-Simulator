@@ -106,6 +106,7 @@ namespace FES.Agents
             builder.AddSystem(new ProductionSystem());
             builder.AddSystem(new MerchantSystem());
             builder.AddSystem(new HouseholdSpendingSystem());
+            builder.AddSystem(new HomeSurplusSystem());
             builder.AddSystem(new GuidanceSystem());
             builder.AddSystem(new LicenseSystem());
             builder.AddSystem(new BankSystem());

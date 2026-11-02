@@ -46,12 +46,16 @@ namespace FES.Tests
             for (int f = 0; f < facilities.Count; f++)
                 foreach (var input in sim.Database.Facilities[facilities.DefIndex[f]].Recipe.Inputs)
                     Assert.IsTrue(Enumerable.Range(0, facilities.Count).Any(g => sim.Database.Facilities[facilities.DefIndex[g]].Recipe.Outputs.Any(o => o.Good == input.Good)
-                        && Within(nodes, facilities.Node[g], facilities.Node[f])), $"facility {f}");
+                        && (Within(nodes, facilities.Node[g], facilities.Node[f]) || SameRegion(nodes, facilities.Node[g], facilities.Node[f]))), $"facility {f} {sim.Database.Facilities[facilities.DefIndex[f]].Key} needs {sim.Database.Good(input.Good).Key} at {nodes.LevelOf(facilities.Node[f])}");
 
             int expectedMerchants = villages * 2 + cities * 6 + nodes.LevelCount(WorldLevel.Region) * 8
                 + nodes.LevelCount(WorldLevel.Nation) * 2 + nodes.LevelCount(WorldLevel.Continent) * 2;
             Assert.AreEqual(expectedMerchants, sim.World.Get<AgentTable>().Count);
         }
+
+        // A class's producers stand at its core (DEC-104), so what its inputs come from may be a neighbour of that core.
+        static bool SameRegion(NodeTable nodes, int a, int b) =>
+            nodes.AncestorAt(a, WorldLevel.Region) == nodes.AncestorAt(b, WorldLevel.Region);
 
         static bool Within(NodeTable nodes, int node, int ancestor)
         {
@@ -417,6 +421,7 @@ namespace FES.Tests
             Assert.AreEqual(3L * def.Weight, view.CartLoad.Weight);
             Assert.AreEqual(3L * def.Size, view.CartLoad.Size);
 
+            sim.World.Get<PurseState>().ChangeFloat(view.PlayerNode.Value, 1_000_000); // the traders here have money for it
             sim.Actions.SellGoods(quote.Good, 100);
             sim.AdvanceTurn();
             Assert.AreEqual(3, sim.LastTurnEvents.OfType<GoodsTraded>().Single().Filled);

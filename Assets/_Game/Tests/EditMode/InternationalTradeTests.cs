@@ -32,6 +32,8 @@ namespace FES.Tests
             {
                 Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig(config.Split('\n')), 42).Build();
                 Sim.Database.Config.MerchantMustAct = false; // the tests watch a group's own choice
+                Sim.Database.Config.InternationalMerchantPermille = 1000;
+                Sim.Database.Config.IntercontinentalMerchantPermille = 1000;
                 Sim.AdvanceTurn();
                 Agents = Sim.World.Get<AgentTable>();
                 Markets = Sim.World.Get<MarketStore>();

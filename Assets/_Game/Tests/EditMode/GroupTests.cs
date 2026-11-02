@@ -73,7 +73,7 @@ namespace FES.Tests
             {
                 int g = agents.Group[a];
                 Assert.GreaterOrEqual(g, 0);
-                bool large = nodes.LevelOf(agents.Home[a]) <= WorldLevel.Region && nodes.AncestorAt(agents.Home[a], WorldLevel.Nation) >= 0;
+                bool large = agents.Scale[a] <= (byte)WorldLevel.Region && nodes.AncestorAt(agents.Home[a], WorldLevel.Nation) >= 0;
                 Assert.AreEqual(large ? GroupKind.Company : GroupKind.PrivateEnterprise, groups.KindOf(g));
             }
         }

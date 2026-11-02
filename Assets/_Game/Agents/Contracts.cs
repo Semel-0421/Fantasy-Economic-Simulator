@@ -232,7 +232,8 @@ namespace FES.Agents
             if (!WidestGap(nation, out var route)) return false;
             var traded = new GoodId(_markets.CellGood[route.FromCell]);
             int seller = SellerAt(route.FromNode, traded), buyer = BuyerAt(route.ToNode, ctx.Turn / SimClock.WeeksPerYear + route.FromCell);
-            bool parties = seller != int.MinValue && buyer != int.MinValue && seller != buyer;
+            bool parties = seller != int.MinValue && buyer != int.MinValue && seller != buyer
+                && MayCarry(ctx, seller, traded, route.ToNode) && MayCarry(ctx, buyer, traded, route.ToNode);
             if (!parties || !AgreeTerms(route, buyer, out int quantity, out long unit, out int term))
             {
                 _refused.Add(RefuseKey(route.FromCell, route.ToCell));
@@ -241,10 +242,16 @@ namespace FES.Agents
             long deposit = _db.Config.ContractDepositShare.MulInt(quantity * unit * term);
             Pay(buyer, -deposit);
             Pay(seller, deposit);
-            _contracts.Add(seller, buyer, route, quantity, unit, ctx.Turn + term, deposit);
+            // Delivery runs before signing, so the first week is next turn and the end comes a turn after the last.
+            _contracts.Add(seller, buyer, route, quantity, unit, ctx.Turn + term + 1, deposit);
             ctx.Events.Publish(new SupplyContractSigned(seller, buyer, quantity, unit));
             return true;
         }
+
+        // A merchant without licenses trades no licensed good, under contract or not (DEC-024).
+        bool MayCarry(SimContext ctx, int party, GoodId good, int node) =>
+            !ContractParty.IsMerchant(party) || !PolicyRules.NeedsLicense(ctx.World, good, node)
+            || LicenseRules.MerchantHoldsLicenses(ctx.Seed, new AgentId(~party), _db.Config.LicensedMerchantPermille);
 
         static long RefuseKey(int fromCell, int toCell) => ((long)fromCell << 32) | (uint)toCell;
 

@@ -35,7 +35,7 @@ demand.necessity_elasticity_permille,600
 # Rural-urban migration over about fifteen years (DEC-079).
 migration.max_share_permille,80
 # Population grows below full supply: a slow pre-industrial rise that shortage slows and severe shortage reverses (DEC-112).
-households.base_growth_permille,5
+households.base_growth_permille,10
 households.growth_response_permille,20
 households.urban_penalty_permille,0
 # Factories can be expanded and NPC groups invest on every node (DEC-080).
@@ -105,6 +105,11 @@ merchants.bids,2
 households.budget_weeks,13
 # Each continent makes its own goods; groups based at region level and above carry them across, and far trade flows at 65% (DEC-066, DEC-096).
 merchants.cross_level,2
+# Trade across borders needs its own license ([Draft] DEC-116).
+license.international_merchant_share_permille,500
+license.intercontinental_merchant_share_permille,500
+license.international_price,300
+license.intercontinental_price,1500
 merchants.cross_flow_permille,650
 # A market whose traders cannot pay for 20 units is no market; groups based at a port may sail whatever their personality; nations keep their international bank in coins (DEC-096).
 merchants.judge_coin_units,20

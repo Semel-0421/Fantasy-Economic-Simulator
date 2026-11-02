@@ -39,6 +39,8 @@ namespace FES.Tests
             var people = sim.World.Get<HouseholdState>().Population;
             sim.AdvanceTurn();
             while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+            for (int n = 0; n < nodes.Count; n++)
+                if (nodes.LevelOf(n) != WorldLevel.Village) cash.Cash[n] += 100_000_000; // towns pay better, so people move
             var income = Enumerable.Range(0, nodes.Count).Select(n => cash.YearIncome(n)).ToArray();
             var held = Enumerable.Range(0, nodes.Count).Select(n => cash.Cash[n]).ToArray();
 

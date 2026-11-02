@@ -104,8 +104,8 @@ namespace FES.Tests
             int village = nodes.LevelStart(WorldLevel.Village);
             int city = nodes.LevelStart(WorldLevel.City);
             int region = nodes.LevelStart(WorldLevel.Region);
-            Assert.AreEqual(16 * 2, markets.MarketCellCount[village]);  // 16 goods, without tools, x low/mid
-            Assert.AreEqual(27 * 4, markets.MarketCellCount[city]);     // everything
+            Assert.AreEqual(18 * 2, markets.MarketCellCount[village]);  // 18 goods, without tools, x low/mid
+            Assert.AreEqual(29 * 4, markets.MarketCellCount[city]);     // everything
             Assert.AreEqual(0, markets.MarketCellCount[region]);        // a class has no market of its own (DEC-104)
 
             db.TryGetGood("iron_tools", QualityGrade.Mid, out var tools);

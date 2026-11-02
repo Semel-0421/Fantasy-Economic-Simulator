@@ -350,7 +350,7 @@ namespace FES.Agents
         }
 
         // A group keeps part of its dividends and passes the rest to the households of its home node; a state
-        // enterprise's go to the state (DEC-061; [Draft] household cash is one pot per node, not per quintile).
+        // enterprise's go to the state (DEC-061; they reach the quintiles by income share, DEC-115).
         void PassOnDividends()
         {
             var share = _db.Config.GroupPayoutShare;

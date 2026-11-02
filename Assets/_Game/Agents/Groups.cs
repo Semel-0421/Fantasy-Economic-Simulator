@@ -251,7 +251,7 @@ namespace FES.Agents
                 int node = agents.Home[a];
                 int nation = nodes.AncestorAt(node, WorldLevel.Nation);
                 int group = -1;
-                if (nation >= 0 && nodes.LevelOf(node) <= WorldLevel.Region) group = Pick(directory.CompaniesOf(nation), a);
+                if (nation >= 0 && agents.Scale[a] <= (byte)WorldLevel.Region) group = Pick(directory.CompaniesOf(nation), a);
                 agents.Group[a] = group >= 0 ? group : directory.PrivateAt(node, db.Config);
             }
         }

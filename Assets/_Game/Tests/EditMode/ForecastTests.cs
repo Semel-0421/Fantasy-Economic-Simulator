@@ -236,7 +236,7 @@ namespace FES.Tests
             }
             Supply(town, 1000);
             Supply(village, 1000);
-            Supply(shortOf, 600);
+            Supply(shortOf, 100);
             Supply(plenty, 1100);
             sim.Systems.OfType<HouseholdGrowthSystem>().Single().Execute(sim.Context);
             var growth = sim.Database.Config.PopulationBaseGrowth;

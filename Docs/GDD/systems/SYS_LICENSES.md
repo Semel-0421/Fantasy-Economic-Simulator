@@ -19,6 +19,8 @@ lever nations hold.
 - [Confirmed] It is bought and must be renewed every year (DEC-024).
 - [Confirmed] It gates selling only; anyone may buy the good (DEC-024).
 - [Confirmed] Only some NPC merchant groups hold licenses (DEC-024).
+- [Confirmed] Trade between nations and between continents needs its own license (DEC-116).
+- [Draft] The nation a load leaves issues it for a year at its core towns: 300 coins between nations, 1,500 between continents. An empty cart crosses freely. Half of merchant groups hold each (DEC-116).
 - [Draft] Which goods are special, license prices and the share of licensed NPC groups start as
   placeholder data and config values: iron tools only; price 20 x the good's Mid base price
   (`license.price_permille`); 20% of merchant groups (`license.merchant_share_permille`).

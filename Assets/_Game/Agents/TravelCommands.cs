@@ -34,6 +34,8 @@ namespace FES.Agents
             if (!TryQuote(ctx, out var quote)) return CommandResult.Fail("No route to destination.");
             if (!PlayerTrip.CargoFits(ctx.World, ctx.Services.Get<GameDatabase>(), quote.Route))
                 return CommandResult.Fail("The cargo does not fit what carries it on this route.");
+            if (!PlayerTrip.CargoMayLeave(ctx, player.Node, Destination.Value))
+                return CommandResult.Fail("Carrying cargo out of this nation needs its trade license.");
             return quote.AffordableWith(player.Coins) ? CommandResult.Success : CommandResult.Fail("Not enough coins for the trip.");
         }
 
@@ -141,6 +143,15 @@ namespace FES.Agents
             bool ship = ((RouteTerrain)world.Get<RouteTable>().Terrain[route]).IsWater()
                         && world.Get<PlayerShip>().AvailableAt(world.Get<PlayerState>().Node);
             return ship ? new CargoCapacity(config.ShipMaxWeight, config.ShipMaxSize) : new CargoCapacity(config.CartMaxWeight, config.CartMaxSize);
+        }
+
+        /// <summary>An empty cart crosses freely; a load needs the license of the nation it leaves (DEC-116).</summary>
+        public static bool CargoMayLeave(SimContext ctx, int from, int to)
+        {
+            if (!LicenseRules.TradeLicenseNeeded(ctx.World.Get<NodeTable>(), from, to, out var kind, out int nation)) return true;
+            var markets = ctx.World.Get<MarketStore>();
+            var load = ctx.World.Get<CargoTable>().LoadOf(CargoHolders.PlayerCart, markets.GoodWeight, markets.GoodSize);
+            return load.Weight <= 0 && load.Size <= 0 || ctx.World.Get<LicenseTable>().IsValid((int)kind, nation, ctx.Turn);
         }
 
         public static bool CargoFits(WorldState world, GameDatabase db, int route)

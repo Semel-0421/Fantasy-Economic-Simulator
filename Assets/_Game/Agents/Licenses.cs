@@ -73,9 +73,29 @@ namespace FES.Agents
         }
     }
 
+    /// <summary>A license to carry cargo out of the issuing nation (DEC-116). Stored in <see cref="LicenseTable"/> under a negative base good.</summary>
+    public enum TradeLicenseKind
+    {
+        International = -1,
+        Intercontinental = -2,
+    }
+
     public static class LicenseRules
     {
         public static readonly uint MerchantStream = DetHash.Of("agents.licenses.merchants");
+        public static readonly uint InternationalStream = DetHash.Of("agents.licenses.international");
+        public static readonly uint IntercontinentalStream = DetHash.Of("agents.licenses.intercontinental");
+
+        /// <summary>
+        /// The license a load needs to go from one node to another, issued by the nation it leaves (DEC-116).
+        /// False when none is needed: the same nation, or leaving no nation at all.
+        /// </summary>
+        public static bool TradeLicenseNeeded(NodeTable nodes, int from, int to, out TradeLicenseKind kind, out int nation)
+        {
+            nation = nodes.AncestorAt(from, WorldLevel.Nation);
+            kind = nodes.Continent[from] != nodes.Continent[to] ? TradeLicenseKind.Intercontinental : TradeLicenseKind.International;
+            return nation >= 0 && nation != nodes.AncestorAt(to, WorldLevel.Nation);
+        }
 
         /// <summary>A license's price, in the issuing nation's coin: the good's Mid base price times the config factor.</summary>
         public static long Price(GameDatabase db, int baseGood) =>
@@ -191,6 +211,41 @@ namespace FES.Agents
             GuidanceAxis.Trade, ctx.Services.Get<GameDatabase>().Config.GuidanceWeightBuyLicense, new NodeId(ctx.World.Get<PlayerState>().Node));
     }
 
+    /// <summary>Buys a year's license to carry cargo out of the nation the player is in (DEC-116).</summary>
+    public sealed class BuyTradeLicenseCommand : ICommand
+    {
+        public readonly TradeLicenseKind Kind;
+
+        public BuyTradeLicenseCommand(TradeLicenseKind kind) => Kind = kind;
+
+        public CommandResult Validate(SimContext ctx)
+        {
+            if (Kind != TradeLicenseKind.International && Kind != TradeLicenseKind.Intercontinental) return CommandResult.Fail("Unknown license.");
+            var player = ctx.World.Get<PlayerState>();
+            var nodes = ctx.World.Get<NodeTable>();
+            if (player.IsTravelling) return CommandResult.Fail("Licenses are bought in a nation, not on the road.");
+            if (nodes.AncestorAt(player.Node, WorldLevel.Nation) < 0) return CommandResult.Fail("No nation issues licenses here.");
+            if (nodes.Absorbed && !nodes.IsSeat(player.Node)) return CommandResult.Fail("Licenses are issued at the core towns.");
+            return player.LocalCoins >= Price(ctx) ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
+        }
+
+        public void Apply(SimContext ctx)
+        {
+            var player = ctx.World.Get<PlayerState>();
+            int nation = ctx.World.Get<NodeTable>().AncestorAt(player.Node, WorldLevel.Nation);
+            long price = Price(ctx);
+            player.LocalCoins -= price;
+            MoneyLedger.ToState(ctx.World, nation, price);
+            ctx.World.Get<LicenseTable>().Extend((int)Kind, nation, ctx.Turn);
+        }
+
+        long Price(SimContext ctx)
+        {
+            var config = ctx.Services.Get<GameDatabase>().Config;
+            return Kind == TradeLicenseKind.International ? config.InternationalLicensePrice : config.IntercontinentalLicensePrice;
+        }
+    }
+
     /// <summary>Drops the player's expired licenses and announces them. Runs at the end of the turn.</summary>
     public sealed class LicenseSystem : ISimSystem
     {
@@ -218,7 +273,7 @@ namespace FES.Agents
         {
             into.Clear();
             for (int r = 0; r < licenses.Count; r++)
-                into.Add(new LicenseInfo(licenses.BaseGood[r], new NodeId(licenses.Nation[r]), licenses.ExpiresTurn[r]));
+                if (licenses.BaseGood[r] >= 0) into.Add(new LicenseInfo(licenses.BaseGood[r], new NodeId(licenses.Nation[r]), licenses.ExpiresTurn[r]));
         }
     }
 }

@@ -93,6 +93,7 @@ namespace FES.Data
 
         const string FoodCategory = "provisions";
         const string DrinkCategory = "drink";
+        const string PreservedCategory = "preserved";
 
         static int RoundedShare(int amount, Fx share) => (int)((amount * share.Raw + Fx.OneRaw / 2) / Fx.OneRaw);
 
@@ -111,7 +112,7 @@ namespace FES.Data
                 int baseDemand = t.GetIntOr(r, "base_demand", 0);
                 var traits = ReadTraits(t, r);
                 // Foods and drink keep their own grade prices, and their demand splits by grade, the rest to mid (DEC-090, DEC-091).
-                bool food = (category == FoodCategory || category == DrinkCategory) && Config.FoodGradeDemand[(int)QualityGrade.Mid].Raw > 0;
+                bool food = (category == FoodCategory || category == DrinkCategory || category == PreservedCategory) && Config.FoodGradeDemand[(int)QualityGrade.Mid].Raw > 0;
                 for (int g = 0; g < QualityGrades.Count; g++)
                 {
                     long price = GradePrice(basePrice, g, food);
@@ -141,7 +142,10 @@ namespace FES.Data
             if (goodClass.Length == 0) goodClass = "necessity";
             if (goodClass != "necessity" && goodClass != "luxury" && goodClass != "semi")
                 throw new FormatException($"goods.csv row {r + 1}: class must be necessity, semi or luxury, not '{goodClass}'.");
-            return new GoodTraits(weight, size, license == 1, goodClass == "luxury", goodClass == "semi", t.GetIntOr(r, "made_to_order", 0) != 0);
+            int home = t.GetIntOr(r, "home_output", 0);
+            if (home < 0) throw new FormatException($"goods.csv row {r + 1}: home_output must not be negative.");
+            return new GoodTraits(weight, size, license == 1, goodClass == "luxury", goodClass == "semi", t.GetIntOr(r, "made_to_order", 0) != 0,
+                new HomeMaking(home, t.GetString(r, "category") == PreservedCategory));
         }
 
         long GradePrice(long basePrice, int grade, bool food) =>

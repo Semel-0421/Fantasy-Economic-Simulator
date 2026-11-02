@@ -34,6 +34,7 @@ namespace FES.Economy
         NativeArray<long> _budget;
         NativeArray<long> _luxuryBudget;
         long _specialtyAnchorMulRaw;
+        readonly System.Collections.Generic.List<GoodDef> _homeGoods = new System.Collections.Generic.List<GoodDef>();
 
         public string Id => "economy.pricing";
         public SimPhase Phase => SimPhase.Markets;
@@ -55,6 +56,8 @@ namespace FES.Economy
             _params = PriceParams.From(_config);
             _demand = DemandParams.From(_config);
             _specialtyAnchorMulRaw = _config.SpecialtyPriceMultiplier.Raw;
+            for (int g = 0; g < db.GoodCount; g++)
+                if (db.Goods[g].HomeOutput > 0 && db.Goods[g].Grade == QualityGrade.Low) _homeGoods.Add(db.Goods[g]);
             _anchorMul = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _levelElapsed = new NativeArray<int>(WorldLevels.Count, Allocator.Persistent);
             _levelWeight = new NativeArray<long>(WorldLevels.Count, Allocator.Persistent);
@@ -70,6 +73,7 @@ namespace FES.Economy
 
         public void Execute(SimContext ctx)
         {
+            GrowAtHome();
             // Population and income change yearly; refresh their weights here so loads need no hook.
             for (int n = 0; n < _nodes.Count; n++)
             {
@@ -77,6 +81,7 @@ namespace FES.Economy
                 _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
                 _necessityWeight[n] = _households.NecessityWeight(n, level, _config).Raw;
                 _luxuryWeight[n] = _households.LuxuryWeight(n, level, _config).Raw;
+                _cash.Settle(n, _config.QuintileIncomeShare);
                 _budget[n] = _cash.NecessityBudgetFactor(n, _config.HouseholdBudgetWeeks);
                 _luxuryBudget[n] = _cash.LuxuryBudgetFactor(n, _config.HouseholdBudgetWeeks);
             }
@@ -108,6 +113,7 @@ namespace FES.Economy
                 Turn = ctx.Turn,
                 NeedMemoryWeeks = _config.NeedMemoryWeeks,
                 LastOffered = _cash.LastOffered,
+                HomeGrown = _cash.HomeGrown,
                 LevelElapsed = _levelElapsed,
                 MarketLevel = _nodes.Level,
                 MarketCellStart = _markets.MarketCellStart,
@@ -181,6 +187,7 @@ namespace FES.Economy
                 Demand = _markets.Demand,
                 NecessityWanted = _households.NecessityWanted,
                 NecessityMet = _households.NecessityMet,
+                HomeGrown = _cash.HomeGrown,
                 Desired = _cash.Desired,
                 DesiredNecessity = _cash.DesiredNecessity,
                 PendingUnits = _cash.PendingUnits,
@@ -191,6 +198,30 @@ namespace FES.Economy
                 return;
             }
             job.Schedule(_markets.MarketCount, 4).Complete();
+        }
+
+        // In proportion to the people of the villages, into their market's lowest grade of each good made at home (DEC-117, DEC-118).
+        void GrowAtHome()
+        {
+            for (int n = 0; n < _nodes.Count; n++)
+            {
+                if (_nodes.LevelOf(n) != WorldLevel.Village) continue;
+                int market = _nodes.Absorbed ? _nodes.Core[n] : n;
+                foreach (var good in _homeGoods)
+                {
+                    if (!LowestCell(market, good.Id.BaseIndex, out int cell)) continue;
+                    long grown = _cash.HomeGrown[cell] + _households.Population[n] * good.HomeOutput / 1000;
+                    _cash.HomeGrown[cell] = MarketStore.ClampToNonNegativeInt(grown);
+                }
+            }
+        }
+
+        bool LowestCell(int market, int baseGood, out int cell)
+        {
+            for (int g = 0; g < QualityGrades.Count; g++)
+                if (_markets.TryFindCell(market, GoodId.From(baseGood, (QualityGrade)g), out cell)) return true;
+            cell = -1;
+            return false;
         }
 
         public void Dispose()
@@ -241,6 +272,8 @@ namespace FES.Economy
             builder.AddMigration(new HouseholdCashV2Migration());
             builder.AddMigration(new HouseholdCashV3Migration());
             builder.AddMigration(new HouseholdCashV4Migration());
+            builder.AddMigration(new HouseholdCashV5Migration());
+            builder.AddMigration(new HouseholdCashV6Migration());
         }
     }
 }

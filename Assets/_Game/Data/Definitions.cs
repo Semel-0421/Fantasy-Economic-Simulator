@@ -40,6 +40,10 @@ namespace FES.Data
         public readonly bool IsSemi;
         /// <summary>Made on request: buyers order it and collect it later (DEC-085).</summary>
         public readonly bool MadeToOrder;
+        /// <summary>Units a thousand people grow at home a week, in the lowest grade their market carries (DEC-117); per base good.</summary>
+        public readonly int HomeOutput;
+        /// <summary>Dried or pickled: it is small and dear, and what households hold of it does not spoil (DEC-118).</summary>
+        public readonly bool IsPreserved;
 
         public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, in GoodTraits traits)
         {
@@ -54,10 +58,25 @@ namespace FES.Data
             IsLuxury = traits.IsLuxury;
             IsSemi = traits.IsSemi;
             MadeToOrder = traits.MadeToOrder;
+            HomeOutput = traits.HomeOutput;
+            IsPreserved = traits.IsPreserved;
         }
 
         public QualityGrade Grade => Id.Grade;
         public string Key => $"{BaseKey}@{Grade.ToString().ToLowerInvariant()}";
+    }
+
+    /// <summary>What households make of a base good, and whether it keeps (DEC-117, DEC-118).</summary>
+    public readonly struct HomeMaking
+    {
+        public readonly int Output;
+        public readonly bool Preserved;
+
+        public HomeMaking(int output, bool preserved)
+        {
+            Output = output;
+            Preserved = preserved;
+        }
     }
 
     /// <summary>What every grade of a base good shares.</summary>
@@ -65,8 +84,10 @@ namespace FES.Data
     {
         public readonly int Weight, Size;
         public readonly bool RequiresLicense, IsLuxury, IsSemi, MadeToOrder;
+        public readonly int HomeOutput;
+        public readonly bool IsPreserved;
 
-        public GoodTraits(int weight, int size, bool requiresLicense, bool isLuxury, bool isSemi, bool madeToOrder)
+        public GoodTraits(int weight, int size, bool requiresLicense, bool isLuxury, bool isSemi, bool madeToOrder, HomeMaking home = default)
         {
             Weight = weight;
             Size = size;
@@ -74,6 +95,8 @@ namespace FES.Data
             IsLuxury = isLuxury;
             IsSemi = isSemi;
             MadeToOrder = madeToOrder;
+            HomeOutput = home.Output;
+            IsPreserved = home.Preserved;
         }
     }
 

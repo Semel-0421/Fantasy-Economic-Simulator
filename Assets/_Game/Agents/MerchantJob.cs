@@ -30,6 +30,10 @@ namespace FES.Agents
         public uint EncounterStream;
         public uint LicenseStream;
         public int LicensedPermille;
+        public uint InternationalStream;
+        public int InternationalPermille;
+        public uint IntercontinentalStream;
+        public int IntercontinentalPermille;
         public int BaseGoodCount;
         public int CategoryCount;
         public int BankruptWeeks;
@@ -415,7 +419,10 @@ namespace FES.Agents
         {
             if (NodeContinent[to] != NodeContinent[at])
                 return CrossLevel >= 0 && AgentScale[a] <= CrossLevel
-                    && (TraitRangeLevel[AgentTrait[a]] <= (int)WorldLevel.Nation || NodePort[AgentHome[a]] != 0);
+                    && (TraitRangeLevel[AgentTrait[a]] <= (int)WorldLevel.Nation || NodePort[AgentHome[a]] != 0)
+                    && (NodeContinent[to] == NodeContinent[AgentHome[a]] || HoldsTradeLicense(a, IntercontinentalStream, IntercontinentalPermille));
+            if (NodeLicenseRow[to] != NodeLicenseRow[at] && NodeLicenseRow[to] != NodeLicenseRow[AgentHome[a]]
+                && !HoldsTradeLicense(a, InternationalStream, InternationalPermille)) return false;
             return !reach.InRange || Abroad(a, at) || Within(to, reach.Anchor);
         }
 
@@ -768,6 +775,9 @@ namespace FES.Agents
         }
 
         bool HoldsLicenses(int a) => DetRandom.For(Seed, 0, LicenseStream, a).ChancePermille(LicensedPermille);
+
+        // Going home needs no license, so a group caught abroad is never stranded (DEC-116).
+        bool HoldsTradeLicense(int a, uint stream, int permille) => DetRandom.For(Seed, 0, stream, a).ChancePermille(permille);
 
         bool NeedsLicense(int node, int good) =>
             Licensed[NodeLicenseRow[node] * BaseGoodCount + good / QualityGrades.Count] != 0;

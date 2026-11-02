@@ -151,6 +151,7 @@ namespace FES.Tests
             var player = PlaceAt(sim, "aur_n1_r2_c1", 20_000, ("iron_ore", 40)); // 480 weight: more than the cart's 400
             player.Coins[sim.View.ContinentOf(Node(sim, "bor_n1_r1_c2"))] = 20_000;
             var abroad = Node(sim, "bor_n1_r1_c2");
+            sim.World.Get<LicenseTable>().Extend((int)TradeLicenseKind.Intercontinental, sim.World.Get<NodeTable>().AncestorAt(player.Node, WorldLevel.Nation), sim.Turn);
 
             Assert.IsTrue(sim.View.TryQuoteTrip(abroad, out var passage));
             Assert.AreEqual(config.PassageBaseFee + 40 * config.PassagePerUnit, passage.Passage);

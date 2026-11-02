@@ -100,6 +100,7 @@ namespace FES.Tests
             PlacePlayer(sim, "aur_n1_r2_c1", ("wheat", 10));
             var player = sim.World.Get<PlayerState>();
             var abroad = Node(sim, "bor_n1_r1_c2");
+            sim.World.Get<LicenseTable>().Extend((int)TradeLicenseKind.Intercontinental, sim.World.Get<NodeTable>().AncestorAt(player.Node, WorldLevel.Nation), sim.Turn);
             int home = sim.View.ContinentOf(sim.View.PlayerNode), away = sim.View.ContinentOf(abroad);
             Assert.AreNotEqual(home, away);
 

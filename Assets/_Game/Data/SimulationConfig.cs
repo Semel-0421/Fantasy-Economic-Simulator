@@ -430,6 +430,18 @@ namespace FES.Data
         /// <summary>Share of merchant groups that hold licenses, in permille (DEC-024).</summary>
         public int LicensedMerchantPermille = 200;
 
+        /// <summary>Share of merchant groups licensed to trade into other nations, in permille (DEC-116).</summary>
+        public int InternationalMerchantPermille = 500;
+
+        /// <summary>Share of merchant groups licensed to trade to other continents, in permille (DEC-116).</summary>
+        public int IntercontinentalMerchantPermille = 500;
+
+        /// <summary>What the player pays a nation for a year's license to carry cargo out to other nations (DEC-116).</summary>
+        public long InternationalLicensePrice = 300;
+
+        /// <summary>What the player pays a nation for a year's license to carry cargo out to other continents (DEC-116).</summary>
+        public long IntercontinentalLicensePrice = 1500;
+
         /// <summary>Toll on entering a node, as a share of the cargo's value, unless the map sets the node's own.</summary>
         public Fx TollRate = Fx.FromPermille(30);
 

@@ -149,10 +149,19 @@ namespace FES.Economy
         public NativeArray<long> CashYearStart;
         /// <summary>Per node: lent out since the year began, less what came back, with the interest earned: what income should not count as gone.</summary>
         public NativeArray<long> SavedYear;
+        /// <summary>
+        /// Per node and income quintile, poorest first: each one's part of <see cref="Cash"/> at the last
+        /// <see cref="Settle"/>. Cash stays the node's total; whatever moved it since is shared out there (DEC-115).
+        /// </summary>
+        public NativeArray<long> QuintileCash;
+        /// <summary>Per node: <see cref="SpentYear"/> and <see cref="Spent"/> as of the last settlement.</summary>
+        public NativeArray<long> SpentSettled;
+        /// <summary>Per cell: what households made and have not eaten; at the end of the turn it goes to market or spoils, and only preserved food stays (DEC-117, DEC-118).</summary>
+        public NativeArray<int> HomeGrown;
 
         public const string SectionKey = "economy.household_cash";
         public string Key => SectionKey;
-        public int Version => 5;
+        public int Version => 7;
 
         /// <summary>A good the market has never offered: older than any memory of it.</summary>
         public const int NeverOffered = -1000000;
@@ -169,6 +178,9 @@ namespace FES.Economy
             SpentYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
             CashYearStart = new NativeArray<long>(nodeCount, Allocator.Persistent);
             SavedYear = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            QuintileCash = new NativeArray<long>(nodeCount * HouseholdDemand.Quintiles, Allocator.Persistent);
+            SpentSettled = new NativeArray<long>(nodeCount, Allocator.Persistent);
+            HomeGrown = new NativeArray<int>(cellCount, Allocator.Persistent);
         }
 
         /// <summary>What a node's households received since the year began: wages, dividends, public wages and the like.</summary>
@@ -180,21 +192,87 @@ namespace FES.Economy
             for (int n = 0; n < Cash.Length; n++)
             {
                 CashYearStart[n] = Cash[n] + Spent[n];
+                SpentSettled[n] -= SpentYear[n];
                 SpentYear[n] = 0;
                 SavedYear[n] = 0;
             }
         }
 
         /// <summary>
-        /// The share (raw Q16, at most 1) of their wished necessities a node's households can pay for this week:
-        /// they spend at most their cash over <paramref name="budgetWeeks"/> a week, necessities first (DEC-083).
+        /// The share (raw Q16, at most 1) of their wished necessities a node's households can pay for this week. Each
+        /// quintile wants a fifth of them and spends at most its cash over <paramref name="budgetWeeks"/> a week,
+        /// necessities first (DEC-083, DEC-115).
         /// </summary>
-        public long NecessityBudgetFactor(int node, int budgetWeeks) =>
-            Share(Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks), DesiredNecessity[node]);
+        public long NecessityBudgetFactor(int node, int budgetWeeks)
+        {
+            int start = node * HouseholdDemand.Quintiles;
+            long fifth = DesiredNecessity[node] / HouseholdDemand.Quintiles, paid = 0;
+            for (int q = 0; q < HouseholdDemand.Quintiles; q++)
+                paid += Math.Min(WeekBudget(start + q, budgetWeeks), fifth);
+            return Share(paid, fifth * HouseholdDemand.Quintiles);
+        }
 
-        /// <summary>The share of their wished luxuries that what is left after necessities pays for, so luxuries grow in as money does.</summary>
-        public long LuxuryBudgetFactor(int node, int budgetWeeks) =>
-            Share(Math.Max(0, Cash[node]) / Math.Max(1, budgetWeeks) - DesiredNecessity[node], Desired[node] - DesiredNecessity[node]);
+        /// <summary>The share of their wished luxuries that what each quintile has left after necessities pays for, so they follow the money.</summary>
+        public long LuxuryBudgetFactor(int node, int budgetWeeks)
+        {
+            int start = node * HouseholdDemand.Quintiles;
+            long fifth = DesiredNecessity[node] / HouseholdDemand.Quintiles, spare = 0;
+            for (int q = 0; q < HouseholdDemand.Quintiles; q++)
+                spare += Math.Max(0, WeekBudget(start + q, budgetWeeks) - fifth);
+            return Share(spare, Desired[node] - DesiredNecessity[node]);
+        }
+
+        long WeekBudget(int row, int budgetWeeks) => Math.Max(0, QuintileCash[row]) / Math.Max(1, budgetWeeks);
+
+        /// <summary>
+        /// Brings a node's quintiles up to its cash: income since the last settlement goes by income share, and what
+        /// was spent comes first from each one's fifth of the necessities, the rest from whoever still holds money.
+        /// </summary>
+        public void Settle(int node, Fx[] incomeShares)
+        {
+            int start = node * HouseholdDemand.Quintiles;
+            long spentNow = SpentYear[node] + Spent[node], spent = spentNow - SpentSettled[node], held = 0;
+            SpentSettled[node] = spentNow;
+            for (int q = 0; q < HouseholdDemand.Quintiles; q++) held += QuintileCash[start + q];
+            long income = Cash[node] - held + spent;
+            if (income > 0) ShareIncome(start, income, incomeShares);
+            long fifth = Math.Min(spent, DesiredNecessity[node]) / HouseholdDemand.Quintiles;
+            long rest = spent + Math.Max(0, -income);
+            for (int q = 0; q < HouseholdDemand.Quintiles; q++)
+            {
+                long paid = Math.Min(Math.Max(0, QuintileCash[start + q]), fifth);
+                QuintileCash[start + q] -= paid;
+                rest -= paid;
+            }
+            TakeFromHolders(start, rest);
+        }
+
+        void ShareIncome(int start, long income, Fx[] incomeShares)
+        {
+            long left = income;
+            for (int q = 0; q < HouseholdDemand.Quintiles - 1; q++)
+            {
+                long part = incomeShares[q].MulInt(income);
+                QuintileCash[start + q] += part;
+                left -= part;
+            }
+            QuintileCash[start + HouseholdDemand.Quintiles - 1] += left;
+        }
+
+        // In proportion to what each holds; a remainder falls on the top quintile, so the parts always add up to the cash.
+        void TakeFromHolders(int start, long amount)
+        {
+            long total = 0, left = amount;
+            for (int q = 0; q < HouseholdDemand.Quintiles; q++) total += Math.Max(0, QuintileCash[start + q]);
+            for (int q = 0; total > 0 && q < HouseholdDemand.Quintiles; q++)
+            {
+                long held = Math.Max(0, QuintileCash[start + q]);
+                long cut = amount / total * held + amount % total * held / total;
+                QuintileCash[start + q] -= cut;
+                left -= cut;
+            }
+            QuintileCash[start + HouseholdDemand.Quintiles - 1] -= left;
+        }
 
         static long Share(long budget, long desired)
         {
@@ -215,6 +293,9 @@ namespace FES.Economy
             NativeIO.WriteArray(writer, LastOffered);
             NativeIO.WriteArray(writer, DesiredNecessity);
             NativeIO.WriteArray(writer, SavedYear);
+            NativeIO.WriteArray(writer, QuintileCash);
+            NativeIO.WriteArray(writer, SpentSettled);
+            NativeIO.WriteArray(writer, HomeGrown);
         }
 
         public void Read(BinaryReader reader)
@@ -228,6 +309,9 @@ namespace FES.Economy
             NativeIO.ReadArray(reader, LastOffered);
             NativeIO.ReadArray(reader, DesiredNecessity);
             NativeIO.ReadArray(reader, SavedYear);
+            NativeIO.ReadArray(reader, QuintileCash);
+            NativeIO.ReadArray(reader, SpentSettled);
+            NativeIO.ReadArray(reader, HomeGrown);
         }
 
         public void Dispose()
@@ -240,6 +324,9 @@ namespace FES.Economy
             SpentYear.DisposeIfCreated();
             CashYearStart.DisposeIfCreated();
             SavedYear.DisposeIfCreated();
+            QuintileCash.DisposeIfCreated();
+            SpentSettled.DisposeIfCreated();
+            HomeGrown.DisposeIfCreated();
             LastOffered.DisposeIfCreated();
         }
     }
@@ -325,6 +412,50 @@ namespace FES.Economy
                 writer.Write(new byte[nodes * sizeof(long)]);
                 writer.Write(nodes);
                 writer.Write(cash);
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 6 kept no food at home.</summary>
+    public sealed class HouseholdCashV6Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 6;
+
+        public byte[] Migrate(byte[] section)
+        {
+            var reader = new BinaryReader(new MemoryStream(section));
+            for (int skipped = 0; skipped < 3; skipped++) reader.BaseStream.Seek(reader.ReadInt32() * (long)sizeof(long), SeekOrigin.Current);
+            int cells = reader.ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(cells);
+                writer.Write(new byte[cells * sizeof(int)]);
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 5 kept one pot per node: the next settlement shares it all out as income.</summary>
+    public sealed class HouseholdCashV5Migration : ISaveMigration
+    {
+        public string SectionKey => HouseholdCash.SectionKey;
+        public int FromVersion => 5;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int nodes = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(nodes * HouseholdDemand.Quintiles);
+                writer.Write(new byte[nodes * HouseholdDemand.Quintiles * sizeof(long)]);
+                writer.Write(nodes);
+                writer.Write(new byte[nodes * sizeof(long)]);
             }
             return output.ToArray();
         }

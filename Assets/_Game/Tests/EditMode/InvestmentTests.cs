@@ -68,13 +68,13 @@ namespace FES.Tests
             {
                 cash.DesiredNecessity[0] = 100;
                 cash.Desired[0] = 200;
-                cash.Cash[0] = 50;
-                Assert.AreEqual(Fx.FromPermille(500).Raw, cash.NecessityBudgetFactor(0, 1));
+                cash.QuintileCash[4] = 20; // one fifth paid in full, the rest with nothing
+                Assert.AreEqual(Fx.FromPermille(200).Raw, cash.NecessityBudgetFactor(0, 1));
                 Assert.AreEqual(0, cash.LuxuryBudgetFactor(0, 1));
-                cash.Cash[0] = 150;
+                for (int q = 0; q < 5; q++) cash.QuintileCash[q] = 30;
                 Assert.AreEqual(Fx.OneRaw, cash.NecessityBudgetFactor(0, 1));
                 Assert.AreEqual(Fx.FromPermille(500).Raw, cash.LuxuryBudgetFactor(0, 1));
-                cash.Cash[0] = 200;
+                for (int q = 0; q < 5; q++) cash.QuintileCash[q] = 40;
                 Assert.AreEqual(Fx.OneRaw, cash.LuxuryBudgetFactor(0, 1));
             }
             finally

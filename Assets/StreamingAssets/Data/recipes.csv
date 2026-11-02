@@ -74,3 +74,11 @@ trap_fur,aid,iron_tools,Mid,1
 trap_fur,out,fur,Mid,18
 dig_amber,aid,iron_tools,Mid,1
 dig_amber,out,amber,Mid,12
+pickle_vegetables,in,vegetables,Mid,30
+pickle_vegetables,out,pickled_vegetables,Low,10
+pickle_vegetables,out,pickled_vegetables,Mid,15
+pickle_vegetables,out,pickled_vegetables,High,1
+dry_beans,in,beans,Mid,30
+dry_beans,out,dried_beans,Low,13
+dry_beans,out,dried_beans,Mid,20
+dry_beans,out,dried_beans,High,1

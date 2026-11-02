@@ -135,6 +135,55 @@ namespace FES.Agents
     /// households by population (DEC-061, P13c), so minted coins and collected tolls return to the economy.
     /// The player's deposits are never spent. Runs after the bank's week, before the quarterly records.
     /// </summary>
+    /// <summary>
+    /// What households made and did not eat goes to market at the traders' offer. What traders cannot pay for spoils
+    /// (DEC-117), unless it is preserved food, which waits (DEC-118).
+    /// </summary>
+    public sealed class HomeSurplusSystem : ISimSystem
+    {
+        HouseholdCash _households;
+        PurseState _purses;
+        MarketStore _markets;
+        MarketFlows _flows;
+        SimulationConfig _config;
+        GameDatabase _db;
+
+        public string Id => "agents.home_surplus";
+        public SimPhase Phase => SimPhase.Markets;
+        public int Order => SimOrder.Late + 2;
+
+        public void Initialize(SimContext ctx)
+        {
+            _households = ctx.World.Get<HouseholdCash>();
+            _purses = ctx.World.Get<PurseState>();
+            _markets = ctx.World.Get<MarketStore>();
+            _flows = ctx.World.Get<MarketFlows>();
+            _db = ctx.Services.Get<GameDatabase>();
+            _config = _db.Config;
+        }
+
+        public void Execute(SimContext ctx)
+        {
+            for (int node = 0; node < _markets.MarketCount; node++)
+            {
+                int end = _markets.MarketCellStart[node] + _markets.MarketCellCount[node];
+                for (int c = _markets.MarketCellStart[node]; c < end; c++)
+                    if (_households.HomeGrown[c] > 0) Sell(node, c);
+            }
+        }
+
+        void Sell(int node, int cell)
+        {
+            int offer = _config.TraderOffer(_markets.Price[cell]);
+            int sold = _purses.Sellable(node, _households.HomeGrown[cell], offer);
+            _households.HomeGrown[cell] = _db.Goods[_markets.CellGood[cell]].IsPreserved ? _households.HomeGrown[cell] - sold : 0;
+            if (sold == 0) return;
+            _flows.Sell(cell, sold);
+            _purses.ChangeFloat(node, -(long)sold * offer);
+            _purses.PayHouseholds(node, sold * (long)offer);
+        }
+    }
+
     public sealed class StateSpendingSystem : ISimSystem
     {
         SimulationConfig _config;

@@ -516,6 +516,7 @@ namespace FES.Simulation
 
         /// <summary>Buys, or renews for a year, the license for a good from the nation the player is in.</summary>
         public void BuyLicense(GoodId good) => _queue.Enqueue(new BuyLicenseCommand(good));
+        public void BuyTradeLicense(TradeLicenseKind kind) => _queue.Enqueue(new BuyTradeLicenseCommand(kind));
 
         /// <summary>Buys an NPC facility, offering at least <see cref="SimulationView.FacilityAskingPrice"/>.</summary>
         public void BuyFacility(FacilityId facility, long price, GuidanceAxis axis) =>

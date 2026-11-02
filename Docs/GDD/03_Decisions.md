@@ -372,6 +372,34 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-118 Only villages grow food at home; preserved food
+- Date: 2026-11-03
+- Decision: [Confirmed] households make food at home only in rural nodes (village level); a node judged a city makes none. [Confirmed] A new category, preserved food, holds dried and pickled foods: they do not spoil, take less room and are worth more than fresh food, and households can make them too. [Draft] Pickled vegetables (price 14, size 2) and dried beans (price 13, size 2), base demand 4 each, 10 units per thousand villagers a week at home, and new facilities pickler and bean_dryer. Traders' unpaid surplus of preserved food waits at home instead of spoiling.
+- Reason: the user's request.
+- Limits: home preserving uses no fresh food. Six seeds, year 30: 21.8-22.3M people, +0.11 to +0.15% a year, no falling year; necessities met 16-18% and 61-78% in the two levels measured (28-36% and 56-71% before), the lower level now under the 17% where numbers start to fall; failures 0-222. Then the user had `households.growth_response_permille` restored to 20 (base growth stays 10), leaving necessity supply for later: 19.2-19.8M, -0.31 to -0.45% a year and falling at year 30, supply 16-18% and 61-100%, failures 0-208. This reverses the softening in DEC-115 and the DEC-112 goal is not met for now.
+- Impact: SYS-MARKETS, 02_Data_Formats
+
+### DEC-117 Households grow some of their own food
+- Date: 2026-11-03
+- Decision: [Confirmed] households produce necessities at home, like the crops and animals of medieval homes: low output, in proportion to population, and what they do not need goes to market. [Draft] Beans and vegetables 40 and cheese 10 units per thousand people a week (`home_output` in goods.csv), in the lowest grade the market carries. They eat it before buying, free of budget; the surplus sells at the traders' offer, what traders cannot pay for spoils, and nothing keeps to the next week.
+- Reason: the user's request, as the poorest quintile could not pay for necessities under DEC-115.
+- Limits: a surplus in one grade does not feed wishes for another. Six seeds, year 30: 21.9-22.1M people, +0.19 to +0.24% a year, no falling year; necessities met 28-36% and 56-71% in the two levels measured (26-27% and 46-53% before); failures 0-225. Output does not vary by season, land or town size.
+- Impact: SYS-MARKETS, 02_Data_Formats
+
+### DEC-116 Continental goods, and licenses to trade across borders
+- Date: 2026-11-03
+- Decision: [Confirmed] spice, silk, fur and amber are called continental goods; 'special goods' means only what DEC-021 licenses. [Confirmed] Trade between nations and between continents needs its own license, apart from the licenses for goods. [Draft] The nation a load leaves issues it, for a year, at its core towns: 300 coins between nations, 1,500 between continents. An empty cart crosses freely. Half of merchant groups hold each, picked from the seed; a group may always go home.
+- Reason: the user's ruling on C35, and the user's request for a separate license.
+- Limits: continental goods themselves still need no license. Aggregate flows, used only away from the player when `lod.mode` is not 1, ignore this license. The sample world has one nation per continent, so the license between nations on one continent has not been played.
+- Impact: SYS-LICENSES, SYS-MARKETS, SYS-MERCHANTS
+
+### DEC-115 Households hold and spend by income quintile
+- Date: 2026-11-03
+- Decision: [Confirmed] household cash is split by income quintile in each node. [Draft] Node cash stays the total; each turn income since the last settlement goes by income share (2/3/5/10/80%), spending falls first on each quintile's fifth of the necessities, the rest on whoever holds money. Each quintile wants a fifth of the necessities and buys luxuries with what is left.
+- Reason: the user's ruling on C33 and DEC-061.
+- Limits: all income shares alike, wages and dividends. Two seeds, year 30, with DEC-116: 15.2-15.4M people, -0.84 to -0.90% a year and still falling, necessities met 27-28% in one level and 51-53% in the other measured, which breaks the DEC-112 goal of growth within 20 years. With shares 5/9/15/23/48%: 17.1-17.4M, -0.15 to -0.27%, still falling. The user kept the 80% share, so growth was softened instead: `households.base_growth_permille` 10 (was 5), `households.growth_response_permille` 12 (was 20). Numbers fall only below 17% of necessities met, so growth says little about how well a town is fed. Six seeds, year 30: 20.8-20.9M people, +0.15 to +0.17% a year, no falling year; necessities met 26-27% and 46-53% in the two levels measured; failures 0-238.
+- Impact: SYS-MARKETS, 02_Data_Formats
+
 ### DEC-114 A facility's price follows its earnings
 - Date: 2026-11-03
 - Decision: [Confirmed] A seller's price follows what the facility earns, by the user's choice. [Draft] It asks the facility's value, two years of weekly earnings at today's nearest prices, offer basis, and its cash. Losses count as zero.
@@ -426,12 +454,12 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Date: 2026-11-02
 - Decision: [Draft] A company's taxed profit leaves out loans and their repayment, interest included (so interest is not deducted), and what its owner or association puts in or takes out. The player cannot withdraw the tax on a facility's profit so far. Savings migrants carry are no income of the households on either end. A family set up to take over an asset (an auction with no winning bid, a player's lost facility) starts with the coins of the households around. A subsidised workshop's family and guild are placed where it stands. A group abroad counts in its home continent's money total. Seizures and winning bids draw only on the deposit coins the bank still holds, and a nation keeps its roads from its reserve less the player's deposits. Only auctions for the player's own loan count against seizing more of its facilities. Buying an NPC facility costs at least its value plus the cash it holds. Forced trips (DEC-106) go by the trip's full fee and tolls, a group that cannot pay them stays where it is, and groups remember the markets they have been to, so the "market it does not know" rule works with rumors off. A save without a section for every component loads only into a newly built simulation, and a section not read to its end is refused.
 - Reason: findings of the code review, fixed at the user's request.
-- Limits: a group too poor for any trip breaks DEC-106's [Confirmed] rule that every group acts each turn; the user should confirm this exception. Interest paid is taxed as profit. A running game can no longer load a save from before a section existed. Whether the state's own facilities can be bought is unchanged.
+- Limits: a group too poor for any trip stays idle, the exception DEC-106 now states. Interest paid is taxed as profit. A running game can no longer load a save from before a section existed. Whether the state's own facilities can be bought is unchanged.
 - Impact: SYS-STATE-ECONOMY, SYS-BANKING, SYS-MERCHANTS, 00_Architecture, 02_Data_Formats, 04_Roadmap
 
 ### DEC-106 Every merchant acts each turn
 - Date: 2026-11-02
-- Decision: [Confirmed] every merchant group must take at least one action each turn. [Draft] Selling, buying or travelling counts. A group that did none sets off: to a market it does not know if it can, else by the cheapest fee within its range and continent, paying the trip's costs. Only automated groups run this; a group under manual control is the player's to move.
+- Decision: [Confirmed] every merchant group must take at least one action each turn, except a group too poor for any trip, which stays idle (confirmed by the user 2026-11-03). [Draft] Selling, buying or travelling counts. A group that did none sets off: to a market it does not know if it can, else by the cheapest fee within its range and continent, paying the trip's costs. Only automated groups run this; a group under manual control is the player's to move.
 - Reason: the user's rule.
 - Limits: forced trips cost money: failures rise to 4.8% from 3.5%, three seeds, year 30. Supply and people do not clearly change.
 - Impact: SYS-MERCHANTS, 02_Data_Formats
@@ -449,9 +477,9 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 - Limits: people fall 0.29% a year at year 30, against 0.13% before, and core towns are less well supplied than ordinary ones.
 - Impact: 00_Architecture, 02_Data_Formats, SYS-BANKING, SYS-LICENSES, SYS-PRODUCTION, SYS-MERCHANTS, SYS-INFRASTRUCTURE, sample map_nodes.csv, map_routes.csv, market_profiles.csv, facilities.csv
 
-### DEC-103 Special goods are no necessity
+### DEC-103 Continental goods are no necessity
 - Date: 2026-11-02
-- Decision: [Confirmed] the continents' special goods sit between semi-necessities and luxuries and are never necessities, and a wide price gap while they are scarce abroad is expected. [Draft] All four stay in the luxury class at every grade, because the semi class counts part of a good as a necessity.
+- Decision: [Confirmed] the continents' continental goods (called special goods until DEC-116) sit between semi-necessities and luxuries and are never necessities, and a wide price gap while they are scarce abroad is expected. [Draft] All four stay in the luxury class at every grade, because the semi class counts part of a good as a necessity.
 - Reason: the user's instruction.
 - Impact: SYS-MARKETS; goods.csv unchanged
 
@@ -501,7 +529,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ### DEC-096 Each continent makes its own goods, and groups carry them across the sea
 - Date: 2026-11-01
-- Decision: each continent has special goods made only there, so that trade between continents forms: spice and silk on Aurelia, fur and amber on Borealis. Builds P17 (DEC-066).
+- Decision: each continent has continental goods made only there, so that trade between continents forms: spice and silk on Aurelia, fur and amber on Borealis. Builds P17 (DEC-066).
 - Reason: the user's decision
 - [Draft] Goods. `exotic` category, luxury class, traded at every level (Low and Mid at villages). `facilities.csv` gains a `continent` column; such facilities stand only there, 3 of each type at the start, in villages, and are never built elsewhere by groups, states or subsidies.
 - [Draft] Who sails. Groups based at region level or above (`merchants.cross_level`), and not of the cautious personality unless based at a port (`merchants.port_crossers`). Abroad a group goes anywhere; it buys no guards or insurance and sells for coins only. It values a sale after the rate and the 3% fee, and coins pass through both international banks. Aggregate flows cross at 65% (`merchants.cross_flow_permille`).
@@ -511,8 +539,8 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
   - A group leaving with one load still bids for a better one it could not find (`merchants.bids` 2), which draws goods to the port. Without that the port rarely held them.
   - Nations keep their international bank between 2% and 4% of the coin supply, out of and into their reserves (`bank.international_balance`). A one-sided surplus otherwise emptied one bank and stopped its exporters.
   - The sea route takes 4 weeks at 6 a unit (previous: 8 weeks at 12).
-- Limits: with every node detailed, about 34 ships sail out a year and 2,300-3,000 units of special goods cross, plus 6,700-7,700 units of other goods. The prices stay far apart, with special goods at 66-90% of anchor at home and 154-168% abroad, and only 65-230 units in foreign stock at a time. Around the player, aggregate flows carry much more: prices fall to 12-15% of anchor at home and 26-73% abroad.
-- Alternatives: city-level groups sailing as well (`merchants.cross_level` 3): more ships, no more special goods, people no better. Not kept.
+- Limits: with every node detailed, about 34 ships sail out a year and 2,300-3,000 units of continental goods cross, plus 6,700-7,700 units of other goods. The prices stay far apart, with special goods at 66-90% of anchor at home and 154-168% abroad, and only 65-230 units in foreign stock at a time. Around the player, aggregate flows carry much more: prices fall to 12-15% of anchor at home and 26-73% abroad.
+- Alternatives: city-level groups sailing as well (`merchants.cross_level` 3): more ships, no more continental goods, people no better. Not kept.
 - Impact: SYS-MERCHANTS, SYS-BANKING, 02_Data_Formats, goods.csv, recipes.csv, facilities.csv, market_profiles.csv, map_routes.csv, sample config.csv
 
 ### DEC-095 The market package: judging three markets ahead, bids, sister-city roads, merchants in towns, a 13-week budget

@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-118: home production in villages only; new preserved food category with two goods and two facilities. New golden hashes.
+- DEC-117: households grow beans, vegetables and cheese, eat them first and send the surplus to market. New golden hashes.
+- DEC-115: household cash by income quintile (C33). DEC-116: continental goods renamed (C35), licenses for trade across borders. Growth softened to keep the 80% income share. New golden hashes.
+- Region-scale and larger merchant groups belong to companies again (C26). DEC-106 states its exception: a group too poor for any trip stays idle (C32).
+- Supply contracts deliver every week of their term (C39), and a merchant without licenses signs for no licensed good (C38). New golden hashes.
 - `RecurringDefectTests` refuses unchecked command enums, citations of unrecorded decisions and leftover temporary tests. `Tools/pre-commit.sh` refuses a commit unless all tests passed on exactly that code and data (`Tools/verify.sh`), and refuses temporary tests, recovery files, assets without a `.meta`, new golden hashes without a changelog entry, and a review changed in one language.
 - [03_Decisions.md] DEC-114 (a facility's price follows its earnings)
 - [03_Decisions.md, systems/SYS_ROUTE_HAZARDS.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md] DEC-113 (player rule gates: presence, state facilities, bank run, insurance, ship load)

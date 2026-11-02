@@ -309,6 +309,10 @@ namespace FES.Agents
             job.EncounterStream = Encounters.Stream;
             job.LicenseStream = LicenseRules.MerchantStream;
             job.LicensedPermille = _db.Config.LicensedMerchantPermille;
+            job.InternationalStream = LicenseRules.InternationalStream;
+            job.InternationalPermille = _db.Config.InternationalMerchantPermille;
+            job.IntercontinentalStream = LicenseRules.IntercontinentalStream;
+            job.IntercontinentalPermille = _db.Config.IntercontinentalMerchantPermille;
             job.BaseGoodCount = _policy.BaseGoodCount;
             job.CategoryCount = _flows.CategoryCount;
             job.BankruptWeeks = _db.Config.MerchantBankruptWeeks;

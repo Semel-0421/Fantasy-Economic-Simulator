@@ -62,3 +62,6 @@ data clumps, divergent change, shotgun surgery, feature envy, inappropriate inti
 - The check for unused methods sees names only, and only private methods: a name in use elsewhere hides an unused method.
 - Microsoft's maintainability index (CA1505) and class coupling (CA1506) need a compiler, so they are not checked.
 - The golden runs cover the sample world and some settings, seeds and spans, not every path. Player commands are covered by the other tests.
+
+## Commit gate
+Run `sh Tools/install-hooks.sh` once per checkout, and `sh Tools/verify.sh` before committing code or data. The hook refuses a commit whose code or data differs from what the tests last passed on.

@@ -95,23 +95,8 @@ namespace FES.Persistence
 
             var staged = new List<(IPersistentComponent component, byte[] bytes)>();
             int count = reader.ReadInt32();
-            for (int i = 0; i < count; i++)
-            {
-                string key = reader.ReadString();
-                int version = reader.ReadInt32();
-                int length = reader.ReadInt32();
-                byte[] bytes = reader.ReadBytes(length);
-                if (bytes.Length != length) throw new EndOfStreamException($"Section '{key}' is truncated.");
-                if (!world.TryGetPersistent(key, out var component)) continue;
-                if (version > component.Version)
-                    throw new InvalidDataException($"Section '{key}' version {version} is newer than this build ({component.Version}).");
-                if (version < component.Version) bytes = migrations.Upgrade(key, version, component.Version, bytes);
-                staged.Add((component, bytes));
-            }
-            if (requireEverySection)
-                foreach (var component in world.PersistentComponents)
-                    if (!staged.Exists(s => s.component == component))
-                        throw new InvalidDataException($"The save has no section '{component.Key}': only a newly built simulation can load it.");
+            for (int i = 0; i < count; i++) StageSection(reader, world, migrations, staged);
+            if (requireEverySection) CheckEverySection(world, staged);
 
             foreach (var (component, bytes) in staged)
             {
@@ -121,6 +106,27 @@ namespace FES.Persistence
                     throw new InvalidDataException($"Section '{component.Key}' has bytes left over after reading.");
             }
             return header;
+        }
+
+        static void StageSection(BinaryReader reader, WorldState world, MigrationRegistry migrations, List<(IPersistentComponent component, byte[] bytes)> staged)
+        {
+            string key = reader.ReadString();
+            int version = reader.ReadInt32();
+            int length = reader.ReadInt32();
+            byte[] bytes = reader.ReadBytes(length);
+            if (bytes.Length != length) throw new EndOfStreamException($"Section '{key}' is truncated.");
+            if (!world.TryGetPersistent(key, out var component)) return;
+            if (version > component.Version)
+                throw new InvalidDataException($"Section '{key}' version {version} is newer than this build ({component.Version}).");
+            if (version < component.Version) bytes = migrations.Upgrade(key, version, component.Version, bytes);
+            staged.Add((component, bytes));
+        }
+
+        static void CheckEverySection(WorldState world, List<(IPersistentComponent component, byte[] bytes)> staged)
+        {
+            foreach (var component in world.PersistentComponents)
+                if (!staged.Exists(s => s.component == component))
+                    throw new InvalidDataException($"The save has no section '{component.Key}': only a newly built simulation can load it.");
         }
     }
 }

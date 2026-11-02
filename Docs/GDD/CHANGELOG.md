@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-02
+- [05_Refactoring_Standards.md, 03_Decisions.md, 04_Roadmap.md, 01_Extension_Guide.md, INDEX.md] DEC-108 (refactoring standards, enforced by tests)
 - [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, 00_Architecture.md, systems/SYS_STATE_ECONOMY.md, systems/SYS_BANKING.md, systems/SYS_MERCHANTS.md] DEC-107 (fixes from the code review: what counts as income, and who pays) and measurement
 - [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, systems/SYS_MERCHANTS.md] DEC-105 (nothing built on a class), DEC-106 (every merchant acts each turn)
 - [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, 00_Architecture.md] DEC-104 (classes absorbed by core towns, five core roles)

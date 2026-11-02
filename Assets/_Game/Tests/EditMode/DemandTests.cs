@@ -29,9 +29,7 @@ namespace FES.Tests
         /// <summary>Weekly consumption of 100 units at the anchor, priced at <paramref name="price"/> against an anchor of 100.</summary>
         static long Weekly(SimulationConfig config, int price, long luxuryShare, long necessityWeight = 0x10000, long luxuryWeight = 0x10000)
         {
-            long weekly = HouseholdDemand.Weekly(DemandParams.From(config), 100, price, 100, luxuryShare, necessityWeight, luxuryWeight,
-                out _, out _);
-            return weekly;
+            return HouseholdDemand.Weekly(DemandParams.From(config), 100, price, 100, luxuryShare, necessityWeight, luxuryWeight).Units;
         }
 
         [Test]

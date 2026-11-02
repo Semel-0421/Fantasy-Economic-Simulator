@@ -140,8 +140,20 @@ namespace FES.Agents
             if (!ctx.Clock.IsNewYear || ctx.Turn == 0 || _db.Config.InvestmentPaybackYears <= 0) return;
             for (int n = 0; n < _banks.NationCount; n++)
                 foreach (int node in _purses.NationNodes[n])
-                    for (int k = 0; k < _db.Config.InvestmentProjectsPerNode; k++)
-                        if (!Invest(ctx, node, _banks.NationNode(n))) break;
+                    InvestAt(ctx, node, _banks.NationNode(n));
+        }
+
+        void InvestAt(SimContext ctx, int node, int nationNode)
+        {
+            for (int k = 0; k < _db.Config.InvestmentProjectsPerNode; k++)
+                if (!Invest(ctx, node, nationNode)) break;
+        }
+
+        /// <summary>The best use of a group's money so far: a facility to expand, or else a type to found.</summary>
+        struct Project
+        {
+            public int Facility, Def;
+            public long Cost, Gain;
         }
 
         bool Invest(SimContext ctx, int node, int nationNode)
@@ -156,10 +168,30 @@ namespace FES.Agents
             long cash = own;
             if (config.CompanyDebtShare.Raw > 0 && nation < _purses.NationCount)
                 cash += Math.Min(BondDesk.CompanyRoom(ctx.World, _db, group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
-            int level = _nodes.Level[node], count = 0;
-            int bestFacility = -1, bestDef = -1;
-            long bestCost = 0, bestGain = 0;
 
+            var best = new Project { Facility = -1, Def = -1 };
+            int count = WeighExpansions(node, group, cash, ref best);
+            if (count < config.InvestmentMaxPerNode) WeighNewFacilities(node, cash, ref best);
+            if (best.Def < 0) return false;
+
+            if (best.Cost > own)
+            {
+                long raised = BondDesk.Raise(ctx.World, config, ctx.Turn, group, nation, best.Cost - own);
+                _groups.Cash[group] += raised;
+                ctx.World.Get<CreditStats>().CompanyRaised += raised;
+                if (raised < best.Cost - own) return false;
+            }
+            _groups.Cash[group] -= best.Cost;
+            if (best.Facility >= 0) Expand(ctx, node, in best);
+            else Found(ctx, node, group, in best);
+            return true;
+        }
+
+        // Returns how many facilities stand at the node.
+        int WeighExpansions(int node, int group, long cash, ref Project best)
+        {
+            var config = _db.Config;
+            int count = 0;
             for (int f = 0; f < _facilities.Count; f++)
             {
                 if (_facilities.Node[f] != node) continue;
@@ -171,56 +203,46 @@ namespace FES.Agents
                 long cost = FacilityExpansion.Cost(def, at, config);
                 long gain = (FacilityExpansion.OutputScale(at + 1, config) - FacilityExpansion.OutputScale(at, config)).MulInt(UnitMargin(node, def))
                     - config.FacilityUpkeep[(int)def.Tier];
-                if (Better(gain, cost, bestGain, bestCost, cash))
-                {
-                    bestFacility = f;
-                    bestDef = def.Index;
-                    bestCost = cost;
-                    bestGain = gain;
-                }
+                if (Better(gain, cost, best.Gain, best.Cost, cash))
+                    best = new Project { Facility = f, Def = def.Index, Cost = cost, Gain = gain };
             }
-            if (count < config.InvestmentMaxPerNode)
-                foreach (var def in _db.Facilities)
-                {
-                    if (def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
-                    long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier];
-                    long gain = UnitMargin(node, def) - config.FacilityUpkeep[(int)def.Tier];
-                    if (Better(gain, cost, bestGain, bestCost, cash))
-                    {
-                        bestFacility = -1;
-                        bestDef = def.Index;
-                        bestCost = cost;
-                        bestGain = gain;
-                    }
-                }
-            if (bestDef < 0) return false;
+            return count;
+        }
 
-            if (bestCost > own)
+        void WeighNewFacilities(int node, long cash, ref Project best)
+        {
+            var config = _db.Config;
+            int level = _nodes.Level[node];
+            foreach (var def in _db.Facilities)
             {
-                long raised = BondDesk.Raise(ctx.World, config, ctx.Turn, group, nation, bestCost - own);
-                _groups.Cash[group] += raised;
-                ctx.World.Get<CreditStats>().CompanyRaised += raised;
-                if (raised < bestCost - own) return false;
+                if (def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
+                long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier];
+                long gain = UnitMargin(node, def) - config.FacilityUpkeep[(int)def.Tier];
+                if (Better(gain, cost, best.Gain, best.Cost, cash))
+                    best = new Project { Facility = -1, Def = def.Index, Cost = cost, Gain = gain };
             }
-            _groups.Cash[group] -= bestCost;
-            if (bestFacility >= 0)
-            {
-                _purses.PayHouseholds(node, bestCost);
-                _facilities.Level[bestFacility]++;
-                ctx.Events.Publish(new FacilityExpanded(new FacilityId(bestFacility), _facilities.Level[bestFacility]));
-                return true;
-            }
+        }
+
+        void Expand(SimContext ctx, int node, in Project project)
+        {
+            _purses.PayHouseholds(node, project.Cost);
+            _facilities.Level[project.Facility]++;
+            ctx.Events.Publish(new FacilityExpanded(new FacilityId(project.Facility), _facilities.Level[project.Facility]));
+        }
+
+        void Found(SimContext ctx, int node, int group, in Project project)
+        {
+            var config = _db.Config;
             // A family must exist to buy it at auction; the investor stakes it, so no coins appear (DEC-072).
             int groupsBefore = _groups.Count;
             _directory.PrivateAt(node, config);
             for (int g = groupsBefore; g < _groups.Count; g++) _groups.Cash[group] -= _groups.Cash[g];
-            var chosen = _db.Facilities[bestDef];
+            var chosen = _db.Facilities[project.Def];
             long start = config.FacilityStartCash[(int)chosen.Tier];
-            _purses.PayHouseholds(node, bestCost - start);
-            var id = _facilities.Add(node, bestDef, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, start);
+            _purses.PayHouseholds(node, project.Cost - start);
+            var id = _facilities.Add(node, project.Def, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, start);
             _facilities.Group[id.Value] = group;
             ctx.Events.Publish(new FacilityFounded(id, group));
-            return true;
         }
 
         // Any node may work goods; only villages have the land for primary producers.

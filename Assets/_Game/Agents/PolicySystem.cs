@@ -225,13 +225,19 @@ namespace FES.Agents
 
             void Gather(SimContext ctx)
             {
-                var config = _s._config;
-                var db = _s._db;
-                var facilities = _s._facilities;
                 var groups = _s._groups;
                 var worth = new long[groups.Count];
                 for (int g = 0; g < groups.Count; g++) worth[g] = Math.Max(0, groups.Cash[g]);
+                GatherFacilities(worth);
+                GatherMerchants(ctx, worth);
+                GatherGroups(worth);
+            }
 
+            void GatherFacilities(long[] worth)
+            {
+                var config = _s._config;
+                var db = _s._db;
+                var facilities = _s._facilities;
                 for (int f = 0; f < facilities.Count; f++)
                 {
                     int g = facilities.Group[f];
@@ -246,21 +252,29 @@ namespace FES.Agents
                     owner.Assets += NpcLending.FacilityValue(db, facilities, f) + Math.Max(0, facilities.Cash[f]);
                     owner.Jobs += (long)level * config.JobsPerFacilityLevel;
                     AddTrade(owner, recipe, level);
-
-                    // Guilds speak for the trades their city's facilities work in (DEC-055).
-                    int city = _s._directory.CityOf(node);
-                    if (city < 0) continue;
-                    foreach (var line in recipe.Outputs)
-                    {
-                        int guild = _s._directory.GuildOf(city, db.Good(line.Good).CategoryIndex);
-                        if (guild < 0) continue;
-                        var members = Get(guild, nation);
-                        members.Jobs += (long)level * config.JobsPerFacilityLevel;
-                        AddTrade(members, recipe, level);
-                        break;
-                    }
+                    GuildSpeaks(node, nation, recipe, level);
                 }
+            }
 
+            // Guilds speak for the trades their city's facilities work in (DEC-055).
+            void GuildSpeaks(int node, int nation, RecipeDef recipe, int level)
+            {
+                int city = _s._directory.CityOf(node);
+                if (city < 0) return;
+                foreach (var line in recipe.Outputs)
+                {
+                    int guild = _s._directory.GuildOf(city, _s._db.Good(line.Good).CategoryIndex);
+                    if (guild < 0) continue;
+                    var members = Get(guild, nation);
+                    members.Jobs += (long)level * _s._config.JobsPerFacilityLevel;
+                    AddTrade(members, recipe, level);
+                    break;
+                }
+            }
+
+            void GatherMerchants(SimContext ctx, long[] worth)
+            {
+                var config = _s._config;
                 var agents = _s._agents;
                 for (int a = 0; a < agents.Count; a++)
                 {
@@ -277,8 +291,13 @@ namespace FES.Agents
                     if (LicenseRules.MerchantHoldsLicenses(ctx.Seed, new AgentId(a), config.LicensedMerchantPermille)) h.LicensedMerchants++;
                     else h.UnlicensedMerchants++;
                 }
+            }
 
-                // Loss tilt: the share of last year's worth a group lost (DEC-059); lobbying from group cash.
+            // Loss tilt: the share of last year's worth a group lost (DEC-059); lobbying from group cash.
+            void GatherGroups(long[] worth)
+            {
+                var config = _s._config;
+                var groups = _s._groups;
                 var last = _s._policy.LastWorth;
                 _tilt = new long[groups.Count];
                 _lobbied = new long[groups.Count];
@@ -317,106 +336,133 @@ namespace FES.Agents
                 return value;
             }
 
+            /// <summary>How the influence falls, per nation and per continent.</summary>
+            sealed class Votes
+            {
+                public readonly int Goods;
+                public readonly long[] Total, Tolls, Prices, AllGoods, PerGood, MintTotal, Mint;
+
+                public Votes(int nations, int goods, int continents)
+                {
+                    Goods = goods;
+                    Total = new long[nations];
+                    Tolls = new long[nations];
+                    Prices = new long[nations];
+                    AllGoods = new long[nations];
+                    PerGood = new long[nations * goods];
+                    MintTotal = new long[continents];
+                    Mint = new long[continents];
+                }
+            }
+
             void Weigh(SimContext ctx)
+            {
+                var policy = _s._policy;
+                var votes = new Votes(policy.NationCount, policy.BaseGoodCount, policy.ContinentCount);
+                foreach (var h in _holdings) CountHolding(h, votes);
+                foreach (var e in policy.Lobbying) CountLobbying(e, votes);
+                int year = ctx.Clock.Year - 1;
+                for (int n = 0; n < policy.NationCount; n++) DecideNation(ctx, n, year, votes);
+                for (int c = 0; c < policy.ContinentCount; c++) DecideMinting(ctx, c, votes);
+            }
+
+            void CountHolding(Holding h, Votes votes)
             {
                 var s = _s;
                 var config = s._config;
-                int nations = s._policy.NationCount, goods = s._policy.BaseGoodCount, continents = s._policy.ContinentCount;
-                var total = new long[nations];
-                var tolls = new long[nations];
-                var prices = new long[nations];
-                var allGoods = new long[nations];
-                var perGood = new long[nations * goods];
-                var mintTotal = new long[continents];
-                var mint = new long[continents];
-
-                foreach (var h in _holdings)
+                var kind = s._groups.KindOf(h.Group);
+                long influence = config.InfluenceAssetWeight.MulInt(h.Assets) + h.Jobs * config.InfluencePerJob;
+                if (NationOf(s._groups.Node[h.Group]) == h.Nation) influence += config.InfluenceLobbyWeight.MulInt(_lobbied[h.Group]);
+                int n = h.Nation;
+                int continent = s._nodes.Continent[s._banks.NationNode(n)];
+                votes.Total[n] += influence;
+                votes.MintTotal[continent] += influence;
+                if (kind == GroupKind.StateEnterprise)
                 {
-                    var kind = s._groups.KindOf(h.Group);
-                    long influence = config.InfluenceAssetWeight.MulInt(h.Assets) + h.Jobs * config.InfluencePerJob;
-                    if (NationOf(s._groups.Node[h.Group]) == h.Nation) influence += config.InfluenceLobbyWeight.MulInt(_lobbied[h.Group]);
-                    int n = h.Nation;
-                    int continent = s._nodes.Continent[s._banks.NationNode(n)];
-                    total[n] += influence;
-                    mintTotal[continent] += influence;
-                    if (kind == GroupKind.StateEnterprise)
-                    {
-                        // Up on tolls, wider and dearer licenses, more minting (DEC-059).
-                        tolls[n] += influence;
-                        prices[n] += influence;
-                        allGoods[n] += influence;
-                        mint[continent] += influence;
-                        continue;
-                    }
-
-                    // Everyone else opposes minting once prices rose over the published year (DEC-060).
-                    mint[continent] -= Fx.FromRaw(MintingOpposition(continent)).MulInt(influence);
-
-                    long tilt = _tilt[h.Group];
-                    long trade = h.OutputValue + h.InputValue;
-                    long toll = (trade == 0 ? 0 : Fx.FromRatio(h.OutputValue - h.InputValue, trade).Raw) + tilt;
-                    tolls[n] += Fx.FromRaw(Clamp(toll)).MulInt(influence);
-
-                    long priceStance = 0;
-                    int licensedInvolved = 0;
-                    _involved.Clear();
-                    _involved.UnionWith(h.Produces);
-                    _involved.UnionWith(h.Buys);
-                    if (h.LicensedMerchants + h.UnlicensedMerchants > 0) _involved.UnionWith(LicensedGoods(n));
-                    foreach (int b in _involved)
-                    {
-                        bool licensed = s._policy.Requires(n, b);
-                        long stance = GoodStance(h, b, licensed, tilt);
-                        if (stance == long.MinValue) continue;
-                        perGood[n * goods + b] += Fx.FromRaw(stance).MulInt(influence);
-                        if (!licensed) continue;
-                        priceStance += stance;
-                        licensedInvolved++;
-                    }
-                    if (licensedInvolved > 0) prices[n] += Fx.FromRaw(priceStance / licensedInvolved).MulInt(influence);
+                    // Up on tolls, wider and dearer licenses, more minting (DEC-059).
+                    votes.Tolls[n] += influence;
+                    votes.Prices[n] += influence;
+                    votes.AllGoods[n] += influence;
+                    votes.Mint[continent] += influence;
+                    return;
                 }
 
-                foreach (var e in s._policy.Lobbying)
-                {
-                    long weight = config.InfluenceLobbyWeight.MulInt(e.Amount);
-                    long push = e.Direction * weight;
-                    int continent = s._nodes.Continent[s._banks.NationNode(e.Nation)];
-                    total[e.Nation] += weight;
-                    switch (e.Policy)
-                    {
-                        case PolicyKind.Tolls: tolls[e.Nation] += push; break;
-                        case PolicyKind.LicensePrice: prices[e.Nation] += push; break;
-                        case PolicyKind.LicensedGoods: perGood[e.Nation * goods + e.BaseGood] += push; break;
-                        case PolicyKind.Minting:
-                            mint[continent] += push;
-                            mintTotal[continent] += weight;
-                            break;
-                    }
-                }
+                // Everyone else opposes minting once prices rose over the published year (DEC-060).
+                votes.Mint[continent] -= Fx.FromRaw(MintingOpposition(continent)).MulInt(influence);
 
-                int year = ctx.Clock.Year - 1;
-                for (int n = 0; n < nations; n++)
+                long tilt = _tilt[h.Group];
+                long trade = h.OutputValue + h.InputValue;
+                long toll = (trade == 0 ? 0 : Fx.FromRatio(h.OutputValue - h.InputValue, trade).Raw) + tilt;
+                votes.Tolls[n] += Fx.FromRaw(Clamp(toll)).MulInt(influence);
+                CountGoods(h, tilt, influence, votes);
+            }
+
+            void CountGoods(Holding h, long tilt, long influence, Votes votes)
+            {
+                int n = h.Nation;
+                long priceStance = 0;
+                int licensedInvolved = 0;
+                _involved.Clear();
+                _involved.UnionWith(h.Produces);
+                _involved.UnionWith(h.Buys);
+                if (h.LicensedMerchants + h.UnlicensedMerchants > 0) _involved.UnionWith(LicensedGoods(n));
+                foreach (int b in _involved)
                 {
-                    long threshold = config.PolicyMoveThreshold.MulInt(total[n]);
-                    int tollBefore = s._policy.TollStep[n];
-                    s._policy.TollStep[n] = Step(tollBefore, tolls[n], threshold);
-                    s._policy.LicensePriceStep[n] = Step(s._policy.LicensePriceStep[n], prices[n], threshold);
-                    ChangeLicensedGoods(n, perGood, allGoods[n], Resisted(threshold, LicensedChange(n)), out int added, out int removed);
-                    s._policy.LastInfluence[n] = total[n];
-                    int nationNode = s._banks.NationNode(n);
-                    if (s._policy.TollStep[n] != tollBefore)
-                        s._tolls.ScaleNation(s._nodes, nationNode, PolicyRules.Scale(config, s._policy.TollStep[n]));
-                    ctx.Events.Publish(new PolicyReviewed(new NodeId(nationNode), year, s._policy.TollStep[n],
-                        s._policy.LicensePriceStep[n], added, removed, total[n]));
+                    bool licensed = _s._policy.Requires(n, b);
+                    long stance = GoodStance(h, b, licensed, tilt);
+                    if (stance == long.MinValue) continue;
+                    votes.PerGood[n * votes.Goods + b] += Fx.FromRaw(stance).MulInt(influence);
+                    if (!licensed) continue;
+                    priceStance += stance;
+                    licensedInvolved++;
                 }
-                for (int c = 0; c < continents; c++)
+                if (licensedInvolved > 0) votes.Prices[n] += Fx.FromRaw(priceStance / licensedInvolved).MulInt(influence);
+            }
+
+            void CountLobbying(LobbyEntry e, Votes votes)
+            {
+                var s = _s;
+                long weight = s._config.InfluenceLobbyWeight.MulInt(e.Amount);
+                long push = e.Direction * weight;
+                int continent = s._nodes.Continent[s._banks.NationNode(e.Nation)];
+                votes.Total[e.Nation] += weight;
+                switch (e.Policy)
                 {
-                    int before = s._policy.MintStep[c];
-                    s._policy.MintStep[c] = Step(before, mint[c], config.PolicyMoveThreshold.MulInt(mintTotal[c]));
-                    if (s._policy.MintStep[c] == before) continue;
-                    s._currency.MintRateMultiplier[c] = PolicyRules.Scale(config, s._policy.MintStep[c]);
-                    ctx.Events.Publish(new MintingPolicyChanged(c, s._policy.MintStep[c]));
+                    case PolicyKind.Tolls: votes.Tolls[e.Nation] += push; break;
+                    case PolicyKind.LicensePrice: votes.Prices[e.Nation] += push; break;
+                    case PolicyKind.LicensedGoods: votes.PerGood[e.Nation * votes.Goods + e.BaseGood] += push; break;
+                    case PolicyKind.Minting:
+                        votes.Mint[continent] += push;
+                        votes.MintTotal[continent] += weight;
+                        break;
                 }
+            }
+
+            void DecideNation(SimContext ctx, int n, int year, Votes votes)
+            {
+                var s = _s;
+                var config = s._config;
+                long threshold = config.PolicyMoveThreshold.MulInt(votes.Total[n]);
+                int tollBefore = s._policy.TollStep[n];
+                s._policy.TollStep[n] = Step(tollBefore, votes.Tolls[n], threshold);
+                s._policy.LicensePriceStep[n] = Step(s._policy.LicensePriceStep[n], votes.Prices[n], threshold);
+                ChangeLicensedGoods(n, votes.PerGood, votes.AllGoods[n], Resisted(threshold, LicensedChange(n)), out int added, out int removed);
+                s._policy.LastInfluence[n] = votes.Total[n];
+                int nationNode = s._banks.NationNode(n);
+                if (s._policy.TollStep[n] != tollBefore)
+                    s._tolls.ScaleNation(s._nodes, nationNode, PolicyRules.Scale(config, s._policy.TollStep[n]));
+                ctx.Events.Publish(new PolicyReviewed(new NodeId(nationNode), year, s._policy.TollStep[n],
+                    s._policy.LicensePriceStep[n], added, removed, votes.Total[n]));
+            }
+
+            void DecideMinting(SimContext ctx, int c, Votes votes)
+            {
+                var s = _s;
+                int before = s._policy.MintStep[c];
+                s._policy.MintStep[c] = Step(before, votes.Mint[c], s._config.PolicyMoveThreshold.MulInt(votes.MintTotal[c]));
+                if (s._policy.MintStep[c] == before) return;
+                s._currency.MintRateMultiplier[c] = PolicyRules.Scale(s._config, s._policy.MintStep[c]);
+                ctx.Events.Publish(new MintingPolicyChanged(c, s._policy.MintStep[c]));
             }
 
             readonly HashSet<int> _involved = new HashSet<int>();

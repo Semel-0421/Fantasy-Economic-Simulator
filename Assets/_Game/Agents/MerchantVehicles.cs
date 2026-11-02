@@ -85,22 +85,27 @@ namespace FES.Agents
                 if (_agents.Mode[a] != (byte)ControlMode.Automated) continue;
                 if (_agents.Vehicle[a] > MerchantVehicles.Pack && DetRandom.For(ctx.Seed, ctx.Turn, WearStream, a).NextFx01().Raw < config.MerchantVehicleWear.Raw)
                     _agents.Vehicle[a]--;
-                byte next = (byte)(_agents.Vehicle[a] + 1);
-                if (next >= MerchantVehicles.Count || !MerchantVehicles.TryGood(_db, next, out var good)) continue;
-                if (_ordering[a]) continue;
-                int home = _agents.Home[a];
-                if (!_flows.TryFindNearestMarket(home, good, out _, out int nearest)) continue;
-                if (_agents.Cash[a] < _markets.Price[nearest] * config.MerchantVehicleCashTimes[next]) continue;
-                // The nearest node with one in stock takes the order, else the nearest market, where factories will see it.
-                int cell = nearest;
-                for (int m = home; m >= 0; m = _nodes.Parent[m])
-                    if (_markets.TryFindCell(m, good, out int c) && _markets.Stock[c] > 0)
-                    {
-                        cell = c;
-                        break;
-                    }
-                _orders.Add(a, home, cell, 1, ctx.Turn, next);
+                OrderNextVehicle(ctx, a);
             }
+        }
+
+        void OrderNextVehicle(SimContext ctx, int a)
+        {
+            byte next = (byte)(_agents.Vehicle[a] + 1);
+            if (next >= MerchantVehicles.Count || !MerchantVehicles.TryGood(_db, next, out var good)) return;
+            if (_ordering[a]) return;
+            int home = _agents.Home[a];
+            if (!_flows.TryFindNearestMarket(home, good, out _, out int nearest)) return;
+            if (_agents.Cash[a] < _markets.Price[nearest] * _db.Config.MerchantVehicleCashTimes[next]) return;
+            _orders.Add(a, home, CellToOrderFrom(home, good, nearest), 1, ctx.Turn, next);
+        }
+
+        // The nearest node with one in stock takes the order, else the nearest market, where factories will see it.
+        int CellToOrderFrom(int home, GoodId good, int nearest)
+        {
+            for (int m = home; m >= 0; m = _nodes.Parent[m])
+                if (_markets.TryFindCell(m, good, out int c) && _markets.Stock[c] > 0) return c;
+            return nearest;
         }
     }
 

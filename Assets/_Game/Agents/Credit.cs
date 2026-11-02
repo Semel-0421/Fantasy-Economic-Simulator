@@ -425,48 +425,54 @@ namespace FES.Agents
 
         void ServiceBonds(SimContext ctx)
         {
-            var config = _db.Config;
             Array.Clear(_stateBehind, 0, _stateBehind.Length);
+            for (int r = _bonds.Count - 1; r >= 0; r--) ServiceBond(r);
             for (int r = _bonds.Count - 1; r >= 0; r--)
             {
-                int issuer = _bonds.Issuer[r];
-                bool state = BondTable.IsState(issuer);
-                var rate = state ? config.StateBondInterest : config.CompanyBondInterest;
-                int weeks = state ? config.StateBondWeeks : config.CompanyBondWeeks;
-                _bonds.Interest[r] += rate.MulInt(_bonds.Face[r]) / SimClock.WeeksPerYear;
-                long due = _bonds.Interest[r] + (_bonds.Face[r] <= 0 ? 0 : Math.Max(1, _bonds.Face[r] / weeks));
-                long funds = state ? _bank.Spendable(~issuer) : Math.Max(0, _groups.Cash[issuer]);
-                long paid = Math.Min(due, funds);
-                if (state) _bank.Reserve[~issuer] -= paid;
-                else _groups.Cash[issuer] -= paid;
-                long toInterest = Math.Min(paid, _bonds.Interest[r]);
-                _bonds.Interest[r] -= toInterest;
-                long toFace = paid - toInterest;
-                _bonds.Face[r] -= toFace;
-                PayBondHolder(_bonds.Holder[r], issuer, paid, toFace);
-                _stats.BondsPaid += paid;
-                if (paid >= due) _bonds.BehindWeeks[r] = 0;
-                else
-                {
-                    _bonds.BehindWeeks[r]++;
-                    if (state) _stateBehind[~issuer] = true;
-                }
-                if (_bonds.Face[r] <= 0 && _bonds.Interest[r] <= 0) _bonds.RemoveRow(r);
-            }
-            for (int r = _bonds.Count - 1; r >= 0; r--)
-            {
-                if (BondTable.IsState(_bonds.Issuer[r]) || _bonds.BehindWeeks[r] < config.CompanyDefaultWeeks) continue;
-                int group = _bonds.Issuer[r];
-                for (int k = _bonds.Count - 1; k >= 0; k--)
-                {
-                    if (_bonds.Issuer[k] != group) continue;
-                    _stats.BondsLost += _bonds.Face[k];
-                    _bonds.RemoveRow(k);
-                }
-                _stats.Defaults++;
-                ctx.Events.Publish(new BondDefaulted(group, ctx.Turn));
+                if (BondTable.IsState(_bonds.Issuer[r]) || _bonds.BehindWeeks[r] < _db.Config.CompanyDefaultWeeks) continue;
+                DefaultCompany(ctx, _bonds.Issuer[r]);
                 r = _bonds.Count;
             }
+        }
+
+        void ServiceBond(int r)
+        {
+            var config = _db.Config;
+            int issuer = _bonds.Issuer[r];
+            bool state = BondTable.IsState(issuer);
+            var rate = state ? config.StateBondInterest : config.CompanyBondInterest;
+            int weeks = state ? config.StateBondWeeks : config.CompanyBondWeeks;
+            _bonds.Interest[r] += rate.MulInt(_bonds.Face[r]) / SimClock.WeeksPerYear;
+            long due = _bonds.Interest[r] + (_bonds.Face[r] <= 0 ? 0 : Math.Max(1, _bonds.Face[r] / weeks));
+            long funds = state ? _bank.Spendable(~issuer) : Math.Max(0, _groups.Cash[issuer]);
+            long paid = Math.Min(due, funds);
+            if (state) _bank.Reserve[~issuer] -= paid;
+            else _groups.Cash[issuer] -= paid;
+            long toInterest = Math.Min(paid, _bonds.Interest[r]);
+            _bonds.Interest[r] -= toInterest;
+            long toFace = paid - toInterest;
+            _bonds.Face[r] -= toFace;
+            PayBondHolder(_bonds.Holder[r], issuer, paid, toFace);
+            _stats.BondsPaid += paid;
+            if (paid >= due) _bonds.BehindWeeks[r] = 0;
+            else
+            {
+                _bonds.BehindWeeks[r]++;
+                if (state) _stateBehind[~issuer] = true;
+            }
+            if (_bonds.Face[r] <= 0 && _bonds.Interest[r] <= 0) _bonds.RemoveRow(r);
+        }
+
+        void DefaultCompany(SimContext ctx, int group)
+        {
+            for (int k = _bonds.Count - 1; k >= 0; k--)
+            {
+                if (_bonds.Issuer[k] != group) continue;
+                _stats.BondsLost += _bonds.Face[k];
+                _bonds.RemoveRow(k);
+            }
+            _stats.Defaults++;
+            ctx.Events.Publish(new BondDefaulted(group, ctx.Turn));
         }
 
         void PayBondHolder(int holder, int issuer, long paid, long face)
@@ -491,37 +497,47 @@ namespace FES.Agents
         // above its reserve, then from bonds, as far as buyers and its debt limit allow.
         void KeepFacilitiesInCash(SimContext ctx)
         {
-            var config = _db.Config;
-            if (config.WorkingWeeks <= 0) return;
-            var books = _world.Get<IncomeTaxState>();
+            if (_db.Config.WorkingWeeks <= 0) return;
             for (int f = 0; f < _facilities.Count; f++)
             {
                 int group = _facilities.Group[f];
                 if (group < 0 || _facilities.Owner[f] != OwnerIds.Npc || _groups.IsPlayer[group] != 0) continue;
-                var def = _db.Facilities[_facilities.DefIndex[f]];
-                long inputs = 0, outputs = 0;
-                foreach (var line in def.Recipe.Inputs) inputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
-                foreach (var line in def.Recipe.Outputs) outputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
-                if (outputs <= inputs) continue;
-                long gap = config.WorkingWeeks * (NpcLending.FacilityUpkeep(_db, _facilities, f) + inputs * _facilities.Level[f]) - _facilities.Cash[f];
-                if (gap <= 0) continue;
-                long own = Math.Min(gap, Math.Max(0, _groups.Cash[group] - config.GroupStartCash[_groups.Kind[group]]));
-                if (own > 0)
-                {
-                    _groups.Cash[group] -= own;
-                    _facilities.Cash[f] += own;
-                    books.MoveFacilityCapital(f, own);
-                    gap -= own;
-                    _stats.GroupsToppedUp += own;
-                }
-                if (gap <= 0 || config.CompanyDebtShare.Raw <= 0) continue;
-                int nation = _purses.NodeFloat[_groups.Node[group]];
-                if (nation >= _purses.NationCount || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) continue;
-                long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, BondDesk.CompanyRoom(_world, _db, group)));
-                _facilities.Cash[f] += raised;
-                books.MoveFacilityCapital(f, raised);
-                _stats.CompanyRaised += raised;
+                long gap = WorkingCashGap(f);
+                if (gap > 0) TopUp(ctx, f, group, gap);
             }
+        }
+
+        // What a facility worth running lacks for its next weeks; 0 when its goods are not worth making.
+        long WorkingCashGap(int f)
+        {
+            var def = _db.Facilities[_facilities.DefIndex[f]];
+            long inputs = 0, outputs = 0;
+            foreach (var line in def.Recipe.Inputs) inputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
+            foreach (var line in def.Recipe.Outputs) outputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
+            if (outputs <= inputs) return 0;
+            return _db.Config.WorkingWeeks * (NpcLending.FacilityUpkeep(_db, _facilities, f) + inputs * _facilities.Level[f]) - _facilities.Cash[f];
+        }
+
+        void TopUp(SimContext ctx, int f, int group, long gap)
+        {
+            var config = _db.Config;
+            var books = _world.Get<IncomeTaxState>();
+            long own = Math.Min(gap, Math.Max(0, _groups.Cash[group] - config.GroupStartCash[_groups.Kind[group]]));
+            if (own > 0)
+            {
+                _groups.Cash[group] -= own;
+                _facilities.Cash[f] += own;
+                books.MoveFacilityCapital(f, own);
+                gap -= own;
+                _stats.GroupsToppedUp += own;
+            }
+            if (gap <= 0 || config.CompanyDebtShare.Raw <= 0) return;
+            int nation = _purses.NodeFloat[_groups.Node[group]];
+            if (nation >= _purses.NationCount || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) return;
+            long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, BondDesk.CompanyRoom(_world, _db, group)));
+            _facilities.Cash[f] += raised;
+            books.MoveFacilityCapital(f, raised);
+            _stats.CompanyRaised += raised;
         }
 
         long PriceOf(int node, GoodId good) => _flows.TryFindNearestMarket(node, good, out _, out int cell) ? _markets.Price[cell] : 0;

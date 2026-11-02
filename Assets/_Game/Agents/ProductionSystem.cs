@@ -166,6 +166,26 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             if (_linesForCount != _facilities.Count) BuildLines();
+            ClearWeek();
+            long[] subsidyBudget = OpenSubsidies();
+            RunProduction(ctx);
+            var development = _world.Get<DevelopmentState>();
+            var bank = _world.Get<BankState>();
+            _world.Get<BillRoom>().SettleBank(bank);
+            for (int n = 0; n < subsidyBudget.Length; n++) bank.Reserve[n] -= subsidyBudget[n] - development.SubsidyLeft[n];
+
+            // Upkeep after every sale of the week, the warehouse overflow included.
+            StorePlayerOutput();
+            RunUpkeep();
+            PayWagesAway();
+            PassOnDividends();
+
+            foreach (int f in _bankrupt) GoBankrupt(ctx, f);
+            ExpireWarehouseClaims(ctx);
+        }
+
+        void ClearWeek()
+        {
             _playerOutputFacility.Clear();
             _playerOutputGood.Clear();
             _playerOutputCell.Clear();
@@ -178,9 +198,13 @@ namespace FES.Agents
             for (int p = 0; p < _floatReserve.Length; p++)
                 _floatReserve[p] = Math.Max(0, _purses.Float[p]) - _db.Config.ProducerFloatShare.MulInt(Math.Max(0, _purses.Float[p]));
             _books.EnsureRows(_facilities, _world.Get<AgentTable>());
+        }
+
+        // What each nation with a subsidy may pay this week (DEC-074).
+        long[] OpenSubsidies()
+        {
             var development = _world.Get<DevelopmentState>();
-            var bank = _world.Get<BankState>();
-            long[] subsidyBudget = new long[bank.Reserve.Length];
+            long[] subsidyBudget = new long[_world.Get<BankState>().Reserve.Length];
             foreach (var policy in development.Subsidies) subsidyBudget[policy.Nation] = 1;
             for (int n = 0; n < subsidyBudget.Length; n++)
             {
@@ -188,7 +212,12 @@ namespace FES.Agents
                     subsidyBudget[n] = _db.Config.SubsidyShare.MulInt(Math.Max(0, MoneyLedger.StateExcess(_world, _db.Config, n))) / SimClock.WeeksPerYear;
                 development.SubsidyLeft[n] = subsidyBudget[n];
             }
+            return subsidyBudget;
+        }
 
+        void RunProduction(SimContext ctx)
+        {
+            var development = _world.Get<DevelopmentState>();
             var bills = _world.Get<BillTable>();
             var billRoom = _world.Get<BillRoom>();
             var job = new ProductionJob
@@ -253,11 +282,10 @@ namespace FES.Agents
             };
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
-            billRoom.SettleBank(bank);
-            for (int n = 0; n < subsidyBudget.Length; n++) bank.Reserve[n] -= subsidyBudget[n] - development.SubsidyLeft[n];
+        }
 
-            // Upkeep after every sale of the week, the warehouse overflow included.
-            StorePlayerOutput();
+        void RunUpkeep()
+        {
             var upkeep = new FacilityUpkeepJob
             {
                 BankruptWeeks = _db.Config.FacilityBankruptWeeks,
@@ -282,16 +310,16 @@ namespace FES.Agents
             };
             if (ForceManaged) upkeep.Execute();
             else upkeep.Schedule().Complete();
+        }
+
+        void PayWagesAway()
+        {
             for (int n = 0; n < _nodeWagesAway.Length; n++)
             {
                 if (_nodeWagesAway[n] == 0) continue;
                 MoneyLedger.PayNationWages(_world, _db.Config, _purses.NodeFloat[n], _nodeWagesAway[n]);
                 _nodeWagesAway[n] = 0;
             }
-            PassOnDividends();
-
-            foreach (int f in _bankrupt) GoBankrupt(ctx, f);
-            ExpireWarehouseClaims(ctx);
         }
 
         // Player-owned output, in facility order: into the site's warehouse, the overflow sold (DEC-005, DEC-029).
@@ -423,20 +451,25 @@ namespace FES.Agents
                 // A specialty of the facility's own node: more output, and some of it one grade higher (DEC-016).
                 bool specialty = !isInput && _specialties.IsSpecialty(node, line.Good.BaseIndex);
                 _lineOutputMul.Add(specialty ? _db.Config.SpecialtyOutputMultiplier.Raw : Fx.OneRaw);
-                int upGood = -1, upCell = -1, upModifier = -1;
-                if (specialty && line.Good.Grade < QualityGrade.Best)
-                {
-                    var higher = GoodId.From(line.Good.BaseIndex, line.Good.Grade + 1);
-                    if (_flows.TryFindNearestMarket(node, higher, out int upMarket, out upCell))
-                    {
-                        upGood = higher.Value;
-                        upModifier = SupplyModifier(upMarket, higher);
-                    }
-                }
-                _lineUpGood.Add(upGood);
-                _lineUpCell.Add(upCell);
-                _lineUpModifier.Add(upModifier);
+                AddUpgrade(node, line.Good, specialty);
             }
+        }
+
+        void AddUpgrade(int node, GoodId good, bool specialty)
+        {
+            int upGood = -1, upCell = -1, upModifier = -1;
+            if (specialty && good.Grade < QualityGrade.Best)
+            {
+                var higher = GoodId.From(good.BaseIndex, good.Grade + 1);
+                if (_flows.TryFindNearestMarket(node, higher, out int upMarket, out upCell))
+                {
+                    upGood = higher.Value;
+                    upModifier = SupplyModifier(upMarket, higher);
+                }
+            }
+            _lineUpGood.Add(upGood);
+            _lineUpCell.Add(upCell);
+            _lineUpModifier.Add(upModifier);
         }
 
         int SupplyModifier(int market, GoodId good) =>
@@ -446,24 +479,24 @@ namespace FES.Agents
         {
             _nodeWageAway.DisposeIfCreated();
             _nodeWagesAway.DisposeIfCreated();
-            if (_lineStart.IsCreated) _lineStart.Dispose();
-            if (_lineCell.IsCreated) _lineCell.Dispose();
-            if (_lineGood.IsCreated) _lineGood.Dispose();
-            if (_lineModifier.IsCreated) _lineModifier.Dispose();
-            if (_lineQuantity.IsCreated) _lineQuantity.Dispose();
-            if (_lineIsInput.IsCreated) _lineIsInput.Dispose();
-            if (_lineOutputMul.IsCreated) _lineOutputMul.Dispose();
-            if (_lineUpGood.IsCreated) _lineUpGood.Dispose();
-            if (_lineUpCell.IsCreated) _lineUpCell.Dispose();
-            if (_lineUpModifier.IsCreated) _lineUpModifier.Dispose();
-            if (_playerOutputFacility.IsCreated) _playerOutputFacility.Dispose();
-            if (_playerOutputGood.IsCreated) _playerOutputGood.Dispose();
-            if (_playerOutputCell.IsCreated) _playerOutputCell.Dispose();
-            if (_playerOutputQuantity.IsCreated) _playerOutputQuantity.Dispose();
-            if (_bankrupt.IsCreated) _bankrupt.Dispose();
-            if (_inputCost.IsCreated) _inputCost.Dispose();
-            if (_outputWage.IsCreated) _outputWage.Dispose();
-            if (_groupDividend.IsCreated) _groupDividend.Dispose();
+            _lineStart.DisposeIfCreated();
+            _lineCell.DisposeIfCreated();
+            _lineGood.DisposeIfCreated();
+            _lineModifier.DisposeIfCreated();
+            _lineQuantity.DisposeIfCreated();
+            _lineIsInput.DisposeIfCreated();
+            _lineOutputMul.DisposeIfCreated();
+            _lineUpGood.DisposeIfCreated();
+            _lineUpCell.DisposeIfCreated();
+            _lineUpModifier.DisposeIfCreated();
+            _playerOutputFacility.DisposeIfCreated();
+            _playerOutputGood.DisposeIfCreated();
+            _playerOutputCell.DisposeIfCreated();
+            _playerOutputQuantity.DisposeIfCreated();
+            _bankrupt.DisposeIfCreated();
+            _inputCost.DisposeIfCreated();
+            _outputWage.DisposeIfCreated();
+            _groupDividend.DisposeIfCreated();
             _defUpkeep.DisposeIfCreated();
             _floatReserve.DisposeIfCreated();
         }

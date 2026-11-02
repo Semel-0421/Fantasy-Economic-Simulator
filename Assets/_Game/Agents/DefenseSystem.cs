@@ -125,17 +125,21 @@ namespace FES.Agents
             for (int node = 0; node < NodeFloat.Length; node++)
             {
                 int nation = NodeFloat[node];
-                if (nation >= Value.Length || Spend[nation] <= 0 || Value[nation] <= 0) continue;
-                long spend = Spend[nation], value = Value[nation];
-                int end = MarketCellStart[node] + MarketCellCount[node];
-                for (int c = MarketCellStart[node]; c < end; c++)
-                {
-                    long units = value <= spend ? Stock[c] : Stock[c] * spend / value;
-                    if (units <= 0) continue;
-                    Stock[c] -= (int)units;
-                    Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + units);
-                    Paid[nation] += units * Price[c];
-                }
+                if (nation < Value.Length && Spend[nation] > 0 && Value[nation] > 0) Buy(node, nation);
+            }
+        }
+
+        void Buy(int node, int nation)
+        {
+            long spend = Spend[nation], value = Value[nation];
+            int end = MarketCellStart[node] + MarketCellCount[node];
+            for (int c = MarketCellStart[node]; c < end; c++)
+            {
+                long units = value <= spend ? Stock[c] : Stock[c] * spend / value;
+                if (units <= 0) continue;
+                Stock[c] -= (int)units;
+                Demand[c] = MarketStore.ClampToNonNegativeInt(Demand[c] + units);
+                Paid[nation] += units * Price[c];
             }
         }
     }

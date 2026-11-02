@@ -85,18 +85,20 @@ namespace FES.Agents
             DistancePower = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
             RangeLevel = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
             LossAversion = new NativeArray<int>(MerchantTraits.Count, Allocator.Persistent);
-            for (int t = 0; t < MerchantTraits.Count; t++)
-            {
-                int personality = (int)MerchantTraits.PersonalityOf(t), occupation = (int)MerchantTraits.OccupationOf(t);
-                bool on = config.MerchantTraitsEnabled;
-                SpendRaw[t] = on ? config.PersonalitySpend[personality].Raw : Fx.OneRaw;
-                MinMarginRaw[t] = on ? config.PersonalityMinMargin[personality].Raw : 0;
-                CapacityRaw[t] = on ? config.OccupationCapacity[occupation].Raw : Fx.OneRaw;
-                UpkeepRaw[t] = on ? config.OccupationUpkeep[occupation].Raw : Fx.OneRaw;
-                DistancePower[t] = on ? config.OccupationDistancePower[occupation] : 0;
-                RangeLevel[t] = (int)(on ? config.PersonalityRange[personality] : WorldLevel.Continent);
-                LossAversion[t] = on && config.PersonalityLossAversion[personality] > 0 ? config.PersonalityLossAversion[personality] : config.MerchantRiskAversion;
-            }
+            for (int t = 0; t < MerchantTraits.Count; t++) Fill(t, config);
+        }
+
+        void Fill(int t, SimulationConfig config)
+        {
+            int personality = (int)MerchantTraits.PersonalityOf(t), occupation = (int)MerchantTraits.OccupationOf(t);
+            bool on = config.MerchantTraitsEnabled;
+            SpendRaw[t] = on ? config.PersonalitySpend[personality].Raw : Fx.OneRaw;
+            MinMarginRaw[t] = on ? config.PersonalityMinMargin[personality].Raw : 0;
+            CapacityRaw[t] = on ? config.OccupationCapacity[occupation].Raw : Fx.OneRaw;
+            UpkeepRaw[t] = on ? config.OccupationUpkeep[occupation].Raw : Fx.OneRaw;
+            DistancePower[t] = on ? config.OccupationDistancePower[occupation] : 0;
+            RangeLevel[t] = (int)(on ? config.PersonalityRange[personality] : WorldLevel.Continent);
+            LossAversion[t] = on && config.PersonalityLossAversion[personality] > 0 ? config.PersonalityLossAversion[personality] : config.MerchantRiskAversion;
         }
 
         public void Dispose()
@@ -231,28 +233,34 @@ namespace FES.Agents
                 count++;
             }
             int first = continent * MerchantTraits.Count;
-            if (count > 0 && capital > 0)
-            {
-                long average = capital / count;
-                long total = 0;
-                var fitness = new long[MerchantTraits.Count];
-                for (int t = 0; t < MerchantTraits.Count; t++)
-                {
-                    // A trait nobody active has keeps an average score, so it can come back.
-                    long relative = Fx.OneRaw / 2, survival = Fx.OneRaw;
-                    if (_count[t] > 0)
-                    {
-                        relative = Math.Min(Fx.OneRaw, (_capital[t] / _count[t] << Fx.FractionBits) / Math.Max(1, average) / 2);
-                        survival = Math.Max(0, Fx.OneRaw - ((long)_genetics.YearBankruptcies[first + t] << Fx.FractionBits) / _count[t]);
-                    }
-                    fitness[t] = (_config.MerchantFitnessCapital.Raw * relative >> Fx.FractionBits)
-                        + ((Fx.OneRaw - _config.MerchantFitnessCapital.Raw) * survival >> Fx.FractionBits);
-                    total += fitness[t];
-                }
-                for (int t = 0; total > 0 && t < MerchantTraits.Count; t++)
-                    _genetics.Weight[first + t] = (fitness[t] << Fx.FractionBits) / total;
-            }
+            if (count > 0 && capital > 0) SetWeights(first, capital / count);
             for (int t = 0; t < MerchantTraits.Count; t++) _genetics.YearBankruptcies[first + t] = 0;
+        }
+
+        void SetWeights(int first, long average)
+        {
+            long total = 0;
+            var fitness = new long[MerchantTraits.Count];
+            for (int t = 0; t < MerchantTraits.Count; t++)
+            {
+                fitness[t] = Fitness(t, first, average);
+                total += fitness[t];
+            }
+            for (int t = 0; total > 0 && t < MerchantTraits.Count; t++)
+                _genetics.Weight[first + t] = (fitness[t] << Fx.FractionBits) / total;
+        }
+
+        long Fitness(int t, int first, long average)
+        {
+            // A trait nobody active has keeps an average score, so it can come back.
+            long relative = Fx.OneRaw / 2, survival = Fx.OneRaw;
+            if (_count[t] > 0)
+            {
+                relative = Math.Min(Fx.OneRaw, (_capital[t] / _count[t] << Fx.FractionBits) / Math.Max(1, average) / 2);
+                survival = Math.Max(0, Fx.OneRaw - ((long)_genetics.YearBankruptcies[first + t] << Fx.FractionBits) / _count[t]);
+            }
+            return (_config.MerchantFitnessCapital.Raw * relative >> Fx.FractionBits)
+                + ((Fx.OneRaw - _config.MerchantFitnessCapital.Raw) * survival >> Fx.FractionBits);
         }
     }
 

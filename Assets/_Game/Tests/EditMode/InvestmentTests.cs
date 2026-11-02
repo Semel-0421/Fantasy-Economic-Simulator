@@ -165,7 +165,7 @@ namespace FES.Tests
             int continent = nodes.Continent[from];
             sim.World.Get<PurseState>().ChangeFloat(to, 0);
             markets.Stock[fromCell] = 1000;
-            contracts.Add(ContractParty.OfGroup(0), ContractParty.OfGroup(1), fromCell, toCell, from, to, 10, markets.Price[fromCell] + 1L, 100);
+            contracts.Add(ContractParty.OfGroup(0), ContractParty.OfGroup(1), new ContractRoute(fromCell, toCell, from, to), 10, markets.Price[fromCell] + 1L, 100);
             long money = MoneyLedger.ContinentMoney(sim.World, continent);
             sim.AdvanceTurn();
             Assert.AreEqual(money, MoneyLedger.ContinentMoney(sim.World, continent));
@@ -186,7 +186,7 @@ namespace FES.Tests
             markets.Stock[cell] = 0; // nothing to deliver
             groups.Cash[0] = 5000;
             long buyer = groups.Cash[1];
-            contracts.Add(0, 1, cell, toCell, from, nodes.Parent[from], 1, 10, 0, 500);
+            contracts.Add(0, 1, new ContractRoute(cell, toCell, from, nodes.Parent[from]), 1, 10, 0, 500);
             sim.AdvanceTurn();
             Assert.AreEqual(0, contracts.Count);
             Assert.GreaterOrEqual(groups.Cash[1], buyer + 500 - 1000, "the unused deposit came back");

@@ -70,25 +70,29 @@ namespace FES.Agents
         {
             // Roads to the core towns are kept first (DEC-104).
             for (int pass = 0; pass < 2; pass++)
-            for (int r = 0; r < _routes.Count; r++)
-            {
-                bool seat = _nodes.IsSeat(_routes.From[r]) || _nodes.IsSeat(_routes.To[r]);
-                if (seat != (pass == 0)) continue;
-                if (_roads.BuildDoneTurn[r] >= 0 && ctx.Turn >= _roads.BuildDoneTurn[r])
+                for (int r = 0; r < _routes.Count; r++)
                 {
-                    _roads.BuildDoneTurn[r] = -1;
-                    _roads.Condition[r] = RoadState.MaxCondition;
-                    _roads.Owner[r] = RoadState.PlayerOwner;
-                    ctx.Events.Publish(new RoadBuilt(new NodeId(_routes.From[r]), new NodeId(_routes.To[r]), ctx.Turn));
-                    continue;
+                    bool seat = _nodes.IsSeat(_routes.From[r]) || _nodes.IsSeat(_routes.To[r]);
+                    if (seat == (pass == 0)) StepRoad(ctx, r);
                 }
-                if (!_roads.IsPaved(r) || _roads.Owner[r] == RoadState.NoOwner || PayUpkeep(r)) continue;
-                _roads.Condition[r] -= _db.Config.RoadDecayPermille;
-                if (_roads.Condition[r] > 0) continue;
-                _roads.Condition[r] = 0;
-                _roads.Owner[r] = RoadState.NoOwner;
-                ctx.Events.Publish(new RoadLost(new NodeId(_routes.From[r]), new NodeId(_routes.To[r]), ctx.Turn));
+        }
+
+        void StepRoad(SimContext ctx, int r)
+        {
+            if (_roads.BuildDoneTurn[r] >= 0 && ctx.Turn >= _roads.BuildDoneTurn[r])
+            {
+                _roads.BuildDoneTurn[r] = -1;
+                _roads.Condition[r] = RoadState.MaxCondition;
+                _roads.Owner[r] = RoadState.PlayerOwner;
+                ctx.Events.Publish(new RoadBuilt(new NodeId(_routes.From[r]), new NodeId(_routes.To[r]), ctx.Turn));
+                return;
             }
+            if (!_roads.IsPaved(r) || _roads.Owner[r] == RoadState.NoOwner || PayUpkeep(r)) return;
+            _roads.Condition[r] -= _db.Config.RoadDecayPermille;
+            if (_roads.Condition[r] > 0) return;
+            _roads.Condition[r] = 0;
+            _roads.Owner[r] = RoadState.NoOwner;
+            ctx.Events.Publish(new RoadLost(new NodeId(_routes.From[r]), new NodeId(_routes.To[r]), ctx.Turn));
         }
 
         // Upkeep is wages where the road starts (DEC-061).

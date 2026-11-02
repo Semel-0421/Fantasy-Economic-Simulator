@@ -102,82 +102,114 @@ namespace FES.Data
             {
                 string key = t.GetString(r, "key");
                 string category = t.GetString(r, "category");
-                if (!_categoryByKey.TryGetValue(category, out int categoryIndex))
-                {
-                    categoryIndex = Categories.Count;
-                    _categoryByKey.Add(category, categoryIndex);
-                    Categories.Add(new GoodCategoryDef(categoryIndex, category));
-                }
+                int categoryIndex = CategoryIndexOf(category);
                 if (_baseGoodByKey.ContainsKey(key)) throw new FormatException($"goods.csv: duplicate key '{key}'.");
                 int baseIndex = _baseGoodByKey.Count;
                 _baseGoodByKey.Add(key, baseIndex);
 
                 long basePrice = t.GetLong(r, "base_price");
                 int baseDemand = t.GetIntOr(r, "base_demand", 0);
-                int weight = t.GetIntOr(r, "weight", 1);
-                int size = t.GetIntOr(r, "size", 1);
-                int license = t.GetIntOr(r, "requires_license", 0);
-                if (license != 0 && license != 1) throw new FormatException($"goods.csv row {r + 1}: requires_license must be 0 or 1.");
-                if (weight < 0 || size < 0) throw new FormatException($"goods.csv row {r + 1}: weight and size must not be negative.");
-                string goodClass = t.GetStringOr(r, "class", "necessity");
-                if (goodClass.Length == 0) goodClass = "necessity";
-                if (goodClass != "necessity" && goodClass != "luxury" && goodClass != "semi")
-                    throw new FormatException($"goods.csv row {r + 1}: class must be necessity, semi or luxury, not '{goodClass}'.");
+                var traits = ReadTraits(t, r);
                 // Foods and drink keep their own grade prices, and their demand splits by grade, the rest to mid (DEC-090, DEC-091).
                 bool food = (category == FoodCategory || category == DrinkCategory) && Config.FoodGradeDemand[(int)QualityGrade.Mid].Raw > 0;
-                int otherDemand = 0;
-                if (food)
-                    for (int g = 0; g < QualityGrades.Count; g++)
-                        if (g != (int)QualityGrade.Mid) otherDemand += RoundedShare(baseDemand, Config.FoodGradeDemand[g]);
                 for (int g = 0; g < QualityGrades.Count; g++)
                 {
-                    long price = Math.Max(1, (food ? Config.FoodGradePrice[g] : Config.GradePriceMultiplier[g]).MulInt(basePrice));
-                    int demand = !food ? baseDemand : g == (int)QualityGrade.Mid ? Math.Max(0, baseDemand - otherDemand) : RoundedShare(baseDemand, Config.FoodGradeDemand[g]);
+                    long price = GradePrice(basePrice, g, food);
                     Goods.Add(new GoodDef(GoodId.From(baseIndex, (QualityGrade)g), key, categoryIndex,
-                        (int)Math.Min(int.MaxValue, price), demand, weight, size, license == 1, goodClass == "luxury", t.GetIntOr(r, "made_to_order", 0) != 0, goodClass == "semi"));
+                        (int)Math.Min(int.MaxValue, price), GradeDemand(baseDemand, g, food), traits));
                 }
             }
         }
 
+        int CategoryIndexOf(string category)
+        {
+            if (_categoryByKey.TryGetValue(category, out int index)) return index;
+            index = Categories.Count;
+            _categoryByKey.Add(category, index);
+            Categories.Add(new GoodCategoryDef(index, category));
+            return index;
+        }
+
+        static GoodTraits ReadTraits(CsvTable t, int r)
+        {
+            int weight = t.GetIntOr(r, "weight", 1);
+            int size = t.GetIntOr(r, "size", 1);
+            int license = t.GetIntOr(r, "requires_license", 0);
+            if (license != 0 && license != 1) throw new FormatException($"goods.csv row {r + 1}: requires_license must be 0 or 1.");
+            if (weight < 0 || size < 0) throw new FormatException($"goods.csv row {r + 1}: weight and size must not be negative.");
+            string goodClass = t.GetStringOr(r, "class", "necessity");
+            if (goodClass.Length == 0) goodClass = "necessity";
+            if (goodClass != "necessity" && goodClass != "luxury" && goodClass != "semi")
+                throw new FormatException($"goods.csv row {r + 1}: class must be necessity, semi or luxury, not '{goodClass}'.");
+            return new GoodTraits(weight, size, license == 1, goodClass == "luxury", goodClass == "semi", t.GetIntOr(r, "made_to_order", 0) != 0);
+        }
+
+        long GradePrice(long basePrice, int grade, bool food) =>
+            Math.Max(1, (food ? Config.FoodGradePrice[grade] : Config.GradePriceMultiplier[grade]).MulInt(basePrice));
+
+        int GradeDemand(int baseDemand, int grade, bool food)
+        {
+            if (!food) return baseDemand;
+            if (grade != (int)QualityGrade.Mid) return RoundedShare(baseDemand, Config.FoodGradeDemand[grade]);
+            int otherDemand = 0;
+            for (int g = 0; g < QualityGrades.Count; g++)
+                if (g != (int)QualityGrade.Mid) otherDemand += RoundedShare(baseDemand, Config.FoodGradeDemand[g]);
+            return Math.Max(0, baseDemand - otherDemand);
+        }
+
         void LoadRecipesAndFacilities(CsvTable recipes, CsvTable facilities)
         {
-            var byKey = new Dictionary<string, (List<RecipeLine> inputs, List<RecipeLine> outputs, List<RecipeLine> aids)>(StringComparer.Ordinal);
+            var recipeByKey = LoadRecipes(recipes);
+            if (facilities != null) LoadFacilities(facilities, recipeByKey);
+        }
+
+        Dictionary<string, RecipeDef> LoadRecipes(CsvTable recipes)
+        {
+            var byKey = new Dictionary<string, RecipeRows>(StringComparer.Ordinal);
             var order = new List<string>();
-            if (recipes != null)
-            {
-                for (int r = 0; r < recipes.RowCount; r++)
-                {
-                    string key = recipes.GetString(r, "recipe");
-                    if (!byKey.TryGetValue(key, out var lines))
-                    {
-                        byKey.Add(key, lines = (new List<RecipeLine>(), new List<RecipeLine>(), new List<RecipeLine>()));
-                        order.Add(key);
-                    }
-                    string goodKey = recipes.GetString(r, "good");
-                    var grade = recipes.GetEnum<QualityGrade>(r, "grade");
-                    if (!TryGetGood(goodKey, grade, out var good))
-                        throw new FormatException($"recipes.csv row {r + 1}: unknown good '{goodKey}'.");
-                    var line = new RecipeLine(good, recipes.GetInt(r, "qty"));
-                    if (line.Quantity < 0) throw new FormatException($"recipes.csv row {r + 1}: qty must not be negative.");
-                    string role = recipes.GetString(r, "role");
-                    var roleLines = role == "in" ? lines.inputs
-                        : role == "out" ? lines.outputs
-                        : role == "aid" ? lines.aids
-                        : throw new FormatException($"recipes.csv row {r + 1}: role must be 'in', 'aid' or 'out'.");
-                    if (roleLines.Exists(l => l.Good.Value == good.Value))
-                        throw new FormatException($"recipes.csv row {r + 1}: '{goodKey}' is listed twice as '{role}' in recipe '{key}'.");
-                    roleLines.Add(line);
-                }
-            }
+            for (int r = 0; recipes != null && r < recipes.RowCount; r++)
+                ReadRecipeRow(recipes, r, byKey, order);
             var recipeByKey = new Dictionary<string, RecipeDef>(StringComparer.Ordinal);
             foreach (var key in order)
             {
-                var def = new RecipeDef(Recipes.Count, key, byKey[key].inputs.ToArray(), byKey[key].outputs.ToArray(), byKey[key].aids.ToArray());
+                var def = new RecipeDef(Recipes.Count, key, byKey[key].Inputs.ToArray(), byKey[key].Outputs.ToArray(), byKey[key].Aids.ToArray());
                 Recipes.Add(def);
                 recipeByKey.Add(key, def);
             }
+            return recipeByKey;
+        }
 
-            if (facilities == null) return;
+        sealed class RecipeRows
+        {
+            public readonly List<RecipeLine> Inputs = new List<RecipeLine>(), Outputs = new List<RecipeLine>(), Aids = new List<RecipeLine>();
+        }
+
+        void ReadRecipeRow(CsvTable recipes, int r, Dictionary<string, RecipeRows> byKey, List<string> order)
+        {
+            string key = recipes.GetString(r, "recipe");
+            if (!byKey.TryGetValue(key, out var lines))
+            {
+                byKey.Add(key, lines = new RecipeRows());
+                order.Add(key);
+            }
+            string goodKey = recipes.GetString(r, "good");
+            var grade = recipes.GetEnum<QualityGrade>(r, "grade");
+            if (!TryGetGood(goodKey, grade, out var good))
+                throw new FormatException($"recipes.csv row {r + 1}: unknown good '{goodKey}'.");
+            var line = new RecipeLine(good, recipes.GetInt(r, "qty"));
+            if (line.Quantity < 0) throw new FormatException($"recipes.csv row {r + 1}: qty must not be negative.");
+            string role = recipes.GetString(r, "role");
+            var roleLines = role == "in" ? lines.Inputs
+                : role == "out" ? lines.Outputs
+                : role == "aid" ? lines.Aids
+                : throw new FormatException($"recipes.csv row {r + 1}: role must be 'in', 'aid' or 'out'.");
+            if (roleLines.Exists(l => l.Good.Value == good.Value))
+                throw new FormatException($"recipes.csv row {r + 1}: '{goodKey}' is listed twice as '{role}' in recipe '{key}'.");
+            roleLines.Add(line);
+        }
+
+        void LoadFacilities(CsvTable facilities, Dictionary<string, RecipeDef> recipeByKey)
+        {
             var facilityKeys = new HashSet<string>(StringComparer.Ordinal);
             for (int r = 0; r < facilities.RowCount; r++)
             {
@@ -206,9 +238,7 @@ namespace FES.Data
                     t.GetString(r, "key"),
                     t.GetEnum<WorldLevel>(r, "level"),
                     CategoryOrAll(t, r),
-                    t.GetEnum<ModifierTarget>(r, "target"),
-                    Fx.FromPermille(t.GetLong(r, "mul_permille")),
-                    t.GetInt(r, "duration"),
+                    new EventEffect(t.GetEnum<ModifierTarget>(r, "target"), Fx.FromPermille(t.GetLong(r, "mul_permille")), t.GetInt(r, "duration")),
                     t.GetInt(r, "chance_permille"));
                 if (def.DurationTurns < 1) throw new FormatException($"events.csv row {r + 1}: duration must be >= 1.");
 
@@ -246,27 +276,30 @@ namespace FES.Data
             if (t == null) return;
             var byTag = new SortedDictionary<string, SortedSet<int>>(StringComparer.Ordinal);
             for (int r = 0; r < t.RowCount; r++)
-            {
-                string tag = t.GetString(r, "tag");
-                string category = t.GetString(r, "category");
-                if (!_categoryByKey.TryGetValue(category, out int categoryIndex))
-                    throw new FormatException($"{t.Name} row {r + 1}: unknown category '{category}'.");
-                if (!byTag.TryGetValue(tag, out var goods)) byTag.Add(tag, goods = new SortedSet<int>());
-                string goodKey = t.GetStringOr(r, "good", string.Empty);
-                if (goodKey.Length == 0)
-                {
-                    for (int b = 0; b < BaseGoodCount; b++)
-                        if (Goods[b * QualityGrades.Count].CategoryIndex == categoryIndex) goods.Add(b);
-                    continue;
-                }
-                if (!_baseGoodByKey.TryGetValue(goodKey, out int baseIndex))
-                    throw new FormatException($"{t.Name} row {r + 1}: unknown good '{goodKey}'.");
-                if (Goods[baseIndex * QualityGrades.Count].CategoryIndex != categoryIndex)
-                    throw new FormatException($"{t.Name} row {r + 1}: '{goodKey}' is not in category '{category}'.");
-                goods.Add(baseIndex);
-            }
+                ReadSpecialtyRow(t, r, byTag);
             foreach (var entry in byTag)
                 _specialtiesByTag.Add(entry.Key, new SpecialtyRule(entry.Key, new List<int>(entry.Value).ToArray()));
+        }
+
+        void ReadSpecialtyRow(CsvTable t, int r, SortedDictionary<string, SortedSet<int>> byTag)
+        {
+            string tag = t.GetString(r, "tag");
+            string category = t.GetString(r, "category");
+            if (!_categoryByKey.TryGetValue(category, out int categoryIndex))
+                throw new FormatException($"{t.Name} row {r + 1}: unknown category '{category}'.");
+            if (!byTag.TryGetValue(tag, out var goods)) byTag.Add(tag, goods = new SortedSet<int>());
+            string goodKey = t.GetStringOr(r, "good", string.Empty);
+            if (goodKey.Length == 0)
+            {
+                for (int b = 0; b < BaseGoodCount; b++)
+                    if (Goods[b * QualityGrades.Count].CategoryIndex == categoryIndex) goods.Add(b);
+                return;
+            }
+            if (!_baseGoodByKey.TryGetValue(goodKey, out int baseIndex))
+                throw new FormatException($"{t.Name} row {r + 1}: unknown good '{goodKey}'.");
+            if (Goods[baseIndex * QualityGrades.Count].CategoryIndex != categoryIndex)
+                throw new FormatException($"{t.Name} row {r + 1}: '{goodKey}' is not in category '{category}'.");
+            goods.Add(baseIndex);
         }
 
         int CategoryOrAll(CsvTable t, int row)

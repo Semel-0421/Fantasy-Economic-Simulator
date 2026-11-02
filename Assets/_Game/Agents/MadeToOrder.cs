@@ -178,7 +178,7 @@ namespace FES.Agents
                     if (!def.MadeToOrder || def.BaseDemand <= 0 || !_made[def.Id.Value]) continue;
                     long weekly = HouseholdDemand.CellBase(def.BaseDemand, def.BasePrice, config.LevelDemandWeight[level].Raw, Fx.OneRaw, index, out long anchor);
                     long units = HouseholdDemand.Weekly(_demand, weekly, _markets.Price[c], anchor, Fx.OneRaw,
-                        _population.NecessityWeight(n, level, config).Raw, _population.LuxuryWeight(n, level, config).Raw, out _, out _);
+                        _population.NecessityWeight(n, level, config).Raw, _population.LuxuryWeight(n, level, config).Raw).Units;
                     units = Fx.RoundShift(units * share) * QuarterWeeks;
                     if (units > 0) _orders.Add(-1, n, c, MarketStore.ClampToNonNegativeInt(units), ctx.Turn, 0);
                 }
@@ -353,27 +353,7 @@ namespace FES.Agents
             _lines.Clear();
             Array.Fill(_makersAt, -1);
             Array.Clear(_capacity, 0, _capacity.Length);
-            var config = _db.Config;
-            for (int f = 0; f < _facilities.Count; f++)
-            {
-                var def = _db.Facilities[_facilities.DefIndex[f]];
-                if (_facilities.Owner[f] == OwnerIds.Player || def.Recipe.Outputs.Length == 0) continue; // the player runs their own as they like
-                if (def.Tier == IndustryTier.Primary && !config.ForecastPrimary) continue;
-                int node = _facilities.Node[f];
-                if (!_flows.TryFindNearestMarket(node, def.Recipe.Outputs[0].Good, out _, out int cell)) continue;
-                int at = _makersAt[cell];
-                if (at < 0)
-                {
-                    at = _makersAt[cell] = _makers.Count;
-                    _makers.Add(new Makers { Cell = cell, Def = def, FirstLine = _lines.Count });
-                    AddLines(node, def.Recipe.Outputs);
-                    AddLines(node, def.Recipe.Inputs);
-                    AddLines(node, def.Recipe.Aids);
-                }
-                var makers = _makers[at];
-                makers.Runs += FacilityExpansion.OutputScale(_facilities.Level[f], config).Raw * OrderSystem.QuarterWeeks;
-                _makers[at] = makers;
-            }
+            for (int f = 0; f < _facilities.Count; f++) ListMaker(f);
             foreach (var makers in _makers)
             {
                 int line = makers.FirstLine;
@@ -383,6 +363,28 @@ namespace FES.Agents
                     if (cell >= 0) _capacity[cell] += Fx.MulIntRaw(output.Quantity, makers.Runs);
                 }
             }
+        }
+
+        void ListMaker(int f)
+        {
+            var config = _db.Config;
+            var def = _db.Facilities[_facilities.DefIndex[f]];
+            if (_facilities.Owner[f] == OwnerIds.Player || def.Recipe.Outputs.Length == 0) return; // the player runs their own as they like
+            if (def.Tier == IndustryTier.Primary && !config.ForecastPrimary) return;
+            int node = _facilities.Node[f];
+            if (!_flows.TryFindNearestMarket(node, def.Recipe.Outputs[0].Good, out _, out int cell)) return;
+            int at = _makersAt[cell];
+            if (at < 0)
+            {
+                at = _makersAt[cell] = _makers.Count;
+                _makers.Add(new Makers { Cell = cell, Def = def, FirstLine = _lines.Count });
+                AddLines(node, def.Recipe.Outputs);
+                AddLines(node, def.Recipe.Inputs);
+                AddLines(node, def.Recipe.Aids);
+            }
+            var makers = _makers[at];
+            makers.Runs += FacilityExpansion.OutputScale(_facilities.Level[f], config).Raw * OrderSystem.QuarterWeeks;
+            _makers[at] = makers;
         }
 
         void AddLines(int node, RecipeLine[] lines)

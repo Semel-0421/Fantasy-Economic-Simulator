@@ -23,7 +23,7 @@ updated: 2026-11-01
 | Start | A random village, no bank access (DEC-040) |
 | World | 5 continents, 25 nations, 50 regions, 250 cities, 1,250 villages |
 | Goods | 20 categories x 50 goods x 4 grades = 4,000 items |
-| Stage | Economy simulation built (P1 to P13d, labor, tax, state economy); refactoring, then balance; P14 to P18 ready (see 04_Roadmap) |
+| Stage | Economy simulation built (P1 to P13d, labor, tax, state economy); refactored to the enforced limits (DEC-108); balance next; P14 to P18 ready (see 04_Roadmap) |
 
 ## Document map
 | Document | Contents |
@@ -33,6 +33,7 @@ updated: 2026-11-01
 | [02_Data_Formats.md](02_Data_Formats.md) | CSV files and config keys (as built) |
 | [03_Decisions.md](03_Decisions.md) | Decision log (DEC) and open questions (Q) |
 | [04_Roadmap.md](04_Roadmap.md) | Implementation phases for the economy rules |
+| [05_Refactoring_Standards.md](05_Refactoring_Standards.md) | Refactoring procedure and the limits the tests enforce |
 | [systems/SYS_MERCHANTS.md](systems/SYS_MERCHANTS.md) | NPC merchant arbitrage |
 | [systems/SYS_PRODUCTION.md](systems/SYS_PRODUCTION.md) | Production inputs, player output, node specialties |
 | [systems/SYS_INVENTORY.md](systems/SYS_INVENTORY.md) | Item weight and size, cart, warehouses, player trading |

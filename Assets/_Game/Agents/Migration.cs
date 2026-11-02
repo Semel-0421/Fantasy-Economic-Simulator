@@ -126,23 +126,10 @@ namespace FES.Agents
 
         void Emancipate(SimContext ctx, int nation)
         {
-            long jobs = 0, people = 0, bound = 0;
-            foreach (int node in _purses.NationNodes[nation])
-            {
-                if (IsTown(node))
-                {
-                    jobs += _jobs[node];
-                    people += _population.Population[node];
-                }
-                else bound += _population.Population[node] - Free(node, _population.Population[node]);
-            }
             int enacted = _state.EnactedYear[nation];
             if (enacted < 0)
             {
-                if (ctx.Turn < _config.MigrationEmancipationEarliestYears * SimClock.WeeksPerYear) return;
-                if (bound <= 0 || jobs <= 0 || jobs - people < _config.MigrationVacancyShare.MulInt(jobs)) return;
-                _state.EnactedYear[nation] = ctx.Clock.Year;
-                ctx.Events.Publish(new EmancipationEnacted(new NodeId(_banks.NationNode(nation)), ctx.Clock.Year));
+                TryEnact(ctx, nation);
                 return;
             }
             int freedFrom = enacted + _config.MigrationEmancipationLeadYears;
@@ -158,61 +145,85 @@ namespace FES.Agents
             }
         }
 
+        void TryEnact(SimContext ctx, int nation)
+        {
+            long jobs = 0, people = 0, bound = 0;
+            foreach (int node in _purses.NationNodes[nation])
+            {
+                if (IsTown(node))
+                {
+                    jobs += _jobs[node];
+                    people += _population.Population[node];
+                }
+                else bound += _population.Population[node] - Free(node, _population.Population[node]);
+            }
+            if (ctx.Turn < _config.MigrationEmancipationEarliestYears * SimClock.WeeksPerYear) return;
+            if (bound <= 0 || jobs <= 0 || jobs - people < _config.MigrationVacancyShare.MulInt(jobs)) return;
+            _state.EnactedYear[nation] = ctx.Clock.Year;
+            ctx.Events.Publish(new EmancipationEnacted(new NodeId(_banks.NationNode(nation)), ctx.Clock.Year));
+        }
+
         void Move(SimContext ctx, int nation)
         {
             var nodes = _purses.NationNodes[nation];
             var rate = _labor.Rate(nation);
             foreach (int village in nodes)
+                if (!IsTown(village) && _population.Population[village] > 0) MoveFrom(ctx, village, nodes, rate);
+        }
+
+        void MoveFrom(SimContext ctx, int village, int[] nodes, Fx rate)
+        {
+            long people = _population.Population[village];
+            long here = PerHead(village);
+            // Towns by expected gain; the best sets how many want to go, each takes its part.
+            long best = 0, weights = 0;
+            foreach (int town in nodes)
             {
-                if (IsTown(village)) continue;
-                long people = _population.Population[village];
-                if (people <= 0) continue;
-                long here = PerHead(village);
-                // Towns by expected gain; the best sets how many want to go, each takes its part.
-                long best = 0, weights = 0;
-                foreach (int town in nodes)
-                {
-                    if (!IsTown(town)) continue;
-                    long gain = Expected(town, rate) - here;
-                    if (gain <= 0) continue;
-                    if (gain > best) best = gain;
-                    weights += Weight(town, gain);
-                }
-                if (best <= 0 || weights <= 0) continue;
+                if (!IsTown(town)) continue;
+                long gain = Expected(town, rate) - here;
+                if (gain <= 0) continue;
+                if (gain > best) best = gain;
+                weights += Weight(town, gain);
+            }
+            if (best <= 0 || weights <= 0) return;
 
-                long free = Free(village, people);
-                long bound = people - free;
-                long wish = Fx.FromRatio(best, Math.Max(best, here) + best).MulInt(_config.MigrationMaxShare.MulInt(people) * 2);
-                long freeMoving = Math.Min(free, wish);
-                var flee = _houses.ContractHolds[village] ? _config.MigrationFleeShare : _config.MigrationFleeShare * Fx.FromInt(_config.MigrationBrokenContractFactor);
-                long boundMoving = flee.MulInt(bound);
-                long moving = freeMoving + boundMoving;
-                if (moving <= 0) continue;
+            long free = Free(village, people);
+            long bound = people - free;
+            long wish = Fx.FromRatio(best, Math.Max(best, here) + best).MulInt(_config.MigrationMaxShare.MulInt(people) * 2);
+            long freeMoving = Math.Min(free, wish);
+            var flee = _houses.ContractHolds[village] ? _config.MigrationFleeShare : _config.MigrationFleeShare * Fx.FromInt(_config.MigrationBrokenContractFactor);
+            long boundMoving = flee.MulInt(bound);
+            long moving = freeMoving + boundMoving;
+            if (moving <= 0) return;
 
-                long cashMoving = people > 0 ? Math.Max(0, _cash.Cash[village]) / people * moving
-                    + Math.Max(0, _cash.Cash[village]) % people * moving / people : 0;
-                long leftPeople = moving, leftCash = cashMoving, leftWeights = weights;
-                foreach (int town in nodes)
-                {
-                    if (!IsTown(town)) continue;
-                    long gain = Expected(town, rate) - here;
-                    if (gain <= 0) continue;
-                    long weight = Weight(town, gain);
-                    long toPeople = leftPeople * weight / leftWeights;
-                    long toCash = leftCash * weight / leftWeights;
-                    leftWeights -= weight;
-                    leftPeople -= toPeople;
-                    leftCash -= toCash;
-                    _population.Population[town] += toPeople;
-                    _cash.Cash[town] += toCash;
-                    _cash.SavedYear[town] -= toCash; // savings that move are no income, and no loss where they left
-                    if (toPeople > 0) ctx.Events.Publish(new PeopleMigrated(new NodeId(village), new NodeId(town), toPeople));
-                }
-                _cash.Cash[village] -= cashMoving;
-                _cash.SavedYear[village] += cashMoving;
-                _population.Population[village] = people - moving;
-                long leftFree = free - freeMoving;
-                _state.FreeShare[village] = people - moving > 0 ? Fx.FromRatio(leftFree, people - moving).Raw : Fx.OneRaw;
+            long cashMoving = people > 0 ? Math.Max(0, _cash.Cash[village]) / people * moving
+                + Math.Max(0, _cash.Cash[village]) % people * moving / people : 0;
+            SendToTowns(ctx, village, nodes, rate, moving, cashMoving, weights);
+            _cash.Cash[village] -= cashMoving;
+            _cash.SavedYear[village] += cashMoving;
+            _population.Population[village] = people - moving;
+            long leftFree = free - freeMoving;
+            _state.FreeShare[village] = people - moving > 0 ? Fx.FromRatio(leftFree, people - moving).Raw : Fx.OneRaw;
+        }
+
+        void SendToTowns(SimContext ctx, int village, int[] nodes, Fx rate, long leftPeople, long leftCash, long leftWeights)
+        {
+            long here = PerHead(village);
+            foreach (int town in nodes)
+            {
+                if (!IsTown(town)) continue;
+                long gain = Expected(town, rate) - here;
+                if (gain <= 0) continue;
+                long weight = Weight(town, gain);
+                long toPeople = leftPeople * weight / leftWeights;
+                long toCash = leftCash * weight / leftWeights;
+                leftWeights -= weight;
+                leftPeople -= toPeople;
+                leftCash -= toCash;
+                _population.Population[town] += toPeople;
+                _cash.Cash[town] += toCash;
+                _cash.SavedYear[town] -= toCash; // savings that move are no income, and no loss where they left
+                if (toPeople > 0) ctx.Events.Publish(new PeopleMigrated(new NodeId(village), new NodeId(town), toPeople));
             }
         }
 

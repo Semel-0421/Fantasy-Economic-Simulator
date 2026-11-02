@@ -89,76 +89,109 @@ namespace FES.Data
 
         static IEnumerable<string[]> ParseRows(string name, string text)
         {
-            var fields = new List<string>();
-            var field = new StringBuilder();
-            bool inQuotes = false;
-            bool fieldStarted = false; // a non-whitespace character or quote has been seen in this field
-            bool rowStarted = false;   // any field content has been seen in this row
-            int line = 1;
+            var reader = new RowReader(name, text);
+            string[] row;
+            while ((row = reader.Next()) != null) yield return row;
+        }
 
-            for (int i = 0; i < text.Length; i++)
+        /// <summary>Reads the text one row at a time.</summary>
+        sealed class RowReader
+        {
+            readonly string _name, _text;
+            readonly List<string> _fields = new List<string>();
+            readonly StringBuilder _field = new StringBuilder();
+            bool _inQuotes;
+            bool _fieldStarted; // a non-whitespace character or quote has been seen in this field
+            bool _rowStarted;   // any field content has been seen in this row
+            int _i, _line = 1;
+
+            public RowReader(string name, string text)
             {
-                char c = text[i];
-                if (inQuotes)
-                {
-                    if (c == '"' && i + 1 < text.Length && text[i + 1] == '"')
-                    {
-                        field.Append('"');
-                        i++;
-                    }
-                    else if (c == '"') inQuotes = false;
-                    else
-                    {
-                        if (c == '\n') line++;
-                        field.Append(c);
-                    }
-                    continue;
-                }
-
-                if (c == '#' && !rowStarted && fields.Count == 0 && !fieldStarted)
-                {
-                    while (i < text.Length && text[i] != '\n') i++; // comment line
-                    line++;
-                    field.Clear();
-                    continue;
-                }
-                if (c == '"' && !fieldStarted)
-                {
-                    inQuotes = true;
-                    fieldStarted = rowStarted = true;
-                    field.Clear();
-                    continue;
-                }
-                if (c == ',')
-                {
-                    fields.Add(field.ToString());
-                    field.Clear();
-                    fieldStarted = false;
-                    rowStarted = true;
-                    continue;
-                }
-                if (c == '\r' || c == '\n')
-                {
-                    if (c == '\n') line++;
-                    if (rowStarted || fieldStarted)
-                    {
-                        fields.Add(field.ToString());
-                        yield return fields.ToArray();
-                    }
-                    fields.Clear();
-                    field.Clear();
-                    fieldStarted = rowStarted = false;
-                    continue;
-                }
-                if (!char.IsWhiteSpace(c)) fieldStarted = rowStarted = true;
-                field.Append(c);
+                _name = name;
+                _text = text;
             }
 
-            if (inQuotes) throw new FormatException($"{name} line {line}: unterminated quoted field.");
-            if (rowStarted || fieldStarted)
+            /// <summary>The next row, or null at the end of the text.</summary>
+            public string[] Next()
             {
-                fields.Add(field.ToString());
-                yield return fields.ToArray();
+                string[] row = null;
+                for (; row == null && _i < _text.Length; _i++)
+                {
+                    char c = _text[_i];
+                    if (_inQuotes) ReadQuoted(c);
+                    else if (c == '#' && !_rowStarted && _fields.Count == 0 && !_fieldStarted) SkipComment();
+                    else if (c == '"' && !_fieldStarted) OpenQuote();
+                    else if (c == ',') EndField();
+                    else if (c == '\r' || c == '\n') row = EndLine(c);
+                    else ReadPlain(c);
+                }
+                if (row != null) return row;
+                if (_inQuotes) throw new FormatException($"{_name} line {_line}: unterminated quoted field.");
+                return TakeRow();
+            }
+
+            void ReadQuoted(char c)
+            {
+                if (c == '"' && _i + 1 < _text.Length && _text[_i + 1] == '"')
+                {
+                    _field.Append('"');
+                    _i++;
+                }
+                else if (c == '"') _inQuotes = false;
+                else
+                {
+                    if (c == '\n') _line++;
+                    _field.Append(c);
+                }
+            }
+
+            void SkipComment()
+            {
+                while (_i < _text.Length && _text[_i] != '\n') _i++;
+                _line++;
+                _field.Clear();
+            }
+
+            void OpenQuote()
+            {
+                _inQuotes = true;
+                _fieldStarted = _rowStarted = true;
+                _field.Clear();
+            }
+
+            void EndField()
+            {
+                _fields.Add(_field.ToString());
+                _field.Clear();
+                _fieldStarted = false;
+                _rowStarted = true;
+            }
+
+            string[] EndLine(char c)
+            {
+                if (c == '\n') _line++;
+                return TakeRow();
+            }
+
+            void ReadPlain(char c)
+            {
+                if (!char.IsWhiteSpace(c)) _fieldStarted = _rowStarted = true;
+                _field.Append(c);
+            }
+
+            /// <summary>Ends the row and returns it, or null when it held nothing.</summary>
+            string[] TakeRow()
+            {
+                string[] row = null;
+                if (_rowStarted || _fieldStarted)
+                {
+                    _fields.Add(_field.ToString());
+                    row = _fields.ToArray();
+                }
+                _fields.Clear();
+                _field.Clear();
+                _fieldStarted = _rowStarted = false;
+                return row;
             }
         }
     }

@@ -76,15 +76,8 @@ namespace FES.Agents
             var projects = _development.Projects;
             for (int n = 0; n < _banks.NationCount; n++)
             {
-                int next = -1;
-                bool working = false;
-                for (int i = 0; i < projects.Count && !working; i++)
-                {
-                    if (projects[i].Nation != n) continue;
-                    if (projects[i].DoneTurn >= 0) working = true;
-                    else if (next < 0) next = i;
-                }
-                if (working || next < 0) continue;
+                int next = NextToStart(n);
+                if (next < 0) continue;
                 var project = projects[next];
                 long cost = CostOf(project);
                 if (_bank.Reserve[n] - _bank.PlayerDeposit[n] < cost) continue;
@@ -93,6 +86,20 @@ namespace FES.Agents
                 project.DoneTurn = ctx.Turn + _db.Config.StateProjectWeeks;
                 projects[next] = project;
             }
+        }
+
+        // The nation's next project not begun, or -1 while one is under way.
+        int NextToStart(int nation)
+        {
+            var projects = _development.Projects;
+            int next = -1;
+            for (int i = 0; i < projects.Count; i++)
+            {
+                if (projects[i].Nation != nation) continue;
+                if (projects[i].DoneTurn >= 0) return -1;
+                if (next < 0) next = i;
+            }
+            return next;
         }
 
         void Plan(int nation)
@@ -109,9 +116,7 @@ namespace FES.Agents
             scores[(int)StateProjectKind.Road] = config.StateRoadScore;
             for (int k = 0; k < config.StateProjectsPerYear; k++)
             {
-                int best = -1;
-                for (int kind = 0; kind < scores.Length; kind++)
-                    if (scores[kind] > 0 && (best < 0 || scores[kind] > scores[best])) best = kind;
+                int best = BestScore(scores);
                 if (best < 0) return;
                 var kindOf = (StateProjectKind)best;
                 var project = Site(kindOf, nation);
@@ -124,6 +129,14 @@ namespace FES.Agents
                 project.DoneTurn = -1;
                 _development.Projects.Add(project);
             }
+        }
+
+        static int BestScore(long[] scores)
+        {
+            int best = -1;
+            for (int kind = 0; kind < scores.Length; kind++)
+                if (scores[kind] > 0 && (best < 0 || scores[kind] > scores[best])) best = kind;
+            return best;
         }
 
         long NecessityGapPermille(int nation)
@@ -193,34 +206,47 @@ namespace FES.Agents
         // preferring land with a specialty in it.
         void SiteOnLand(ref StateProject project, int nation)
         {
-            long lowest = long.MaxValue;
-            foreach (int node in _purses.NationNodes[nation])
-            {
-                if (_development.LandLevel[node] >= _db.Config.StateLandMax || _nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
-                if (Underway(project.Kind, node, -1)) continue;
-                long supplied = _population.NecessitySuppliedPermille(node);
-                if (supplied >= lowest) continue;
-                lowest = supplied;
-                project.Node = node;
-            }
+            project.Node = NeediestLand(project.Kind, nation);
             if (project.Node < 0) return;
             long bestRatio = long.MinValue;
             foreach (var def in _db.Facilities)
             {
                 if (project.Kind == StateProjectKind.Farmland ? !IsFarm(def) : !IsMine(def)) continue;
                 if (!FacilityPlaces.Allowed(def, _nodes, project.Node)) continue;
-                long ratio = 0;
-                foreach (var line in def.Recipe.Outputs)
-                {
-                    if (_specialties.IsSpecialty(project.Node, line.Good.BaseIndex)) ratio += 1000;
-                    if (_markets.TryFindCell(project.Node, line.Good, out int cell))
-                        ratio += _markets.Price[cell] * 1000L / Math.Max(1, _markets.GoodBasePrice[line.Good.Value]);
-                }
+                long ratio = OutputDearness(project.Node, def);
                 if (ratio <= bestRatio) continue;
                 bestRatio = ratio;
                 project.DefIndex = def.Index;
             }
             if (project.DefIndex < 0) project.Node = -1;
+        }
+
+        int NeediestLand(StateProjectKind kind, int nation)
+        {
+            int neediest = -1;
+            long lowest = long.MaxValue;
+            foreach (int node in _purses.NationNodes[nation])
+            {
+                if (_development.LandLevel[node] >= _db.Config.StateLandMax || _nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
+                if (Underway(kind, node, -1)) continue;
+                long supplied = _population.NecessitySuppliedPermille(node);
+                if (supplied >= lowest) continue;
+                lowest = supplied;
+                neediest = node;
+            }
+            return neediest;
+        }
+
+        long OutputDearness(int node, FacilityDef def)
+        {
+            long ratio = 0;
+            foreach (var line in def.Recipe.Outputs)
+            {
+                if (_specialties.IsSpecialty(node, line.Good.BaseIndex)) ratio += 1000;
+                if (_markets.TryFindCell(node, line.Good, out int cell))
+                    ratio += _markets.Price[cell] * 1000L / Math.Max(1, _markets.GoodBasePrice[line.Good.Value]);
+            }
+            return ratio;
         }
 
         // A land route out of a port or the end of a highway, so highways grow inland from the coast.

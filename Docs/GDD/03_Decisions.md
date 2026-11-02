@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-108 Refactoring follows published standards, and tests enforce them
+- Date: 2026-11-02
+- Decision: [Confirmed] Refactoring is checked against standards from outside the project, and enforced. [Draft] The standards are Fowler's definition (behaviour unchanged, small steps) and the default limits of Sonar's and Microsoft's rules, in 05_Refactoring_Standards. `CodeStandardsTests` fails on a method or file over a limit, a duplicated block or an unused private method; `GoldenRunTests` fails when a seeded run's saved state changes by a byte, so a change meant to alter the simulation records new hashes in the same commit. Exemptions need a reason in the test, and none are in use.
+- Reason: the user's instruction. The code had 48 methods over the cognitive limit, the worst at 113 against 15.
+- Limits: the check reads source without a compiler and can differ from the real analyzers on unusual syntax. The golden hashes change with every rule or data change, which is the point, and costs a line in those commits. Bugs found while refactoring were left in, as a refactoring changes no behaviour.
+- Impact: 05_Refactoring_Standards, 01_Extension_Guide, 04_Roadmap
+
 ### DEC-107 Fixes from the code review: what counts as income, and who pays
 - Date: 2026-11-02
 - Decision: [Draft] A company's taxed profit leaves out loans and their repayment, interest included (so interest is not deducted), and what its owner or association puts in or takes out. The player cannot withdraw the tax on a facility's profit so far. Savings migrants carry are no income of the households on either end. A family set up to take over an asset (an auction with no winning bid, a player's lost facility) starts with the coins of the households around. A subsidised workshop's family and guild are placed where it stands. A group abroad counts in its home continent's money total. Seizures and winning bids draw only on the deposit coins the bank still holds, and a nation keeps its roads from its reserve less the player's deposits. Only auctions for the player's own loan count against seizing more of its facilities. Buying an NPC facility costs at least its value plus the cash it holds. Forced trips (DEC-106) go by the trip's full fee and tolls, a group that cannot pay them stays where it is, and groups remember the markets they have been to, so the "market it does not know" rule works with rumors off. A save without a section for every component loads only into a newly built simulation, and a section not read to its end is refused.

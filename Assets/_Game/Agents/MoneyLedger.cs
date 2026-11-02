@@ -41,11 +41,13 @@ namespace FES.Agents
         /// </summary>
         public static long ContinentMoney(WorldState world, int continent)
         {
+            return world.Get<PlayerState>().Coins[continent] + BusinessMoney(world, continent) + PublicMoney(world, continent);
+        }
+
+        static long BusinessMoney(WorldState world, int continent)
+        {
             var nodes = world.Get<NodeTable>();
-            var banks = world.Get<NodeBanks>();
-            var bank = world.Get<BankState>();
-            var purses = world.Get<PurseState>();
-            long money = world.Get<PlayerState>().Coins[continent] + bank.InternationalReserve[continent];
+            long money = 0;
             var facilities = world.Get<FacilityTable>();
             for (int f = 0; f < facilities.Count; f++)
                 if (nodes.Continent[facilities.Node[f]] == continent) money += facilities.Cash[f];
@@ -55,6 +57,16 @@ namespace FES.Agents
             var groups = world.Get<GroupTable>();
             for (int g = 0; g < groups.Count; g++)
                 if (nodes.Continent[groups.Node[g]] == continent) money += groups.Cash[g];
+            return money;
+        }
+
+        static long PublicMoney(WorldState world, int continent)
+        {
+            var nodes = world.Get<NodeTable>();
+            var banks = world.Get<NodeBanks>();
+            var bank = world.Get<BankState>();
+            var purses = world.Get<PurseState>();
+            long money = bank.InternationalReserve[continent];
             for (int n = 0; n < banks.NationCount; n++)
                 if (nodes.Continent[banks.NationNode(n)] == continent) money += bank.Reserve[n];
             for (int p = 0; p < purses.Count; p++)

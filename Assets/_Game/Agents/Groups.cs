@@ -235,12 +235,8 @@ namespace FES.Agents
             for (int f = 0; f < facilities.Count; f++)
             {
                 if (facilities.Group[f] >= 0 || facilities.Owner[f] == OwnerIds.Player) continue;
-                var def = db.Facilities[facilities.DefIndex[f]];
                 int node = facilities.Node[f];
-                int nation = nodes.AncestorAt(node, WorldLevel.Nation);
-                int group = -1;
-                if (nation >= 0 && def.StateOwned) group = directory.StateEnterpriseOf(nation);
-                else if (nation >= 0 && def.Tier == IndustryTier.Secondary) group = Pick(directory.CompaniesOf(nation), f);
+                int group = FacilityOwnerFrom(directory, db.Facilities[facilities.DefIndex[f]], nodes.AncestorAt(node, WorldLevel.Nation), f);
                 facilities.Group[f] = group >= 0 ? group : directory.PrivateAt(node, db.Config);
             }
             for (int a = 0; a < agents.Count; a++)
@@ -252,6 +248,13 @@ namespace FES.Agents
                 if (nation >= 0 && nodes.LevelOf(node) <= WorldLevel.Region) group = Pick(directory.CompaniesOf(nation), a);
                 agents.Group[a] = group >= 0 ? group : directory.PrivateAt(node, db.Config);
             }
+        }
+
+        static int FacilityOwnerFrom(GroupDirectory directory, FacilityDef def, int nation, int f)
+        {
+            if (nation >= 0 && def.StateOwned) return directory.StateEnterpriseOf(nation);
+            if (nation >= 0 && def.Tier == IndustryTier.Secondary) return Pick(directory.CompaniesOf(nation), f);
+            return -1;
         }
 
         static int Pick(IReadOnlyList<int> candidates, int index) => candidates.Count == 0 ? -1 : candidates[index % candidates.Count];

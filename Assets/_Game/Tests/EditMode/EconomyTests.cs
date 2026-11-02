@@ -18,10 +18,21 @@ namespace FES.Tests
             MinPrice = 1,
         };
 
+        static void Step(in PriceParams p, int basePrice, long anchorMulRaw, int elapsed, ref int price, ref int prev, ref int stock, ref int supply, ref int demand)
+        {
+            var cell = new PriceCell { Price = price, PrevPrice = prev, Stock = stock, Supply = supply, Demand = demand };
+            PriceKernel.Step(p, basePrice, anchorMulRaw, elapsed, ref cell);
+            price = cell.Price;
+            prev = cell.PrevPrice;
+            stock = cell.Stock;
+            supply = cell.Supply;
+            demand = cell.Demand;
+        }
+
         static int StepPrice(int supply, int demand, int stock = 0, int price = 100, int elapsed = 1)
         {
             int prev = 0;
-            PriceKernel.Step(Params, 100, Fx.OneRaw, elapsed, ref price, ref prev, ref stock, ref supply, ref demand);
+            Step(Params, 100, Fx.OneRaw, elapsed, ref price, ref prev, ref stock, ref supply, ref demand);
             return price;
         }
 
@@ -41,7 +52,7 @@ namespace FES.Tests
             var p = Params;
             p.AnchorRaw = Fx.FromPermille(20).Raw;
             int price = 70, prev = 0, stock = 0, supply = 0, demand = 0;
-            PriceKernel.Step(p, 100, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Step(p, 100, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
             Assert.Greater(price, 70);
         }
 
@@ -51,12 +62,12 @@ namespace FES.Tests
             var p = Params;
             p.AnchorRaw = Fx.FromPermille(20).Raw;
             int price = 8, prev = 0, stock = 0, supply = 0, demand = 100;
-            PriceKernel.Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
             Assert.Greater(price, 8, "at this price the step rounds to one coin; the pull must not cancel it");
             price = 5;
             supply = 100;
             demand = 0;
-            PriceKernel.Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Step(p, 7, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
             Assert.Less(price, 5);
         }
 
@@ -75,7 +86,7 @@ namespace FES.Tests
         public void PriceKernel_ClearsAccumulators_AndCarriesUnsoldStock()
         {
             int price = 100, prev = 0, stock = 5, supply = 20, demand = 15;
-            PriceKernel.Step(Params, 100, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
+            Step(Params, 100, Fx.OneRaw, 1, ref price, ref prev, ref stock, ref supply, ref demand);
             Assert.AreEqual(100, prev);
             Assert.AreEqual(10, stock); // 20 + 5 available, 15 sold
             Assert.AreEqual(0, supply);

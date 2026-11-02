@@ -30,18 +30,17 @@ namespace FES.Agents
         /// <summary>Chance of an encounter on this trip (DEC-026).</summary>
         public readonly Fx EncounterChance;
 
-        public TripQuote(int route, long fee, int feeContinent, long toll, int tollContinent, int cargoUnits,
-            long passage, long guards, long insurance, long cargoValue, Fx encounterChance)
+        public TripQuote(int route, in TripCharges charges, int feeContinent, int tollContinent, int cargoUnits, long cargoValue, Fx encounterChance)
         {
             Route = route;
-            Fee = fee;
+            Fee = charges.Fee;
             FeeContinent = feeContinent;
-            Toll = toll;
+            Toll = charges.Toll;
             TollContinent = tollContinent;
             CargoUnits = cargoUnits;
-            Passage = passage;
-            Guards = guards;
-            Insurance = insurance;
+            Passage = charges.Passage;
+            Guards = charges.Guards;
+            Insurance = charges.Insurance;
             CargoValue = cargoValue;
             EncounterChance = encounterChance;
         }
@@ -54,6 +53,21 @@ namespace FES.Agents
             FeeContinent == TollContinent
                 ? coins[FeeContinent] >= DepartureCost + Toll
                 : coins[FeeContinent] >= DepartureCost && coins[TollContinent] >= Toll;
+    }
+
+    /// <summary>What a trip charges; see <see cref="TripQuote"/>.</summary>
+    public readonly struct TripCharges
+    {
+        public readonly long Fee, Toll, Passage, Guards, Insurance;
+
+        public TripCharges(long fee, long toll, long passage, long guards, long insurance)
+        {
+            Fee = fee;
+            Toll = toll;
+            Passage = passage;
+            Guards = guards;
+            Insurance = insurance;
+        }
     }
 
     /// <summary>Countermeasures bought with a trip (DEC-026).</summary>
@@ -148,8 +162,8 @@ namespace FES.Agents
             long guards = options.Guards ? config.GuardBaseCost + config.GuardCostShare.MulInt(valueHere) : 0;
             long insurance = options.Insurance ? config.InsurancePremium.MulInt(valueHere) : 0;
             if (options.GuildMember) insurance -= config.GuildInsuranceDiscount.MulInt(insurance);
-            return new TripQuote(route, fee, fromContinent, toll, toContinent, (int)System.Math.Min(units, int.MaxValue),
-                passage, guards, insurance, value, EncounterChance(route, value, options.Guards));
+            return new TripQuote(route, new TripCharges(fee, toll, passage, guards, insurance), fromContinent, toContinent,
+                (int)System.Math.Min(units, int.MaxValue), value, EncounterChance(route, value, options.Guards));
         }
 
         /// <summary>The route's charge per cargo unit, cut by paving in proportion to the road's condition (DEC-054).</summary>

@@ -168,28 +168,30 @@ namespace FES.Agents
         // Per node and continent: the first route of the fewest hops there, or -1.
         void PrepareWaysHome()
         {
-            int continents = _nodes.ContinentCount;
             var frontier = new System.Collections.Generic.Queue<int>();
-            for (int c = 0; c < continents; c++)
-            {
-                for (int n = 0; n < _nodes.Count; n++) _routeToward[n * continents + c] = -1;
-                var seen = new bool[_nodes.Count];
-                for (int n = 0; n < _nodes.Count; n++)
-                    if (_nodes.Continent[n] == c)
-                    {
-                        seen[n] = true;
-                        frontier.Enqueue(n);
-                    }
-                while (frontier.Count > 0)
+            for (int c = 0; c < _nodes.ContinentCount; c++) FindWaysToward(c, frontier);
+        }
+
+        void FindWaysToward(int c, System.Collections.Generic.Queue<int> frontier)
+        {
+            int continents = _nodes.ContinentCount;
+            for (int n = 0; n < _nodes.Count; n++) _routeToward[n * continents + c] = -1;
+            var seen = new bool[_nodes.Count];
+            for (int n = 0; n < _nodes.Count; n++)
+                if (_nodes.Continent[n] == c)
                 {
-                    int at = frontier.Dequeue();
-                    for (int r = 0; r < _routes.Count; r++)
-                    {
-                        if (_routes.To[r] != at || seen[_routes.From[r]]) continue;
-                        seen[_routes.From[r]] = true;
-                        _routeToward[_routes.From[r] * continents + c] = r;
-                        frontier.Enqueue(_routes.From[r]);
-                    }
+                    seen[n] = true;
+                    frontier.Enqueue(n);
+                }
+            while (frontier.Count > 0)
+            {
+                int at = frontier.Dequeue();
+                for (int r = 0; r < _routes.Count; r++)
+                {
+                    if (_routes.To[r] != at || seen[_routes.From[r]]) continue;
+                    seen[_routes.From[r]] = true;
+                    _routeToward[_routes.From[r] * continents + c] = r;
+                    frontier.Enqueue(_routes.From[r]);
                 }
             }
         }
@@ -223,136 +225,20 @@ namespace FES.Agents
             for (int p = 0; p < _hedgeRoom.Length; p++)
                 _hedgeRoom[p] = _db.Config.HedgeFee.Raw > 0 && p < _purses.NationCount ? _db.Config.HedgeBankShare.MulInt(_bank.Spendable(p)) : 0;
 
-            var job = new DetailedMerchantJob
-            {
-                Seed = ctx.Seed,
-                Turn = ctx.Turn,
-                EncounterStream = Encounters.Stream,
-                LicenseStream = LicenseRules.MerchantStream,
-                LicensedPermille = _db.Config.LicensedMerchantPermille,
-                BaseGoodCount = _policy.BaseGoodCount,
-                CategoryCount = _flows.CategoryCount,
-                BankruptWeeks = _db.Config.MerchantBankruptWeeks,
-                MerchantHolderBase = CargoHolders.MerchantBase,
-                CashLossRaw = _db.Config.EncounterCashLoss.Raw,
-                CargoLossRaw = _db.Config.EncounterCargoLoss.Raw,
-                DangerValueScale = _db.Config.DangerValueScale,
-                Rumors = _db.Config.MerchantRumorsEnabled,
-                WeighSales = _db.Config.MerchantWeighSales,
-                JudgeHops = _db.Config.MerchantJudgeHops,
-                Bids = _db.Config.MerchantBids,
-                BidsWhileLoaded = _db.Config.MerchantBidsWhileLoaded,
-                ReturnHome = _db.Config.MerchantReturnHome,
-                InputBid = _markets.InputBid,
-                CrossLevel = _db.Config.MerchantCrossLevel,
-                ContinentCount = _nodes.ContinentCount,
-                CoinRateRaw = _coinRate,
-                ExchangeFeeRaw = _db.Config.ExchangeFee.Raw,
-                International = _international,
-                RouteToward = _routeToward,
-                SpreadRaw = _db.Config.TraderSpread.Raw,
-                NodePort = _nodePort,
-                JudgeCoinUnits = _db.Config.MerchantJudgeCoinUnits,
-                BillRoom = _billRoom.Room,
-                BillBankRoom = _billRoom.BankRoom,
-                BillBankSpent = _billRoom.BankSpent,
-                BillDiscountRaw = _db.Config.BillDiscount.Raw,
-                BillWeeks = _db.Config.BillWeeks,
-                BillHolder = _bills.Holder.List,
-                BillPurse = _bills.Purse.List,
-                BillFace = _bills.Face.List,
-                BillDue = _bills.DueTurn.List,
-                BillStats = _billStats,
-                NodeDetail = _lod.Detail,
-                NodeContinent = _nodes.Continent,
-                NodeParent = _nodes.Parent,
-                NodeLevel = _nodes.Level,
-                NodeCategorySpecialty = _nodeCategorySpecialty,
-                Tariff = _tolls.Tariff,
-                SpecialtySurcharge = _tolls.SpecialtySurcharge,
-                NodeLicenseRow = _nodeLicenseRow,
-                Licensed = _policy.Licensed,
-                NodeFloat = _purses.NodeFloat,
-                ContinentPriceIndex = _continentIndex,
-                OutStart = _routes.OutStart,
-                OutCount = _routes.OutCount,
-                RouteIndex = _routes.RouteIndex,
-                RouteTo = _routes.To,
-                RouteTurns = _routes.TravelTurns,
-                RouteBaseFee = _routes.BaseFee,
-                RouteCostPerUnitRaw = _routeCostPerUnit,
-                RouteDangerRaw = _routeDanger,
-                MarketCellStart = _markets.MarketCellStart,
-                MarketCellCount = _markets.MarketCellCount,
-                CellGood = _markets.CellGood,
-                GoodBasePrice = _markets.GoodBasePrice,
-                GoodWeight = _markets.GoodWeight,
-                GoodSize = _markets.GoodSize,
-                GoodCategory = _markets.GoodCategory,
-                Price = _markets.Price,
-                Levels = _levels,
-                TraitSpendRaw = _traits.SpendRaw,
-                TraitMinMarginRaw = _traits.MinMarginRaw,
-                TraitCapacityRaw = _traits.CapacityRaw,
-                VehicleCapacityRaw = _vehicleCapacity,
-                VehicleCostRaw = _vehicleCost,
-                VehicleDangerRaw = _vehicleDanger,
-                VehiclePremiumRaw = _vehiclePremium,
-                GuardBaseCost = _db.Config.GuardBaseCost,
-                MemberPremiumRaw = _db.Config.MerchantMemberPremium.Raw,
-                AgentAssociation = _agents.Association.AsArray(),
-                TraitLossAversion = _traits.LossAversion,
-                NodeCoreStrength = _nodes.CoreStrength,
-                AgentOwner = _agents.Owner.AsArray(),
-                CountTripCosts = _db.Config.MerchantCountTripCosts,
-                MustAct = _db.Config.MerchantMustAct,
-                HedgeFloorRaw = _db.Config.HedgeFloor.Raw,
-                HedgeFeeRaw = _db.Config.HedgeFee.Raw,
-                HedgeFallRaw = _db.Config.HedgeFall.Raw,
-                HedgeChanceRaw = _db.Config.HedgeFallChance.Raw,
-                HedgeRoom = _hedgeRoom,
-                HedgeNet = _hedgeNet,
-                AgentHedge = _agents.HedgeFloor.AsArray(),
-                GuardCostShareRaw = _db.Config.GuardCostShare.Raw,
-                GuardReductionRaw = _db.Config.GuardReduction.Raw,
-                InsurancePremiumRaw = _db.Config.InsurancePremium.Raw,
-                InsuranceRefundRaw = _db.Config.InsuranceRefund.Raw,
-                TripStats = _tripStats,
-                AgentVehicle = _agents.Vehicle.AsArray(),
-                TraitUpkeepRaw = _traits.UpkeepRaw,
-                TraitDistancePower = _traits.DistancePower,
-                TraitRangeLevel = _traits.RangeLevel,
-                AgentHome = _agents.Home.AsArray(),
-                AgentMode = _agents.Mode.AsArray(),
-                AgentScale = _agents.Scale.AsArray(),
-                AgentTrait = _agents.Trait.AsArray(),
-                AgentMemory = _agents.Memory.AsArray(),
-                AgentNode = _agents.Node.AsArray(),
-                AgentDestination = _agents.Destination.AsArray(),
-                AgentArrivalTurn = _agents.ArrivalTurn.AsArray(),
-                AgentNegativeWeeks = _agents.NegativeCashWeeks.AsArray(),
-                AgentCash = _agents.Cash.AsArray(),
-                AgentLoadCost = _agents.LoadCost.AsArray(),
-                Stock = _markets.Stock,
-                Supply = _markets.Supply,
-                Demand = _markets.Demand,
-                Float = _purses.Float,
-                HouseholdCash = _world.Get<HouseholdCash>().Cash,
-                TollsByNode = _tollsByNode,
-                Bankrupt = _bankrupt,
-                CargoHolder = _cargo.Holder.List,
-                CargoGood = _cargo.Good.List,
-                CargoQuantity = _cargo.Quantity.List,
-                FirstRow = _firstRow,
-                NextRow = _nextRow,
-                Board = _board,
-                Rows = _rows,
-                StockedStart = _stockedStart,
-                StockedCount = _stockedCount,
-                StockedCells = _stockedCells,
-            };
+            var job = new DetailedMerchantJob { Seed = ctx.Seed, Turn = ctx.Turn };
+            SetRules(ref job);
+            SetPlaces(ref job);
+            SetTraits(ref job);
+            SetGroups(ref job);
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
+            SettleDetailed();
+            foreach (int a in _bankrupt) GoBankrupt(ctx, a);
+            RecordTripStats();
+        }
+
+        void SettleDetailed()
+        {
             SettleCoins();
             _billRoom.SettleBank(_bank);
             for (int p = 0; p < _hedgeNet.Length; p++)
@@ -372,7 +258,10 @@ namespace FES.Agents
                 MoneyLedger.ToState(_world, n, _tollsByNode[n]); // same continent: one coin (DEC-015)
                 _tollsByNode[n] = 0;
             }
-            foreach (int a in _bankrupt) GoBankrupt(ctx, a);
+        }
+
+        void RecordTripStats()
+        {
             var stats = _world.Get<MerchantTripStats>();
             stats.Trips += _tripStats[0];
             stats.Guarded += _tripStats[1];
@@ -396,6 +285,145 @@ namespace FES.Agents
             stats.HedgePaid += _tripStats[19];
             stats.ForcedTrips += _tripStats[20];
             for (int k = 0; k < _tripStats.Length; k++) _tripStats[k] = 0;
+        }
+
+        void SetRules(ref DetailedMerchantJob job)
+        {
+            job.EncounterStream = Encounters.Stream;
+            job.LicenseStream = LicenseRules.MerchantStream;
+            job.LicensedPermille = _db.Config.LicensedMerchantPermille;
+            job.BaseGoodCount = _policy.BaseGoodCount;
+            job.CategoryCount = _flows.CategoryCount;
+            job.BankruptWeeks = _db.Config.MerchantBankruptWeeks;
+            job.MerchantHolderBase = CargoHolders.MerchantBase;
+            job.CashLossRaw = _db.Config.EncounterCashLoss.Raw;
+            job.CargoLossRaw = _db.Config.EncounterCargoLoss.Raw;
+            job.DangerValueScale = _db.Config.DangerValueScale;
+            job.Rumors = _db.Config.MerchantRumorsEnabled;
+            job.WeighSales = _db.Config.MerchantWeighSales;
+            job.JudgeHops = _db.Config.MerchantJudgeHops;
+            job.Bids = _db.Config.MerchantBids;
+            job.BidsWhileLoaded = _db.Config.MerchantBidsWhileLoaded;
+            job.ReturnHome = _db.Config.MerchantReturnHome;
+            job.InputBid = _markets.InputBid;
+            job.CrossLevel = _db.Config.MerchantCrossLevel;
+            job.ContinentCount = _nodes.ContinentCount;
+            job.CoinRateRaw = _coinRate;
+            job.ExchangeFeeRaw = _db.Config.ExchangeFee.Raw;
+            job.International = _international;
+            job.RouteToward = _routeToward;
+            job.SpreadRaw = _db.Config.TraderSpread.Raw;
+            job.NodePort = _nodePort;
+            job.JudgeCoinUnits = _db.Config.MerchantJudgeCoinUnits;
+            job.BillRoom = _billRoom.Room;
+            job.BillBankRoom = _billRoom.BankRoom;
+            job.BillBankSpent = _billRoom.BankSpent;
+            job.BillDiscountRaw = _db.Config.BillDiscount.Raw;
+            job.BillWeeks = _db.Config.BillWeeks;
+            job.BillHolder = _bills.Holder.List;
+            job.BillPurse = _bills.Purse.List;
+            job.BillFace = _bills.Face.List;
+            job.BillDue = _bills.DueTurn.List;
+            job.BillStats = _billStats;
+        }
+
+        void SetPlaces(ref DetailedMerchantJob job)
+        {
+            job.NodeDetail = _lod.Detail;
+            job.NodeContinent = _nodes.Continent;
+            job.NodeParent = _nodes.Parent;
+            job.NodeLevel = _nodes.Level;
+            job.NodeCategorySpecialty = _nodeCategorySpecialty;
+            job.Tariff = _tolls.Tariff;
+            job.SpecialtySurcharge = _tolls.SpecialtySurcharge;
+            job.NodeLicenseRow = _nodeLicenseRow;
+            job.Licensed = _policy.Licensed;
+            job.NodeFloat = _purses.NodeFloat;
+            job.ContinentPriceIndex = _continentIndex;
+            job.OutStart = _routes.OutStart;
+            job.OutCount = _routes.OutCount;
+            job.RouteIndex = _routes.RouteIndex;
+            job.RouteTo = _routes.To;
+            job.RouteTurns = _routes.TravelTurns;
+            job.RouteBaseFee = _routes.BaseFee;
+            job.RouteCostPerUnitRaw = _routeCostPerUnit;
+            job.RouteDangerRaw = _routeDanger;
+            job.MarketCellStart = _markets.MarketCellStart;
+            job.MarketCellCount = _markets.MarketCellCount;
+            job.CellGood = _markets.CellGood;
+            job.GoodBasePrice = _markets.GoodBasePrice;
+            job.GoodWeight = _markets.GoodWeight;
+            job.GoodSize = _markets.GoodSize;
+            job.GoodCategory = _markets.GoodCategory;
+            job.Price = _markets.Price;
+        }
+
+        void SetTraits(ref DetailedMerchantJob job)
+        {
+            job.Levels = _levels;
+            job.TraitSpendRaw = _traits.SpendRaw;
+            job.TraitMinMarginRaw = _traits.MinMarginRaw;
+            job.TraitCapacityRaw = _traits.CapacityRaw;
+            job.VehicleCapacityRaw = _vehicleCapacity;
+            job.VehicleCostRaw = _vehicleCost;
+            job.VehicleDangerRaw = _vehicleDanger;
+            job.VehiclePremiumRaw = _vehiclePremium;
+            job.GuardBaseCost = _db.Config.GuardBaseCost;
+            job.MemberPremiumRaw = _db.Config.MerchantMemberPremium.Raw;
+            job.AgentAssociation = _agents.Association.AsArray();
+            job.TraitLossAversion = _traits.LossAversion;
+            job.NodeCoreStrength = _nodes.CoreStrength;
+            job.AgentOwner = _agents.Owner.AsArray();
+            job.CountTripCosts = _db.Config.MerchantCountTripCosts;
+            job.MustAct = _db.Config.MerchantMustAct;
+            job.HedgeFloorRaw = _db.Config.HedgeFloor.Raw;
+            job.HedgeFeeRaw = _db.Config.HedgeFee.Raw;
+            job.HedgeFallRaw = _db.Config.HedgeFall.Raw;
+            job.HedgeChanceRaw = _db.Config.HedgeFallChance.Raw;
+            job.HedgeRoom = _hedgeRoom;
+            job.HedgeNet = _hedgeNet;
+            job.AgentHedge = _agents.HedgeFloor.AsArray();
+            job.GuardCostShareRaw = _db.Config.GuardCostShare.Raw;
+            job.GuardReductionRaw = _db.Config.GuardReduction.Raw;
+            job.InsurancePremiumRaw = _db.Config.InsurancePremium.Raw;
+            job.InsuranceRefundRaw = _db.Config.InsuranceRefund.Raw;
+            job.TripStats = _tripStats;
+            job.AgentVehicle = _agents.Vehicle.AsArray();
+            job.TraitUpkeepRaw = _traits.UpkeepRaw;
+            job.TraitDistancePower = _traits.DistancePower;
+            job.TraitRangeLevel = _traits.RangeLevel;
+        }
+
+        void SetGroups(ref DetailedMerchantJob job)
+        {
+            job.AgentHome = _agents.Home.AsArray();
+            job.AgentMode = _agents.Mode.AsArray();
+            job.AgentScale = _agents.Scale.AsArray();
+            job.AgentTrait = _agents.Trait.AsArray();
+            job.AgentMemory = _agents.Memory.AsArray();
+            job.AgentNode = _agents.Node.AsArray();
+            job.AgentDestination = _agents.Destination.AsArray();
+            job.AgentArrivalTurn = _agents.ArrivalTurn.AsArray();
+            job.AgentNegativeWeeks = _agents.NegativeCashWeeks.AsArray();
+            job.AgentCash = _agents.Cash.AsArray();
+            job.AgentLoadCost = _agents.LoadCost.AsArray();
+            job.Stock = _markets.Stock;
+            job.Supply = _markets.Supply;
+            job.Demand = _markets.Demand;
+            job.Float = _purses.Float;
+            job.HouseholdCash = _world.Get<HouseholdCash>().Cash;
+            job.TollsByNode = _tollsByNode;
+            job.Bankrupt = _bankrupt;
+            job.CargoHolder = _cargo.Holder.List;
+            job.CargoGood = _cargo.Good.List;
+            job.CargoQuantity = _cargo.Quantity.List;
+            job.FirstRow = _firstRow;
+            job.NextRow = _nextRow;
+            job.Board = _board;
+            job.Rows = _rows;
+            job.StockedStart = _stockedStart;
+            job.StockedCount = _stockedCount;
+            job.StockedCells = _stockedCells;
         }
 
         void GoBankrupt(SimContext ctx, int a)
@@ -443,47 +471,7 @@ namespace FES.Agents
 
         public void RunAggregate(SimContext ctx)
         {
-            // Idle automated groups of aggregate nodes pool their cargo capacity; their traits average out.
-            for (int n = 0; n < _nodeCapacity.Length; n++)
-            {
-                _nodeCapacity[n] = 0;
-                _nodeSpend[n] = 0;
-                _nodeMinMargin[n] = 0;
-                _nodeVehicles[n] = 0;
-                _nodeVehicleCost[n] = Fx.OneRaw;
-                _nodeVehicleDanger[n] = Fx.OneRaw;
-                _nodeGroups[n] = 0;
-            }
-            for (int a = 0; a < _agents.Count; a++)
-            {
-                int n = _agents.Node[a];
-                if (_lod.IsDetailed(n) || _lod.IsDetailed(_agents.Home[a]) || _agents.IsTravelling(a)
-                    || _agents.Mode[a] != (byte)ControlMode.Automated) continue;
-                int trait = _agents.Trait[a];
-                long capacity = Fx.MulIntRaw(Fx.MulIntRaw(_db.Config.MerchantMaxWeight[_agents.Scale[a]], _traits.CapacityRaw[trait]), _vehicleCapacity[_agents.Vehicle[a]]);
-                _nodeVehicles[n] += _vehicleCapacity[_agents.Vehicle[a]];
-                if (_nodeGroups[n] == 0)
-                {
-                    _nodeVehicleCost[n] = 0;
-                    _nodeVehicleDanger[n] = 0;
-                }
-                _nodeVehicleCost[n] += _vehicleCost[_agents.Vehicle[a]];
-                _nodeVehicleDanger[n] += _vehicleDanger[_agents.Vehicle[a]];
-                _nodeGroups[n]++;
-                _nodeCapacity[n] += capacity;
-                _nodeSpend[n] += capacity * _traits.SpendRaw[trait];
-                _nodeMinMargin[n] += capacity * _traits.MinMarginRaw[trait];
-            }
-            for (int n = 0; n < _nodeCapacity.Length; n++)
-            {
-                if (_nodeCapacity[n] <= 0) continue;
-                // Better vehicles dare move a larger share of the stock (DEC-084).
-                _nodeSpend[n] = (Fx.FromRaw(_nodeSpend[n] / _nodeCapacity[n]) * Fx.FromRaw(_nodeVehicles[n] / _nodeGroups[n])).Raw;
-                _nodeVehicleCost[n] /= _nodeGroups[n];
-                _nodeVehicleDanger[n] /= _nodeGroups[n];
-                _nodeMinMargin[n] /= _nodeCapacity[n];
-            }
-
+            PoolIdleGroups();
             PrepareCoins();
             var job = new MerchantFlowJob
             {
@@ -534,6 +522,50 @@ namespace FES.Agents
             if (ForceManaged) job.Execute();
             else job.Schedule().Complete();
             SettleCoins();
+        }
+
+        // Idle automated groups of aggregate nodes pool their cargo capacity; their traits average out.
+        void PoolIdleGroups()
+        {
+            for (int n = 0; n < _nodeCapacity.Length; n++)
+            {
+                _nodeCapacity[n] = 0;
+                _nodeSpend[n] = 0;
+                _nodeMinMargin[n] = 0;
+                _nodeVehicles[n] = 0;
+                _nodeVehicleCost[n] = Fx.OneRaw;
+                _nodeVehicleDanger[n] = Fx.OneRaw;
+                _nodeGroups[n] = 0;
+            }
+            for (int a = 0; a < _agents.Count; a++)
+            {
+                int n = _agents.Node[a];
+                if (_lod.IsDetailed(n) || _lod.IsDetailed(_agents.Home[a]) || _agents.IsTravelling(a)
+                    || _agents.Mode[a] != (byte)ControlMode.Automated) continue;
+                int trait = _agents.Trait[a];
+                long capacity = Fx.MulIntRaw(Fx.MulIntRaw(_db.Config.MerchantMaxWeight[_agents.Scale[a]], _traits.CapacityRaw[trait]), _vehicleCapacity[_agents.Vehicle[a]]);
+                _nodeVehicles[n] += _vehicleCapacity[_agents.Vehicle[a]];
+                if (_nodeGroups[n] == 0)
+                {
+                    _nodeVehicleCost[n] = 0;
+                    _nodeVehicleDanger[n] = 0;
+                }
+                _nodeVehicleCost[n] += _vehicleCost[_agents.Vehicle[a]];
+                _nodeVehicleDanger[n] += _vehicleDanger[_agents.Vehicle[a]];
+                _nodeGroups[n]++;
+                _nodeCapacity[n] += capacity;
+                _nodeSpend[n] += capacity * _traits.SpendRaw[trait];
+                _nodeMinMargin[n] += capacity * _traits.MinMarginRaw[trait];
+            }
+            for (int n = 0; n < _nodeCapacity.Length; n++)
+            {
+                if (_nodeCapacity[n] <= 0) continue;
+                // Better vehicles dare move a larger share of the stock (DEC-084).
+                _nodeSpend[n] = (Fx.FromRaw(_nodeSpend[n] / _nodeCapacity[n]) * Fx.FromRaw(_nodeVehicles[n] / _nodeGroups[n])).Raw;
+                _nodeVehicleCost[n] /= _nodeGroups[n];
+                _nodeVehicleDanger[n] /= _nodeGroups[n];
+                _nodeMinMargin[n] /= _nodeCapacity[n];
+            }
         }
 
         public void Dispose()

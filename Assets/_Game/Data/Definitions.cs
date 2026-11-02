@@ -41,14 +41,33 @@ namespace FES.Data
         /// <summary>Made on request: buyers order it and collect it later (DEC-085).</summary>
         public readonly bool MadeToOrder;
 
-        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, int weight, int size,
-            bool requiresLicense, bool isLuxury = false, bool madeToOrder = false, bool isSemi = false)
+        public GoodDef(GoodId id, string baseKey, int categoryIndex, int basePrice, int baseDemand, in GoodTraits traits)
         {
             Id = id;
             BaseKey = baseKey;
             CategoryIndex = categoryIndex;
             BasePrice = basePrice;
             BaseDemand = baseDemand;
+            Weight = traits.Weight;
+            Size = traits.Size;
+            RequiresLicense = traits.RequiresLicense;
+            IsLuxury = traits.IsLuxury;
+            IsSemi = traits.IsSemi;
+            MadeToOrder = traits.MadeToOrder;
+        }
+
+        public QualityGrade Grade => Id.Grade;
+        public string Key => $"{BaseKey}@{Grade.ToString().ToLowerInvariant()}";
+    }
+
+    /// <summary>What every grade of a base good shares.</summary>
+    public readonly struct GoodTraits
+    {
+        public readonly int Weight, Size;
+        public readonly bool RequiresLicense, IsLuxury, IsSemi, MadeToOrder;
+
+        public GoodTraits(int weight, int size, bool requiresLicense, bool isLuxury, bool isSemi, bool madeToOrder)
+        {
             Weight = weight;
             Size = size;
             RequiresLicense = requiresLicense;
@@ -56,9 +75,6 @@ namespace FES.Data
             IsSemi = isSemi;
             MadeToOrder = madeToOrder;
         }
-
-        public QualityGrade Grade => Id.Grade;
-        public string Key => $"{BaseKey}@{Grade.ToString().ToLowerInvariant()}";
     }
 
     public readonly struct RecipeLine
@@ -145,17 +161,31 @@ namespace FES.Data
         /// <summary>Chance per eligible node per turn, in permille.</summary>
         public readonly int ChancePermille;
 
-        public WorldEventDef(int index, string key, WorldLevel scopeLevel, int categoryIndex, ModifierTarget target,
-            Fx multiplier, int durationTurns, int chancePermille)
+        public WorldEventDef(int index, string key, WorldLevel scopeLevel, int categoryIndex, in EventEffect effect, int chancePermille)
         {
             Index = index;
             Key = key;
             ScopeLevel = scopeLevel;
             CategoryIndex = categoryIndex;
+            Target = effect.Target;
+            Multiplier = effect.Multiplier;
+            DurationTurns = effect.DurationTurns;
+            ChancePermille = chancePermille;
+        }
+    }
+
+    /// <summary>What a world event does while it lasts.</summary>
+    public readonly struct EventEffect
+    {
+        public readonly ModifierTarget Target;
+        public readonly Fx Multiplier;
+        public readonly int DurationTurns;
+
+        public EventEffect(ModifierTarget target, Fx multiplier, int durationTurns)
+        {
             Target = target;
             Multiplier = multiplier;
             DurationTurns = durationTurns;
-            ChancePermille = chancePermille;
         }
     }
 

@@ -11,48 +11,20 @@ namespace FES.World
     {
         public static NodeTable BuildNodes(MapDef map)
         {
-            var byKey = new Dictionary<string, MapNodeDef>(StringComparer.Ordinal);
-            foreach (var n in map.Nodes)
-            {
-                if (string.IsNullOrEmpty(n.Key)) throw new FormatException("Map node with empty key.");
-                if (!byKey.TryAdd(n.Key, n)) throw new FormatException($"Duplicate map node key '{n.Key}'.");
-            }
-            foreach (var n in map.Nodes) Validate(n, byKey);
+            CheckNodes(map);
 
-            // Order level by level; within a level by (parent's new index, key) so the layout is deterministic.
             var ordered = new List<MapNodeDef>(map.Nodes.Count);
             var newIndex = new Dictionary<string, int>(StringComparer.Ordinal);
             var levelStart = new int[WorldLevels.Count];
             var levelCount = new int[WorldLevels.Count];
             for (int l = 0; l < WorldLevels.Count; l++)
             {
-                var level = (WorldLevel)l;
-                var nodes = map.Nodes.FindAll(n => n.Level == level);
-                nodes.Sort((a, b) =>
-                {
-                    int pa = a.Level == WorldLevel.Continent ? -1 : newIndex[a.ParentKey];
-                    int pb = b.Level == WorldLevel.Continent ? -1 : newIndex[b.ParentKey];
-                    return pa != pb ? pa.CompareTo(pb) : string.CompareOrdinal(a.Key, b.Key);
-                });
                 levelStart[l] = ordered.Count;
-                levelCount[l] = nodes.Count;
-                foreach (var n in nodes)
-                {
-                    newIndex.Add(n.Key, ordered.Count);
-                    ordered.Add(n);
-                }
+                levelCount[l] = AddLevelInOrder(map, (WorldLevel)l, ordered, newIndex);
             }
 
             int count = ordered.Count;
-            var keys = new string[count];
-            var names = new string[count];
-            for (int i = 0; i < count; i++)
-            {
-                keys[i] = ordered[i].Key;
-                names[i] = string.IsNullOrEmpty(ordered[i].Name) ? ordered[i].Key : ordered[i].Name;
-            }
-
-            var table = new NodeTable(count, keys, names);
+            var table = NewTable(ordered);
             for (int l = 0; l < WorldLevels.Count; l++) table.SetLevelRange((WorldLevel)l, levelStart[l], levelCount[l]);
 
             var parents = new int[count];
@@ -72,39 +44,79 @@ namespace FES.World
             return table;
         }
 
-        // A town or village is its own core. A larger class names a town or village inside it, or takes its first town,
-        // or else its first village (DEC-101).
+        static void CheckNodes(MapDef map)
+        {
+            var byKey = new Dictionary<string, MapNodeDef>(StringComparer.Ordinal);
+            foreach (var n in map.Nodes)
+            {
+                if (string.IsNullOrEmpty(n.Key)) throw new FormatException("Map node with empty key.");
+                if (!byKey.TryAdd(n.Key, n)) throw new FormatException($"Duplicate map node key '{n.Key}'.");
+            }
+            foreach (var n in map.Nodes) Validate(n, byKey);
+        }
+
+        // Within a level by (parent's new index, key), so the layout is deterministic.
+        static int AddLevelInOrder(MapDef map, WorldLevel level, List<MapNodeDef> ordered, Dictionary<string, int> newIndex)
+        {
+            var nodes = map.Nodes.FindAll(n => n.Level == level);
+            nodes.Sort((a, b) =>
+            {
+                int pa = a.Level == WorldLevel.Continent ? -1 : newIndex[a.ParentKey];
+                int pb = b.Level == WorldLevel.Continent ? -1 : newIndex[b.ParentKey];
+                return pa != pb ? pa.CompareTo(pb) : string.CompareOrdinal(a.Key, b.Key);
+            });
+            foreach (var n in nodes)
+            {
+                newIndex.Add(n.Key, ordered.Count);
+                ordered.Add(n);
+            }
+            return nodes.Count;
+        }
+
+        static NodeTable NewTable(List<MapNodeDef> ordered)
+        {
+            var keys = new string[ordered.Count];
+            var names = new string[ordered.Count];
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                keys[i] = ordered[i].Key;
+                names[i] = string.IsNullOrEmpty(ordered[i].Name) ? ordered[i].Key : ordered[i].Name;
+            }
+            return new NodeTable(ordered.Count, keys, names);
+        }
+
         static void AssignCores(NodeTable table, List<MapNodeDef> ordered, Dictionary<string, int> newIndex)
         {
             for (int i = 0; i < table.Count; i++)
+                table.Core[i] = CoreOf(table, ordered[i], i, newIndex);
+        }
+
+        // A town or village is its own core. A larger class names a town or village inside it, or takes its first town,
+        // or else its first village (DEC-101).
+        static int CoreOf(NodeTable table, MapNodeDef node, int index, Dictionary<string, int> newIndex)
+        {
+            string named = node.CoreKey;
+            if (table.Level[index] >= (byte)WorldLevel.City)
             {
-                if (table.Level[i] >= (byte)WorldLevel.City)
-                {
-                    if (!string.IsNullOrEmpty(ordered[i].CoreKey) && ordered[i].CoreKey != ordered[i].Key)
-                        throw new FormatException($"Node '{ordered[i].Key}': a {table.LevelOf(i)} is its own core.");
-                    table.Core[i] = i;
-                    continue;
-                }
-                int core = -1;
-                string named = ordered[i].CoreKey;
-                if (!string.IsNullOrEmpty(named))
-                {
-                    if (!newIndex.TryGetValue(named, out core) || !table.IsAncestorOrSelf(i, core) || table.Level[core] < (byte)WorldLevel.City)
-                        throw new FormatException($"Node '{ordered[i].Key}': core '{named}' is not a town or village inside it.");
-                }
-                else
-                {
-                    foreach (var level in new[] { WorldLevel.City, WorldLevel.Village })
-                    {
-                        int start = table.LevelStart(level), end = start + table.LevelCount(level);
-                        for (int n = start; n < end && core < 0; n++)
-                            if (table.IsAncestorOrSelf(i, n)) core = n;
-                        if (core >= 0) break;
-                    }
-                    if (core < 0) core = i; // a class with nothing under it yet
-                }
-                table.Core[i] = core;
+                if (!string.IsNullOrEmpty(named) && named != node.Key)
+                    throw new FormatException($"Node '{node.Key}': a {table.LevelOf(index)} is its own core.");
+                return index;
             }
+            if (string.IsNullOrEmpty(named)) return FirstPlaceInside(table, index);
+            if (!newIndex.TryGetValue(named, out int core) || !table.IsAncestorOrSelf(index, core) || table.Level[core] < (byte)WorldLevel.City)
+                throw new FormatException($"Node '{node.Key}': core '{named}' is not a town or village inside it.");
+            return core;
+        }
+
+        static int FirstPlaceInside(NodeTable table, int index)
+        {
+            foreach (var level in new[] { WorldLevel.City, WorldLevel.Village })
+            {
+                int start = table.LevelStart(level), end = start + table.LevelCount(level);
+                for (int n = start; n < end; n++)
+                    if (table.IsAncestorOrSelf(index, n)) return n;
+            }
+            return index; // a class with nothing under it yet
         }
 
         /// <summary>

@@ -96,116 +96,158 @@ namespace FES.Agents
 
         public void Execute()
         {
-            for (int f = 0; f < FacilityNode.Length; f++)
+            for (int f = 0; f < FacilityNode.Length; f++) RunFacility(f);
+        }
+
+        void RunFacility(int f)
+        {
+            FacilityOutputWage[f] = 0;
+            bool detailed = NodeDetail[FacilityNode[f]] == (byte)SimDetail.Detailed;
+            var output = PlannedOutput(f, detailed);
+            long inputCost = InputCost(f, output);
+            FacilityInputCost[f] = inputCost;
+            if (!InputsInStock(f, output, out long cost))
             {
-                FacilityOutputWage[f] = 0;
-                bool detailed = NodeDetail[FacilityNode[f]] == (byte)SimDetail.Detailed;
-                var output = Fx.FromRaw(FacilityEfficiency[f]) * Fx.FromInt(FacilityLevel[f])
-                    * (Fx.One + Fx.FromRaw(ExpansionBonusRaw) * Fx.FromInt(FacilityLevel[f] - 1));
-                if (detailed) output *= DetRandom.For(Seed, Turn, Stream, f).NextSpread(VariancePermille);
-                if (FacilityOwner[f] != OwnerIds.Player)
-                    for (int k = LineStart[f]; k < LineStart[f + 1]; k++)
-                        if (LineIsInput[k] == 0)
-                        {
-                            if (LineCell[k] >= 0) output *= Fx.FromRaw(CellPlan[LineCell[k]]);
-                            break;
-                        }
-                // Aggregate: expected output, no per-facility randomness or decisions.
-
-                int start = LineStart[f], end = LineStart[f + 1];
-                long inputCost = 0;
-                for (int k = start; k < end && LineIsInput[k] != 0; k++)
-                    if (LineCell[k] >= 0) inputCost += Fx.MulIntRaw(LineQuantity[k], output.Raw) * Price[LineCell[k]];
-                FacilityInputCost[f] = inputCost;
-                bool inStock = true;
-                long cost = 0;
-                for (int k = start; k < end && LineIsInput[k] != 0; k++)
-                {
-                    if (LineIsInput[k] == AidLine) continue;
-                    int cell = LineCell[k];
-                    long need = Fx.MulIntRaw(LineQuantity[k], output.Raw);
-                    if (cell < 0 || Stock[cell] < need)
-                    {
-                        inStock = false;
-                        break;
-                    }
-                    cost += need * Price[cell];
-                }
-                if (!inStock)
-                {
-                    // What it could not buy still bids the price up, so merchants bring the input here, as long as
-                    // it could pay and the output would be worth the inputs; that keeps the bid from running away (DEC-078).
-                    long outputValue = 0;
-                    for (int k = start; k < end; k++)
-                        if (LineIsInput[k] == 0 && LineCell[k] >= 0) outputValue += Fx.MulIntRaw(LineQuantity[k], output.Raw) * Price[LineCell[k]];
-                    if (inputCost >= outputValue || inputCost > FacilityCash[f]) continue;
-                    for (int k = start; k < end && LineIsInput[k] != 0; k++)
-                    {
-                        int cell = LineCell[k];
-                        if (cell < 0 || LineIsInput[k] == AidLine) continue;
-                        long need = Fx.MulIntRaw(LineQuantity[k], output.Raw);
-                        if (Stock[cell] < need) InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + need - Stock[cell]);
-                    }
-                    continue;
-                }
-                if (cost > FacilityCash[f]) continue;
-
-                // Tools and seed are all bought or none; without them it works at a lower output, and bids for them (DEC-081).
-                // The bid stays within the output's worth and the cash, as for inputs (DEC-078).
-                bool hasAids = false, aided = true;
-                long aidCost = 0, aidValue = 0, outputWorth = 0;
-                for (int k = start; k < end; k++)
-                {
-                    if (LineCell[k] < 0) continue;
-                    long worth = Fx.MulIntRaw(LineQuantity[k], output.Raw) * Price[LineCell[k]];
-                    if (LineIsInput[k] == AidLine) aidValue += worth;
-                    else if (LineIsInput[k] == 0) outputWorth += worth;
-                }
-                bool mayBid = aidValue < outputWorth && cost + aidValue <= FacilityCash[f];
-                for (int k = start; k < end && LineIsInput[k] != 0; k++)
-                {
-                    if (LineIsInput[k] != AidLine) continue;
-                    hasAids = true;
-                    int cell = LineCell[k];
-                    long need = Fx.MulIntRaw(LineQuantity[k], output.Raw);
-                    if (cell < 0 || Stock[cell] < need)
-                    {
-                        aided = false;
-                        if (cell >= 0 && mayBid) InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + need - Stock[cell]);
-                    }
-                    else aidCost += need * Price[cell];
-                }
-                if (cost + aidCost > FacilityCash[f]) aided = false;
-                if (aided) cost += aidCost;
-                FacilityCash[f] -= cost;
-                Float[NodeFloat[FacilityNode[f]]] += cost;
-
-                bool playerOwned = FacilityOwner[f] == OwnerIds.Player;
-                for (int k = start; k < end; k++)
-                {
-                    int cell = LineCell[k];
-                    long quantity = Fx.MulIntRaw(LineQuantity[k], output.Raw);
-                    if (LineIsInput[k] == AidLine && !aided) continue;
-                    if (LineIsInput[k] != 0)
-                    {
-                        Stock[cell] -= (int)quantity;
-                        Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + quantity);
-                        Demand[cell] = MarketStore.ClampToNonNegativeInt(Demand[cell] + quantity);
-                        continue;
-                    }
-
-                    quantity = Fx.MulIntRaw(quantity, LineOutputMul[k]);
-                    if (hasAids && !aided) quantity = Fx.MulIntRaw(quantity, UnaidedOutputRaw);
-                    long upgraded = 0;
-                    if (LineUpGood[k] >= 0)
-                    {
-                        if (!detailed) upgraded = Fx.MulIntRaw(quantity, GradeUpChanceRaw);
-                        else if (DetRandom.For(Seed, Turn, GradeStream, f, (uint)k).NextFx01().Raw < GradeUpChanceRaw) upgraded = quantity;
-                        Emit(f, LineUpGood[k], LineUpCell[k], LineUpModifier[k], upgraded, playerOwned);
-                    }
-                    Emit(f, LineGood[k], cell, LineModifier[k], quantity - upgraded, playerOwned);
-                }
+                BidForInputs(f, output, inputCost);
+                return;
             }
+            if (cost > FacilityCash[f]) return;
+
+            bool aided = TryAids(f, output, cost, out bool hasAids, out long aidCost);
+            if (cost + aidCost > FacilityCash[f]) aided = false;
+            if (aided) cost += aidCost;
+            FacilityCash[f] -= cost;
+            Float[NodeFloat[FacilityNode[f]]] += cost;
+            MakeGoods(f, output, detailed, aided, hasAids && !aided);
+        }
+
+        // Aggregate: expected output, no per-facility randomness or decisions.
+        Fx PlannedOutput(int f, bool detailed)
+        {
+            var output = Fx.FromRaw(FacilityEfficiency[f]) * Fx.FromInt(FacilityLevel[f])
+                * (Fx.One + Fx.FromRaw(ExpansionBonusRaw) * Fx.FromInt(FacilityLevel[f] - 1));
+            if (detailed) output *= DetRandom.For(Seed, Turn, Stream, f).NextSpread(VariancePermille);
+            if (FacilityOwner[f] == OwnerIds.Player) return output;
+            for (int k = LineStart[f]; k < LineStart[f + 1]; k++)
+            {
+                if (LineIsInput[k] != 0) continue;
+                if (LineCell[k] >= 0) output *= Fx.FromRaw(CellPlan[LineCell[k]]);
+                break;
+            }
+            return output;
+        }
+
+        long Units(int k, Fx output) => Fx.MulIntRaw(LineQuantity[k], output.Raw);
+
+        long InputCost(int f, Fx output)
+        {
+            long cost = 0;
+            for (int k = LineStart[f]; k < LineStart[f + 1] && LineIsInput[k] != 0; k++)
+                if (LineCell[k] >= 0) cost += Units(k, output) * Price[LineCell[k]];
+            return cost;
+        }
+
+        bool InputsInStock(int f, Fx output, out long cost)
+        {
+            cost = 0;
+            for (int k = LineStart[f]; k < LineStart[f + 1] && LineIsInput[k] != 0; k++)
+            {
+                if (LineIsInput[k] == AidLine) continue;
+                int cell = LineCell[k];
+                long need = Units(k, output);
+                if (cell < 0 || Stock[cell] < need) return false;
+                cost += need * Price[cell];
+            }
+            return true;
+        }
+
+        // What it could not buy still bids the price up, so merchants bring the input here, as long as
+        // it could pay and the output would be worth the inputs; that keeps the bid from running away (DEC-078).
+        void BidForInputs(int f, Fx output, long inputCost)
+        {
+            int start = LineStart[f], end = LineStart[f + 1];
+            long outputValue = 0;
+            for (int k = start; k < end; k++)
+                if (LineIsInput[k] == 0 && LineCell[k] >= 0) outputValue += Units(k, output) * Price[LineCell[k]];
+            if (inputCost >= outputValue || inputCost > FacilityCash[f]) return;
+            for (int k = start; k < end && LineIsInput[k] != 0; k++)
+            {
+                int cell = LineCell[k];
+                if (cell < 0 || LineIsInput[k] == AidLine) continue;
+                long need = Units(k, output);
+                if (Stock[cell] < need) InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + need - Stock[cell]);
+            }
+        }
+
+        // Tools and seed are all bought or none; without them it works at a lower output, and bids for them (DEC-081).
+        // The bid stays within the output's worth and the cash, as for inputs (DEC-078). Returns whether they are all there.
+        bool TryAids(int f, Fx output, long cost, out bool hasAids, out long aidCost)
+        {
+            int start = LineStart[f], end = LineStart[f + 1];
+            bool aided = true;
+            hasAids = false;
+            aidCost = 0;
+            bool mayBid = AidsAreWorthIt(f, output, cost);
+            for (int k = start; k < end && LineIsInput[k] != 0; k++)
+            {
+                if (LineIsInput[k] != AidLine) continue;
+                hasAids = true;
+                int cell = LineCell[k];
+                long need = Units(k, output);
+                if (cell < 0 || Stock[cell] < need)
+                {
+                    aided = false;
+                    if (cell >= 0 && mayBid) InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + need - Stock[cell]);
+                }
+                else aidCost += need * Price[cell];
+            }
+            return aided;
+        }
+
+        bool AidsAreWorthIt(int f, Fx output, long cost)
+        {
+            long aidValue = 0, outputWorth = 0;
+            for (int k = LineStart[f]; k < LineStart[f + 1]; k++)
+            {
+                if (LineCell[k] < 0) continue;
+                long worth = Units(k, output) * Price[LineCell[k]];
+                if (LineIsInput[k] == AidLine) aidValue += worth;
+                else if (LineIsInput[k] == 0) outputWorth += worth;
+            }
+            return aidValue < outputWorth && cost + aidValue <= FacilityCash[f];
+        }
+
+        void MakeGoods(int f, Fx output, bool detailed, bool aided, bool unaided)
+        {
+            for (int k = LineStart[f]; k < LineStart[f + 1]; k++)
+            {
+                long quantity = Units(k, output);
+                if (LineIsInput[k] == AidLine && !aided) continue;
+                if (LineIsInput[k] != 0) UseInput(LineCell[k], quantity);
+                else MakeOutput(f, k, quantity, detailed, unaided);
+            }
+        }
+
+        void UseInput(int cell, long quantity)
+        {
+            Stock[cell] -= (int)quantity;
+            Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + quantity);
+            Demand[cell] = MarketStore.ClampToNonNegativeInt(Demand[cell] + quantity);
+        }
+
+        void MakeOutput(int f, int k, long quantity, bool detailed, bool unaided)
+        {
+            bool playerOwned = FacilityOwner[f] == OwnerIds.Player;
+            quantity = Fx.MulIntRaw(quantity, LineOutputMul[k]);
+            if (unaided) quantity = Fx.MulIntRaw(quantity, UnaidedOutputRaw);
+            long upgraded = 0;
+            if (LineUpGood[k] >= 0)
+            {
+                if (!detailed) upgraded = Fx.MulIntRaw(quantity, GradeUpChanceRaw);
+                else if (DetRandom.For(Seed, Turn, GradeStream, f, (uint)k).NextFx01().Raw < GradeUpChanceRaw) upgraded = quantity;
+                Emit(f, LineUpGood[k], LineUpCell[k], LineUpModifier[k], upgraded, playerOwned);
+            }
+            Emit(f, LineGood[k], LineCell[k], LineModifier[k], quantity - upgraded, playerOwned);
         }
 
         static long Min(long a, long b) => a < b ? a : b;
@@ -224,48 +266,47 @@ namespace FES.Agents
                 PlayerOutputCell.Add(cell);
                 PlayerOutputQuantity.Add(clamped);
             }
-            else if (cell >= 0)
-            {
-                // All of it reaches the market; the producer is paid only as far as the traders can pay (DEC-061),
-                // from what the float keeps free of this week's merchants.
-                int traders = NodeFloat[FacilityNode[f]];
-                long worth = clamped * Price[cell];
-                worth -= Fx.MulIntRaw(worth, SpreadRaw);
-                long paid = worth;
-                long payable = Float[traders] - FloatReserve[traders];
-                if (paid > payable) paid = payable > 0 ? payable : 0;
-                Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
-                FacilityCash[f] += paid;
-                Float[traders] -= paid;
-                if (BillProducers && FacilityOwner[f] != OwnerIds.Player) // only bonds are open to the player (DEC-102)
-                {
-                    long face = Min(worth - paid, BillRoom[traders]);
-                    if (face > 0)
-                    {
-                        BillRoom[traders] -= face;
-                        long discounted = face - Fx.MulIntRaw(face, BillDiscountRaw);
-                        bool bank = BillBankRoom[traders] >= discounted;
-                        BillHolder.Add(bank ? BillHolders.Bank : BillHolders.Facility(f));
-                        BillPurse.Add(traders);
-                        BillFace.Add(face);
-                        BillDue.Add(Turn + BillWeeks);
-                        if (bank)
-                        {
-                            BillBankRoom[traders] -= discounted;
-                            BillBankSpent[traders] += discounted;
-                            FacilityCash[f] += discounted;
-                        }
-                    }
-                }
-                long rate = SubsidyRate[traders * GoodCount + good];
-                if (rate > 0)
-                {
-                    long grant = Fx.MulIntRaw(clamped * Price[cell], rate);
-                    if (grant > SubsidyLeft[traders]) grant = SubsidyLeft[traders];
-                    FacilityCash[f] += grant;
-                    SubsidyLeft[traders] -= grant;
-                }
-            }
+            else if (cell >= 0) SellToMarket(f, good, cell, clamped);
+        }
+
+        // All of it reaches the market; the producer is paid only as far as the traders can pay (DEC-061),
+        // from what the float keeps free of this week's merchants.
+        void SellToMarket(int f, int good, int cell, int clamped)
+        {
+            int traders = NodeFloat[FacilityNode[f]];
+            long worth = clamped * Price[cell];
+            worth -= Fx.MulIntRaw(worth, SpreadRaw);
+            long paid = worth;
+            long payable = Float[traders] - FloatReserve[traders];
+            if (paid > payable) paid = payable > 0 ? payable : 0;
+            Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + clamped);
+            FacilityCash[f] += paid;
+            Float[traders] -= paid;
+            if (BillProducers && FacilityOwner[f] != OwnerIds.Player) // only bonds are open to the player (DEC-102)
+                TakeBill(f, traders, worth - paid);
+            long rate = SubsidyRate[traders * GoodCount + good];
+            if (rate <= 0) return;
+            long grant = Fx.MulIntRaw(clamped * Price[cell], rate);
+            if (grant > SubsidyLeft[traders]) grant = SubsidyLeft[traders];
+            FacilityCash[f] += grant;
+            SubsidyLeft[traders] -= grant;
+        }
+
+        void TakeBill(int f, int traders, long unpaid)
+        {
+            long face = Min(unpaid, BillRoom[traders]);
+            if (face <= 0) return;
+            BillRoom[traders] -= face;
+            long discounted = face - Fx.MulIntRaw(face, BillDiscountRaw);
+            bool bank = BillBankRoom[traders] >= discounted;
+            BillHolder.Add(bank ? BillHolders.Bank : BillHolders.Facility(f));
+            BillPurse.Add(traders);
+            BillFace.Add(face);
+            BillDue.Add(Turn + BillWeeks);
+            if (!bank) return;
+            BillBankRoom[traders] -= discounted;
+            BillBankSpent[traders] += discounted;
+            FacilityCash[f] += discounted;
         }
     }
 

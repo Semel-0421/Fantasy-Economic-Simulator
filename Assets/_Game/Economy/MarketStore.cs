@@ -149,21 +149,7 @@ namespace FES.Economy
     {
         public static MarketStore Build(NodeTable nodes, GameDatabase db, NodeSpecialties specialties)
         {
-            // Every market of a level carries the same goods, so resolve the profile once per level.
-            var goodsPerLevel = new List<int>[WorldLevels.Count];
-            for (int l = 0; l < WorldLevels.Count; l++)
-            {
-                goodsPerLevel[l] = new List<int>();
-                foreach (var good in db.Goods)
-                {
-                    foreach (var rule in db.MarketProfiles)
-                    {
-                        if ((int)rule.Level != l || !rule.Matches(good)) continue;
-                        goodsPerLevel[l].Add(good.Id.Value);
-                        break;
-                    }
-                }
-            }
+            var goodsPerLevel = GoodsPerLevel(db);
 
             var gradeMaskPerLevel = new int[WorldLevels.Count];
             foreach (var rule in db.MarketProfiles) gradeMaskPerLevel[(int)rule.Level] |= rule.GradeMask;
@@ -174,21 +160,56 @@ namespace FES.Economy
             for (int n = 0; n < nodes.Count; n++)
             {
                 var goods = goodsPerLevel[nodes.Level[n]];
-                if (specialties.Count[n] > 0)
-                {
-                    var merged = new SortedSet<int>(goods);
-                    int mask = gradeMaskPerLevel[nodes.Level[n]];
-                    for (int k = specialties.Start[n]; k < specialties.Start[n] + specialties.Count[n]; k++)
-                        for (int g = 0; g < QualityGrades.Count; g++)
-                            if ((mask & (1 << g)) != 0) merged.Add(GoodId.From(specialties.BaseGood[k], (QualityGrade)g).Value);
-                    goods = new List<int>(merged);
-                }
+                if (specialties.Count[n] > 0) goods = WithSpecialties(goods, specialties, n, gradeMaskPerLevel[nodes.Level[n]]);
                 goodsPerNode[n] = goods;
                 cells += goods.Count;
             }
             if (cells > int.MaxValue) throw new InvalidOperationException("Market cell count exceeds int range.");
 
             var store = new MarketStore(nodes.Count, (int)cells, db.GoodCount);
+            FillGoods(store, db);
+            int cell = 0;
+            for (int n = 0; n < nodes.Count; n++)
+            {
+                store.MarketCellStart[n] = cell;
+                store.MarketCellCount[n] = goodsPerNode[n].Count;
+                foreach (int g in goodsPerNode[n])
+                    FillCell(store, cell++, g, db, specialties.IsSpecialty(n, new GoodId(g).BaseIndex));
+            }
+            return store;
+        }
+
+        // Every market of a level carries the same goods, so resolve the profile once per level.
+        static List<int>[] GoodsPerLevel(GameDatabase db)
+        {
+            var goodsPerLevel = new List<int>[WorldLevels.Count];
+            for (int l = 0; l < WorldLevels.Count; l++)
+            {
+                goodsPerLevel[l] = new List<int>();
+                foreach (var good in db.Goods)
+                    if (CarriedAt(db, good, l)) goodsPerLevel[l].Add(good.Id.Value);
+            }
+            return goodsPerLevel;
+        }
+
+        static bool CarriedAt(GameDatabase db, GoodDef good, int level)
+        {
+            foreach (var rule in db.MarketProfiles)
+                if ((int)rule.Level == level && rule.Matches(good)) return true;
+            return false;
+        }
+
+        static List<int> WithSpecialties(List<int> goods, NodeSpecialties specialties, int node, int gradeMask)
+        {
+            var merged = new SortedSet<int>(goods);
+            for (int k = specialties.Start[node]; k < specialties.Start[node] + specialties.Count[node]; k++)
+                for (int g = 0; g < QualityGrades.Count; g++)
+                    if ((gradeMask & (1 << g)) != 0) merged.Add(GoodId.From(specialties.BaseGood[k], (QualityGrade)g).Value);
+            return new List<int>(merged);
+        }
+
+        static void FillGoods(MarketStore store, GameDatabase db)
+        {
             for (int g = 0; g < db.GoodCount; g++)
             {
                 store.GoodBasePrice[g] = db.Goods[g].BasePrice;
@@ -197,26 +218,16 @@ namespace FES.Economy
                 store.GoodWeight[g] = db.Goods[g].Weight;
                 store.GoodSize[g] = db.Goods[g].Size;
             }
+        }
 
-            int cell = 0;
-            for (int n = 0; n < nodes.Count; n++)
-            {
-                var goods = goodsPerNode[n];
-                store.MarketCellStart[n] = cell;
-                store.MarketCellCount[n] = goods.Count;
-                foreach (int g in goods)
-                {
-                    bool specialty = specialties.IsSpecialty(n, new GoodId(g).BaseIndex);
-                    var anchor = specialty ? db.Config.SpecialtyPriceMultiplier : Fx.One;
-                    int price = (int)Math.Max(1, anchor.MulInt(db.Goods[g].BasePrice));
-                    store.CellGood[cell] = g;
-                    store.CellSpecialty[cell] = (byte)(specialty ? 1 : 0);
-                    store.Price[cell] = price;
-                    store.PrevPrice[cell] = price;
-                    cell++;
-                }
-            }
-            return store;
+        static void FillCell(MarketStore store, int cell, int good, GameDatabase db, bool specialty)
+        {
+            var anchor = specialty ? db.Config.SpecialtyPriceMultiplier : Fx.One;
+            int price = (int)Math.Max(1, anchor.MulInt(db.Goods[good].BasePrice));
+            store.CellGood[cell] = good;
+            store.CellSpecialty[cell] = (byte)(specialty ? 1 : 0);
+            store.Price[cell] = price;
+            store.PrevPrice[cell] = price;
         }
     }
 }

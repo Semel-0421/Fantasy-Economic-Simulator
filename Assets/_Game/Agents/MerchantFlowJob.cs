@@ -86,36 +86,43 @@ namespace FES.Agents
         {
             for (int n = 0; n < NodeDetail.Length; n++)
             {
-                if (NodeDetail[n] == (byte)SimDetail.Detailed || NodeCapacity[n] <= 0) continue;
-                int first = OutStart[n], last = first + OutCount[n];
-                int routes = 0;
-                for (int k = first; k < last; k++)
-                    if (CrossFlowRaw > 0 || NodeContinent[RouteTo[RouteIndex[k]]] == NodeContinent[n]) routes++;
-                if (routes == 0) continue;
-                for (int k = first; k < last; k++)
-                {
-                    int r = RouteIndex[k];
-                    RouteBudget[r] = CrossFlowRaw <= 0 && NodeContinent[RouteTo[r]] != NodeContinent[n]
-                        ? 0
-                        : NodeCapacity[n] / ((long)routes * Math.Max(1, RouteTurns[r]));
-                }
-
+                if (NodeDetail[n] == (byte)SimDetail.Detailed || NodeCapacity[n] <= 0 || !ShareCapacity(n)) continue;
                 // Most cells hold no stock: scan the node's cells once and look up each destination's cell.
                 int cellEnd = MarketCellStart[n] + MarketCellCount[n];
-                for (int c = MarketCellStart[n]; c < cellEnd; c++)
-                {
-                    for (int k = first; k < last && Stock[c] > 0; k++)
-                    {
-                        int r = RouteIndex[k];
-                        if (RouteBudget[r] <= 0) continue;
-                        int to = RouteTo[r];
-                        int toCell = FindCell(to, CellGood[c]);
-                        if (toCell < 0) continue;
-                        long budget = RouteBudget[r];
-                        Move(n, c, toCell, CellGood[c], to, Fx.RoundShift(RouteCostPerUnitRaw[r] * NodeVehicleCostRaw[n]), Fx.RoundShift(RouteExpectedLoss[r] * NodeVehicleDangerRaw[n]), ref budget);
-                        RouteBudget[r] = budget;
-                    }
-                }
+                for (int c = MarketCellStart[n]; c < cellEnd; c++) MoveCell(n, c);
+            }
+        }
+
+        // Each route open to the node's groups gets its part of their capacity, less the longer it takes. False when none is open.
+        bool ShareCapacity(int n)
+        {
+            int first = OutStart[n], last = first + OutCount[n];
+            int routes = 0;
+            for (int k = first; k < last; k++)
+                if (CrossFlowRaw > 0 || NodeContinent[RouteTo[RouteIndex[k]]] == NodeContinent[n]) routes++;
+            if (routes == 0) return false;
+            for (int k = first; k < last; k++)
+            {
+                int r = RouteIndex[k];
+                RouteBudget[r] = CrossFlowRaw <= 0 && NodeContinent[RouteTo[r]] != NodeContinent[n]
+                    ? 0
+                    : NodeCapacity[n] / ((long)routes * Math.Max(1, RouteTurns[r]));
+            }
+            return true;
+        }
+
+        void MoveCell(int n, int c)
+        {
+            int first = OutStart[n], last = first + OutCount[n];
+            for (int k = first; k < last && Stock[c] > 0; k++)
+            {
+                int r = RouteIndex[k];
+                if (RouteBudget[r] <= 0) continue;
+                int toCell = FindCell(RouteTo[r], CellGood[c]);
+                if (toCell < 0) continue;
+                long budget = RouteBudget[r];
+                Move(n, c, toCell, r, ref budget);
+                RouteBudget[r] = budget;
             }
         }
 
@@ -133,64 +140,95 @@ namespace FES.Agents
             return -1;
         }
 
-        void Move(int from, int fromCell, int toCell, int good, int to, long perUnitRaw, long expectedLossRaw, ref long budget)
+        void Move(int from, int fromCell, int toCell, int r, ref long budget)
         {
-            int fromCoin = NodeContinent[from], toCoin = NodeContinent[to];
-            bool cross = fromCoin != toCoin;
-            long sell = Price[toCell];
-            // Valued in the origin's coin, after the exchange fee.
-            if (cross)
-            {
-                sell = Fx.MulIntRaw(sell, CoinRateRaw[toCoin * ContinentCount + fromCoin]);
-                sell -= Fx.MulIntRaw(sell, ExchangeFeeRaw);
-                if (sell <= 0) return;
-            }
-            long rate = Tariff[to];
-            if (NodeCategorySpecialty[to * CategoryCount + GoodCategory[good]] != 0) rate += SpecialtySurcharge[to];
-            long marginRaw = ((sell - Price[fromCell] - Fx.MulIntRaw(sell, rate)) << Fx.FractionBits) - perUnitRaw;
+            int to = RouteTo[r], good = CellGood[fromCell];
+            bool cross = NodeContinent[from] != NodeContinent[to];
+            long sell = InOriginCoin(from, to, Price[toCell]);
+            if (cross && sell <= 0) return;
+            long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * NodeVehicleCostRaw[from]);
+            long marginRaw = ((sell - Price[fromCell] - Fx.MulIntRaw(sell, TollRate(to, good))) << Fx.FractionBits) - perUnitRaw;
             if (marginRaw <= 0 || Stock[fromCell] <= 0 || marginRaw < NodeMinMarginRaw[from] * Price[fromCell]) return;
 
+            long buy = Price[fromCell];
+            long pay = PayInDestinationCoin(from, to, buy);
+            long quantity = FlowQuantity(from, fromCell, to, sell, marginRaw, budget);
+            quantity = WithinCoins(from, to, quantity, buy, pay);
+            if (quantity <= 0) return;
+            budget -= quantity * GoodWeight[good];
+            Settle(from, to, quantity, buy, pay);
+            if (WageRaw > 0) PayWage(from, to, Fx.MulIntRaw(Fx.MulIntRaw(quantity, marginRaw), WageRaw));
+
+            long expectedLossRaw = Fx.RoundShift(RouteExpectedLoss[r] * NodeVehicleDangerRaw[from]);
+            Stock[fromCell] -= (int)quantity;
+            Supply[fromCell] = MarketStore.ClampToNonNegativeInt(Supply[fromCell] + quantity);
+            Demand[fromCell] = MarketStore.ClampToNonNegativeInt(Demand[fromCell] + quantity);
+            Supply[toCell] = MarketStore.ClampToNonNegativeInt(Supply[toCell] + quantity - Fx.MulIntRaw(quantity, expectedLossRaw));
+        }
+
+        // A price at the destination, valued in the origin's coin after the exchange fee.
+        long InOriginCoin(int from, int to, long price)
+        {
+            int fromCoin = NodeContinent[from], toCoin = NodeContinent[to];
+            if (fromCoin == toCoin) return price;
+            long value = Fx.MulIntRaw(price, CoinRateRaw[toCoin * ContinentCount + fromCoin]);
+            return value - Fx.MulIntRaw(value, ExchangeFeeRaw);
+        }
+
+        long PayInDestinationCoin(int from, int to, long buy)
+        {
+            int fromCoin = NodeContinent[from], toCoin = NodeContinent[to];
+            if (fromCoin == toCoin) return buy;
+            long pay = Fx.MulIntRaw(buy, CoinRateRaw[fromCoin * ContinentCount + toCoin]);
+            return pay + Fx.MulIntRaw(pay, ExchangeFeeRaw);
+        }
+
+        long TollRate(int to, int good)
+        {
+            long rate = Tariff[to];
+            if (NodeCategorySpecialty[to * CategoryCount + GoodCategory[good]] != 0) rate += SpecialtySurcharge[to];
+            return rate;
+        }
+
+        long FlowQuantity(int from, int fromCell, int to, long sell, long marginRaw, long budget)
+        {
+            int good = CellGood[fromCell];
             long quantity = Fx.MulIntRaw(Stock[fromCell], Fx.RoundShift(FlowShareRaw * NodeSpendRaw[from])) * marginRaw / (sell << Fx.FractionBits);
             if (Licensed[NodeLicenseRow[to] * BaseGoodCount + good / QualityGrades.Count] != 0) quantity = Fx.MulIntRaw(quantity, LicensedShareRaw);
             if (GoodWeight[good] > 0) quantity = Math.Min(quantity, budget / GoodWeight[good]);
-            if (cross) quantity = Fx.MulIntRaw(quantity, CrossFlowRaw);
-            quantity = Math.Min(quantity, Stock[fromCell]); // good vehicles can ask for more than there is
+            if (NodeContinent[from] != NodeContinent[to]) quantity = Fx.MulIntRaw(quantity, CrossFlowRaw);
+            return Math.Min(quantity, Stock[fromCell]); // good vehicles can ask for more than there is
+        }
+
+        long WithinCoins(int from, int to, long quantity, long buy, long pay)
+        {
+            if (NodeContinent[from] != NodeContinent[to] && buy > 0)
+                quantity = Math.Min(quantity, Math.Max(0, International[NodeContinent[from]]) / buy);
+            int payer = NodeFloat[to];
+            if (payer != NodeFloat[from] && pay > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / pay);
+            return quantity;
+        }
+
+        void Settle(int from, int to, long quantity, long buy, long pay)
+        {
             int payer = NodeFloat[to], payee = NodeFloat[from];
-            long buy = Price[fromCell];
-            long pay = buy;
-            if (cross)
-            {
-                pay = Fx.MulIntRaw(buy, CoinRateRaw[fromCoin * ContinentCount + toCoin]);
-                pay += Fx.MulIntRaw(pay, ExchangeFeeRaw);
-                if (buy > 0) quantity = Math.Min(quantity, Math.Max(0, International[fromCoin]) / buy);
-            }
-            if (payer != payee && pay > 0) quantity = Math.Min(quantity, Math.Max(0, Float[payer]) / pay);
-            if (quantity <= 0) return;
-            budget -= quantity * GoodWeight[good];
             if (payer != payee)
             {
                 Float[payer] -= quantity * pay;
                 Float[payee] += quantity * buy;
                 Imports[payer] += quantity * pay;
             }
-            if (cross)
-            {
-                International[toCoin] += quantity * pay;
-                International[fromCoin] -= quantity * buy;
-            }
-            if (WageRaw > 0)
-            {
-                int purse = cross ? payee : payer;
-                long wage = Fx.MulIntRaw(Fx.MulIntRaw(quantity, marginRaw), WageRaw);
-                if (wage > Float[purse]) wage = Float[purse] > 0 ? Float[purse] : 0;
-                Float[purse] -= wage;
-                HouseholdCash[from] += wage;
-            }
+            if (NodeContinent[from] == NodeContinent[to]) return;
+            International[NodeContinent[to]] += quantity * pay;
+            International[NodeContinent[from]] -= quantity * buy;
+        }
 
-            Stock[fromCell] -= (int)quantity;
-            Supply[fromCell] = MarketStore.ClampToNonNegativeInt(Supply[fromCell] + quantity);
-            Demand[fromCell] = MarketStore.ClampToNonNegativeInt(Demand[fromCell] + quantity);
-            Supply[toCell] = MarketStore.ClampToNonNegativeInt(Supply[toCell] + quantity - Fx.MulIntRaw(quantity, expectedLossRaw));
+        void PayWage(int from, int to, long wage)
+        {
+            int purse = NodeContinent[from] != NodeContinent[to] ? NodeFloat[from] : NodeFloat[to];
+            if (wage > Float[purse]) wage = Float[purse] > 0 ? Float[purse] : 0;
+            Float[purse] -= wage;
+            HouseholdCash[from] += wage;
         }
     }
 }

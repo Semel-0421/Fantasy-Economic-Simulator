@@ -44,28 +44,29 @@ namespace FES.Agents
             {
                 if (_agents.Owner[a] != OwnerIds.Npc) continue;
                 int association = _agents.Association[a];
-                if (association < 0)
-                {
-                    if (year && DetRandom.For(ctx.Seed, ctx.Turn, JoinStream, a).NextFx01().Raw < _config.MerchantJoinShare.Raw)
-                        _agents.Association[a] = Find(_agents.Home[a]);
-                    continue;
-                }
-                long start = _config.MerchantStartCash[_agents.Scale[a]];
-                if (year && _agents.Cash[a] > start)
-                {
-                    long fee = _config.MerchantMemberFee.MulInt(_agents.Cash[a] - start);
-                    _agents.Cash[a] -= fee;
-                    ctx.World.Get<MerchantTripStats>().SpentFeesToAssociations += fee;
-                    _groups.Cash[association] += fee;
-                }
-                long floor = _config.MerchantSupportFloor.MulInt(start);
-                if (_agents.Cash[a] >= floor) continue;
-                long grant = Math.Min(floor - _agents.Cash[a], _config.MerchantSupportShare.MulInt(Math.Max(0, _groups.Cash[association])));
-                if (grant <= 0) continue;
-                _groups.Cash[association] -= grant;
-                _agents.Cash[a] += grant;
-                ctx.World.Get<IncomeTaxState>().MoveMerchantCapital(a, grant);
+                if (association >= 0) DealWithAssociation(ctx, a, association, year);
+                else if (year && DetRandom.For(ctx.Seed, ctx.Turn, JoinStream, a).NextFx01().Raw < _config.MerchantJoinShare.Raw)
+                    _agents.Association[a] = Find(_agents.Home[a]);
             }
+        }
+
+        void DealWithAssociation(SimContext ctx, int a, int association, bool year)
+        {
+            long start = _config.MerchantStartCash[_agents.Scale[a]];
+            if (year && _agents.Cash[a] > start)
+            {
+                long fee = _config.MerchantMemberFee.MulInt(_agents.Cash[a] - start);
+                _agents.Cash[a] -= fee;
+                ctx.World.Get<MerchantTripStats>().SpentFeesToAssociations += fee;
+                _groups.Cash[association] += fee;
+            }
+            long floor = _config.MerchantSupportFloor.MulInt(start);
+            if (_agents.Cash[a] >= floor) return;
+            long grant = Math.Min(floor - _agents.Cash[a], _config.MerchantSupportShare.MulInt(Math.Max(0, _groups.Cash[association])));
+            if (grant <= 0) return;
+            _groups.Cash[association] -= grant;
+            _agents.Cash[a] += grant;
+            ctx.World.Get<IncomeTaxState>().MoveMerchantCapital(a, grant);
         }
 
         int Find(int home)

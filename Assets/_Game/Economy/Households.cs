@@ -353,6 +353,12 @@ namespace FES.Economy
             (c.NecessityElasticity * DemandCurve.QuintileSensitivity(c.QuintileIncomeShare[q])).Raw;
     }
 
+    /// <summary>What a cell's households want in a week: all units, necessity units at the anchor price, necessity units at this price.</summary>
+    public struct WeeklyWish
+    {
+        public long Units, Wanted, Met;
+    }
+
     /// <summary>
     /// One market cell's weekly household consumption (SYS-MARKETS, DEC-048 to DEC-050): the base demand
     /// (already weighted by level and modifiers) split into a necessity part, bought per head with each income
@@ -380,15 +386,13 @@ namespace FES.Economy
             if (good.BaseDemand <= 0) return 0;
             long weekly = CellBase(good.BaseDemand, good.BasePrice, config.LevelDemandWeight[level].Raw, Fx.OneRaw, priceIndex, out long anchor);
             return Weekly(p, weekly, (int)Math.Min(anchor, int.MaxValue), anchor, config.LuxuryShare(good).Raw,
-                households.NecessityWeight(node, level, config).Raw, households.LuxuryWeight(node, level, config).Raw, out _, out _);
+                households.NecessityWeight(node, level, config).Raw, households.LuxuryWeight(node, level, config).Raw).Units;
         }
 
         /// <param name="luxuryShare">How far the good is bought like a luxury (raw Q16, 0..1).</param>
         /// <param name="necessityWeight">The market households' necessity weight (raw Q16), see <see cref="HouseholdState"/>.</param>
-        /// <param name="wanted">Necessity units wanted at the anchor price.</param>
-        /// <param name="met">Necessity units demanded at this price.</param>
-        public static long Weekly(in DemandParams p, long weeklyAtAnchor, int price, long anchor,
-            long luxuryShare, long necessityWeight, long luxuryWeight, out long wanted, out long met)
+        public static WeeklyWish Weekly(in DemandParams p, long weeklyAtAnchor, int price, long anchor,
+            long luxuryShare, long necessityWeight, long luxuryWeight)
         {
             if (anchor < 1) anchor = 1;
             long excess = ((price - anchor) << Fx.FractionBits) / anchor;
@@ -407,9 +411,12 @@ namespace FES.Economy
             long necessityAtAnchor = Fx.RoundShift(necessityShare * necessityWeight);
             long necessityPart = Fx.RoundShift(necessityAtAnchor * necessity);
             long luxuryPart = Fx.RoundShift(Fx.RoundShift(luxuryShare * luxuryWeight) * luxury);
-            wanted = Fx.RoundShift(weeklyAtAnchor * necessityAtAnchor);
-            met = Fx.RoundShift(weeklyAtAnchor * necessityPart);
-            return Fx.RoundShift(weeklyAtAnchor * (necessityPart + luxuryPart));
+            return new WeeklyWish
+            {
+                Wanted = Fx.RoundShift(weeklyAtAnchor * necessityAtAnchor),
+                Met = Fx.RoundShift(weeklyAtAnchor * necessityPart),
+                Units = Fx.RoundShift(weeklyAtAnchor * (necessityPart + luxuryPart)),
+            };
         }
     }
 

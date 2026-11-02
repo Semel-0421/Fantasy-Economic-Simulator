@@ -348,10 +348,20 @@ namespace FES.Agents
         /// </summary>
         void Seize(SimContext ctx, int r)
         {
+            SeizeDeposits(ctx, r);
+            SeizeStoredCargo(ctx, r);
+            SeizeCart(ctx, r);
+            SeizeShip(ctx, r);
+            SeizeFacilities(ctx, r);
+        }
+
+        NodeId LenderNode(int r) => new NodeId(_banks.NationNode(_loans.Nation[r]));
+
+        void SeizeDeposits(SimContext ctx, int r)
+        {
             int nation = _loans.Nation[r];
             int continent = _sheet.NationContinent(nation);
-            var nationNode = new NodeId(_banks.NationNode(nation));
-
+            var nationNode = LenderNode(r);
             for (int n = 0; n < _bank.PlayerDeposit.Length && Owed(r) > 0; n++)
             {
                 int from = _sheet.NationContinent(n);
@@ -367,7 +377,11 @@ namespace FES.Agents
                 _bank.Reserve[nation] += value - paid;
                 ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.Deposit, FacilityId.None, value, ctx.Turn));
             }
+        }
 
+        void SeizeStoredCargo(SimContext ctx, int r)
+        {
+            var nationNode = LenderNode(r);
             for (int f = 0; f < _facilities.Count && Owed(r) > 0; f++)
             {
                 if (_facilities.Owner[f] != OwnerIds.Player) continue;
@@ -383,26 +397,35 @@ namespace FES.Agents
                 long value = SellCargo(r, holder, _groupTable.Node[guild]);
                 if (value > 0) ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.WarehouseCargo, FacilityId.None, value, ctx.Turn));
             }
+        }
 
-            // A moving cart has no fixed place: it is taken when the player is next at one of the lender's branches.
-            if (Owed(r) > 0 && !_player.IsTravelling && _banks.BranchNation(_player.Node) == nation)
-            {
-                long value = SellCargo(r, CargoHolders.PlayerCart, _player.Node);
-                if (value > 0) ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.CartCargo, FacilityId.None, value, ctx.Turn));
-            }
+        // A moving cart has no fixed place: it is taken when the player is next at one of the lender's branches.
+        void SeizeCart(SimContext ctx, int r)
+        {
+            if (Owed(r) <= 0 || _player.IsTravelling || _banks.BranchNation(_player.Node) != _loans.Nation[r]) return;
+            long value = SellCargo(r, CargoHolders.PlayerCart, _player.Node);
+            if (value > 0) ctx.Events.Publish(new CollateralSeized(LenderNode(r), CollateralKind.CartCargo, FacilityId.None, value, ctx.Turn));
+        }
 
-            // A ship is sold to the bank at the auction share of its price ([Draft]).
-            if (Owed(r) > 0 && _ship.Owned)
-            {
-                long value = _sheet.Convert(_db.Config.AuctionReserveShare.MulInt(_db.Config.ShipPrice), _ship.BoughtContinent, continent);
-                _ship.Owned = false;
-                _purses.Float[nation] -= value; // [Draft] the lending nation's traders buy it
-                long paid = Math.Min(value, Owed(r));
-                Repay(r, paid);
-                _bank.Reserve[nation] += value - paid;
-                ctx.Events.Publish(new CollateralSeized(nationNode, CollateralKind.Ship, FacilityId.None, value, ctx.Turn));
-            }
+        // A ship is sold to the bank at the auction share of its price ([Draft]).
+        void SeizeShip(SimContext ctx, int r)
+        {
+            if (Owed(r) <= 0 || !_ship.Owned) return;
+            int nation = _loans.Nation[r];
+            long value = _sheet.Convert(_db.Config.AuctionReserveShare.MulInt(_db.Config.ShipPrice), _ship.BoughtContinent, _sheet.NationContinent(nation));
+            _ship.Owned = false;
+            _purses.Float[nation] -= value; // [Draft] the lending nation's traders buy it
+            long paid = Math.Min(value, Owed(r));
+            Repay(r, paid);
+            _bank.Reserve[nation] += value - paid;
+            ctx.Events.Publish(new CollateralSeized(LenderNode(r), CollateralKind.Ship, FacilityId.None, value, ctx.Turn));
+        }
 
+        void SeizeFacilities(SimContext ctx, int r)
+        {
+            int nation = _loans.Nation[r];
+            int continent = _sheet.NationContinent(nation);
+            var nationNode = LenderNode(r);
             for (int f = 0; f < _facilities.Count && Owed(r) - PendingAuctions(nation, continent) > 0; f++)
             {
                 if (_facilities.Owner[f] != OwnerIds.Player) continue;

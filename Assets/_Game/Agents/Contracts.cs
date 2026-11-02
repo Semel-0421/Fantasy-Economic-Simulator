@@ -71,14 +71,14 @@ namespace FES.Agents
             Prepaid = Column<long>();
         }
 
-        public void Add(int seller, int buyer, int fromCell, int toCell, int fromNode, int toNode, int quantity, long unitPrice, int endTurn, long prepaid = 0)
+        public void Add(int seller, int buyer, in ContractRoute route, int quantity, long unitPrice, int endTurn, long prepaid = 0)
         {
             Seller.Add(seller);
             Buyer.Add(buyer);
-            FromCell.Add(fromCell);
-            ToCell.Add(toCell);
-            FromNode.Add(fromNode);
-            ToNode.Add(toNode);
+            FromCell.Add(route.FromCell);
+            ToCell.Add(route.ToCell);
+            FromNode.Add(route.FromNode);
+            ToNode.Add(route.ToNode);
             Quantity.Add(quantity);
             UnitPrice.Add(unitPrice);
             EndTurn.Add(endTurn);
@@ -86,6 +86,20 @@ namespace FES.Agents
         }
 
         internal void RemoveRow(int row) => RemoveRowSwapBack(row);
+    }
+
+    /// <summary>The market cells a contract's goods leave and reach, and their nodes.</summary>
+    public readonly struct ContractRoute
+    {
+        public readonly int FromCell, ToCell, FromNode, ToNode;
+
+        public ContractRoute(int fromCell, int toCell, int fromNode, int toNode)
+        {
+            FromCell = fromCell;
+            ToCell = toCell;
+            FromNode = fromNode;
+            ToNode = toNode;
+        }
     }
 
     /// <summary>
@@ -212,60 +226,67 @@ namespace FES.Agents
         // The widest gap in the nation not yet under contract, among goods with stock on one side.
         bool Sign(SimContext ctx, int nation)
         {
-            var config = _db.Config;
+            if (!WidestGap(nation, out var route)) return false;
+            var traded = new GoodId(_markets.CellGood[route.FromCell]);
+            int seller = SellerAt(route.FromNode, traded), buyer = BuyerAt(route.ToNode, ctx.Turn / SimClock.WeeksPerYear + route.FromCell);
+            bool parties = seller != int.MinValue && buyer != int.MinValue && seller != buyer;
+            if (!parties || !AgreeTerms(route, buyer, out int quantity, out long unit, out int term))
+            {
+                _refused.Add(RefuseKey(route.FromCell, route.ToCell));
+                return true;
+            }
+            long deposit = _db.Config.ContractDepositShare.MulInt(quantity * unit * term);
+            Pay(buyer, -deposit);
+            Pay(seller, deposit);
+            _contracts.Add(seller, buyer, route, quantity, unit, ctx.Turn + term, deposit);
+            ctx.Events.Publish(new SupplyContractSigned(seller, buyer, quantity, unit));
+            return true;
+        }
+
+        static long RefuseKey(int fromCell, int toCell) => ((long)fromCell << 32) | (uint)toCell;
+
+        bool WidestGap(int nation, out ContractRoute route)
+        {
             var nodes = _purses.NationNodes[nation];
-            int bestFrom = -1, bestTo = -1, bestFromNode = -1, bestToNode = -1;
+            route = default;
             long bestGap = 0;
             foreach (int a in nodes)
             {
                 int end = _markets.MarketCellStart[a] + _markets.MarketCellCount[a];
                 for (int c = _markets.MarketCellStart[a]; c < end; c++)
-                {
-                    if (_markets.Stock[c] < config.ContractMinStock) continue;
-                    var good = new GoodId(_markets.CellGood[c]);
-                    foreach (int b in nodes)
-                    {
-                        if (a == b || !_markets.TryFindCell(b, good, out int d)) continue;
-                        long gap = SettledPrice(b, d) - _markets.Price[c];
-                        if (gap <= bestGap || _markets.Stock[d] >= config.ContractMinStock || Contracted(c, d)) continue;
-                        if (_refused.Contains(((long)c << 32) | (uint)d) || WeeklyDemand(b, d) < 2) continue;
-                        bestGap = gap;
-                        bestFrom = c;
-                        bestTo = d;
-                        bestFromNode = a;
-                        bestToNode = b;
-                    }
-                }
+                    if (_markets.Stock[c] >= _db.Config.ContractMinStock) WidestGapFrom(a, c, nodes, ref bestGap, ref route);
             }
-            if (bestFrom < 0) return false;
-            var traded = new GoodId(_markets.CellGood[bestFrom]);
-            int seller = SellerAt(bestFromNode, traded), buyer = BuyerAt(bestToNode, ctx.Turn / SimClock.WeeksPerYear + bestFrom);
-            long refuseKey = ((long)bestFrom << 32) | (uint)bestTo;
-            if (seller == int.MinValue || buyer == int.MinValue || seller == buyer)
-            {
-                _refused.Add(refuseKey);
-                return true;
-            }
+            return bestGap > 0;
+        }
 
-            int quantity = (int)Math.Min(_markets.Stock[bestFrom] / config.ContractStockWeeks, config.ContractDemandShare.MulInt(WeeklyDemand(bestToNode, bestTo)));
+        void WidestGapFrom(int a, int c, int[] nodes, ref long bestGap, ref ContractRoute route)
+        {
+            var good = new GoodId(_markets.CellGood[c]);
+            foreach (int b in nodes)
+            {
+                if (a == b || !_markets.TryFindCell(b, good, out int d)) continue;
+                long gap = SettledPrice(b, d) - _markets.Price[c];
+                if (gap <= bestGap || _markets.Stock[d] >= _db.Config.ContractMinStock || Contracted(c, d)) continue;
+                if (_refused.Contains(RefuseKey(c, d)) || WeeklyDemand(b, d) < 2) continue;
+                bestGap = gap;
+                route = new ContractRoute(c, d, a, b);
+            }
+        }
+
+        // The term fits both sides: as long as the seller's stock lasts and the buyer's money pays for it. False when no terms suit them.
+        bool AgreeTerms(in ContractRoute route, int buyer, out int quantity, out long unit, out int term)
+        {
+            var config = _db.Config;
+            int stock = _markets.Stock[route.FromCell];
+            quantity = (int)Math.Min(stock / config.ContractStockWeeks, config.ContractDemandShare.MulInt(WeeklyDemand(route.ToNode, route.ToCell)));
             quantity = Math.Max(1, quantity);
             var discount = Fx.Min(config.ContractMaxDiscount, config.ContractBaseDiscount + config.ContractDiscountPerUnit * Fx.FromInt(quantity));
-            long sell = SettledPrice(bestToNode, bestTo), unit = Math.Max(_markets.Price[bestFrom] + 1L, sell - discount.MulInt(sell));
-            // The term fits both sides: as long as the seller's stock lasts and the buyer's money pays for it.
+            long sell = SettledPrice(route.ToNode, route.ToCell);
+            unit = Math.Max(_markets.Price[route.FromCell] + 1L, sell - discount.MulInt(sell));
             long weekly = quantity * unit;
             long afford = Math.Max(0, Cash(buyer)) / Math.Max(1, config.ContractDepositShare.MulInt(weekly));
-            int term = (int)Math.Min(Math.Min(_markets.Stock[bestFrom] / quantity, afford), config.ContractMaxWeeks);
-            if (unit >= sell || term < config.ContractMinWeeks || Cash(buyer) < weekly * config.ContractCreditWeeks)
-            {
-                _refused.Add(refuseKey);
-                return true;
-            }
-            long deposit = config.ContractDepositShare.MulInt(weekly * term);
-            Pay(buyer, -deposit);
-            Pay(seller, deposit);
-            _contracts.Add(seller, buyer, bestFrom, bestTo, bestFromNode, bestToNode, quantity, unit, ctx.Turn + term, deposit);
-            ctx.Events.Publish(new SupplyContractSigned(seller, buyer, quantity, unit));
-            return true;
+            term = (int)Math.Min(Math.Min(stock / quantity, afford), config.ContractMaxWeeks);
+            return unit < sell && term >= config.ContractMinWeeks && Cash(buyer) >= weekly * config.ContractCreditWeeks;
         }
 
         bool Contracted(int from, int to)
@@ -364,29 +385,37 @@ namespace FES.Agents
         {
             if (!ctx.Clock.IsNewYear || ctx.Turn == 0 || _db.Config.StrategicSubsidyShare.Raw <= 0) return;
             if (_levels == null || _levels.Length != _groups.Count) _levels = new long[_groups.Count];
-            for (int n = 0; n < _banks.NationCount; n++)
+            for (int n = 0; n < _banks.NationCount; n++) Grant(n);
+        }
+
+        void Grant(int nation)
+        {
+            long total = CountStrategicLevels(nation);
+            if (total <= 0) return;
+            long budget = _db.Config.StrategicSubsidyShare.MulInt(Math.Max(0, MoneyLedger.StateExcess(_world, _db.Config, nation)));
+            long paid = 0;
+            for (int g = 0; g < _levels.Length; g++)
             {
-                Array.Clear(_levels, 0, _levels.Length);
-                long total = 0;
-                for (int f = 0; f < _facilities.Count; f++)
-                {
-                    int g = _facilities.Group[f];
-                    if (g < 0 || _facilities.Owner[f] != OwnerIds.Npc || _purses.NodeFloat[_facilities.Node[f]] != n) continue;
-                    if (!_db.Facilities[_facilities.DefIndex[f]].Strategic) continue;
-                    _levels[g] += _facilities.Level[f];
-                    total += _facilities.Level[f];
-                }
-                if (total <= 0) continue;
-                long budget = _db.Config.StrategicSubsidyShare.MulInt(Math.Max(0, MoneyLedger.StateExcess(_world, _db.Config, n)));
-                long paid = 0;
-                for (int g = 0; g < _levels.Length; g++)
-                {
-                    long grant = budget / total * _levels[g] + budget % total * _levels[g] / total;
-                    _groups.Cash[g] += grant;
-                    paid += grant;
-                }
-                _bank.Reserve[n] -= paid;
+                long grant = budget / total * _levels[g] + budget % total * _levels[g] / total;
+                _groups.Cash[g] += grant;
+                paid += grant;
             }
+            _bank.Reserve[nation] -= paid;
+        }
+
+        long CountStrategicLevels(int nation)
+        {
+            Array.Clear(_levels, 0, _levels.Length);
+            long total = 0;
+            for (int f = 0; f < _facilities.Count; f++)
+            {
+                int g = _facilities.Group[f];
+                if (g < 0 || _facilities.Owner[f] != OwnerIds.Npc || _purses.NodeFloat[_facilities.Node[f]] != nation) continue;
+                if (!_db.Facilities[_facilities.DefIndex[f]].Strategic) continue;
+                _levels[g] += _facilities.Level[f];
+                total += _facilities.Level[f];
+            }
+            return total;
         }
     }
 }

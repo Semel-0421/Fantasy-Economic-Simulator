@@ -106,3 +106,5 @@ managed run (see `PricingSystem.ForceManaged`).
 - [ ] New tunable numbers live in `config.csv` / `SimulationConfig`, not in system code.
 - [ ] No `UnityEngine`, `System.Random`, `DateTime.Now`, `float`/`double` in simulation folders.
 - [ ] Scale test (`Category=Scale`, explicit) still within budget.
+- [ ] `CodeStandardsTests` pass (05_Refactoring_Standards).
+- [ ] `GoldenRunTests` pass. A change meant to alter the simulation records the new hashes in the same commit; a refactoring records none.

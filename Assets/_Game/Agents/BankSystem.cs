@@ -484,13 +484,14 @@ namespace FES.Agents
                 if (_nodes.Continent[_agents.Node[a]] != _nodes.Continent[_agents.Home[a]]) break; // out of the bank's reach abroad
                 if (!_flows.TryFindNearestMarket(_agents.Node[a], item.Good, out _, out int cell)) continue;
                 // Only what the traders there can pay for is sold; the rest stays on board (DEC-061).
-                int units = _purses.Sellable(_agents.Node[a], item.Quantity, _markets.Price[cell]);
+                int price = _db.Config.TraderOffer(_markets.Price[cell]);
+                int units = _purses.Sellable(_agents.Node[a], item.Quantity, price);
                 if (units <= 0) continue;
                 _cargo.Change(holder, item.Good, -units);
                 _flows.Sell(cell, units);
                 // Proceeds beyond the debt go to the bank too (DEC-039).
-                _bank.Reserve[nation] += (long)units * _markets.Price[cell];
-                _purses.ChangeFloat(_agents.Node[a], -(long)units * _markets.Price[cell]);
+                _bank.Reserve[nation] += (long)units * price;
+                _purses.ChangeFloat(_agents.Node[a], -(long)units * price);
             }
             _agents.LoadCost[a] = 0;
             _npcLoans.RemoveRow(r);
@@ -556,7 +557,8 @@ namespace FES.Agents
             {
                 if (Owed(r) <= 0) break;
                 if (!_flows.TryFindNearestMarket(node, item.Good, out _, out int cell)) continue;
-                int price = _markets.Price[cell];
+                int price = _db.Config.TraderOffer(_markets.Price[cell]);
+                if (price <= 0) continue;
                 long needed = ToCover(Owed(r), _nodes.Continent[node], continent);
                 int units = _purses.Sellable(node, (int)Math.Min(item.Quantity, (needed + price - 1) / price), price);
                 if (units <= 0) continue;

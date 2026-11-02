@@ -213,6 +213,8 @@ Margin trials under DEC-099 to DEC-103, three seeds, year 30, reading people, gr
 
 After DEC-109 to DEC-111, three seeds, year 30: 15.73M, -0.29% a year, necessities met in cities 83%, villages 153%, groups hold 12.5M against households' 2.6M. Direction trials for the next step: [PROPOSAL_STEP5_2026-11-03](reviews/PROPOSAL_STEP5_2026-11-03.md).
 
+Direction A with the owner's choices (DEC-112), six seeds, year 30: 19.5M to 20.5M people, +0.24 to +0.46% a year, last falling year 10 to 14; necessities met cities 73 to 85%, villages 114 to 130%; groups 2.2M to 5.7M, households 11.2M to 15.6M; failures 0 to 77.
+
 Open, from DEC-104: core towns the worst supplied; people falling about 0.18% a year at year 60; groups hold 17.8M at year 60. Why is not settled.
 
 Balance, from DEC-095 to DEC-103

@@ -39,3 +39,6 @@ A in this order: corrected decisions with a test that every recipe has a non-neg
 3. Starting income: config 5, 5, 5, 4, 2 or documents 300, 300, 300, 500, 2000. Recommended: documents, since the config values look like a unit slip; not tried.
 4. Necessity elasticity: treat 0.5 as the mean and normalise the curve, or record the real 0.97. Recommended: normalise, then re-measure; not tried.
 5. Steady state: is falling population a defect? The trials still mostly fall. Recommended target: within 0.1% a year of steady at year 30, with cities at 90% of necessities or more.
+
+## Outcome
+The owner chose A on 2026-11-03, with payout 50%, the documented incomes, elasticity from real cases, and growth within 20 years under a gentler rule. Carried out in DEC-112, whose results replace the trial table above.

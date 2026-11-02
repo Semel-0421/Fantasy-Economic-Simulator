@@ -216,7 +216,7 @@ namespace FES.Tests
         }
 
         [Test]
-        public void Population_HoldsAtFullSupply_InTownAndVillage()
+        public void Population_GrowsAtFullSupply_AndFallsOnlyInSevereShortage()
         {
             using var sim = TestWorlds.BuildSample();
             sim.Database.Config.MigrationMaxShare = Fx.Zero;
@@ -236,13 +236,14 @@ namespace FES.Tests
             }
             Supply(town, 1000);
             Supply(village, 1000);
-            Supply(shortOf, 900);
+            Supply(shortOf, 600);
             Supply(plenty, 1100);
             sim.Systems.OfType<HouseholdGrowthSystem>().Single().Execute(sim.Context);
-            Assert.AreEqual(townBefore, households.Population[town]);
-            Assert.AreEqual(villageBefore, households.Population[village]);
+            var growth = sim.Database.Config.PopulationBaseGrowth;
+            Assert.AreEqual(townBefore + growth.MulInt(townBefore), households.Population[town]);
+            Assert.AreEqual(villageBefore + growth.MulInt(villageBefore), households.Population[village]);
             Assert.Less(households.Population[shortOf], shortBefore);
-            Assert.Greater(households.Population[plenty], plentyBefore);
+            Assert.Greater(households.Population[plenty] - plentyBefore, growth.MulInt(plentyBefore));
         }
     }
 }

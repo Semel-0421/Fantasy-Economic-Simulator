@@ -469,6 +469,9 @@ namespace FES.Data
         public Fx TraderSpread = Fx.Zero;
         /// <summary>What traders pay a seller for a unit at this price.</summary>
         public int TraderOffer(int price) => price - (int)TraderSpread.MulInt(price);
+
+        /// <summary>What a sum at list price brings a seller.</summary>
+        public long TraderOffer(long worth) => worth - TraderSpread.MulInt(worth);
         /// <summary>Weeks of households' wishes a float keeps; a share of what is above goes to the nation's households a week; 0 off (DEC-098).</summary>
         public int TraderFloatKeepWeeks = 0;
         public Fx TraderFloatPayout = Fx.FromPermille(20);

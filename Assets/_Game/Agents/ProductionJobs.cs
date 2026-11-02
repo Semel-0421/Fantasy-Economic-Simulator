@@ -169,7 +169,7 @@ namespace FES.Agents
             long outputValue = 0;
             for (int k = start; k < end; k++)
                 if (LineIsInput[k] == 0 && LineCell[k] >= 0) outputValue += Units(k, output) * Price[LineCell[k]];
-            if (inputCost >= outputValue || inputCost > FacilityCash[f]) return;
+            if (inputCost >= OfferOn(outputValue) || inputCost > FacilityCash[f]) return;
             for (int k = start; k < end && LineIsInput[k] != 0; k++)
             {
                 int cell = LineCell[k];
@@ -214,7 +214,7 @@ namespace FES.Agents
                 if (LineIsInput[k] == AidLine) aidValue += worth;
                 else if (LineIsInput[k] == 0) outputWorth += worth;
             }
-            return aidValue < outputWorth && cost + aidValue <= FacilityCash[f];
+            return aidValue < OfferOn(outputWorth) && cost + aidValue <= FacilityCash[f];
         }
 
         void MakeGoods(int f, Fx output, bool detailed, bool aided, bool unaided)
@@ -269,13 +269,16 @@ namespace FES.Agents
             else if (cell >= 0) SellToMarket(f, good, cell, clamped);
         }
 
+        // What traders pay a seller for goods at this list worth (DEC-098).
+        long OfferOn(long worth) => worth - Fx.MulIntRaw(worth, SpreadRaw);
+
         // All of it reaches the market; the producer is paid only as far as the traders can pay (DEC-061),
         // from what the float keeps free of this week's merchants.
         void SellToMarket(int f, int good, int cell, int clamped)
         {
             int traders = NodeFloat[FacilityNode[f]];
             long worth = clamped * Price[cell];
-            worth -= Fx.MulIntRaw(worth, SpreadRaw);
+            worth = OfferOn(worth);
             long paid = worth;
             long payable = Float[traders] - FloatReserve[traders];
             if (paid > payable) paid = payable > 0 ? payable : 0;

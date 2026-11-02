@@ -310,13 +310,13 @@ namespace FES.Agents
             return bestCost == 0 || gain * bestCost > bestGain * cost;
         }
 
-        // A week's output of one level one facility at the nearest prices, less its inputs and tools.
-        long UnitMargin(int node, FacilityDef def)
+        // A week's output of one level one facility at what traders pay for it, less its inputs and tools at the nearest prices.
+        public long UnitMargin(int node, FacilityDef def)
         {
             long margin = 0;
             foreach (var line in def.Recipe.Outputs)
             {
-                margin += line.Quantity * PriceOf(node, line.Good);
+                margin += _db.Config.TraderOffer(line.Quantity * PriceOf(node, line.Good));
                 margin -= _db.Config.FacilityOutputWage.MulInt(line.Quantity * _markets.GoodBasePrice[line.Good.Value]);
             }
             foreach (var line in def.Recipe.Inputs) margin -= line.Quantity * PriceOf(node, line.Good);

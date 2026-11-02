@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- [03_Decisions.md, 04_Roadmap.md, 02_Data_Formats.md, systems/SYS_MARKETS.md, systems/SYS_INTEREST_GROUPS.md, reviews/PROPOSAL_STEP5_2026-11-03.md, reviews/PROPOSAL_STEP5_2026-11-03.ko.md] DEC-112 (direction A: margin in decisions and recipes, payout 50%, documented income, elasticity 0.6, gentler population rule)
 - [03_Decisions.md, 04_Roadmap.md, reviews/META_2026-11-02.md, reviews/META_2026-11-02.ko.md, reviews/PROPOSAL_STEP5_2026-11-03.md, reviews/PROPOSAL_STEP5_2026-11-03.ko.md] DEC-111 (guarded loading, warehouse claims, defense from thin stock), proposal for step 5
 
 ## 2026-11-02

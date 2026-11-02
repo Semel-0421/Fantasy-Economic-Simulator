@@ -49,12 +49,12 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
     1 - elasticity x (price / anchor - 1), never below 0 and at most twice the anchor quantity when cheap
     (`demand.max_cheap_permille`). It reaches nothing at the choke price, so a good nobody supplies stops
     rising there instead of running away.
-  - Elasticity: necessities 0.5, luxuries 1.5 (`demand.necessity_elasticity_permille`,
+  - Elasticity: necessities 0.6 on average, from staple food studies (DEC-112), luxuries 1.5 (`demand.necessity_elasticity_permille`,
     `demand.luxury_elasticity_permille`).
   - Quintile income shares, poorest first: 2 / 3 / 5 / 10 / 80% (`households.q1..q5.income_share_permille`).
     For necessities each quintile reacts on its own, its elasticity scaled by the square root of the
-    average share (20%) over its own, so the poor give up necessities first (Q1 x3.2, Q5 x0.5); demand is
-    the average over the quintiles. Luxuries have a single curve and scale with total income.
+    average share (20%) over its own, then against the mean of the five, so the poor give up necessities first
+    (Q1 about x1.6, Q5 about x0.26) while demand as a whole moves by the stated elasticity. Demand is the average over the quintiles. Luxuries have a single curve and scale with total income.
   - A market's demand at the anchor is the old base demand times its level weight, times population over
     the level's default for the necessity part, and total income over the default for the luxury part.
   - Population starts at 20,000 / 10,000 / 4,000 / 2,000 / 500 per continent / nation / region / city /

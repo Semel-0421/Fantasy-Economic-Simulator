@@ -592,13 +592,13 @@ namespace FES.Agents
         }
 
         // What a facility worth running lacks for its next weeks; 0 when its goods are not worth making.
-        long WorkingCashGap(int f)
+        public long WorkingCashGap(int f)
         {
             var def = _db.Facilities[_facilities.DefIndex[f]];
             long inputs = 0, outputs = 0;
             foreach (var line in def.Recipe.Inputs) inputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
             foreach (var line in def.Recipe.Outputs) outputs += line.Quantity * PriceOf(_facilities.Node[f], line.Good);
-            if (outputs <= inputs) return 0;
+            if (_db.Config.TraderOffer(outputs) <= inputs) return 0;
             return _db.Config.WorkingWeeks * (NpcLending.FacilityUpkeep(_db, _facilities, f) + inputs * _facilities.Level[f]) - _facilities.Cash[f];
         }
 

@@ -16,11 +16,11 @@ households.nation.population,700000
 households.region.population,350000
 households.city.population,525000
 households.village.population,650000
-households.continent.income_permille,5
-households.nation.income_permille,5
-households.region.income_permille,5
-households.city.income_permille,4
-households.village.income_permille,2
+households.continent.income_permille,300
+households.nation.income_permille,300
+households.region.income_permille,300
+households.city.income_permille,500
+households.village.income_permille,2000
 # Cities work inputs; villages only raise them (DEC-076).
 producers.village.tertiary,0
 producers.city.secondary,6
@@ -30,10 +30,13 @@ demand.nation.weight_permille,5330
 demand.region.weight_permille,2670
 demand.city.weight_permille,4000
 demand.village.weight_permille,4950
+# Staple food: cereals 0.60 (Andreyeva 2010), 0.43 to 0.61 by income (Green 2013) (DEC-112).
+demand.necessity_elasticity_permille,600
 # Rural-urban migration over about fifteen years (DEC-079).
 migration.max_share_permille,80
-# Population holds at full supply (DEC-091).
-households.base_growth_permille,0
+# Population grows below full supply: a slow pre-industrial rise that shortage slows and severe shortage reverses (DEC-112).
+households.base_growth_permille,5
+households.growth_response_permille,20
 households.urban_penalty_permille,0
 # Factories can be expanded and NPC groups invest on every node (DEC-080).
 facility.expansion_bonus_permille,250
@@ -43,7 +46,7 @@ investment.min_plan_permille,800
 # Emancipation waits for a settled labor shortage.
 migration.emancipation_earliest_years,5
 migration.vacancy_permille,300
-groups.payout_permille,250
+groups.payout_permille,500
 # Wages follow output and the state pays towns short of money; weights from a 30-year grid (DEC-082).
 facility.output_wage_permille,25
 state.public_wage_permille,30

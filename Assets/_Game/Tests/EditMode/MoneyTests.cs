@@ -586,7 +586,7 @@ namespace FES.Tests
             AssertConserved(sim, "dividends");
             long dividend = facilityCash - facilities.Cash[f];
             Assert.That(dividend, Is.InRange(900_000, 1_100_000), "about 10% of the profit");
-            Assert.That(groups.Cash[g] - groupCash, Is.InRange(dividend * 3 / 4 - 30_000, dividend * 3 / 4 + 10_000), "the group keeps three quarters to invest, less what it feeds its facilities");
+            Assert.That(groups.Cash[g] - groupCash, Is.InRange(dividend / 2 - 30_000, dividend / 2 + 10_000), "the group keeps halfers to invest, less what it feeds its facilities");
             Assert.Greater(households.Cash[home] - homeCash, dividend / 5, "the rest goes to its home's households");
         }
 

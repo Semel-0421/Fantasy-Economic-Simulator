@@ -176,7 +176,7 @@ namespace FES.Agents
                     continue;
                 }
                 int from = _contracts.FromCell[r], to = _contracts.ToCell[r], seller = _contracts.Seller[r], buyer = _contracts.Buyer[r];
-                long unit = _contracts.UnitPrice[r], buy = _markets.Price[from], sell = _markets.Price[to];
+                long unit = _contracts.UnitPrice[r], buy = _markets.Price[from], sell = config.TraderOffer(_markets.Price[to]);
                 long units = Math.Min(_contracts.Quantity[r], _markets.Stock[from]);
                 if (buy > 0) units = Math.Min(units, Math.Max(0, Cash(seller)) / buy);
                 if (units <= 0) continue;

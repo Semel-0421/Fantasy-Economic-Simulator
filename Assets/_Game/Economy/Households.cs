@@ -349,8 +349,14 @@ namespace FES.Economy
             Quintile5Raw = QuintileElasticity(c, 4),
         };
 
-        static long QuintileElasticity(SimulationConfig c, int q) =>
-            (c.NecessityElasticity * DemandCurve.QuintileSensitivity(c.QuintileIncomeShare[q])).Raw;
+        // Each quintile's sensitivity is taken against their mean, so demand as a whole moves by the stated elasticity.
+        static long QuintileElasticity(SimulationConfig c, int q)
+        {
+            long sum = 0;
+            for (int k = 0; k < HouseholdDemand.Quintiles; k++) sum += DemandCurve.QuintileSensitivity(c.QuintileIncomeShare[k]).Raw;
+            long relative = (DemandCurve.QuintileSensitivity(c.QuintileIncomeShare[q]).Raw << Fx.FractionBits) * HouseholdDemand.Quintiles / Math.Max(1, sum);
+            return Fx.RoundShift(c.NecessityElasticity.Raw * relative);
+        }
     }
 
     /// <summary>What a cell's households want in a week: all units, necessity units at the anchor price, necessity units at this price.</summary>

@@ -87,7 +87,7 @@ changing a default in code does.
 |---|---|---|
 | tier.<level>.period / .offset | see 00_Architecture | price-update cadence |
 | demand.<level>.weight_permille | continent 40000 ... village 1000 | base demand weight |
-| demand.necessity_elasticity_permille, demand.luxury_elasticity_permille, demand.max_cheap_permille | 500, 1500, 2000 | demand curve ([Draft]) |
+| demand.necessity_elasticity_permille, demand.luxury_elasticity_permille, demand.max_cheap_permille | 500, sample data 600; 1500, 2000 | demand curve; necessity elasticity is the mean over quintiles ([Draft], DEC-112) |
 | demand.<grade>.luxury_share_permille | 0 / 0 / 500 / 1000 | how far each grade of a necessity is bought like a luxury ([Draft]) |
 | households.<level>.population, households.<level>.income_permille | 20000 / 10000 / 4000 / 2000 / 500; 300 / 300 / 300 / 500 / 2000 | default population and weekly income per head in thousandths of a coin ([Draft]; P13d replaced `households.<level>.income`, 4 / 4 / 3 / 3 / 2 coins) |
 | households.q1..q5.income_share_permille | 20, 30, 50, 100, 800 | income share per quintile, poorest first; must sum to 1000 ([Draft]) |
@@ -126,7 +126,7 @@ changing a default in code does.
 | state.project_share_permille, state.projects_per_year, state.project_weeks, state.road_score_permille, state.trade_score_permille | 500, 3, 16, 120, 100 | share of the reserve above target for the year's plan; most per year; weeks each; what paving, and harbors and highways beyond their import bill, score against other needs ([Draft]) |
 | state.defense_safety_cost_per_route, state.defense_max_safety_permille | 15000, 600 | yearly defense per route for a full danger cut, and the most it cuts (DEC-074) |
 | state.subsidy_share_permille, state.subsidy_rate_permille, state.subsidy_years, state.subsidy_max_per_nation | 300, 200, 3, 2 | share of the excess subsidies may pay in a year; rate on output's value; length; most at once (DEC-074) |
-| households.base_growth_permille, households.growth_response_permille, households.max_growth_permille, households.max_decline_permille | 8, 40, 13, 40 | yearly population change at full necessity supply, per full shortfall, and limits (DEC-074) |
+| households.base_growth_permille, households.growth_response_permille, households.max_growth_permille, households.max_decline_permille | 8, 40, 13, 40; sample data 5, 20 (DEC-112) | yearly population change at full necessity supply, per full shortfall, and limits (DEC-074) |
 | state.farmland_cost, state.mine_cost, state.harbor_cost, state.highway_cost_per_turn | 5000, 8000, 10000, 1000 | project costs ([Draft]) |
 | state.land_bonus_permille, state.land_max, state.harbor_bonus_permille, state.harbor_max, state.highway_bonus_permille | 100, 5, 100, 3, 200 | output and charge bonuses of projects ([Draft]) |
 | state.facility_levy_permille | 500 | share of a state enterprise's dividends the state collects ([Draft]) |
@@ -184,7 +184,7 @@ changing a default in code does.
 | bank.auction_weeks, bank.auction_reserve_permille | 2, 800 | auction of seized facilities ([Draft]) |
 | bank.state_reserve_target_permille, bank.state_spending_permille | 2000, 20 | reserve target as a multiple of the nation's share of the initial reserve share of the coin supply; weekly share of the reserve above it spent as public wages ([Draft]) |
 | facility.dividend_buffer_weeks, facility.dividend_permille | 26, 100 | weeks of costs a facility keeps; weekly share of the cash above it paid as dividends ([Draft] values from DEC-061) |
-| groups.payout_permille | 800 | share of its dividends a group passes to its home node's households ([Draft]) |
+| groups.payout_permille | 800, sample data 500 (DEC-112) | share of its dividends a group passes to its home node's households ([Draft]) |
 | bank.international_reserve_permille | 20 | share of a continent's starting coin supply its international bank holds for exchange ([Draft]) |
 | bank.target_reserve_permille, bank.max_rate_multiplier_permille | 500, 3000 | reserve ratio below which loan rates rise, and the cap on that rise ([Draft]) |
 | bank.npc_loan_term_weeks, bank.npc_buffer_weeks, bank.npc_max_reserve_share_permille | 26, 8, 100 | NPC loans: term, weeks of upkeep borrowed beyond the shortfall, largest share of a reserve one loan takes (0 turns NPC lending off) ([Draft]) |

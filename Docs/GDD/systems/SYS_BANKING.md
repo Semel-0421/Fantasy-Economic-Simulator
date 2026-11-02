@@ -161,14 +161,18 @@ faster than its cash at the risk of losing what it owns.
     that continent the player carries, wherever they are.
   - Seizure takes deposits (any bank), then warehouse cargo, then the cart (at one of the lender's
     branches), then facilities, until the debt is covered. Cargo is sold at the nearest market; what
-    exceeds the debt goes to the bank. Debt left after all assets stays owed.
+    exceeds the debt goes to the bank. Debt left after all assets stays owed. Only auctions for the
+    player's own loan count as covering it. A deposit is taken only as far as its bank still holds the
+    coins (DEC-107).
   - A winning bid is paid when the auction closes, from the coins and then the deposits of the
-    facility's continent; without a winning bid an NPC buys at the reserve price.
+    facility's continent, as far as their banks hold the coins (DEC-107); without a winning bid an NPC
+    buys at the reserve price.
 - [Draft] Claude's proposals, built in P9b:
   - A nation's money total is the positive cash held at its nodes (player, merchant groups, facilities,
     interest groups) plus its bank's reserve; deposits sit in the reserve and are not added again. Coins
     held outside any nation (carried abroad, or at continent-level nodes) count only toward their
-    continent's total, as does the international bank's reserve.
+    continent's total, as does the international bank's reserve. A merchant group's coins are its home
+    continent's, wherever it is (DEC-107).
   - Reserve ratio = reserve / (reserve + loan balances owed to the bank, the player's and NPCs'). It is
     1.0 for a bank that has lent nothing.
   - Loan rate = base rate (10%) times target ratio / reserve ratio when the ratio is below the target
@@ -182,8 +186,9 @@ faster than its cash at the risk of losing what it owns.
   - NPC instalments come out of the borrower's cash. After the grace period a facility is seized and
     auctioned (the player may bid; the proceeds go to the bank); a merchant group's cargo is sold at the
     nearest market and the rest is written off. An NPC facility going bankrupt with a loan is seized the
-    same way; a merchant group going bankrupt leaves its loan unpaid. Buying an NPC facility repays its
-    loan from the price; the bank writes off what the price does not cover.
+    same way; a merchant group going bankrupt leaves its loan unpaid. Buying an NPC facility costs at
+    least its value and the cash it holds (DEC-107) and repays its loan from the price; the bank writes
+    off what the price does not cover.
   - Quarters are 13 weeks; a record is taken in the last week of each quarter (turns 12, 25, 38, 51 of a
     year), and the last 20 records are kept (`finance.history_quarters`). Each new year publishes, from the
     last record, every nation's total, reserve ratio and loan rate and every continent's total, price

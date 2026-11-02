@@ -130,6 +130,7 @@ namespace FES.Agents
         [ReadOnly] public NativeArray<int> NodeCoreStrength;
         [ReadOnly] public NativeArray<int> AgentOwner;
         public bool CountTripCosts;
+        public bool MustAct;
         public long HedgeFloorRaw;
         public long HedgeFeeRaw;
         public long HedgeFallRaw;
@@ -209,9 +210,11 @@ namespace FES.Agents
                 if (AgentDestination[a] < 0)
                 {
                     if (Rumors) Listen(a);
+                    long soldBefore = TripStats[8];
                     int carryOn = SellOrCarry(a, AgentNode[a]); // an idle group tries what no one could pay for last time
                     if (carryOn >= 0) Depart(a, AgentNode[a], carryOn);
                     else TryStartTrip(a);
+                    if (MustAct && AgentDestination[a] < 0 && TripStats[8] == soldBefore) SetOff(a, AgentNode[a]);
                 }
                 PayUpkeep(a);
             }
@@ -223,6 +226,39 @@ namespace FES.Agents
                 CargoGood.RemoveAtSwapBack(r);
                 CargoQuantity.RemoveAtSwapBack(r);
             }
+        }
+
+        // A group that did nothing this turn takes to the road (DEC-106): to a market it knows nothing of if it can, for
+        // the cheapest trip it may make, so its coins and news move. A trip it cannot pay for is none it may make (DEC-107).
+        void SetOff(int a, int node)
+        {
+            int anchor = RangeAnchor(a);
+            bool inRange = Within(node, anchor);
+            var memory = AgentMemory[a];
+            memory.Learn(node);
+            AgentMemory[a] = memory;
+            CollectRows(a);
+            int best = -1;
+            long bestCost = long.MaxValue;
+            bool bestNew = false;
+            int first = OutStart[node], last = first + OutCount[node];
+            for (int k = first; k < last; k++)
+            {
+                int r = RouteIndex[k];
+                int to = RouteTo[r];
+                if (NodeContinent[to] != NodeContinent[node] || !MayGo(a, node, to, anchor, inRange)) continue;
+                TripCharges(a, r, out long fee, out long tolls, out _);
+                long cost = fee + tolls;
+                if (cost > AgentCash[a]) continue;
+                bool isNew = !memory.Knows(to);
+                if (best >= 0 && (bestNew && !isNew || bestNew == isNew && cost >= bestCost)) continue;
+                best = r;
+                bestCost = cost;
+                bestNew = isNew;
+            }
+            if (best < 0) return;
+            TripStats[20]++;
+            Depart(a, node, best);
         }
 
         // What the group knows of its node, and what others here know, passes around.
@@ -262,7 +298,7 @@ namespace FES.Agents
             AgentNode[a] = node;
             AgentDestination[a] = -1;
             AgentArrivalTurn[a] = -1;
-            if (Rumors)
+            if (Rumors || MustAct)
             {
                 var memory = AgentMemory[a];
                 memory.Learn(node);
@@ -816,13 +852,13 @@ namespace FES.Agents
             return chanceRaw;
         }
 
-        void Depart(int a, int node, int route)
+        // What a route charges the collected rows, in the group's coins: the fee, the tolls at its end, and what the load is worth there.
+        void TripCharges(int a, int route, out long fee, out long tolls, out long value)
         {
-            // The same trip cost as the player's (DEC-015): merchants need no ship (DEC-034), and buy no guards.
-            int bestRoute = route;
-            int destination = RouteTo[bestRoute];
-            CollectRows(a);
-            long units = 0, tollTotal = 0, value = 0;
+            int destination = RouteTo[route];
+            long units = 0;
+            tolls = 0;
+            value = 0;
             for (int i = 0; i < Rows.Length; i++)
             {
                 int row = Rows[i], good = CargoGood[row];
@@ -830,13 +866,22 @@ namespace FES.Agents
                 int cell = FindNearestCell(destination, good);
                 if (cell < 0) continue;
                 long itemValue = (long)CargoQuantity[row] * Price[cell];
-                tollTotal += Fx.MulIntRaw(itemValue, TollRate(destination, good));
+                tolls += Fx.MulIntRaw(itemValue, TollRate(destination, good));
                 value += itemValue;
             }
-            long fee = Fx.MulIntRaw(RouteBaseFee[bestRoute] + Fx.MulIntRaw(units, RouteCostPerUnitRaw[bestRoute]), VehicleCostRaw[AgentVehicle[a]]);
-            bool abroad = Abroad(a, node);
+            fee = Fx.MulIntRaw(RouteBaseFee[route] + Fx.MulIntRaw(units, RouteCostPerUnitRaw[route]), VehicleCostRaw[AgentVehicle[a]]);
             value = Earn(a, destination, value);
-            tollTotal = Spend(a, destination, tollTotal);
+            tolls = Spend(a, destination, tolls);
+        }
+
+        void Depart(int a, int node, int route)
+        {
+            // The same trip cost as the player's (DEC-015): merchants need no ship (DEC-034), and buy no guards.
+            int bestRoute = route;
+            int destination = RouteTo[bestRoute];
+            CollectRows(a);
+            TripCharges(a, bestRoute, out long fee, out long tollTotal, out long value);
+            bool abroad = Abroad(a, node);
             AgentCash[a] -= fee + tollTotal;
             TripStats[10] += fee;
             TripStats[11] += tollTotal;

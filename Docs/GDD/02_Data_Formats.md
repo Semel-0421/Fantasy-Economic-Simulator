@@ -145,6 +145,7 @@ changing a default in code does.
 | traders.float_keep_weeks, traders.float_payout_permille | 0 off, sample data 8; 20 (DEC-098) | weeks of households' wishes a float keeps; share of the excess paid to the nation's households a week ([Draft]) |
 | merchants.flow_wage_permille | 0, sample data 1000 (DEC-098) | share of an aggregate flow's margin paid as wages at the origin ([Draft]) |
 | merchants.cautious/normal/aggressive.loss_aversion | 0 uses merchants.risk_aversion; sample data 3, 2, 1 (DEC-099) | how many times a loss weighs against the same gain ([Draft]) |
+| merchants.must_act | 1 (DEC-106, DEC-107) | a group that did nothing sets off, if it can pay for a trip |
 | merchants.count_trip_costs | 0, sample data 1 (DEC-099) | a trip's upkeep and expected losses count when choosing a load ([Draft]) |
 | merchants.hedge_fee_permille, hedge_floor_permille, hedge_fall_permille, hedge_chance_permille, hedge_bank_share_permille | 0 off, 850, 150, 300, 100; sample data 8, 900, 150, 60, 100 (DEC-099) | price cover ([Draft]) |
 | merchants.judge_coin_units | 0, sample data 20 (DEC-096) | a market whose traders cannot pay for this many units is no market when judging a load; 0 off |

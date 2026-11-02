@@ -108,6 +108,7 @@ namespace FES.Agents
                     if (line.Good.Value == policy.Good && def == null) def = d;
             int site = ShortestOfNecessities(policy.Nation);
             if (def == null || site < 0) return;
+            if (!FacilityPlaces.Allowed(def, _nodes, site)) site = _nodes.Core[_banks.NationNode(policy.Nation)]; // fine workshops stand at a core (DEC-104)
             long facilityCash = config.FacilityStartCash[(int)def.Tier];
             long mostGroupCash = config.GroupStartCash[(int)GroupKind.Company] + config.GroupStartCash[(int)GroupKind.Guild]
                 + config.GroupStartCash[(int)GroupKind.PrivateEnterprise];
@@ -123,7 +124,6 @@ namespace FES.Agents
             _groups.PrivateAt(site, config);
             for (int g = groupsBefore; g < _groupTable.Count; g++) _bank.Reserve[policy.Nation] -= _groupTable.Cash[g];
             _bank.Reserve[policy.Nation] -= facilityCash;
-            if (!FacilityPlaces.Allowed(def, _nodes, site)) site = _nodes.Core[_banks.NationNode(policy.Nation)]; // fine workshops stand at a core (DEC-104)
             var id = _facilities.Add(site, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, facilityCash);
             _facilities.Group[id.Value] = group;
         }
@@ -144,7 +144,7 @@ namespace FES.Agents
             long lowest = long.MaxValue;
             foreach (int node in _purses.NationNodes[nation])
             {
-                if (_nodes.Level[node] <= (int)WorldLevel.Nation) continue;
+                if (_nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
                 long supplied = _population.NecessitySuppliedPermille(node);
                 if (supplied >= lowest) continue;
                 lowest = supplied;

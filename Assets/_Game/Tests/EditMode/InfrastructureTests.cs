@@ -117,6 +117,7 @@ namespace FES.Tests
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
                 "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), 42).Build();
             var config = sim.Database.Config;
+            config.MerchantMustAct = false; // merchants on the road would keep paying tolls into the reserve
             var banks = sim.World.Get<NodeBanks>();
             var bank = sim.World.Get<BankState>();
             var roads = sim.World.Get<RoadState>();
@@ -139,6 +140,26 @@ namespace FES.Tests
             Assert.AreEqual(0, roads.Condition[paved]);
             Assert.AreEqual(RoadState.NoOwner, roads.Owner[paved]);
             Assert.IsTrue(sim.LastTurnEvents.OfType<RoadLost>().Any(e => e.From == Node(sim, "aur_n1_r1_c1")));
+        }
+
+        [Test]
+        public void NationRoads_AreNotKeptWithThePlayersDeposit()
+        {
+            using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
+                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), 42).Build();
+            var config = sim.Database.Config;
+            config.MerchantMustAct = false;
+            config.LodMode = 2; // detailed merchants' tolls would fill the reserve
+            var bank = sim.World.Get<BankState>();
+            var roads = sim.World.Get<RoadState>();
+            int nation = sim.World.Get<NodeBanks>().NationIndex(sim.World.Get<NodeTable>().AncestorAt(Node(sim, "aur_n1_r1_c1").Value, WorldLevel.Nation));
+            int paved = Route(sim, "aur_n1_r1_c1", "aur_n1_r1_c2");
+            bank.Reserve[nation] = 100_000;
+            bank.PlayerDeposit[nation] = 100_000;
+
+            sim.AdvanceTurn();
+
+            Assert.AreEqual(RoadState.MaxCondition - config.RoadDecayPermille, roads.Condition[paved]);
         }
 
         [Test]

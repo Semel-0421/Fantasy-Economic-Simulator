@@ -266,6 +266,8 @@ namespace FES.Data
         public readonly int[] PersonalityLossAversion = new int[3];
         /// <summary>A group counts the trip's upkeep and expected losses when it chooses a load (DEC-099).</summary>
         public bool MerchantCountTripCosts = false;
+        /// <summary>Every group acts each turn: with no sale, purchase or trip of its own it sets off on the road (DEC-106).</summary>
+        public bool MerchantMustAct = true;
         /// <summary>Price cover (DEC-099): the share of a load's value the bank guarantees, its fee, the fall and its chance groups expect. A zero fee turns it off.</summary>
         public Fx HedgeFloor = Fx.FromPermille(850);
         public Fx HedgeFee = Fx.Zero;
@@ -681,6 +683,7 @@ namespace FES.Data
             CoreDemandPerPoint = Permille(v, "core.demand_permille", CoreDemandPerPoint);
             MerchantRiskAversion = Int(v, "merchants.risk_aversion", MerchantRiskAversion);
             MerchantCountTripCosts = Int(v, "merchants.count_trip_costs", MerchantCountTripCosts ? 1 : 0) != 0;
+            MerchantMustAct = Int(v, "merchants.must_act", MerchantMustAct ? 1 : 0) != 0;
             HedgeFloor = Permille(v, "merchants.hedge_floor_permille", HedgeFloor);
             HedgeFee = Permille(v, "merchants.hedge_fee_permille", HedgeFee);
             HedgeFall = Permille(v, "merchants.hedge_fall_permille", HedgeFall);

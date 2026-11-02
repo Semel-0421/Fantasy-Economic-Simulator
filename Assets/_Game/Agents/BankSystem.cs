@@ -199,6 +199,7 @@ namespace FES.Agents
         NpcLoanTable _npcLoans;
         AgentTable _agents;
         PurseState _purses;
+        IncomeTaxState _books;
         readonly List<CargoItem> _items = new List<CargoItem>();
         readonly List<int> _holders = new List<int>();
 
@@ -227,6 +228,7 @@ namespace FES.Agents
             _npcLoans = ctx.World.Get<NpcLoanTable>();
             _agents = ctx.World.Get<AgentTable>();
             _purses = ctx.World.Get<PurseState>();
+            _books = ctx.World.Get<IncomeTaxState>();
         }
 
         /// <summary>Starting reserves: a config share of each continent's coin supply, split evenly over its nations.</summary>
@@ -353,9 +355,9 @@ namespace FES.Agents
             for (int n = 0; n < _bank.PlayerDeposit.Length && Owed(r) > 0; n++)
             {
                 int from = _sheet.NationContinent(n);
-                long take = Math.Min(_bank.PlayerDeposit[n], ToCover(Owed(r), from, continent));
+                long take = Math.Min(_bank.PayableDeposit(n), ToCover(Owed(r), from, continent));
                 if (take <= 0) continue;
-                // The deposit's coins already sit in its bank's reserve: they move to the lender.
+                // The deposit's coins sit in its bank's reserve, as far as it has not lent them: they move to the lender.
                 _bank.PlayerDeposit[n] -= take;
                 _bank.Reserve[n] -= take;
                 long value = _sheet.Convert(take, from, continent);
@@ -427,9 +429,14 @@ namespace FES.Agents
             if (merchant)
             {
                 _agents.Cash[a] -= paid;
+                _books.MoveMerchantCapital(a, -paid);
                 ctx.World.Get<MerchantTripStats>().SpentLoans += paid;
             }
-            else _facilities.Cash[borrower] -= paid;
+            else
+            {
+                _facilities.Cash[borrower] -= paid;
+                _books.MoveFacilityCapital(borrower, -paid);
+            }
             _npcLoans.Balance[r] -= paid;
             _npcLoans.Due[r] -= paid;
             _bank.Reserve[_npcLoans.Nation[r]] += paid;
@@ -480,7 +487,9 @@ namespace FES.Agents
                 if (nation < 0 || _npcLoans.Find(NpcBorrowers.Facility(f)) >= 0) continue;
                 long need = -_facilities.Cash[f] + config.NpcLoanBufferWeeks * NpcLending.FacilityUpkeep(_db, _facilities, f);
                 long limit = config.LoanToValue.MulInt(NpcLending.FacilityValue(_db, _facilities, f));
-                _facilities.Cash[f] += NpcLending.Lend(ctx.World, config, NpcBorrowers.Facility(f), nation, Math.Min(need, limit));
+                long lent = NpcLending.Lend(ctx.World, config, NpcBorrowers.Facility(f), nation, Math.Min(need, limit));
+                _facilities.Cash[f] += lent;
+                _books.MoveFacilityCapital(f, lent);
             }
             for (int a = 0; a < _agents.Count; a++)
             {
@@ -490,7 +499,9 @@ namespace FES.Agents
                 if (nation < 0 || _npcLoans.Find(NpcBorrowers.Merchant(a)) >= 0) continue;
                 long need = -_agents.Cash[a] + config.NpcLoanBufferWeeks * config.MerchantUpkeep[_agents.Scale[a]];
                 long limit = config.LoanToValue.MulInt(_sheet.CargoValue(CargoHolders.Merchant(new AgentId(a)), node));
-                _agents.Cash[a] += NpcLending.Lend(ctx.World, config, NpcBorrowers.Merchant(a), nation, Math.Min(need, limit));
+                long lent = NpcLending.Lend(ctx.World, config, NpcBorrowers.Merchant(a), nation, Math.Min(need, limit));
+                _agents.Cash[a] += lent;
+                _books.MoveMerchantCapital(a, lent);
             }
         }
 
@@ -498,7 +509,7 @@ namespace FES.Agents
         {
             long sum = 0;
             for (int a = 0; a < _auctions.Count; a++)
-                if (_auctions.Nation[a] == nation)
+                if (_auctions.Nation[a] == nation && _auctions.ForPlayerLoan[a] != 0)
                     sum += _sheet.Convert(_auctions.ReservePrice[a], _nodes.Continent[_facilities.Node[_auctions.Facility[a]]], continent);
             return sum;
         }
@@ -555,7 +566,7 @@ namespace FES.Agents
             _facilities.Owner[f] = won ? OwnerIds.Player : OwnerIds.Npc;
             _facilities.Mode[f] = (byte)(won ? ControlMode.Manual : ControlMode.Automated);
             // [Draft] Without a winning bid a local family buys it.
-            _facilities.Group[f] = won ? _groupTable.PlayerCompany() : _groups.PrivateAt(_facilities.Node[f], _db.Config);
+            _facilities.Group[f] = won ? _groupTable.PlayerCompany() : MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
             if (!won)
             {
                 // The buyer pays the price, and its new manager's starting cash, from its cash (DEC-061).
@@ -585,7 +596,7 @@ namespace FES.Agents
         {
             long deposits = 0;
             for (int n = 0; n < _bank.PlayerDeposit.Length; n++)
-                if (_sheet.NationContinent(n) == continent) deposits += _bank.PlayerDeposit[n];
+                if (_sheet.NationContinent(n) == continent) deposits += _bank.PayableDeposit(n);
             if (_player.Coins[continent] + deposits < amount) return false;
             long fromCoins = Math.Min(amount, Math.Max(0, _player.Coins[continent]));
             _player.Coins[continent] -= fromCoins;
@@ -593,7 +604,7 @@ namespace FES.Agents
             for (int n = 0; n < _bank.PlayerDeposit.Length && rest > 0; n++)
             {
                 if (_sheet.NationContinent(n) != continent) continue;
-                long take = Math.Min(rest, _bank.PlayerDeposit[n]);
+                long take = Math.Min(rest, _bank.PayableDeposit(n));
                 _bank.PlayerDeposit[n] -= take;
                 _bank.Reserve[n] -= take;
                 rest -= take;

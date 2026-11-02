@@ -6,6 +6,7 @@ using FES.Agents;
 using FES.Core;
 using FES.Data;
 using FES.Economy;
+using FES.Persistence;
 using FES.Simulation;
 using FES.World;
 using NUnit.Framework;
@@ -112,6 +113,104 @@ namespace FES.Tests
             Assert.Catch(() => target.Load(truncated));
             Assert.AreEqual(before, target.ComputeHash());
             Assert.AreEqual(1, target.Turn);
+        }
+
+        [Test]
+        public void Load_IntoARunningGame_RefusesASaveWithoutASection()
+        {
+            using var source = TestWorlds.BuildSample(seed: 5);
+            for (int t = 0; t < 5; t++) source.AdvanceTurn();
+            using var partial = SaveWithout(source, "agents.income_tax");
+
+            using var target = TestWorlds.BuildSample(seed: 5);
+            target.AdvanceTurn();
+            ulong before = target.ComputeHash();
+            Assert.Throws<InvalidDataException>(() => target.Load(partial));
+            Assert.AreEqual(before, target.ComputeHash());
+        }
+
+        [Test]
+        public void Load_IntoANewGame_KeepsItsFreshStateForAMissingSection()
+        {
+            using var source = TestWorlds.BuildSample(seed: 5);
+            for (int t = 0; t < 5; t++) source.AdvanceTurn();
+            using var partial = SaveWithout(source, "agents.guidance");
+
+            using var target = TestWorlds.BuildSample(seed: 5);
+            target.Load(partial);
+            Assert.AreEqual(5, target.Turn);
+        }
+
+        [Test]
+        public void Load_RefusesASectionNotReadToItsEnd()
+        {
+            using var source = TestWorlds.BuildSample(seed: 5);
+            source.AdvanceTurn();
+            using var full = new MemoryStream();
+            source.Save(full);
+            full.Position = 0;
+            var header = SaveSerializer.ReadHeader(new BinaryReader(full));
+            using var padded = new MemoryStream();
+            SaveSerializer.Write(padded, header, source.World.PersistentComponents.Select(c => c.Key == "agents.income_tax" ? new Padded(c) : c));
+            padded.Position = 0;
+
+            using var target = TestWorlds.BuildSample(seed: 5);
+            target.AdvanceTurn();
+            ulong before = target.ComputeHash();
+            Assert.Throws<InvalidDataException>(() => target.Load(padded));
+            Assert.AreEqual(before, target.ComputeHash());
+        }
+
+        static MemoryStream SaveWithout(GameSimulation sim, string key)
+        {
+            using var full = new MemoryStream();
+            sim.Save(full);
+            full.Position = 0;
+            var header = SaveSerializer.ReadHeader(new BinaryReader(full));
+            var partial = new MemoryStream();
+            SaveSerializer.Write(partial, header, sim.World.PersistentComponents.Where(c => c.Key != key));
+            partial.Position = 0;
+            return partial;
+        }
+
+        /// <summary>A component whose section ends in bytes nothing reads.</summary>
+        sealed class Padded : IPersistentComponent
+        {
+            readonly IPersistentComponent _inner;
+
+            public Padded(IPersistentComponent inner) => _inner = inner;
+
+            public string Key => _inner.Key;
+            public int Version => _inner.Version;
+            public void Read(BinaryReader reader) => _inner.Read(reader);
+
+            public void Write(BinaryWriter writer)
+            {
+                _inner.Write(writer);
+                writer.Write(0L);
+            }
+        }
+
+        [Test]
+        public void BuyingAFacility_CostsItsValueAndTheCashItHolds()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var player = sim.World.Get<PlayerState>();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Node[i] == player.Node);
+            long asked = NpcLending.FacilityValue(sim.Database, facilities, f) + facilities.Cash[f];
+            player.LocalCoins = asked * 2;
+
+            sim.Enqueue(new BuyFacilityCommand(new FacilityId(f), 0, GuidanceAxis.Industry));
+            sim.Enqueue(new BuyFacilityCommand(new FacilityId(f), asked - 1, GuidanceAxis.Industry));
+            sim.AdvanceTurn();
+            Assert.AreEqual(2, sim.LastTurnEvents.OfType<CommandRejected>().Count());
+            Assert.AreEqual(OwnerIds.Npc, facilities.Owner[f]);
+
+            asked = NpcLending.FacilityValue(sim.Database, facilities, f) + facilities.Cash[f];
+            sim.Enqueue(new BuyFacilityCommand(new FacilityId(f), asked, GuidanceAxis.Industry));
+            sim.AdvanceTurn();
+            Assert.AreEqual(OwnerIds.Player, facilities.Owner[f]);
         }
 
         [Test]
@@ -461,8 +560,7 @@ namespace FES.Tests
             Assert.IsFalse(lod.IsDetailed(facilities.Node[far]));
             Assert.IsTrue(lod.IsDetailed(player.Node));
 
-            player.CoinsAt(facilities.Node[far]) += 100; // paid in the facility's continent coin
-            sim.Enqueue(new BuyFacilityCommand(new FacilityId(far), 100, GuidanceAxis.Agriculture));
+            TestWorlds.BuyFacility(sim, far, GuidanceAxis.Agriculture); // paid in the facility's continent coin
             sim.AdvanceTurn(); // Commands phase runs before the Lod phase, so this same turn sees the purchase
             Assert.AreEqual(OwnerIds.Player, facilities.Owner[far]);
             Assert.IsTrue(lod.IsDetailed(facilities.Node[far]));

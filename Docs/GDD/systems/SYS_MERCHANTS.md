@@ -153,4 +153,4 @@ Implemented in P5.
   most cells hold no stock. `MerchantFlowJob` (Burst, single-threaded, nodes in order) is the aggregate
   pass; at full scale merchants take about 7.6 ms of a 14.7 ms turn (aggregate 4.2 ms, 155 detailed
   groups 2.6 ms).
-
+- [Confirmed] Every merchant group acts at least once each turn (DEC-106). [Draft] A group that cannot pay for any trip stays where it is (DEC-107).

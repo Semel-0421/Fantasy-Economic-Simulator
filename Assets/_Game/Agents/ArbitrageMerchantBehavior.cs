@@ -104,7 +104,7 @@ namespace FES.Agents
             _vehiclePremium = new NativeArray<long>(MerchantVehicles.Count, Allocator.Persistent);
             _nodeVehicleCost = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _nodeVehicleDanger = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
-            _tripStats = new NativeArray<long>(20, Allocator.Persistent);
+            _tripStats = new NativeArray<long>(21, Allocator.Persistent);
             _hedgeRoom = new NativeArray<long>(ctx.World.Get<PurseState>().Count, Allocator.Persistent);
             _hedgeNet = new NativeArray<long>(ctx.World.Get<PurseState>().Count, Allocator.Persistent);
             for (int k = 0; k < MerchantVehicles.Count; k++)
@@ -305,6 +305,7 @@ namespace FES.Agents
                 NodeCoreStrength = _nodes.CoreStrength,
                 AgentOwner = _agents.Owner.AsArray(),
                 CountTripCosts = _db.Config.MerchantCountTripCosts,
+                MustAct = _db.Config.MerchantMustAct,
                 HedgeFloorRaw = _db.Config.HedgeFloor.Raw,
                 HedgeFeeRaw = _db.Config.HedgeFee.Raw,
                 HedgeFallRaw = _db.Config.HedgeFall.Raw,
@@ -393,6 +394,7 @@ namespace FES.Agents
             stats.CoverRefunds += _tripStats[17];
             stats.SpentHedge += _tripStats[18];
             stats.HedgePaid += _tripStats[19];
+            stats.ForcedTrips += _tripStats[20];
             for (int k = 0; k < _tripStats.Length; k++) _tripStats[k] = 0;
         }
 

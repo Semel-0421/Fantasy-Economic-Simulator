@@ -31,6 +31,7 @@ namespace FES.Tests
             public Port(string goodKey = "wheat", string config = "lod.mode,1\nmarkets.trader_spread_permille,0")
             {
                 Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig(config.Split('\n')), 42).Build();
+                Sim.Database.Config.MerchantMustAct = false; // the tests watch a group's own choice
                 Sim.AdvanceTurn();
                 Agents = Sim.World.Get<AgentTable>();
                 Markets = Sim.World.Get<MarketStore>();
@@ -413,7 +414,7 @@ namespace FES.Tests
 
         static GameSimulation Build3Hops(int hops)
         {
-            var sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", "merchants.judge_hops," + hops), 42).Build();
+            var sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", "merchants.judge_hops," + hops, "merchants.must_act,0"), 42).Build();
             sim.AdvanceTurn();
             return sim;
         }

@@ -37,7 +37,7 @@ namespace FES.Tests
 
         static List<CargoItem> WeekOfOutput(GameSimulation sim, int facility)
         {
-            sim.Actions.BuyFacility(new FacilityId(facility), 0, GuidanceAxis.Agriculture);
+            TestWorlds.BuyFacility(sim, facility, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
             var stored = new List<CargoItem>();
             sim.View.GetWarehouse(new FacilityId(facility), stored);
@@ -122,7 +122,7 @@ namespace FES.Tests
             var plainLine = sim.Database.Facilities[facilities.DefIndex[plain]].Recipe.Outputs[0];
 
             var specialOut = WeekOfOutput(sim, special);
-            sim.Actions.BuyFacility(new FacilityId(plain), 0, GuidanceAxis.Agriculture);
+            TestWorlds.BuyFacility(sim, plain, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
             var plainOut = new List<CargoItem>();
             sim.View.GetWarehouse(new FacilityId(plain), plainOut);

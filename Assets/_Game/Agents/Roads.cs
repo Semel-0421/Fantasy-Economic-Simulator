@@ -105,7 +105,7 @@ namespace FES.Agents
             int owner = _roads.Owner[r];
             if (owner >= 0)
             {
-                if (_bank.Reserve[owner] < upkeep) return false;
+                if (_bank.Spendable(owner) < upkeep) return false;
                 _bank.Reserve[owner] -= upkeep;
                 return true;
             }

@@ -31,6 +31,24 @@ namespace FES.Tests
         }
 
         [Test]
+        public void MigrantsSavings_AreNoIncome()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            var cash = sim.World.Get<HouseholdCash>();
+            var people = sim.World.Get<HouseholdState>().Population;
+            sim.AdvanceTurn();
+            while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+            var income = Enumerable.Range(0, nodes.Count).Select(n => cash.YearIncome(n)).ToArray();
+            var held = Enumerable.Range(0, nodes.Count).Select(n => cash.Cash[n]).ToArray();
+
+            sim.Systems.OfType<MigrationSystem>().Single().Execute(sim.Context);
+
+            Assert.IsTrue(Enumerable.Range(0, nodes.Count).Any(n => cash.Cash[n] != held[n]), "savings moved");
+            CollectionAssert.AreEqual(income, Enumerable.Range(0, nodes.Count).Select(n => cash.YearIncome(n)).ToArray());
+        }
+
+        [Test]
         public void Towns_AreFree_VillagesStartPartlyBound()
         {
             using var sim = TestWorlds.BuildSample();

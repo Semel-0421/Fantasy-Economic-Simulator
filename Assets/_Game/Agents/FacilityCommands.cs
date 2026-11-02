@@ -27,14 +27,23 @@ namespace FES.Agents
             var error = PlayerSite.Check(ctx, Facility);
             if (error != null) return CommandResult.Fail(error);
             if (Amount > 0 && ctx.World.Get<PlayerState>().LocalCoins < Amount) return CommandResult.Fail("Not enough cash.");
-            if (Amount < 0 && ctx.World.Get<FacilityTable>().Cash[Facility.Value] < -Amount) return CommandResult.Fail("The facility does not hold that much.");
+            if (Amount < 0 && Withdrawable(ctx) < -Amount) return CommandResult.Fail("The facility does not hold that much, less this year's tax.");
             return CommandResult.Success;
+        }
+
+        // Its cash, less the tax on its profit so far: what the owner takes out stays taxed (DEC-107).
+        long Withdrawable(SimContext ctx)
+        {
+            long cash = ctx.World.Get<FacilityTable>().Cash[Facility.Value];
+            long profit = ctx.World.Get<IncomeTaxState>().FacilityProfit(Facility.Value, cash);
+            return cash - ctx.Services.Get<GameDatabase>().Config.TaxCompany.MulInt(Math.Max(0, profit));
         }
 
         public void Apply(SimContext ctx)
         {
             ctx.World.Get<PlayerState>().LocalCoins -= Amount;
             ctx.World.Get<FacilityTable>().Cash[Facility.Value] += Amount;
+            ctx.World.Get<IncomeTaxState>().MoveFacilityCapital(Facility.Value, Amount);
         }
     }
 
@@ -94,12 +103,17 @@ namespace FES.Agents
             Axis = axis;
         }
 
+        /// <summary>What a seller asks: the facility's value and the cash that goes with it (DEC-107).</summary>
+        public static long AskingPrice(GameDatabase db, FacilityTable facilities, int f) =>
+            NpcLending.FacilityValue(db, facilities, f) + Math.Max(0, facilities.Cash[f]);
+
         public CommandResult Validate(SimContext ctx)
         {
             var facilities = ctx.World.Get<FacilityTable>();
             if (!Facility.IsValid || Facility.Value >= facilities.Count) return CommandResult.Fail("Unknown facility.");
             if (Price < 0) return CommandResult.Fail("Price must not be negative.");
             if (facilities.Owner[Facility.Value] != OwnerIds.Npc) return CommandResult.Fail("Facility is not for sale.");
+            if (Price < AskingPrice(ctx.Services.Get<GameDatabase>(), facilities, Facility.Value)) return CommandResult.Fail("The seller asks more.");
             if (ctx.World.Get<PlayerState>().CoinsAt(facilities.Node[Facility.Value]) < Price) return CommandResult.Fail("Not enough cash.");
             return CommandResult.Success;
         }

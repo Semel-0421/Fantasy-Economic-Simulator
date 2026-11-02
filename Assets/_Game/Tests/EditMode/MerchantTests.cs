@@ -25,6 +25,7 @@ namespace FES.Tests
         public void DetailedMerchant_BuysTravelsAndSells()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MerchantMustAct = false; // the test watches a group's own choice
             var agents = sim.World.Get<AgentTable>();
             var cargo = sim.World.Get<CargoTable>();
             sim.AdvanceTurn();
@@ -94,6 +95,7 @@ namespace FES.Tests
         public void MerchantBelowZeroCash_IsReplacedAtHome()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MerchantMustAct = false; // the test watches a group's own choice
             sim.Database.Config.MerchantJoinShare = Fx.Zero; // no association to help it
             var agents = sim.World.Get<AgentTable>();
             sim.AdvanceTurn(); // LOD is set on the first turn
@@ -169,6 +171,7 @@ namespace FES.Tests
         public void UnsoldCargo_IsSoldOnceTheTradersCanPay()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MerchantMustAct = false; // the test watches a group's own choice
             sim.AdvanceTurn();
             var agents = sim.World.Get<AgentTable>();
             var cargo = sim.World.Get<CargoTable>();
@@ -215,6 +218,7 @@ namespace FES.Tests
         public void GroupBasedInTheDetailedArea_IsSteppedAwayFromIt()
         {
             using var sim = TestWorlds.BuildSample();
+            sim.Database.Config.MerchantMustAct = false; // the test watches a group's own choice
             sim.Database.Config.LodMode = 0;
             sim.AdvanceTurn();
             var agents = sim.World.Get<AgentTable>();

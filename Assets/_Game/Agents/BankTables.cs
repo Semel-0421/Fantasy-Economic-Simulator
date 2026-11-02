@@ -26,6 +26,9 @@ namespace FES.Agents
         /// <summary>A nation's reserve without the player's deposits, never below zero.</summary>
         public long Spendable(int nation) => Math.Max(0, Reserve[nation] - PlayerDeposit[nation]);
 
+        /// <summary>What of the player's deposit the bank can pay out now: it may have lent the rest (DEC-107).</summary>
+        public long PayableDeposit(int nation) => Math.Min(PlayerDeposit[nation], Math.Max(0, Reserve[nation]));
+
         public string Key => "agents.banks";
         public int Version => 1;
 

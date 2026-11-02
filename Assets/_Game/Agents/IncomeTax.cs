@@ -73,6 +73,20 @@ namespace FES.Agents
             if (a < MerchantStart.Length) MerchantStart[a] = cash;
         }
 
+        /// <summary>Cash that came or went without being earned or spent moves the start of the book with it, so it is no profit or loss (DEC-107).</summary>
+        public void MoveFacilityCapital(int f, long amount)
+        {
+            if (f < FacilityStart.Length) FacilityStart[f] += amount;
+        }
+
+        public void MoveMerchantCapital(int a, long amount)
+        {
+            if (a < MerchantStart.Length) MerchantStart[a] += amount;
+        }
+
+        /// <summary>A facility's profit this tax year, holding this cash: the change in its cash plus the dividends it paid.</summary>
+        public long FacilityProfit(int f, long cash) => f < FacilityStart.Length ? cash - FacilityStart[f] + FacilityDividends[f] : 0;
+
         public void Write(BinaryWriter writer)
         {
             writer.Write(Opened);
@@ -109,8 +123,9 @@ namespace FES.Agents
 
     /// <summary>
     /// Once a year every node's households pay income tax on what they measurably received, and every facility
-    /// and merchant group on its profit: the change in its cash plus the dividends it paid. A loss carries no
-    /// relief, and nobody pays beyond the cash they hold. The money goes to the nation's bank reserve (or the
+    /// and merchant group on its profit: the change in its cash plus the dividends it paid. Loans, their repayment
+    /// (interest included, so it is not deducted) and what owners or associations put in or take out are no profit or
+    /// loss. A loss carries no relief, and nobody pays beyond the cash they hold. The money goes to the nation's bank reserve (or the
     /// international bank outside a nation), and the state spends it through its reserve rule.
     /// A bank-held facility pays nothing. Interest groups are not taxed: their income is taxed facilities'
     /// profit, and it is taxed again in households when passed on. Runs before the year's books close.
@@ -165,7 +180,7 @@ namespace FES.Agents
             for (int f = 0; f < _facilities.Count; f++)
             {
                 if (_facilities.Owner[f] == OwnerIds.Bank) continue;
-                long profit = _facilities.Cash[f] - _books.FacilityStart[f] + _books.FacilityDividends[f];
+                long profit = _books.FacilityProfit(f, _facilities.Cash[f]);
                 long paid = Pay(_facilities.Node[f], profit, _facilities.Cash[f]);
                 _facilities.Cash[f] -= paid;
                 companies += paid;

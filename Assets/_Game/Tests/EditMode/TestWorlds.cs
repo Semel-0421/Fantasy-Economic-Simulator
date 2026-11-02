@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text;
+using FES.Agents;
+using FES.Core;
 using FES.Data;
 using FES.Simulation;
 using UnityEngine;
@@ -35,6 +37,14 @@ namespace FES.Tests
             foreach (string line in lines)
                 text = System.Text.RegularExpressions.Regex.Replace(text, "(?m)^" + line.Split(',')[0] + ",.*\r?\n?", "");
             return SampleWith(GameDatabase.ConfigFile, text.TrimEnd() + "\n" + string.Join("\n", lines) + "\n");
+        }
+
+        /// <summary>Queues the purchase of a facility at what its seller asks, with the coins given to the player.</summary>
+        public static void BuyFacility(GameSimulation sim, int facility, GuidanceAxis axis)
+        {
+            long asked = sim.View.FacilityAskingPrice(new FacilityId(facility));
+            sim.World.Get<PlayerState>().CoinsAt(sim.World.Get<FacilityTable>().Node[facility]) += asked;
+            sim.Actions.BuyFacility(new FacilityId(facility), asked, axis);
         }
 
         /// <summary>

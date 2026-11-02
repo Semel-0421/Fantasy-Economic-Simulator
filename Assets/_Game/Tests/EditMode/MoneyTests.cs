@@ -129,7 +129,7 @@ namespace FES.Tests
             sim.Actions.BuyLicense(tools);
             sim.Actions.FoundCompany(city, GuidanceAxis.Trade, 1_000);
             Step(sim, "sell, license, company");
-            sim.Actions.BuyFacility(new FacilityId(facility), 2_000, GuidanceAxis.Industry);
+            sim.Actions.BuyFacility(new FacilityId(facility), sim.View.FacilityAskingPrice(new FacilityId(facility)), GuidanceAxis.Industry);
             var groups = sim.World.Get<GroupTable>();
             sim.Actions.JoinGuild(Enumerable.Range(0, groups.Count).First(g => groups.KindOf(g) == GroupKind.Guild && groups.Node[g] == city.Value));
             Step(sim, "facility and guild");
@@ -353,6 +353,219 @@ namespace FES.Tests
             Assert.AreEqual(1_000, facilities.Cash[loss]);
             Assert.AreEqual(3_000 - 200, agents.Cash[0]);
             Assert.AreEqual(9_500, books.FacilityStart[gain], "the new year's books");
+        }
+
+        [Test]
+        public void IncomeTax_DoesNotCountTheOwnersDeposit()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            sim.AdvanceTurn();
+            while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+            int f = OwnFacilityAtTheCity(sim);
+            SetCoins(sim, Node(sim, City), 50_000);
+            books.RestartFacility(f, 1_000);
+            facilities.Cash[f] = 1_000;
+
+            var deposit = new MoveFacilityCashCommand(new FacilityId(f), 10_000);
+            Assert.IsTrue(deposit.Validate(sim.Context).Ok);
+            deposit.Apply(sim.Context);
+            sim.Systems.OfType<IncomeTaxSystem>().Single().Execute(sim.Context);
+
+            Assert.AreEqual(11_000, facilities.Cash[f]);
+        }
+
+        [Test]
+        public void Withdrawal_LeavesTheTaxOnTheYearsProfit()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            sim.AdvanceTurn();
+            while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+            int f = OwnFacilityAtTheCity(sim);
+            SetCoins(sim, Node(sim, City), 0);
+            books.RestartFacility(f, 0);
+            facilities.Cash[f] = 10_000; // a profit of 10,000, so 1,000 owed
+
+            Assert.IsFalse(new MoveFacilityCashCommand(new FacilityId(f), -10_000).Validate(sim.Context).Ok);
+            var withdrawal = new MoveFacilityCashCommand(new FacilityId(f), -9_000);
+            Assert.IsTrue(withdrawal.Validate(sim.Context).Ok);
+            withdrawal.Apply(sim.Context);
+            sim.Systems.OfType<IncomeTaxSystem>().Single().Execute(sim.Context);
+
+            Assert.AreEqual(0, facilities.Cash[f], "the whole tax was paid");
+        }
+
+        [Test]
+        public void IncomeTax_DoesNotCountAFacilitysLoan_OrItsRepayment()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            var loans = sim.World.Get<NpcLoanTable>();
+            var bank = sim.Systems.OfType<BankSystem>().Single();
+            sim.AdvanceTurn();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc && loans.Find(NpcBorrowers.Facility(i)) < 0);
+            facilities.Cash[f] = -100;
+            long Profit() => facilities.Cash[f] - books.FacilityStart[f];
+            long profit = Profit();
+
+            bank.Execute(sim.Context);
+            Assert.GreaterOrEqual(loans.Find(NpcBorrowers.Facility(f)), 0);
+            Assert.Greater(facilities.Cash[f], 0, "it borrowed");
+            Assert.AreEqual(profit, Profit(), "a loan is no profit");
+
+            long cash = facilities.Cash[f] += 100_000;
+            profit = Profit();
+            bank.Execute(sim.Context);
+            Assert.Less(facilities.Cash[f], cash, "it repaid");
+            Assert.AreEqual(profit, Profit(), "a repayment is no loss");
+        }
+
+        [Test]
+        public void IncomeTax_DoesNotCountAMerchantsLoan_OrItsRepayment()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            var loans = sim.World.Get<NpcLoanTable>();
+            var bank = sim.Systems.OfType<BankSystem>().Single();
+            sim.AdvanceTurn();
+            int a = Enumerable.Range(0, agents.Count).First(i => agents.Owner[i] == OwnerIds.Npc && loans.Find(NpcBorrowers.Merchant(i)) < 0);
+            Assert.IsTrue(sim.Database.TryGetGood("wheat", QualityGrade.Mid, out var wheat));
+            agents.Node[a] = agents.Home[a];
+            sim.World.Get<CargoTable>().Change(CargoHolders.Merchant(new AgentId(a)), wheat, 1_000); // collateral
+            agents.Cash[a] = -100;
+            long Profit() => agents.Cash[a] - books.MerchantStart[a];
+            long profit = Profit();
+
+            bank.Execute(sim.Context);
+            Assert.GreaterOrEqual(loans.Find(NpcBorrowers.Merchant(a)), 0);
+            Assert.Greater(agents.Cash[a], -100, "it borrowed");
+            Assert.AreEqual(profit, Profit(), "a loan is no profit");
+
+            long cash = agents.Cash[a] += 100_000;
+            profit = Profit();
+            bank.Execute(sim.Context);
+            Assert.Less(agents.Cash[a], cash, "it repaid");
+            Assert.AreEqual(profit, Profit(), "a repayment is no loss");
+        }
+
+        [Test]
+        public void IncomeTax_DoesNotCountWhatAGroupPutsIntoItsFacility()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var groups = sim.World.Get<GroupTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            sim.AdvanceTurn();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc && facilities.Group[i] >= 0
+                && sim.Database.Facilities[facilities.DefIndex[i]].Tier == IndustryTier.Primary);
+            groups.Cash[facilities.Group[f]] += 1_000_000;
+            facilities.Cash[f] = 0;
+            long profit = -books.FacilityStart[f];
+
+            sim.Systems.OfType<CreditSystem>().Single().Execute(sim.Context);
+
+            Assert.Greater(facilities.Cash[f], 0, "the group fed it");
+            Assert.AreEqual(profit, facilities.Cash[f] - books.FacilityStart[f]);
+        }
+
+        [Test]
+        public void IncomeTax_DoesNotCountAnAssociationsSupport()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var groups = sim.World.Get<GroupTable>();
+            var books = sim.World.Get<IncomeTaxState>();
+            sim.AdvanceTurn();
+            int a = Enumerable.Range(0, agents.Count).First(i => agents.Owner[i] == OwnerIds.Npc);
+            int association = groups.Add(GroupKind.Company, agents.Home[a], -1, 1_000_000);
+            agents.Association[a] = association;
+            agents.Cash[a] = 0;
+            long profit = -books.MerchantStart[a];
+
+            sim.Systems.OfType<MerchantMembershipSystem>().Single().Execute(sim.Context);
+
+            Assert.Greater(agents.Cash[a], 0, "the association helped it");
+            Assert.AreEqual(profit, agents.Cash[a] - books.MerchantStart[a]);
+        }
+
+        static int OwnFacilityAtTheCity(GameSimulation sim)
+        {
+            var facilities = sim.World.Get<FacilityTable>();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Node[i] == Node(sim, City).Value);
+            facilities.Owner[f] = OwnerIds.Player;
+            return f;
+        }
+
+        // An NPC facility at a node whose families are made companies, so none lives there.
+        static int FacilityWhereNoFamilyLives(GameSimulation sim)
+        {
+            var facilities = sim.World.Get<FacilityTable>();
+            var groups = sim.World.Get<GroupTable>();
+            int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc);
+            for (int g = 0; g < groups.Count; g++)
+                if (groups.KindOf(g) == GroupKind.PrivateEnterprise && groups.Node[g] == facilities.Node[f]) groups.Kind[g] = (byte)GroupKind.Company;
+            return f;
+        }
+
+        [Test]
+        public void UnsoldAuction_WhereNoFamilyLives_MakesNoNewCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var groups = sim.World.Get<GroupTable>();
+            sim.AdvanceTurn();
+            int f = FacilityWhereNoFamilyLives(sim);
+            int nation = sim.World.Get<PurseState>().NodeFloat[facilities.Node[f]];
+            int groupsBefore = groups.Count;
+            facilities.Owner[f] = OwnerIds.Bank;
+            sim.World.Get<AuctionTable>().Add(f, nation, sim.Turn, 1_000, forPlayerLoan: false);
+
+            Step(sim, "auction");
+
+            Assert.AreEqual(OwnerIds.Npc, facilities.Owner[f]);
+            Assert.AreEqual(groupsBefore + 1, groups.Count, "a family was set up");
+        }
+
+        [Test]
+        public void LostPlayerFacility_WhereNoFamilyLives_MakesNoNewCoins()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            var groups = sim.World.Get<GroupTable>();
+            sim.AdvanceTurn();
+            int f = FacilityWhereNoFamilyLives(sim);
+            int groupsBefore = groups.Count;
+            facilities.Owner[f] = OwnerIds.Player;
+            sim.World.Get<PurseState>().PayHouseholds(facilities.Node[f], facilities.Cash[f] + 1);
+            facilities.Cash[f] = -1;
+
+            for (int t = 0; t < sim.Database.Config.FacilityBankruptWeeks + 1 && facilities.Owner[f] == OwnerIds.Player; t++)
+                Step(sim, $"week {t}");
+
+            Assert.AreEqual(OwnerIds.Npc, facilities.Owner[f]);
+            Assert.AreEqual(groupsBefore + 1, groups.Count, "a family was set up");
+        }
+
+        [Test]
+        public void MoneyTotals_CountAGroupAbroad_WithItsHomeContinent()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var nodes = sim.World.Get<NodeTable>();
+            var totals = sim.World.Get<MoneyTotals>();
+            int a = Enumerable.Range(0, agents.Count).First(i => agents.Cash[i] > 0);
+            totals.Recompute(sim.World);
+            var before = (long[])totals.ContinentTotal.Clone();
+
+            agents.Node[a] = Enumerable.Range(0, nodes.Count).First(n => nodes.Continent[n] != nodes.Continent[agents.Home[a]] && nodes.LevelOf(n) == WorldLevel.City);
+            totals.Recompute(sim.World);
+
+            CollectionAssert.AreEqual(before, totals.ContinentTotal);
         }
 
         [Test]

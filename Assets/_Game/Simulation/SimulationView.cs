@@ -296,6 +296,9 @@ namespace FES.Simulation
             }
         }
 
+        /// <summary>The least its seller takes for an NPC facility.</summary>
+        public long FacilityAskingPrice(FacilityId facility) => BuyFacilityCommand.AskingPrice(Database, _facilities, facility.Value);
+
         /// <summary>The warehouse of a facility, sorted by good id. Holds goods while the player owns it.</summary>
         public void GetWarehouse(FacilityId facility, List<CargoItem> into) => _cargo.Collect(CargoHolders.Warehouse(facility), into);
         public CargoLoad WarehouseLoad(FacilityId facility) =>
@@ -514,6 +517,7 @@ namespace FES.Simulation
         /// <summary>Buys, or renews for a year, the license for a good from the nation the player is in.</summary>
         public void BuyLicense(GoodId good) => _queue.Enqueue(new BuyLicenseCommand(good));
 
+        /// <summary>Buys an NPC facility, offering at least <see cref="SimulationView.FacilityAskingPrice"/>.</summary>
         public void BuyFacility(FacilityId facility, long price, GuidanceAxis axis) =>
             _queue.Enqueue(new BuyFacilityCommand(facility, price, axis));
 

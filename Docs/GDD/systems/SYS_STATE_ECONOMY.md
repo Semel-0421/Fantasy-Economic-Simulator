@@ -40,6 +40,9 @@ flowchart LR
 - [Draft] Households' income is the measured income the income-per-head rule uses, so that rule sees income after tax. A
   company's profit is its change in cash plus dividends paid. Losses carry no relief, nobody pays beyond the cash held, and
   a new operator starts new books. Bank-held facilities, interest groups and the player's own purse pay nothing.
+- [Draft] Loans and their repayment, interest included, and what an owner or association puts in or takes out are no profit
+  or loss. The player cannot withdraw the tax on a facility's profit so far. Savings migrants carry are no household income
+  (DEC-107).
 
 ## Defense
 - [Confirmed] A nation spends a fixed 5% of its budget on a standing army and mercenaries, with maintenance on top,

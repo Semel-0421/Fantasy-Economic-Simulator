@@ -64,6 +64,7 @@ namespace FES.Agents
                 if (grant <= 0) continue;
                 _groups.Cash[association] -= grant;
                 _agents.Cash[a] += grant;
+                ctx.World.Get<IncomeTaxState>().MoveMerchantCapital(a, grant);
             }
         }
 

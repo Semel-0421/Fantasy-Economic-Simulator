@@ -19,6 +19,7 @@ namespace FES.Simulation
         readonly TurnPipeline _pipeline;
         readonly ulong _dataHash;
         SimulationView _view;
+        bool _newlyBuilt = true;
 
         public readonly SimContext Context;
         public readonly GameDatabase Database;
@@ -46,7 +47,11 @@ namespace FES.Simulation
 
         public void Enqueue(ICommand command) => Context.Commands.Enqueue(command);
 
-        public void AdvanceTurn() => _pipeline.Advance(Context);
+        public void AdvanceTurn()
+        {
+            _newlyBuilt = false;
+            _pipeline.Advance(Context);
+        }
 
         public ulong ComputeHash() => World.ComputeHash();
 
@@ -60,7 +65,9 @@ namespace FES.Simulation
         /// Loads a save into this simulation, replacing all persistent state (including the seed).
         /// It must have been built from the same definitions and map. Atomic: if anything fails, the
         /// previous state is restored and the exception is rethrown. Queued commands and undelivered
-        /// events are discarded, and derived state (LOD, modifier multipliers) is rebuilt.
+        /// events are discarded, and derived state (LOD, modifier multipliers) is rebuilt. A save without
+        /// a section for every component loads only into a newly built simulation, whose fresh state those
+        /// components keep; anywhere else they would keep the running game's state, so it is refused.
         /// </summary>
         public void Load(Stream stream)
         {
@@ -68,7 +75,7 @@ namespace FES.Simulation
             Save(backup);
             try
             {
-                SaveSerializer.Read(stream, World, _dataHash, Migrations);
+                SaveSerializer.Read(stream, World, _dataHash, Migrations, requireEverySection: !_newlyBuilt);
             }
             catch
             {
@@ -76,6 +83,7 @@ namespace FES.Simulation
                 SaveSerializer.Read(backup, World, _dataHash, Migrations);
                 throw;
             }
+            _newlyBuilt = false;
             _pipeline.NotifyLoaded(Context);
         }
 

@@ -205,9 +205,11 @@ namespace FES.Agents
                     leftCash -= toCash;
                     _population.Population[town] += toPeople;
                     _cash.Cash[town] += toCash;
+                    _cash.SavedYear[town] -= toCash; // savings that move are no income, and no loss where they left
                     if (toPeople > 0) ctx.Events.Publish(new PeopleMigrated(new NodeId(village), new NodeId(town), toPeople));
                 }
                 _cash.Cash[village] -= cashMoving;
+                _cash.SavedYear[village] += cashMoving;
                 _population.Population[village] = people - moving;
                 long leftFree = free - freeMoving;
                 _state.FreeShare[village] = people - moving > 0 ? Fx.FromRatio(leftFree, people - moving).Raw : Fx.OneRaw;

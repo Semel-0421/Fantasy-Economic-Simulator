@@ -31,6 +31,7 @@ namespace FES.Tests
             {
                 Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", bills ? "credit.bill_cap_weeks,8" : "credit.bill_cap_weeks,0", "markets.trader_spread_permille," + spread), 42).Build();
                 Sim.AdvanceTurn(); // LOD is set on the first turn
+                Sim.Database.Config.MerchantMustAct = false; // the tests watch a group's own choice
                 Agents = Sim.World.Get<AgentTable>();
                 Markets = Sim.World.Get<MarketStore>();
                 Purses = Sim.World.Get<PurseState>();

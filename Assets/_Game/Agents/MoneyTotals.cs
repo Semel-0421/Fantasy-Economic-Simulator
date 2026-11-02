@@ -66,7 +66,8 @@ namespace FES.Agents
             var facilities = world.Get<FacilityTable>();
             AddCash(nodes, facilities.Node.AsArray(), facilities.Cash.AsArray());
             var agents = world.Get<AgentTable>();
-            AddCash(nodes, agents.Node.AsArray(), agents.Cash.AsArray());
+            for (int a = 0; a < agents.Count; a++) // a group's coins are its home continent's, wherever it is
+                AddCash(nodes, agents.Node[a], nodes.Continent[agents.Home[a]], agents.Cash[a]);
             var groups = world.Get<GroupTable>();
             AddCash(nodes, groups.Node.AsArray(), groups.Cash.AsArray());
 

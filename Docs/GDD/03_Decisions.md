@@ -372,6 +372,26 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-107 Fixes from the code review: what counts as income, and who pays
+- Date: 2026-11-02
+- Decision: [Draft] A company's taxed profit leaves out loans and their repayment, interest included (so interest is not deducted), and what its owner or association puts in or takes out. The player cannot withdraw the tax on a facility's profit so far. Savings migrants carry are no income of the households on either end. A family set up to take over an asset (an auction with no winning bid, a player's lost facility) starts with the coins of the households around. A subsidised workshop's family and guild are placed where it stands. A group abroad counts in its home continent's money total. Seizures and winning bids draw only on the deposit coins the bank still holds, and a nation keeps its roads from its reserve less the player's deposits. Only auctions for the player's own loan count against seizing more of its facilities. Buying an NPC facility costs at least its value plus the cash it holds. Forced trips (DEC-106) go by the trip's full fee and tolls, a group that cannot pay them stays where it is, and groups remember the markets they have been to, so the "market it does not know" rule works with rumors off. A save without a section for every component loads only into a newly built simulation, and a section not read to its end is refused.
+- Reason: findings of the code review, fixed at the user's request.
+- Limits: a group too poor for any trip breaks DEC-106's [Confirmed] rule that every group acts each turn; the user should confirm this exception. Interest paid is taxed as profit. A running game can no longer load a save from before a section existed. Whether the state's own facilities can be bought is unchanged.
+- Impact: SYS-STATE-ECONOMY, SYS-BANKING, SYS-MERCHANTS, 00_Architecture, 02_Data_Formats, 04_Roadmap
+
+### DEC-106 Every merchant acts each turn
+- Date: 2026-11-02
+- Decision: [Confirmed] every merchant group must take at least one action each turn. [Draft] Selling, buying or travelling counts. A group that did none sets off: to a market it does not know if it can, else by the cheapest fee within its range and continent, paying the trip's costs. Only automated groups run this; a group under manual control is the player's to move.
+- Reason: the user's rule.
+- Limits: forced trips cost money: failures rise to 4.8% from 3.5%, three seeds, year 30. Supply and people do not clearly change.
+- Impact: SYS-MERCHANTS, 02_Data_Formats
+
+### DEC-105 Nothing is built on a class
+- Date: 2026-11-02
+- Decision: [Draft] state projects, subsidies and investors build only at towns and villages. A state project had put a mine on a region node, whose upkeep left coins with no people.
+- Reason: fixing the coins left at region nodes, at the user's request.
+- Impact: SYS-PRODUCTION
+
 ### DEC-104 Classes hold no market; core towns take them on and carry five roles
 - Date: 2026-11-02
 - Decision: [Confirmed] continents, nations and regions are classes only: their markets, people and routes move to their core towns. Core towns carry administration, finance, trade, infrastructure and workshops. [Draft] Details: a core takes its classes' people, producers and groups, and their demand per head, the continent's excepted. Wages per head +10% and demand +5% per point of strength. Bank branches and license sales stand only at cores; prices at cores are known to all merchants; roads touching a core are kept first; smithies, coppersmiths, cartwrights and wagonworks stand only at cores, while food and clothing workshops stay in every town. Strength: continent 3, nation 2, region 1. [Confirmed] A town that is core of several classes takes the highest (user's choice after comparing both); [Draft] stacking stays a config option, off.

@@ -112,6 +112,94 @@ namespace FES.Tests
         }
 
         [Test]
+        public void Classes_AreNoLandToBuildOn()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            for (int n = 0; n < nodes.Count; n++)
+                Assert.AreEqual(nodes.Level[n] >= (byte)WorldLevel.City, FacilityPlaces.IsLand(nodes, n), nodes.KeyOf(n));
+        }
+
+        [Test]
+        public void EveryGroup_ActsEachTurn()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var agents = sim.World.Get<AgentTable>();
+            var stats = sim.World.Get<MerchantTripStats>();
+            for (int t = 0; t < 3 * 52; t++) sim.AdvanceTurn();
+            Assert.Greater(stats.ForcedTrips, 0);
+            long sold = stats.Sold;
+            for (int a = 0; a < agents.Count; a++)
+            {
+                sim.World.Get<CargoTable>().Clear(CargoHolders.Merchant(new AgentId(a)));
+                agents.Cash[a] = 1_000_000; // no failure to send one home
+                agents.NegativeCashWeeks[a] = 0;
+            }
+            var markets = sim.World.Get<MarketStore>();
+            for (int c = 0; c < markets.Stock.Length; c++) markets.Stock[c] = 0; // nothing to buy, nothing to sell
+            sim.Context.Services.Get<IMerchantBehavior>().RunDetailed(sim.Context);
+            for (int a = 0; a < agents.Count; a++) Assert.IsTrue(agents.IsTravelling(a), "group " + a);
+            Assert.AreEqual(sold, stats.Sold);
+        }
+
+        [Test]
+        public void AGroupThatCannotPay_DoesNotSetOff()
+        {
+            using var sim = TestWorlds.BuildSample();
+            sim.AdvanceTurn();
+            var agents = sim.World.Get<AgentTable>();
+            var stats = sim.World.Get<MerchantTripStats>();
+            NothingToDo(sim, cash: -1);
+            long forced = stats.ForcedTrips;
+
+            sim.Context.Services.Get<IMerchantBehavior>().RunDetailed(sim.Context);
+
+            Assert.AreEqual(forced, stats.ForcedTrips);
+            for (int a = 0; a < agents.Count; a++) Assert.IsFalse(agents.IsTravelling(a), "group " + a);
+        }
+
+        [Test]
+        public void AnIdleGroup_GoesToMarketsItHasNotSeen()
+        {
+            using var sim = TestWorlds.BuildSample();
+            sim.AdvanceTurn();
+            var agents = sim.World.Get<AgentTable>();
+            var nodes = sim.World.Get<NodeTable>();
+            NothingToDo(sim, cash: 1_000_000);
+            int group = Enumerable.Range(0, agents.Count).First(a => nodes.LevelOf(agents.Home[a]) == WorldLevel.City);
+
+            var seen = new System.Collections.Generic.HashSet<int>();
+            for (int hop = 0; hop < 6; hop++)
+            {
+                sim.Context.Services.Get<IMerchantBehavior>().RunDetailed(sim.Context);
+                Assert.IsTrue(agents.IsTravelling(group), "hop " + hop);
+                seen.Add(agents.Destination[group]);
+                agents.ArrivalTurn[group] = sim.Turn; // it arrives the next time the groups act
+                agents.Cash[group] = 1_000_000;
+            }
+
+            Assert.GreaterOrEqual(seen.Count, 3, "it does not shuttle between the same two markets");
+        }
+
+        // Every group rests at home with this much cash, nothing to sell, and nothing on any market to buy.
+        static void NothingToDo(GameSimulation sim, long cash)
+        {
+            var agents = sim.World.Get<AgentTable>();
+            var cargo = sim.World.Get<CargoTable>();
+            var markets = sim.World.Get<MarketStore>();
+            for (int a = 0; a < agents.Count; a++)
+            {
+                cargo.Clear(CargoHolders.Merchant(new AgentId(a)));
+                agents.Node[a] = agents.Home[a];
+                agents.Destination[a] = -1;
+                agents.ArrivalTurn[a] = -1;
+                agents.Cash[a] = cash;
+                agents.NegativeCashWeeks[a] = 0;
+            }
+            for (int c = 0; c < markets.Stock.Length; c++) markets.Stock[c] = 0;
+        }
+
+        [Test]
         public void ACoreOutsideItsClass_IsRefused()
         {
             var map = new MapDef();

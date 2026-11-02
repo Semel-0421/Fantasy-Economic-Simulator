@@ -86,7 +86,7 @@ namespace FES.Tests
             var player = PlaceAt(sim, City, 10_000);
             int first = Enumerable.Range(0, facilities.Count).First(f => facilities.Node[f] == player.Node);
             int second = Enumerable.Range(0, facilities.Count).Last(f => facilities.Node[f] == player.Node);
-            sim.Actions.BuyFacility(new FacilityId(first), 0, GuidanceAxis.Industry);
+            TestWorlds.BuyFacility(sim, first, GuidanceAxis.Industry);
             sim.AdvanceTurn();
             Assert.AreEqual(-1, sim.View.PlayerCompany);
             Assert.AreEqual(-1, facilities.Group[first]);
@@ -101,7 +101,7 @@ namespace FES.Tests
             Assert.IsTrue(sim.View.Group(company).IsPlayer);
             Assert.AreEqual(company, facilities.Group[first]);
 
-            sim.Actions.BuyFacility(new FacilityId(second), 0, GuidanceAxis.Industry);
+            TestWorlds.BuyFacility(sim, second, GuidanceAxis.Industry);
             sim.AdvanceTurn();
             Assert.AreEqual(company, facilities.Group[second]);
         }
@@ -188,7 +188,7 @@ namespace FES.Tests
             var player = PlaceAt(sim, City, 10_000);
             int f = Enumerable.Range(0, facilities.Count).First(i => facilities.Node[i] == player.Node);
             sim.Actions.FoundCompany(Node(sim, City), GuidanceAxis.Trade, 0);
-            sim.Actions.BuyFacility(new FacilityId(f), 0, GuidanceAxis.Industry);
+            TestWorlds.BuyFacility(sim, f, GuidanceAxis.Industry);
             sim.AdvanceTurn();
             facilities.Cash[f] = -1;
             for (int t = 0; t < sim.Database.Config.FacilityBankruptWeeks + 1 && facilities.Owner[f] == OwnerIds.Player; t++)

@@ -493,6 +493,7 @@ namespace FES.Agents
         {
             var config = _db.Config;
             if (config.WorkingWeeks <= 0) return;
+            var books = _world.Get<IncomeTaxState>();
             for (int f = 0; f < _facilities.Count; f++)
             {
                 int group = _facilities.Group[f];
@@ -509,6 +510,7 @@ namespace FES.Agents
                 {
                     _groups.Cash[group] -= own;
                     _facilities.Cash[f] += own;
+                    books.MoveFacilityCapital(f, own);
                     gap -= own;
                     _stats.GroupsToppedUp += own;
                 }
@@ -517,6 +519,7 @@ namespace FES.Agents
                 if (nation >= _purses.NationCount || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) continue;
                 long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, BondDesk.CompanyRoom(_world, _db, group)));
                 _facilities.Cash[f] += raised;
+                books.MoveFacilityCapital(f, raised);
                 _stats.CompanyRaised += raised;
             }
         }

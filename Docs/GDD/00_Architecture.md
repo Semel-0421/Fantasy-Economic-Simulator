@@ -192,7 +192,7 @@ Static tables (`NodeTable`, `RouteTable`, market layout) are rebuilt from data, 
 - The map is hand-written data; the seeded hex map comes with P18 (DEC-075).
 - No roll-up of lower-tier flows into higher-tier markets beyond "nearest carrying market".
 - Saves reject changed data instead of remapping ids by key.
-- Sections missing from an older save keep the freshly built state.
+- An older save without a section loads only into a newly built simulation, whose fresh state that section keeps; a running game refuses it (DEC-107).
 - `SimulationView` has no view of merchants or world events yet.
 
 Every node is detailed in play (DEC-100). Each node is also a class with one core node, `NodeTable.Core` (DEC-101).

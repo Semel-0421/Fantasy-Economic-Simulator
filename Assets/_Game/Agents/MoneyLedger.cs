@@ -270,6 +270,16 @@ namespace FES.Agents
             return cash;
         }
 
+        /// <summary>The family at a node, to take over an asset there. One set up now starts with the coins of the households around, so none appear (DEC-107).</summary>
+        public static int FamilyAt(WorldState world, GroupDirectory directory, SimulationConfig config, int node)
+        {
+            var groups = world.Get<GroupTable>();
+            int before = groups.Count;
+            int family = directory.PrivateAt(node, config);
+            if (groups.Count > before) PayLocalHouseholds(world, node, -groups.Cash[family]);
+            return family;
+        }
+
         /// <summary>A group pays <paramref name="amount"/> from its cash; what it lacks comes from the households around <paramref name="node"/>.</summary>
         public static void PayFromGroup(WorldState world, int group, int node, long amount)
         {

@@ -196,7 +196,7 @@ namespace FES.Agents
             long lowest = long.MaxValue;
             foreach (int node in _purses.NationNodes[nation])
             {
-                if (_development.LandLevel[node] >= _db.Config.StateLandMax || _nodes.Level[node] <= (int)WorldLevel.Nation) continue;
+                if (_development.LandLevel[node] >= _db.Config.StateLandMax || _nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
                 if (Underway(project.Kind, node, -1)) continue;
                 long supplied = _population.NecessitySuppliedPermille(node);
                 if (supplied >= lowest) continue;

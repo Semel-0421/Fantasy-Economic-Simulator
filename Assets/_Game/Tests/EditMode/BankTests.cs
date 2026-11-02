@@ -301,6 +301,77 @@ namespace FES.Tests
         }
 
         [Test]
+        public void PlayersLoan_IsNotCoveredByAnotherBorrowersAuction()
+        {
+            using var sim = Build();
+            PlaceAt(sim, City, 0);
+            int f = OwnCityFacility(sim);
+            sim.Actions.TakeLoan(2_000);
+            sim.AdvanceTurn();
+            PlaceAt(sim, "aur_n1_r1_c1_v1", 0);
+            var facilities = sim.World.Get<FacilityTable>();
+            int other = Enumerable.Range(0, facilities.Count).First(i => facilities.Owner[i] == OwnerIds.Npc);
+            facilities.Owner[other] = OwnerIds.Bank;
+            int nation = sim.World.Get<NodeBanks>().NationIndex(NationOf(sim, City).Value);
+            sim.World.Get<AuctionTable>().Add(other, nation, sim.Turn + 10_000, 1_000_000, forPlayerLoan: false);
+
+            for (int t = 0; t <= sim.Database.Config.LoanGraceWeeks + 1 && facilities.Owner[f] == OwnerIds.Player; t++) sim.AdvanceTurn();
+
+            Assert.AreEqual(OwnerIds.Bank, facilities.Owner[f]);
+        }
+
+        [Test]
+        public void Seizure_TakesOnlyTheDepositCoinsTheBankHolds()
+        {
+            using var sim = Build();
+            PlaceAt(sim, City, 0);
+            OwnCityFacility(sim);
+            sim.Actions.TakeLoan(3_000);
+            sim.AdvanceTurn();
+            PlaceAt(sim, "aur_n1_r1_c1_v1", 0);
+            int abroad = sim.World.Get<NodeBanks>().NationIndex(NationOf(sim, "bor_n1_r1_c2").Value);
+            var bank = sim.World.Get<BankState>();
+            bank.PlayerDeposit[abroad] = 1_000;
+            bank.Reserve[abroad] = 300; // it lent the rest
+
+            var seized = new List<CollateralSeized>();
+            for (int t = 0; t <= sim.Database.Config.LoanGraceWeeks + 1 && seized.Count == 0; t++)
+            {
+                sim.AdvanceTurn();
+                seized.AddRange(sim.LastTurnEvents.OfType<CollateralSeized>());
+            }
+
+            Assert.AreEqual(CollateralKind.Deposit, seized.First().Kind);
+            Assert.AreEqual(0, bank.Reserve[abroad]);
+            Assert.GreaterOrEqual(bank.PlayerDeposit[abroad], 700);
+        }
+
+        [Test]
+        public void WinningBid_IsNotPaidFromDepositCoinsTheBankLacks()
+        {
+            using var sim = Build();
+            PlaceAt(sim, City, 0);
+            var facilities = sim.World.Get<FacilityTable>();
+            int f = OwnCityFacility(sim);
+            facilities.Owner[f] = OwnerIds.Bank;
+            var banks = sim.World.Get<NodeBanks>();
+            int home = banks.NationIndex(NationOf(sim, City).Value);
+            int lender = banks.NationIndex(NationOf(sim, "bor_n1_r1_c2").Value);
+            var bank = sim.World.Get<BankState>();
+            sim.AdvanceTurn();
+            bank.PlayerDeposit[home] = 1_000;
+            bank.Reserve[home] = 300;
+            var auctions = sim.World.Get<AuctionTable>();
+            auctions.Add(f, lender, sim.Turn, 800, forPlayerLoan: false); // the sale's coins go abroad
+            auctions.PlayerBid[auctions.Find(new FacilityId(f))] = 800;
+
+            sim.AdvanceTurn();
+
+            Assert.IsFalse(sim.LastTurnEvents.OfType<AuctionClosed>().Single().WonByPlayer);
+            Assert.GreaterOrEqual(bank.Reserve[home], 0);
+        }
+
+        [Test]
         public void BankState_SurvivesSaveAndLoad()
         {
             using var sim = Build();

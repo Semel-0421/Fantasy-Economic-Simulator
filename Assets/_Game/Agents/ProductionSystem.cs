@@ -352,7 +352,7 @@ namespace FES.Agents
             _facilities.Owner[f] = OwnerIds.Npc;
             _facilities.Mode[f] = (byte)ControlMode.Automated;
             // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.
-            if (wasPlayer) _facilities.Group[f] = _groups.PrivateAt(_facilities.Node[f], _db.Config);
+            if (wasPlayer) _facilities.Group[f] = MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
             _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f], StartCash(f));
             _books.RestartFacility(f, _facilities.Cash[f]);
             _facilities.NegativeCashWeeks[f] = 0;

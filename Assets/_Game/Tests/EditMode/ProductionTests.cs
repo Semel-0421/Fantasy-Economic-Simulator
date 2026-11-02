@@ -142,7 +142,7 @@ namespace FES.Tests
             var facilities = sim.World.Get<FacilityTable>();
             int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
             long cash = facilities.Cash[farm];
-            sim.Actions.BuyFacility(new FacilityId(farm), 0, GuidanceAxis.Agriculture);
+            TestWorlds.BuyFacility(sim, farm, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
 
             var stored = new List<CargoItem>();
@@ -161,7 +161,7 @@ namespace FES.Tests
             var facilities = sim.World.Get<FacilityTable>();
             int farm = FacilitiesAtPlayer(sim, IndustryTier.Primary).First();
             long cash = facilities.Cash[farm];
-            sim.Actions.BuyFacility(new FacilityId(farm), 0, GuidanceAxis.Agriculture);
+            TestWorlds.BuyFacility(sim, farm, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
 
             var load = sim.View.WarehouseLoad(new FacilityId(farm));
@@ -180,7 +180,7 @@ namespace FES.Tests
             int bakery = FacilitiesOf(sim, IndustryTier.Tertiary).First();
             sim.World.Get<PlayerState>().Node = facilities.Node[bakery];
             var id = new FacilityId(bakery);
-            sim.Actions.BuyFacility(id, 0, GuidanceAxis.Trade);
+            TestWorlds.BuyFacility(sim, id.Value, GuidanceAxis.Trade);
             sim.AdvanceTurn();
             sim.Actions.MoveFacilityCash(id, -facilities.Cash[bakery]);
             sim.AdvanceTurn();
@@ -228,7 +228,7 @@ namespace FES.Tests
             var id = new FacilityId(farm);
             long facilityCash = facilities.Cash[farm];
             sim.Actions.MoveFacilityCash(id, 50); // rejected: not owned yet
-            sim.Actions.BuyFacility(id, 0, GuidanceAxis.Agriculture);
+            TestWorlds.BuyFacility(sim, id.Value, GuidanceAxis.Agriculture);
             sim.AdvanceTurn();
             Assert.AreEqual(1, sim.LastTurnEvents.OfType<CommandRejected>().Count());
 

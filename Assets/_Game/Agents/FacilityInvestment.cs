@@ -9,6 +9,9 @@ namespace FES.Agents
     /// <summary>Where a facility type may stand: a continent's own goods are made nowhere else (DEC-096).</summary>
     public static class FacilityPlaces
     {
+        /// <summary>Whether anything can be built at a node: a class has no land of its own (DEC-105).</summary>
+        public static bool IsLand(NodeTable nodes, int node) => !nodes.Absorbed || nodes.Level[node] >= (byte)WorldLevel.City;
+
         public static bool Allowed(FacilityDef def, NodeTable nodes, int node)
         {
             if (nodes.Absorbed && def.CoreOnly && nodes.Level[node] >= (byte)WorldLevel.City && !nodes.IsSeat(node)) return false; // DEC-104
@@ -143,6 +146,7 @@ namespace FES.Agents
 
         bool Invest(SimContext ctx, int node, int nationNode)
         {
+            if (!FacilityPlaces.IsLand(_nodes, node)) return false;
             int group = RichestAt(node, nationNode);
             if (group < 0) return false;
             var config = _db.Config;

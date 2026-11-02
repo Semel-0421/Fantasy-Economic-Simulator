@@ -36,7 +36,7 @@ namespace FES.Persistence
     /// <summary>
     /// Binary save container: header, then one length-prefixed section per persistent component
     /// (key, version, bytes). Unknown sections are skipped; older sections are migrated; sections
-    /// missing from the file keep their freshly built state.
+    /// missing from the file keep the state the component holds, so only a newly built world can take them.
     /// </summary>
     public static class SaveSerializer
     {
@@ -84,7 +84,8 @@ namespace FES.Persistence
         /// (A component's own Read can still fail mid-apply; <c>GameSimulation.Load</c> rolls back in that case.)
         /// </summary>
         /// <param name="expectedDataHash">The running build's data hash; a mismatch is rejected.</param>
-        public static SaveHeader Read(Stream stream, WorldState world, ulong expectedDataHash, MigrationRegistry migrations)
+        /// <param name="requireEverySection">Rejects a file without a section for every component of the world.</param>
+        public static SaveHeader Read(Stream stream, WorldState world, ulong expectedDataHash, MigrationRegistry migrations, bool requireEverySection = false)
         {
             using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
             var header = ReadHeader(reader);
@@ -107,11 +108,17 @@ namespace FES.Persistence
                 if (version < component.Version) bytes = migrations.Upgrade(key, version, component.Version, bytes);
                 staged.Add((component, bytes));
             }
+            if (requireEverySection)
+                foreach (var component in world.PersistentComponents)
+                    if (!staged.Exists(s => s.component == component))
+                        throw new InvalidDataException($"The save has no section '{component.Key}': only a newly built simulation can load it.");
 
             foreach (var (component, bytes) in staged)
             {
                 using var sectionReader = new BinaryReader(new MemoryStream(bytes), Encoding.UTF8);
                 component.Read(sectionReader);
+                if (sectionReader.BaseStream.Position != bytes.Length)
+                    throw new InvalidDataException($"Section '{component.Key}' has bytes left over after reading.");
             }
             return header;
         }

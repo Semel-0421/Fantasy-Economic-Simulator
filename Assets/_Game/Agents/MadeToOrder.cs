@@ -20,6 +20,8 @@ namespace FES.Agents
         public long SpentWages, SpentTax, SpentFeesToAssociations, SpentLoans, SpentVehicles;
         /// <summary>DEC-099: price cover bought, and what banks paid on it.</summary>
         public long SpentHedge, HedgePaid;
+        /// <summary>DEC-106: trips a group made only because it had to act.</summary>
+        public long ForcedTrips;
     }
 
     /// <summary>

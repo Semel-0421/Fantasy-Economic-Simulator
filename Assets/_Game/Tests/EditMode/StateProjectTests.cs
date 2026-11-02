@@ -95,6 +95,45 @@ namespace FES.Tests
         }
 
         [Test]
+        public void SubsidisedWorkshop_HasItsFamilyAtTheCoreItStandsAt()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var nodes = sim.World.Get<NodeTable>();
+            var groups = sim.World.Get<GroupTable>();
+            var facilities = sim.World.Get<FacilityTable>();
+            var households = sim.World.Get<HouseholdState>();
+            var banks = sim.World.Get<NodeBanks>();
+            var development = sim.World.Get<DevelopmentState>();
+            sim.AdvanceTurn();
+            while (!sim.Context.Clock.IsNewYear) sim.AdvanceTurn();
+
+            int core = nodes.Core[banks.NationNode(0)];
+            bool HasFamily(int node) => Enumerable.Range(0, groups.Count).Any(g => groups.KindOf(g) == GroupKind.PrivateEnterprise && groups.Node[g] == node);
+            var nationNodes = sim.World.Get<PurseState>().NationNodes[0];
+            int site = nationNodes.First(n => n != core && nodes.LevelOf(n) == WorldLevel.City);
+            for (int g = 0; g < groups.Count; g++) // no family lives at either yet
+                if (groups.KindOf(g) == GroupKind.PrivateEnterprise && (groups.Node[g] == core || groups.Node[g] == site)) groups.Kind[g] = (byte)GroupKind.Company;
+            foreach (int node in nationNodes)
+            {
+                households.NecessityWanted[node] = 100;
+                households.NecessityMet[node] = node == site ? 0 : 100; // the shortest of necessities, so the subsidy looks here first
+            }
+            Assert.IsTrue(sim.Database.TryGetGood("iron_tools", QualityGrade.Mid, out var tools));
+            sim.Database.Config.SubsidyMaxPerNation = 1;
+            development.Subsidies.Clear();
+            development.Subsidies.Add(new SubsidyPolicy { Nation = 0, Good = tools.Value, EndYear = 9_999 });
+            sim.World.Get<BankState>().Reserve[0] += 10_000_000;
+            int before = facilities.Count;
+
+            sim.Systems.OfType<SubsidySystem>().Single().Execute(sim.Context);
+
+            Assert.Greater(facilities.Count, before);
+            Assert.AreEqual(core, facilities.Node[facilities.Count - 1], "a smithy stands at a core");
+            Assert.IsTrue(HasFamily(core));
+            Assert.IsFalse(HasFamily(site), "no family is staked where nothing was built");
+        }
+
+        [Test]
         public void SubsidyRate_AddsToWhatAProducerIsPaid()
         {
             long Cash(bool subsidy)

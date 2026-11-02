@@ -384,9 +384,15 @@ namespace FES.Economy
         public static long AtAnchor(in DemandParams p, SimulationConfig config, HouseholdState households, int node, int level, GoodDef good, long priceIndex)
         {
             if (good.BaseDemand <= 0) return 0;
+            return AtAnchor(p, config, level, good, priceIndex, households.NecessityWeight(node, level, config).Raw, households.LuxuryWeight(node, level, config).Raw);
+        }
+
+        /// <summary>The same, with the node's weights already known, for whoever asks for all of a node's goods.</summary>
+        public static long AtAnchor(in DemandParams p, SimulationConfig config, int level, GoodDef good, long priceIndex, long necessityWeight, long luxuryWeight)
+        {
+            if (good.BaseDemand <= 0) return 0;
             long weekly = CellBase(good.BaseDemand, good.BasePrice, config.LevelDemandWeight[level].Raw, Fx.OneRaw, priceIndex, out long anchor);
-            return Weekly(p, weekly, (int)Math.Min(anchor, int.MaxValue), anchor, config.LuxuryShare(good).Raw,
-                households.NecessityWeight(node, level, config).Raw, households.LuxuryWeight(node, level, config).Raw).Units;
+            return Weekly(p, weekly, (int)Math.Min(anchor, int.MaxValue), anchor, config.LuxuryShare(good).Raw, necessityWeight, luxuryWeight).Units;
         }
 
         /// <param name="luxuryShare">How far the good is bought like a luxury (raw Q16, 0..1).</param>

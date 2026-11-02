@@ -207,6 +207,8 @@ namespace FES.Agents
     {
         public int Turn = -1;
         public long[] Houses = new long[0], Groups = new long[0];
+        /// <summary>Per nation: the sum of what its households and groups still offer this week.</summary>
+        public long[] Nations = new long[0];
     }
 
     public sealed class BondDefaulted : ISimEvent
@@ -225,6 +227,44 @@ namespace FES.Agents
     /// Sells bonds to those holding idle money: a nation's households beyond their spending and its groups beyond their
     /// reserve, each offering a share of that a week. Coins only move between purses.
     /// </summary>
+    /// <summary>Every company's debt room at once, for systems that ask thousands of times in a turn.</summary>
+    public sealed class CompanyRooms
+    {
+        readonly GameDatabase _db;
+        readonly FacilityTable _facilities;
+        readonly GroupTable _groups;
+        readonly BondTable _bonds;
+        long[] _value = new long[0], _debt = new long[0];
+
+        public CompanyRooms(WorldState world, GameDatabase db)
+        {
+            _db = db;
+            _facilities = world.Get<FacilityTable>();
+            _groups = world.Get<GroupTable>();
+            _bonds = world.Get<BondTable>();
+        }
+
+        public void Refresh()
+        {
+            if (_value.Length < _groups.Count)
+            {
+                _value = new long[_groups.Count + 64];
+                _debt = new long[_groups.Count + 64];
+            }
+            Array.Clear(_value, 0, _value.Length);
+            Array.Clear(_debt, 0, _debt.Length);
+            for (int f = 0; f < _facilities.Count; f++)
+                if (_facilities.Group[f] >= 0 && _facilities.Owner[f] == OwnerIds.Npc)
+                    _value[_facilities.Group[f]] += NpcLending.FacilityValue(_db, _facilities, f);
+            for (int r = 0; r < _bonds.Count; r++)
+                if (!BondTable.IsState(_bonds.Issuer[r])) _debt[_bonds.Issuer[r]] += _bonds.Face[r];
+        }
+
+        public long Room(int group) => BondDesk.CompanyRoom(_db.Config, _value[group], _debt[group]);
+
+        public void AddDebt(int group, long face) => _debt[group] += face;
+    }
+
     public static class BondDesk
     {
         static BondOffers OffersOf(WorldState world, SimulationConfig config, int turn)
@@ -236,6 +276,7 @@ namespace FES.Agents
             var groups = world.Get<GroupTable>();
             if (offers.Houses.Length != cash.Cash.Length) offers.Houses = new long[cash.Cash.Length];
             if (offers.Groups.Length < groups.Count) offers.Groups = new long[groups.Count + 64];
+            Array.Clear(offers.Groups, groups.Count, offers.Groups.Length - groups.Count);
             for (int n = 0; n < offers.Houses.Length; n++)
                 offers.Houses[n] = config.BondBuyShare.MulInt(Math.Max(0, cash.Cash[n] - config.BondKeepWeeks * cash.Desired[n]));
             for (int g = 0; g < groups.Count; g++)
@@ -243,7 +284,20 @@ namespace FES.Agents
                 long keep = config.BondGroupKeepTimes * config.GroupStartCash[groups.Kind[g]];
                 offers.Groups[g] = groups.IsPlayer[g] != 0 ? 0 : config.BondBuyShare.MulInt(Math.Max(0, groups.Cash[g] - keep));
             }
+            SumByNation(offers, world.Get<PurseState>(), groups);
             return offers;
+        }
+
+        static void SumByNation(BondOffers offers, PurseState purses, GroupTable groups)
+        {
+            if (offers.Nations.Length != purses.NationCount) offers.Nations = new long[purses.NationCount];
+            for (int n = 0; n < offers.Nations.Length; n++)
+            {
+                offers.Nations[n] = 0;
+                foreach (int node in purses.NationNodes[n]) offers.Nations[n] += offers.Houses[node];
+            }
+            for (int g = 0; g < groups.Count; g++)
+                if (purses.NodeFloat[groups.Node[g]] < offers.Nations.Length) offers.Nations[purses.NodeFloat[groups.Node[g]]] += offers.Groups[g];
         }
 
         /// <summary>What a nation's holders would pay for this week's bonds, apart from the issuer itself.</summary>
@@ -252,11 +306,8 @@ namespace FES.Agents
             var offers = OffersOf(world, config, turn);
             var purses = world.Get<PurseState>();
             var groups = world.Get<GroupTable>();
-            long offered = 0;
-            foreach (int node in purses.NationNodes[nation]) offered += offers.Houses[node];
-            for (int g = 0; g < groups.Count; g++)
-                if (g != issuer && purses.NodeFloat[groups.Node[g]] == nation) offered += offers.Groups[g];
-            return offered;
+            bool issuerBuys = issuer >= 0 && issuer < groups.Count && purses.NodeFloat[groups.Node[issuer]] == nation;
+            return offers.Nations[nation] - (issuerBuys ? offers.Groups[issuer] : 0);
         }
 
         /// <summary>Sells up to <paramref name="amount"/> of bonds, in proportion to what holders offer. Returns the coins raised, which the caller receives.</summary>
@@ -276,6 +327,7 @@ namespace FES.Agents
                 long part = want / offered * offers.Houses[node] + want % offered * offers.Houses[node] / offered;
                 if (part <= 0) continue;
                 offers.Houses[node] -= part;
+                offers.Nations[nation] -= part;
                 cash.Cash[node] -= part;
                 cash.SavedYear[node] += part;
                 bonds.Add(issuer, node, part);
@@ -287,6 +339,7 @@ namespace FES.Agents
                 long part = want / offered * offers.Groups[g] + want % offered * offers.Groups[g] / offered;
                 if (part <= 0) continue;
                 offers.Groups[g] -= part;
+                offers.Nations[nation] -= part;
                 groups.Cash[g] -= part;
                 bonds.Add(issuer, BondTable.OfGroup(g), part);
                 raised += part;
@@ -313,8 +366,11 @@ namespace FES.Agents
             long value = 0;
             for (int f = 0; f < facilities.Count; f++)
                 if (facilities.Group[f] == group && facilities.Owner[f] == OwnerIds.Npc) value += NpcLending.FacilityValue(db, facilities, f);
-            return Math.Max(0, db.Config.CompanyDebtShare.MulInt(value) - world.Get<BondTable>().DebtOf(group));
+            return CompanyRoom(db.Config, value, world.Get<BondTable>().DebtOf(group));
         }
+
+        public static long CompanyRoom(SimulationConfig config, long facilitiesValue, long debt) =>
+            Math.Max(0, config.CompanyDebtShare.MulInt(facilitiesValue) - debt);
     }
 
     /// <summary>
@@ -343,6 +399,7 @@ namespace FES.Agents
         CreditStats _stats;
         FinanceState _finance;
         bool[] _stateBehind;
+        CompanyRooms _rooms;
         long[] _floatPot;
         int[] _nationsOnContinent;
 
@@ -370,6 +427,7 @@ namespace FES.Agents
             _bonds = ctx.World.Get<BondTable>();
             _stats = ctx.World.Get<CreditStats>();
             _finance = ctx.World.Get<FinanceState>();
+            _rooms = new CompanyRooms(ctx.World, _db);
             _stateBehind = new bool[_banks.NationCount];
             _floatPot = new long[_purses.Count];
             _nationsOnContinent = new int[_nodes.ContinentCount];
@@ -498,6 +556,7 @@ namespace FES.Agents
         void KeepFacilitiesInCash(SimContext ctx)
         {
             if (_db.Config.WorkingWeeks <= 0) return;
+            _rooms.Refresh();
             for (int f = 0; f < _facilities.Count; f++)
             {
                 int group = _facilities.Group[f];
@@ -534,7 +593,8 @@ namespace FES.Agents
             if (gap <= 0 || config.CompanyDebtShare.Raw <= 0) return;
             int nation = _purses.NodeFloat[_groups.Node[group]];
             if (nation >= _purses.NationCount || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) return;
-            long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, BondDesk.CompanyRoom(_world, _db, group)));
+            long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, _rooms.Room(group)));
+            _rooms.AddDebt(group, raised);
             _facilities.Cash[f] += raised;
             books.MoveFacilityCapital(f, raised);
             _stats.CompanyRaised += raised;

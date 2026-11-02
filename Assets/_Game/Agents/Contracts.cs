@@ -219,6 +219,9 @@ namespace FES.Agents
 
         long IndexOf(int node) => _currency.PriceIndex[_nodes.Continent[node]].Raw;
 
+        // A nation's markets share a continent, so no market there settles above this anchor.
+        long AnchorOf(int node, int cell) => Fx.RoundShift(_markets.GoodBasePrice[_markets.CellGood[cell]] * IndexOf(node));
+
         // The price a market settles at: its anchor, or less while it sells below it. A spike from a passing shortage does not count.
         long SettledPrice(int node, int cell) =>
             Math.Min(_markets.Price[cell], Fx.RoundShift(_markets.GoodBasePrice[_markets.CellGood[cell]] * IndexOf(node)));
@@ -254,7 +257,8 @@ namespace FES.Agents
             {
                 int end = _markets.MarketCellStart[a] + _markets.MarketCellCount[a];
                 for (int c = _markets.MarketCellStart[a]; c < end; c++)
-                    if (_markets.Stock[c] >= _db.Config.ContractMinStock) WidestGapFrom(a, c, nodes, ref bestGap, ref route);
+                    if (_markets.Stock[c] >= _db.Config.ContractMinStock && AnchorOf(a, c) - _markets.Price[c] > bestGap)
+                        WidestGapFrom(a, c, nodes, ref bestGap, ref route);
             }
             return bestGap > 0;
         }

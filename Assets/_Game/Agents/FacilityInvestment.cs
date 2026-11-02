@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FES.Core;
 using FES.Data;
 using FES.Economy;
@@ -116,6 +117,12 @@ namespace FES.Agents
         GroupTable _groups;
         GroupDirectory _directory;
         DemandForecast _forecast;
+        CompanyRooms _rooms;
+        bool _roomsStale;
+        // Scanning the tables for each of 1,580 nodes is most of a new-year turn.
+        List<int>[] _facilitiesAt;
+        List<int>[] _groupsAt;
+        int _groupsListed;
 
         public string Id => "agents.investment";
         public SimPhase Phase => SimPhase.Finance;
@@ -133,14 +140,38 @@ namespace FES.Agents
             _groups = ctx.World.Get<GroupTable>();
             _directory = new GroupDirectory(_groups, _nodes);
             _forecast = ctx.World.Get<DemandForecast>();
+            _rooms = new CompanyRooms(ctx.World, _db);
+            _facilitiesAt = new List<int>[_nodes.Count];
+            _groupsAt = new List<int>[_nodes.Count];
+            for (int n = 0; n < _nodes.Count; n++)
+            {
+                _facilitiesAt[n] = new List<int>();
+                _groupsAt[n] = new List<int>();
+            }
         }
 
         public void Execute(SimContext ctx)
         {
             if (!ctx.Clock.IsNewYear || ctx.Turn == 0 || _db.Config.InvestmentPaybackYears <= 0) return;
+            ListByNode();
             for (int n = 0; n < _banks.NationCount; n++)
                 foreach (int node in _purses.NationNodes[n])
                     InvestAt(ctx, node, _banks.NationNode(n));
+        }
+
+        void ListByNode()
+        {
+            foreach (var list in _facilitiesAt) list.Clear();
+            foreach (var list in _groupsAt) list.Clear();
+            for (int f = 0; f < _facilities.Count; f++) _facilitiesAt[_facilities.Node[f]].Add(f);
+            _groupsListed = 0;
+            ListNewGroups();
+            _roomsStale = true;
+        }
+
+        void ListNewGroups()
+        {
+            for (; _groupsListed < _groups.Count; _groupsListed++) _groupsAt[_groups.Node[_groupsListed]].Add(_groupsListed);
         }
 
         void InvestAt(SimContext ctx, int node, int nationNode)
@@ -167,7 +198,7 @@ namespace FES.Agents
             int nation = _purses.NodeFloat[_groups.Node[group]];
             long cash = own;
             if (config.CompanyDebtShare.Raw > 0 && nation < _purses.NationCount)
-                cash += Math.Min(BondDesk.CompanyRoom(ctx.World, _db, group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
+                cash += Math.Min(RoomOf(group), BondDesk.Offered(ctx.World, config, ctx.Turn, nation, group));
 
             var best = new Project { Facility = -1, Def = -1 };
             int count = WeighExpansions(node, group, cash, ref best);
@@ -177,6 +208,7 @@ namespace FES.Agents
             if (best.Cost > own)
             {
                 long raised = BondDesk.Raise(ctx.World, config, ctx.Turn, group, nation, best.Cost - own);
+                _roomsStale = true;
                 _groups.Cash[group] += raised;
                 ctx.World.Get<CreditStats>().CompanyRaised += raised;
                 if (raised < best.Cost - own) return false;
@@ -184,7 +216,15 @@ namespace FES.Agents
             _groups.Cash[group] -= best.Cost;
             if (best.Facility >= 0) Expand(ctx, node, in best);
             else Found(ctx, node, group, in best);
+            _roomsStale = true;
             return true;
+        }
+
+        long RoomOf(int group)
+        {
+            if (_roomsStale) _rooms.Refresh();
+            _roomsStale = false;
+            return _rooms.Room(group);
         }
 
         // Returns how many facilities stand at the node.
@@ -192,9 +232,8 @@ namespace FES.Agents
         {
             var config = _db.Config;
             int count = 0;
-            for (int f = 0; f < _facilities.Count; f++)
+            foreach (int f in _facilitiesAt[node])
             {
-                if (_facilities.Node[f] != node) continue;
                 count++;
                 if (_facilities.Group[f] != group || _facilities.Owner[f] != OwnerIds.Npc) continue;
                 var def = _db.Facilities[_facilities.DefIndex[f]];
@@ -242,6 +281,7 @@ namespace FES.Agents
             _purses.PayHouseholds(node, project.Cost - start);
             var id = _facilities.Add(node, project.Def, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, start);
             _facilities.Group[id.Value] = group;
+            _facilitiesAt[node].Add(id.Value);
             ctx.Events.Publish(new FacilityFounded(id, group));
         }
 
@@ -250,15 +290,24 @@ namespace FES.Agents
 
         int RichestAt(int node, int nationNode)
         {
+            ListNewGroups();
             int best = -1;
-            for (int g = 0; g < _groups.Count; g++)
+            foreach (int g in _groupsAt[node])
+                if (_groups.KindOf(g) == GroupKind.PrivateEnterprise) best = RicherOf(best, g);
+            foreach (int g in _groupsAt[nationNode])
             {
-                if (_groups.IsPlayer[g] != 0) continue;
                 var kind = _groups.KindOf(g);
-                bool may = (kind == GroupKind.PrivateEnterprise && _groups.Node[g] == node) || ((kind == GroupKind.Company || kind == GroupKind.StateEnterprise) && _groups.Node[g] == nationNode);
-                if (may && (best < 0 || _groups.Cash[g] > _groups.Cash[best])) best = g;
+                if (kind == GroupKind.Company || kind == GroupKind.StateEnterprise) best = RicherOf(best, g);
             }
             return best;
+        }
+
+        // The first group in table order wins a tie, whichever list it came from.
+        int RicherOf(int best, int g)
+        {
+            if (_groups.IsPlayer[g] != 0) return best;
+            if (best < 0 || _groups.Cash[g] > _groups.Cash[best]) return g;
+            return _groups.Cash[g] == _groups.Cash[best] && g < best ? g : best;
         }
 
         // Within the group's cash and the payback limit, and a greater gain per coin than the best so far.

@@ -136,8 +136,8 @@ are consumed at Late.
 Default cadence (`config.csv`): village 1, city 1, region 2, nation 4 (offset 1), continent 4.
 
 Budget: **one second a turn on a web build**, every node and agent computed (DEC-110). Not met yet. Full-scale world, shipped rules:
-Editor (Windows desktop, Burst and safety checks on) 7.9 s on average over turns 1 to 65, new-year turn 9.8 s; web player in Chrome on
-the same desktop, single-threaded, about 5.2 s, worst 11.3 s, new-year turn 5.9 s. Not yet profiled on Android.
+Editor (Windows desktop, Burst and safety checks on) 1.3 s on average over turns 1 to 65, worst 4.1 s, new-year turn 3.4 s. The web player
+in Chrome on the same desktop was last measured before those speed-ups: single-threaded, about 5.2 s against the Editor's 7.9 s. Not yet profiled on Android.
 
 To measure the web: run the explicit `FullScale_WritesWebBenchmarkData`, build WebGL with the scripting define `FES_BENCHMARK`, delete
 `StreamingAssets/Benchmark`, serve the build and keep its page in view (a hidden page stops advancing). `TurnBenchmark` logs each turn.

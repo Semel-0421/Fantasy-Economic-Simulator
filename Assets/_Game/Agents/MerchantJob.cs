@@ -183,6 +183,12 @@ namespace FES.Agents
         public NativeArray<int> StockedStart;
         public NativeArray<int> StockedCount;
         public NativeList<int> StockedCells;
+        /// <summary>Scratch, per continent and good: the most traders there pay for a unit, in local coins.</summary>
+        public NativeArray<long> BidBest;
+        /// <summary>Scratch, per continent pair: whether routes lead from one to the other.</summary>
+        public NativeArray<bool> BidLinked;
+        /// <summary>Scratch, per node's continent, home continent and good: the most a unit could earn a group, in its own coins.</summary>
+        public NativeArray<long> BidBound;
 
         public void Execute()
         {
@@ -196,6 +202,7 @@ namespace FES.Agents
         {
             for (int n = 0; n < StockedStart.Length; n++) StockedStart[n] = -1;
             StockedCells.Clear();
+            if (Bids || BidsWhileLoaded) PrepareBidBounds();
             for (int a = 0; a < FirstRow.Length; a++) FirstRow[a] = -1;
             NextRow.Clear();
             for (int r = 0; r < CargoHolder.Length; r++)

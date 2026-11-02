@@ -274,6 +274,7 @@ namespace FES.Agents
         readonly System.Collections.Generic.List<Makers> _makers = new System.Collections.Generic.List<Makers>();
         readonly System.Collections.Generic.List<int> _lines = new System.Collections.Generic.List<int>();
         int[] _cellPurse, _makersAt;
+        bool[] _madeToOrder;
         // Per cell, units a quarter.
         long[] _households, _ordered, _industry, _nextIndustry, _capacity, _need;
         // Per purse and good, units a quarter.
@@ -297,6 +298,8 @@ namespace FES.Agents
             _currency = ctx.World.Get<CurrencyState>();
             _demand = DemandParams.From(_db.Config);
             int cells = _markets.CellCount, perGood = _purses.Count * _db.GoodCount;
+            _madeToOrder = new bool[_db.GoodCount];
+            for (int g = 0; g < _madeToOrder.Length; g++) _madeToOrder[g] = _db.Goods[g].MadeToOrder;
             _cellPurse = new int[cells];
             _makersAt = new int[cells];
             for (int n = 0; n < _nodes.Count; n++)
@@ -333,6 +336,7 @@ namespace FES.Agents
             {
                 int level = _nodes.Level[n], end = _markets.MarketCellStart[n] + _markets.MarketCellCount[n];
                 long index = _currency.PriceIndex[_nodes.Continent[n]].Raw;
+                long necessity = _population.NecessityWeight(n, level, config).Raw, luxury = _population.LuxuryWeight(n, level, config).Raw;
                 for (int c = _markets.MarketCellStart[n]; c < end; c++)
                 {
                     long stock = _markets.Stock[c];
@@ -340,7 +344,7 @@ namespace FES.Agents
                     _state.StockAtStart[c] = stock;
                     _state.Produced[c] = 0;
                     _state.Forecast[c] = (_state.Forecast[c] + left) / 2;
-                    _households[c] = HouseholdDemand.AtAnchor(_demand, config, _population, n, level, _db.Goods[_markets.CellGood[c]], index) * OrderSystem.QuarterWeeks;
+                    _households[c] = HouseholdDemand.AtAnchor(_demand, config, level, _db.Goods[_markets.CellGood[c]], index, necessity, luxury) * OrderSystem.QuarterWeeks;
                 }
             }
             for (int r = 0; r < _orders.Count; r++)
@@ -427,12 +431,19 @@ namespace FES.Agents
             Array.Clear(_unmet, 0, _unmet.Length);
             Array.Clear(_spare, 0, _spare.Length);
             Array.Clear(_surplus, 0, _surplus.Length);
+            var households = config.ForecastHouseholdWeight;
+            var lately = Fx.One - households;
+            var cover = config.ForecastCover;
+            int goods = _db.GoodCount;
+            long[] past = _state.Forecast;
+            var cellGood = _markets.CellGood;
+            var stocks = _markets.Stock;
             for (int c = 0; c < _need.Length; c++)
             {
-                int good = _markets.CellGood[c], k = _cellPurse[c] * _db.GoodCount + good;
-                long forecast = config.ForecastHouseholdWeight.MulInt(_households[c] + _industry[c]) + (Fx.One - config.ForecastHouseholdWeight).MulInt(_state.Forecast[c]);
-                long wanted = forecast + (_db.Goods[good].MadeToOrder ? 0 : config.ForecastCover.MulInt(forecast)) + _ordered[c];
-                long stock = _markets.Stock[c];
+                int good = cellGood[c], k = _cellPurse[c] * goods + good;
+                long forecast = households.MulInt(_households[c] + _industry[c]) + lately.MulInt(past[c]);
+                long wanted = forecast + (_madeToOrder[good] ? 0 : cover.MulInt(forecast)) + _ordered[c];
+                long stock = stocks[c];
                 _need[c] = Math.Max(0, wanted - stock);
                 _surplus[k] += Math.Max(0, stock - wanted);
                 _unmet[k] += Math.Max(0, _need[c] - _capacity[c]);

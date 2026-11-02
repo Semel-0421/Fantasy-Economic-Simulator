@@ -278,15 +278,85 @@ namespace FES.Agents
         {
             var bid = new BestBid { Cell = -1, Profit = beat };
             int node = search.Node;
+            int boundRow = (NodeContinent[node] * ContinentCount + NodeContinent[AgentHome[a]]) * BaseGoodCount * QualityGrades.Count;
             int cellEnd = MarketCellStart[node] + MarketCellCount[node];
             for (int cell = MarketCellStart[node]; cell < cellEnd; cell++)
             {
                 if (Stock[cell] > 0) continue;
                 int good = CellGood[cell];
                 long fit = Fit(good, search.RoomWeight, search.RoomSize);
-                if (fit > 0) WeighBid(a, new CellOffer(cell, good, Spend(a, node, Price[cell]), fit, fit), in search, ref bid);
+                if (fit <= 0) continue;
+                long buy = Spend(a, node, Price[cell]);
+                long sell = BidBound[boundRow + good];
+                if (CouldShowMargin(sell, buy, search.MinMarginRaw) && CouldBeatBid(sell, buy, fit, search.Budget, bid.Profit))
+                    WeighBid(a, new CellOffer(cell, good, buy, fit, fit), in search, ref bid);
             }
             if (bid.Cell >= 0) AddBid(bid.Cell, bid.Units);
+        }
+
+        // WeighUnit's test with no tolls or carriage, which only lower a margin: what fails here fails on every route.
+        static bool CouldShowMargin(long sell, long buy, long minMarginRaw) =>
+            sell > buy && (sell - buy) << Fx.FractionBits >= minMarginRaw * buy;
+
+        // As many units as could be paid for, each at that margin, with no fee: a route brings no more than this.
+        bool CouldBeatBid(long sell, long buy, long fit, long budget, long beat)
+        {
+            long units = Min(fit, budget / Max(buy, 1));
+            return units > 0 && units * (sell - buy) > beat;
+        }
+
+        // Prices hold still during the job, so this bounds every sale a group could weigh, however many hops away.
+        void PrepareBidBounds()
+        {
+            int goods = BaseGoodCount * QualityGrades.Count;
+            for (int i = 0; i < BidBest.Length; i++) BidBest[i] = 0;
+            for (int i = 0; i < BidLinked.Length; i++) BidLinked[i] = false;
+            for (int node = 0; node < NodeContinent.Length; node++)
+            {
+                int continent = NodeContinent[node], cellEnd = MarketCellStart[node] + MarketCellCount[node];
+                for (int c = MarketCellStart[node]; c < cellEnd; c++)
+                    BidBest[continent * goods + CellGood[c]] = Max(BidBest[continent * goods + CellGood[c]], OfferAt(c));
+                for (int k = OutStart[node]; k < OutStart[node] + OutCount[node]; k++)
+                    if (CrossLevel >= 0) BidLinked[continent * ContinentCount + NodeContinent[RouteTo[RouteIndex[k]]]] = true;
+            }
+            LinkContinentsAcrossRoutes();
+            for (int from = 0; from < ContinentCount; from++)
+                for (int home = 0; home < ContinentCount; home++)
+                    BoundBidsFrom(from, home, goods);
+        }
+
+        void LinkContinentsAcrossRoutes()
+        {
+            int count = ContinentCount;
+            for (int c = 0; c < count; c++) BidLinked[c * count + c] = true;
+            for (int via = 0; via < count; via++)
+                for (int from = 0; from < count; from++)
+                    if (BidLinked[from * count + via]) LinkOnward(from, via, count);
+        }
+
+        void LinkOnward(int from, int via, int count)
+        {
+            for (int to = 0; to < count; to++)
+                if (BidLinked[via * count + to]) BidLinked[from * count + to] = true;
+        }
+
+        void BoundBidsFrom(int from, int home, int goods)
+        {
+            int row = (from * ContinentCount + home) * goods;
+            for (int good = 0; good < goods; good++) BidBound[row + good] = 0;
+            for (int there = 0; there < ContinentCount; there++)
+            {
+                if (!BidLinked[from * ContinentCount + there]) continue;
+                for (int good = 0; good < goods; good++)
+                    BidBound[row + good] = Max(BidBound[row + good], EarnAcross(there, home, BidBest[there * goods + good]));
+            }
+        }
+
+        long EarnAcross(int there, int home, long local)
+        {
+            if (there == home) return local;
+            long own = CoinsIn(local, there, home);
+            return own - Fx.MulIntRaw(own, ExchangeFeeRaw);
         }
 
         void WeighBid(int a, in CellOffer offer, in TripSearch search, ref BestBid bid)

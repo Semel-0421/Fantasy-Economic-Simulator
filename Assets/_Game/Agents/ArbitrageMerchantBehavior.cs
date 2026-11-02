@@ -64,6 +64,9 @@ namespace FES.Agents
         NativeArray<int> _stockedStart;
         NativeArray<int> _stockedCount;
         NativeList<int> _stockedCells;
+        NativeArray<long> _bidBest;
+        NativeArray<bool> _bidLinked;
+        NativeArray<long> _bidBound;
         NativeList<int> _nextRow;
         NativeList<int> _rows;
         NativeList<int> _bankrupt;
@@ -132,6 +135,7 @@ namespace FES.Agents
             _stockedStart = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
             _stockedCount = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
             _stockedCells = new NativeList<int>(Allocator.Persistent);
+            AllocateBidBounds();
             _nextRow = new NativeList<int>(Allocator.Persistent);
             _rows = new NativeList<int>(Allocator.Persistent);
             _bankrupt = new NativeList<int>(Allocator.Persistent);
@@ -166,6 +170,14 @@ namespace FES.Agents
         }
 
         // Per node and continent: the first route of the fewest hops there, or -1.
+        void AllocateBidBounds()
+        {
+            int continents = _nodes.ContinentCount;
+            _bidBest = new NativeArray<long>(continents * _db.GoodCount, Allocator.Persistent);
+            _bidLinked = new NativeArray<bool>(continents * continents, Allocator.Persistent);
+            _bidBound = new NativeArray<long>(continents * continents * _db.GoodCount, Allocator.Persistent);
+        }
+
         void PrepareWaysHome()
         {
             var frontier = new System.Collections.Generic.Queue<int>();
@@ -424,6 +436,9 @@ namespace FES.Agents
             job.StockedStart = _stockedStart;
             job.StockedCount = _stockedCount;
             job.StockedCells = _stockedCells;
+            job.BidBest = _bidBest;
+            job.BidLinked = _bidLinked;
+            job.BidBound = _bidBound;
         }
 
         void GoBankrupt(SimContext ctx, int a)
@@ -596,6 +611,9 @@ namespace FES.Agents
             _stockedStart.DisposeIfCreated();
             _stockedCount.DisposeIfCreated();
             if (_stockedCells.IsCreated) _stockedCells.Dispose();
+            _bidBest.DisposeIfCreated();
+            _bidLinked.DisposeIfCreated();
+            _bidBound.DisposeIfCreated();
             if (_nextRow.IsCreated) _nextRow.Dispose();
             if (_rows.IsCreated) _rows.Dispose();
             if (_bankrupt.IsCreated) _bankrupt.Dispose();

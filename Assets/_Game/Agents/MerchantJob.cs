@@ -661,7 +661,7 @@ namespace FES.Agents
 
         void Depart(int a, int node, int route)
         {
-            // The same trip cost as the player's (DEC-015): merchants need no ship (DEC-034), and buy no guards.
+            // The same trip cost as the player's (DEC-015): merchants need no ship (DEC-034).
             int destination = RouteTo[route];
             CollectRows(a);
             TripCharges(a, route, out long fee, out long tollTotal, out long value);

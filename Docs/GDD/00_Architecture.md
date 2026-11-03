@@ -48,7 +48,7 @@ assemblies cannot, because `NativeArray` and the job system live in `UnityEngine
 - **Hierarchy**: one flat SoA `NodeTable`. Levels: Continent > Nation > Region > City > Village.
   A village may hang directly off a region. Nodes are sorted by level, so each level is a contiguous
   index range (`LevelStart`/`LevelCount`) that tier jobs iterate.
-- **Markets**: every node has exactly one market; market index = node index.
+- **Markets**: market index = node index. Every node has a market row, but classes trade none of their own: core towns take them on (DEC-104).
 - **Routes**: directed edges with travel turns and per-unit cost, CSR outgoing lists.
 - **Travel**: `TravelCommand` starts a trip along a route; the player counts as at the origin until
   `agents.travel` moves them on turn (start + travel turns), publishing `PlayerArrived`.
@@ -65,7 +65,7 @@ Target scale (measured by `FullScale_ShippedRules_StayWithinTurnBudget`; the shi
 |---|---|
 | Continents / nations / regions / cities / villages | 5 / 25 / 50 / 250 / 1,250 (1,580 markets) |
 | Goods | 20 categories x 50 goods x 4 grades = 4,000 independent items |
-| Merchant groups | 9,250 (village 3, city 10, region 30, nation 50, continent 50 per node) |
+| Merchant groups | 4,460 in the shipped config; 9,250 was the first target (village 3, city 10, region 30, nation 50, continent 50 per node) |
 | Producer groups | 8,500 (primary 4/village, secondary 4/city, tertiary 2/village) |
 
 ## Markets (sparse SoA)
@@ -161,7 +161,7 @@ aggregate nodes.
 `PriceKernel.Step` per cell: pressure = (demand − effective supply) / total, where effective supply
 includes 25% of carried stock; step = pressure x adjust rate x elapsed turns, clamped to ±max step x
 elapsed turns; plus a pull toward the anchor (base price x event value multiplier x continent price index)
-of at least one coin, so cheap goods have no dead band. Unsold goods carry
+of at least one coin, so cheap goods have no dead band, unless that coin would go against the market's pressure (DEC-091). Unsold goods carry
 over as stock. Production adds to the nearest market (own node or ancestor) that trades the good.
 
 ## Currency

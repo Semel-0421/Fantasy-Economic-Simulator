@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- C34: superseded rules corrected in the documents; the user confirmed DEC-104 over DEC-032 and DEC-069: bank branches and smithies only at core towns.
 - C29: detailed merchants' sales outside their home nation count as the buyers' imports, so the state's import score works in detailed nodes. [Draft] Cargo does not remember where it was bought, so a group bringing foreign goods home is not counted. New golden hashes.
 - Merchants' premiums and refunds pass through the origin city's guild (C27, DEC-061). New golden hashes.
 - DEC-118: home production in villages only; new preserved food category with two goods and two facilities. New golden hashes.

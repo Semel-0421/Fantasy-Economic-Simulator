@@ -105,5 +105,5 @@ SYS-BANKING) are implemented.
   not favour specialties.
 - [Confirmed] A facility type with inputs is drawn only where some facility makes every input in the node's
   subtree (a bakery where wheat grows, a smithy above iron mines); with no such type a primary producer
-  takes the slot. Cities keep four smithies; iron tools' base demand is 12 (was 4, [Draft] value) (DEC-069).
+  takes the slot. [Confirmed] Smithies stand only at core towns, with no count kept (DEC-104, which replaces DEC-069's four per city); iron tools' base demand is 12 (was 4, [Draft] value).
 

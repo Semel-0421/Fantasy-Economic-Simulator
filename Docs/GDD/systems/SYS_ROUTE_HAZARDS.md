@@ -48,7 +48,7 @@ Choosing a route trades speed and cost against risk.
     are bought at ports and stay docked where the player lands; see SYS-INFRASTRUCTURE.)
   - The ship is collateral at its price and is seized after the cart, before facilities, at the auction
     share of its price.
-  - Detailed merchants roll without guards or insurance; aggregate flows lose the expected share
+  - Detailed merchants buy insurance and guards when what they fear outweighs the price, at home only (DEC-099); premiums and refunds pass through the origin city's guild (DEC-061). Aggregate flows lose the expected share
     (chance without the value term, half of it on cargo, times the cargo loss share).
 
 ## Formula

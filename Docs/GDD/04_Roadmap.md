@@ -193,7 +193,7 @@ Speed-ups, every golden hash unchanged: web player at most 0.49 s on average fro
 
 Fixes from the meta-analysis (DEC-109): defense purchases, bank-held facilities, old-save cash. All eight golden hashes changed with the defense fix; balance figures above predate it and were not measured again.
 
-Balance
+Balance (as measured then; DEC-112 and DEC-118 hold the later figures)
 - Population falls 0.8 to 1.2% a year. Year 10 necessity supply by level: nation 4%, region 10%, city 18%, village 89%.
   With unlimited town cash (experiment) region and city reach only about 45% and nation 0%, so towns lack both income and goods.
 - Europe's +0.8% fits 180 million in 1800 to 455 million in 1914. Ireland fell 21% in 1841-1851, about -2.3% a year; the

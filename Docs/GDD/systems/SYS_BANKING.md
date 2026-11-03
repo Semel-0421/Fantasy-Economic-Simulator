@@ -13,7 +13,7 @@ Money has a place: national banks hold it, international banks change it, and lo
 faster than its cash at the risk of losing what it owns.
 
 ## Rules
-- [Confirmed] Each nation runs a bank with one branch in every node of city level and above (DEC-032).
+- [Confirmed] Each nation runs a bank with branches only at its core towns (DEC-104, which replaces every city of DEC-032).
 - [Confirmed] National banks belong to their nation and international banks to their continent (DEC-041).
 - [Confirmed] Money is aggregated as each nation's total and each continent's total (DEC-041).
 - [Confirmed] A nation's branches are linked: money deposited at one branch is available at the others in
@@ -200,7 +200,7 @@ faster than its cash at the risk of losing what it owns.
     quarter's end at least 13 weeks after it began once the reserve ratio is 50% or more
     (`finance.bank_run_drain_permille`, `finance.bank_run_withdraw_permille`, `finance.rate_spike_permille`,
     `finance.event_end_reserve_permille`).
-  - The price index still follows the minted coin supply; measured totals do not drive it yet (Q-036).
+  - The price index follows the published continent total (DEC-062).
 
 ## Flow (loan)
 ```mermaid
@@ -215,13 +215,13 @@ stateDiagram-v2
 ```
 
 ## Edge cases
-- Player in a village (no branch): no deposit or withdrawal there until reaching a city or above.
+- Player where there is no branch: no deposit or withdrawal there until reaching a core town (DEC-104).
 - Player on another continent without that continent's coins: must reach the international bank first, or
   sell goods for local coins.
 
 ## Unity implementation notes
 P9 built the player's banking; P9b added NPC loans, money totals, records, statistics and financial events.
-- `NodeBanks` (world component): branches are the nodes from nation down to city level; the international
+- `NodeBanks` (world component): branches are the core towns (DEC-104); the international
   bank is the `international_bank` flag in `map_nodes.csv` (Claude-chosen name, [Draft]), at most one per
   continent, on a branch.
 - Persistent `BankState` (reserves and player deposits per nation, international reserves, coin supply

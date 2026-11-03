@@ -35,8 +35,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
 - [Confirmed] A necessity counts toward population change if its market offered it (supply or stock) in the
   last 52 weeks (`households.need_memory_weeks`, [Draft] value): a good that stops arriving is a famine,
   one never sold there is not (DEC-067).
-- [Confirmed] Continent and nation markets are supplied over routes, and their households buy there
-  (DEC-068).
+- [Confirmed] Continents, nations and regions hold no market; their people buy at their core towns (DEC-104, which replaces DEC-068).
 - [Draft] P13d: income per head starts at 0.3 / 0.3 / 0.3 / 0.5 / 2.0 coins a week per continent /
   nation / region / city / village (`households.<level>.income_permille`; was 4 / 4 / 3 / 3 / 2 coins as
   `households.<level>.income`), near what households measurably earn in the sample world, so luxury
@@ -71,7 +70,7 @@ Prices should react the way people buy: bread sells in a crisis, silk does not.
   - In the sample world over ten years, prices now stay within about 6 to 14 times their base price
     (the price index reaches 1.8); before P10 some reached the integer limit within three years.
 - [Draft] Claude's proposals, built in P13b (households pay):
-  - A household budget: each week a node's households spend at most their cash over 26 weeks
+  - A household budget: each week a node's households spend at most their cash over 13 weeks
     (`households.budget_weeks`). Their wished consumption is scaled by one share so that last week's
     wished purchases the markets could have delivered (supply and stock left after other demand) fit
     the budget; goods nobody sells do not count against it. The share is the same for every good and
@@ -121,6 +120,6 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
 ## Population and necessity supply
 - [Confirmed] Population growth follows the necessities actually there to buy: what households could afford, capped by
   what the market holds (DEC-072), scaled on Victorian Europe (DEC-074).
-- [Draft] 0.8% a year at full supply (from memory, not checked), falling 4% per full shortfall, at most 1.3% (England and
+- [Draft] 1% a year at full supply (`households.base_growth_permille`), falling 2% per full shortfall (`households.growth_response_permille`) (DEC-112, DEC-118), at most 1.3% (England and
   Wales 1851-1901, checked) and at least -4% (Ireland's famine, from memory, not checked).
 - [Confirmed] Continental goods are never necessities; they may be far dearer where they are scarce (DEC-103).

@@ -473,6 +473,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 ### DEC-104 Classes hold no market; core towns take them on and carry five roles
 - Date: 2026-11-02
 - Decision: [Confirmed] continents, nations and regions are classes only: their markets, people and routes move to their core towns. Core towns carry administration, finance, trade, infrastructure and workshops. [Draft] Details: a core takes its classes' people, producers and groups, and their demand per head, the continent's excepted. Wages per head +10% and demand +5% per point of strength. Bank branches and license sales stand only at cores; prices at cores are known to all merchants; roads touching a core are kept first; smithies, coppersmiths, cartwrights and wagonworks stand only at cores, while food and clothing workshops stay in every town. Strength: continent 3, nation 2, region 1. [Confirmed] A town that is core of several classes takes the highest (user's choice after comparing both); [Draft] stacking stays a config option, off.
+- Ruling, 2026-11-03: [Confirmed] bank branches and smithies stand only at core towns, over DEC-032 and DEC-069.
 - Reason: the user's instruction. The user had the two strength rules measured and chose the highest.
 - Limits: people fall 0.29% a year at year 30, against 0.13% before, and core towns are less well supplied than ordinary ones.
 - Impact: 00_Architecture, 02_Data_Formats, SYS-BANKING, SYS-LICENSES, SYS-PRODUCTION, SYS-MERCHANTS, SYS-INFRASTRUCTURE, sample map_nodes.csv, map_routes.csv, market_profiles.csv, facilities.csv
@@ -774,6 +775,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ### DEC-069 Facility slots without local inputs; four smithies per city
 - Date: 2026-10-31
+- Changed by: DEC-104 (smithies only at core towns, no count kept; the user's ruling, 2026-11-03)
 - Decision: a facility type with inputs is drawn only where some facility makes every input in the node's
   subtree; a slot with no such type goes to a primary producer. Cities keep four smithies, and iron tools'
   base demand rises from 4 to 12 to absorb them ([Draft] value).
@@ -786,6 +788,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ### DEC-068 Continent and nation markets are supplied
 - Date: 2026-10-31
+- Changed by: DEC-104 (classes hold no market)
 - Decision: households at continent and nation nodes buy like any others, so goods must reach them. Maps
   connect a region to its nation and a nation to its continent by routes.
 - Reason: those nodes had no routes, so about 2M coins sat with households who could buy nothing.
@@ -1145,6 +1148,7 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ### DEC-032 National banks and one international bank per continent
 - Date: 2026-10-27
+- Changed by: DEC-104 (branches only at core towns; the user's ruling, 2026-11-03)
 - Decision: each nation runs a bank with one branch in every node of city level and above; branches within
   a nation are linked. Each continent has one international bank; at its node, local coins are exchanged at
   the exchange rate.

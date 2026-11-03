@@ -16,7 +16,7 @@ namespace FES.Agents
     /// It pays a weekly upkeep and goes bankrupt after weeks below zero, replaced by a new group at its home
     /// (DEC-011). Merchants of
     /// aggregate nodes move goods along routes as flows proportional to the price gap after unit costs.
-    /// Merchants stay on their home continent, since they hold one continent's coins ([Draft]).
+    /// Large, bold enough groups cross continents and change their coins at the banks (DEC-096).
     /// </summary>
     public sealed class ArbitrageMerchantBehavior : IMerchantBehavior, IDisposable
     {

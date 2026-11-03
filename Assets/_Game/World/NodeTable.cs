@@ -9,8 +9,8 @@ namespace FES.World
     /// The world hierarchy (continent > nation > region > city > village) as one flat SoA table. Each node is also a
     /// class of the nodes under it, with one core node where the class's seat stands (DEC-101).
     /// Nodes are sorted by level, then parent, then key, so each level is a contiguous index range
-    /// and tier jobs can run over [LevelStart, LevelStart + LevelCount). Every node owns exactly one
-    /// market whose index equals the node index.
+    /// and tier jobs can run over [LevelStart, LevelStart + LevelCount). Every node has a market row
+    /// whose index equals the node index; classes trade none of their own (DEC-104).
     /// Static after build: rebuilt from the map, not saved.
     /// </summary>
     public sealed class NodeTable : IWorldComponent, IDisposable

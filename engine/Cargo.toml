@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["fes-core", "fes-save", "fes-data", "fes-parity"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+publish = false
+
+[workspace.dependencies]
+serde_json = "1"
+
+[workspace.lints.clippy]
+cognitive_complexity = "deny"
+too_many_lines = "deny"
+excessive_nesting = "deny"

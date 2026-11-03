@@ -1,0 +1,11 @@
+[package]
+name = "fes-parity"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fes-core = { path = "../fes-core", features = ["testing"] }
+
+[lints]
+workspace = true

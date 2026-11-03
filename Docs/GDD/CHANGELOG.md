@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-129: facility shares, listed by groups for working cash, dividends by share, the player trades them at the nation's bank. Credit tests turn listing off. New golden hashes.
 - DEC-128: land, plots per node needed to build, a price by scarcity, the player buys and sells plots. New golden hashes.
 - DEC-127: alms from the top quintile, luxury demand that grows with wealth, a tax on luxury purchases. New golden hashes.
 - DEC-126: necessities follow a constant-elasticity curve, nothing from five times the anchor. New golden hashes.

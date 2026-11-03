@@ -201,6 +201,8 @@ namespace FES.Agents
     {
         /// <summary>DEC-122: coins groups got for the bills they sold, and the face of those bills.</summary>
         public long BillsSold, BillsSoldFace;
+        /// <summary>DEC-129: coins groups raised by listing shares.</summary>
+        public long SharesListed;
         public long BillsIssued, BillsDiscounted, BillsPaid, BillsLost, StateRaised, CompanyRaised, GroupsToppedUp, BondsPaid, BondsLost, Defaults;
     }
 
@@ -699,14 +701,27 @@ namespace FES.Agents
                 gap -= own;
                 _stats.GroupsToppedUp += own;
             }
-            if (gap <= 0 || config.CompanyDebtShare.Raw <= 0) return;
             int nation = _purses.NodeFloat[_groups.Node[group]];
-            if (nation >= _purses.NationCount || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) return;
+            if (gap <= 0 || nation >= _purses.NationCount) return;
+            gap -= ListShares(ctx, f, nation, gap);
+            if (gap <= 0 || config.CompanyDebtShare.Raw <= 0 || _finance.EventOf(nation) == FinancialEventKind.CreditCrunch) return;
             long raised = BondDesk.Raise(_world, config, ctx.Turn, group, nation, Math.Min(gap, _rooms.Room(group)));
             _rooms.AddDebt(group, raised);
             _facilities.Cash[f] += raised;
             books.MoveFacilityCapital(f, raised);
             _stats.CompanyRaised += raised;
+        }
+
+        // DEC-129: then it lists shares of the facility to the nation's households, keeping control; state facilities list none.
+        long ListShares(SimContext ctx, int f, int nation, long gap)
+        {
+            if (_db.Config.FacilityMaxListedShares <= 0 || _db.Facilities[_facilities.DefIndex[f]].StateOwned) return 0;
+            long raised = ShareBook.List(_world, _db, ctx.Turn, f, nation, gap);
+            if (raised <= 0) return 0;
+            _facilities.Cash[f] += raised;
+            _world.Get<IncomeTaxState>().MoveFacilityCapital(f, raised);
+            _stats.SharesListed += raised;
+            return raised;
         }
 
         long PriceOf(int node, GoodId good) => _flows.TryFindNearestMarket(node, good, out _, out int cell) ? _markets.Price[cell] : 0;

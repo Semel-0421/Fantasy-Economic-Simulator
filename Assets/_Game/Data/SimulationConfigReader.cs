@@ -129,6 +129,10 @@ namespace FES.Data
             }
             FacilityCloseLossYears = Int(v, "facility.close_loss_years", FacilityCloseLossYears);
             FacilityRepurposeShare = Permille(v, "facility.repurpose_cost_permille", FacilityRepurposeShare);
+            FacilityShares = Int(v, "facility.shares", FacilityShares);
+            FacilityMaxListedShares = Int(v, "facility.max_listed_shares", FacilityMaxListedShares);
+            if (FacilityShares < 1 || FacilityMaxListedShares < 0 || FacilityMaxListedShares >= FacilityShares)
+                throw new FormatException("config.csv: facility.shares must be positive and facility.max_listed_shares below it.");
             CoreStacking = Int(v, "core.stacking", CoreStacking ? 1 : 0) != 0;
             CoreDemandWeighted = Int(v, "core.demand_weighted", CoreDemandWeighted ? 1 : 0) != 0;
             CoreWeight[0] = Int(v, "core.continent.weight", CoreWeight[0]);

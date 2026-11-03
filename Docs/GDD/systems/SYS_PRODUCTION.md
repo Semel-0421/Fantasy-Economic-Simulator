@@ -55,7 +55,7 @@ raw materials propagate to finished goods, and each node's specialties give ever
   the player's and those a bank holds before auction do not. A facility without a group pays the
   households of its node.
 - [Confirmed] Interest groups build new facilities and raise levels (DEC-065); a facility that loses money
-  two years in a row closes (DEC-065). [Draft] Built and switched off for now (DEC-120). A facility taken over after a bankruptcy may change its use once (DEC-125). A facility stands on a plot of its node; founding one needs a free plot, bought at a price that rises as land gets scarce (DEC-128).
+  two years in a row closes (DEC-065). [Draft] Built and switched off for now (DEC-120). A facility taken over after a bankruptcy may change its use once (DEC-125). A facility stands on a plot of its node; founding one needs a free plot, bought at a price that rises as land gets scarce (DEC-128). A facility is split into shares; its group lists up to 49 of 100 for working cash, and holders get their part of its dividends (DEC-129).
 - [Confirmed] A facility with a manager sells its output and buys its inputs on its own (DEC-064,
   SYS-AUTOMATION).
 - [Draft] Claim period on a lost warehouse: 8 weeks (`cargo.lost_warehouse_weeks`); during it the player

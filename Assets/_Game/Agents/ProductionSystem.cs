@@ -98,6 +98,8 @@ namespace FES.Agents
         NativeList<int> _lineUpCell;
         NativeList<int> _lineUpModifier;
         int _linesForCount = -1, _linesForUses;
+        ShareTable _shares;
+        readonly System.Collections.Generic.Dictionary<int, long> _dividendsBefore = new System.Collections.Generic.Dictionary<int, long>();
 
         NativeList<int> _playerOutputFacility;
         NativeList<int> _playerOutputGood;
@@ -163,6 +165,7 @@ namespace FES.Agents
             _outputWage = new NativeList<long>(Allocator.Persistent);
             _groupDividend = new NativeList<long>(Allocator.Persistent);
             _groupTable = ctx.World.Get<GroupTable>();
+            _shares = ctx.World.Get<ShareTable>();
             _world = ctx.World;
             _defUpkeep = new NativeArray<long>(_db.Facilities.Count, Allocator.Persistent);
             for (int d = 0; d < _db.Facilities.Count; d++) _defUpkeep[d] = _db.Config.FacilityUpkeep[(int)_db.Facilities[d].Tier];
@@ -189,7 +192,9 @@ namespace FES.Agents
 
             // Upkeep after every sale of the week, the warehouse overflow included.
             StorePlayerOutput();
+            ShareBook.Snapshot(_shares, _books.FacilityDividends, _dividendsBefore);
             RunUpkeep();
+            ShareBook.PayHolders(_world, _db, _dividendsBefore, _books.FacilityDividends); // DEC-129
             PayWagesAway();
             PassOnDividends();
 

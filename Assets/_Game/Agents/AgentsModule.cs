@@ -35,6 +35,7 @@ namespace FES.Agents
             var facilities = builder.World.Add(new FacilityTable());
             SpawnFacilities(facilities, nodes, db, seed);
             builder.World.Add(new LandState(nodes, db.Config, facilities));
+            builder.World.Add(new ShareTable());
             var merchants = builder.World.Add(new AgentTable());
             SpawnMerchants(merchants, nodes, db.Config, seed);
             var groups = builder.World.Add(new GroupTable());

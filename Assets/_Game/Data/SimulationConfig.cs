@@ -413,6 +413,9 @@ namespace FES.Data
         public Fx FacilityRepurposeShare = Fx.FromPermille(500);
         /// <summary>DEC-128: plots per node by level, and a plot's value when all are free.</summary>
         public readonly int[] LandPlots = { 10, 10, 10, 40, 12 };
+        /// <summary>DEC-129: shares a facility is split into, and how many its group may let others hold, so it keeps control.</summary>
+        public int FacilityShares = 100;
+        public int FacilityMaxListedShares = 49;
         public readonly long[] LandValue = { 2000, 2000, 2000, 1500, 500 };
         /// <summary>Share of each continent's starting coin supply its international bank holds, to change coins with (P13a).</summary>
         public Fx InternationalBankReserveShare = Fx.FromPermille(20);

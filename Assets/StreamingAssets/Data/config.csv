@@ -159,3 +159,6 @@ land.city.plots,40
 land.village.plots,12
 land.city.value,1500
 land.village.value,500
+# A facility is split into shares; its group lets others hold at most 49, raising working cash from households before bonds (DEC-129).
+facility.shares,100
+facility.max_listed_shares,49

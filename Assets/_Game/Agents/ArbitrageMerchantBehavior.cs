@@ -56,6 +56,8 @@ namespace FES.Agents
         int[] _nodeGroups;
         NativeArray<long> _nodeMinMargin;
         NativeArray<long> _tollsByNode;
+        NativeArray<int> _nodeInsurer;
+        int _insurersForGroups = -1;
         NativeArray<long> _continentIndex;
         NativeArray<long> _routeDanger;
         NativeArray<MerchantLevelLimits> _levels;
@@ -123,6 +125,7 @@ namespace FES.Agents
             _nodeGroups = new int[_nodes.Count];
             _nodeMinMargin = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
             _tollsByNode = new NativeArray<long>(_nodes.Count, Allocator.Persistent);
+            _nodeInsurer = new NativeArray<int>(_nodes.Count, Allocator.Persistent);
             _continentIndex = new NativeArray<long>(_nodes.ContinentCount, Allocator.Persistent);
             _routeDanger = new NativeArray<long>(_routes.Count, Allocator.Persistent);
             _levels = new NativeArray<MerchantLevelLimits>(WorldLevels.Count, Allocator.Persistent);
@@ -434,6 +437,14 @@ namespace FES.Agents
             job.Float = _purses.Float;
             job.HouseholdCash = _world.Get<HouseholdCash>().Cash;
             job.TollsByNode = _tollsByNode;
+            var groups = _world.Get<GroupTable>();
+            if (_insurersForGroups != groups.Count)
+            {
+                for (int n = 0; n < _nodeInsurer.Length; n++) _nodeInsurer[n] = MoneyLedger.InsuranceGuild(_world, n);
+                _insurersForGroups = groups.Count;
+            }
+            job.NodeInsurer = _nodeInsurer;
+            job.GroupCash = groups.Cash.AsArray();
             job.Bankrupt = _bankrupt;
             job.CargoHolder = _cargo.Holder.List;
             job.CargoGood = _cargo.Good.List;
@@ -614,6 +625,7 @@ namespace FES.Agents
             _hedgeNet.DisposeIfCreated();
             _nodeMinMargin.DisposeIfCreated();
             _tollsByNode.DisposeIfCreated();
+            _nodeInsurer.DisposeIfCreated();
             _continentIndex.DisposeIfCreated();
             _routeDanger.DisposeIfCreated();
             _levels.DisposeIfCreated();

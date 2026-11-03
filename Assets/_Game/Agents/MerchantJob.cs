@@ -171,6 +171,9 @@ namespace FES.Agents
         public NativeArray<long> Float;
         public NativeArray<long> HouseholdCash;
         public NativeArray<long> TollsByNode;
+        /// <summary>Per node: the group row of the guild behind its policies, or -1 where only households stand behind them.</summary>
+        [ReadOnly] public NativeArray<int> NodeInsurer;
+        public NativeArray<long> GroupCash;
         public NativeList<int> Bankrupt;
 
         public NativeList<int> CargoHolder;
@@ -682,7 +685,7 @@ namespace FES.Agents
             {
                 AgentCash[a] -= premium;
                 TripStats[13] += premium;
-                HouseholdCash[node] += premium;
+                TakePremium(node, premium);
                 expectedLoss -= Fx.MulIntRaw(expectedLoss, InsuranceRefundRaw);
                 TripStats[2]++;
             }
@@ -718,12 +721,28 @@ namespace FES.Agents
                 CargoQuantity[Rows[i]] -= (int)Fx.MulIntRaw(CargoQuantity[Rows[i]], CargoLossRaw);
             AgentHedge[a] -= Fx.MulIntRaw(AgentHedge[a], CargoLossRaw);
             if (!insured) return;
-            // [Draft] The households at the origin stand behind the policy, as far as they hold.
-            long refund = Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), InsuranceRefundRaw);
-            if (refund > HouseholdCash[node]) refund = HouseholdCash[node] > 0 ? HouseholdCash[node] : 0;
-            HouseholdCash[node] -= refund;
+            long refund = RefundFrom(node, Fx.MulIntRaw(Fx.MulIntRaw(value, CargoLossRaw), InsuranceRefundRaw));
             AgentCash[a] += refund;
             TripStats[17] += refund;
+        }
+
+        // The origin city's guild runs the insurance (DEC-055, DEC-061); with no guild there, its households do.
+        void TakePremium(int node, long premium)
+        {
+            int guild = NodeInsurer[node];
+            if (guild >= 0) GroupCash[guild] += premium;
+            else HouseholdCash[node] += premium;
+        }
+
+        // [Draft] As far as the one behind the policy holds.
+        long RefundFrom(int node, long refund)
+        {
+            int guild = NodeInsurer[node];
+            long held = guild >= 0 ? GroupCash[guild] : HouseholdCash[node];
+            if (refund > held) refund = held > 0 ? held : 0;
+            if (guild >= 0) GroupCash[guild] -= refund;
+            else HouseholdCash[node] -= refund;
+            return refund;
         }
 
         void AddCargo(int a, int good, int quantity)

@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- Merchants' premiums and refunds pass through the origin city's guild (C27, DEC-061). New golden hashes.
 - DEC-118: home production in villages only; new preserved food category with two goods and two facilities. New golden hashes.
 - DEC-117: households grow beans, vegetables and cheese, eat them first and send the surplus to market. New golden hashes.
 - DEC-115: household cash by income quintile (C33). DEC-116: continental goods renamed (C35), licenses for trade across borders. Growth softened to keep the 80% income share. New golden hashes.

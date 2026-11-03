@@ -37,6 +37,8 @@ namespace FES.Agents
             var markets = builder.World.Add(new AssetMarkets(nodes, banks.NationCount));
             builder.World.Add(new LandState(nodes, db.Config, facilities, markets));
             builder.World.Add(new ShareTable());
+            var ventures = builder.World.Add(new VentureTable());
+            VentureTable.Found(ventures, nodes, builder.World.Get<RouteTable>(), banks, db.Config);
             var merchants = builder.World.Add(new AgentTable());
             SpawnMerchants(merchants, nodes, db.Config, seed);
             var groups = builder.World.Add(new GroupTable());
@@ -94,6 +96,7 @@ namespace FES.Agents
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
             builder.AddMigration(new PurseStateV1Migration());
+            builder.AddMigration(new AssetMarketsV1Migration());
             builder.AddMigration(new AgentTableV3Migration());
             builder.AddMigration(new AgentTableV4Migration());
             builder.AddMigration(new AgentTableV5Migration());
@@ -119,6 +122,7 @@ namespace FES.Agents
             builder.AddSystem(new StateSpendingSystem());
             builder.AddSystem(new LaborMarketSystem());
             builder.AddSystem(new DefenseSystem());
+            builder.AddSystem(new VentureSystem());
             builder.AddSystem(new AssetMarketSystem());
             builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new IncomeTaxSystem());

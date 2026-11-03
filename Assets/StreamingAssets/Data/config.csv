@@ -180,3 +180,12 @@ market.burst_permille,2500
 market.leverage_limit_permille,600
 market.burst_drop_permille,300
 market.crunch_debt_share_permille,100
+market.venture_idle_weight_permille,30
+# Trading ventures at ports with a route across the sea: they raise capital from the port's nation, buy the far port's good dearest at home, sail half a year, a tenth are lost, and pay their profit by share; their shares trade on the continental exchange (DEC-132).
+venture.per_continent,3
+venture.shares,100
+venture.capital,20000
+venture.voyage_weeks,26
+venture.loss_permille,100
+venture.min_margin_permille,200
+venture.value_years,2

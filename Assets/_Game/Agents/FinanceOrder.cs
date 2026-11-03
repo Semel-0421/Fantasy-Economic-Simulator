@@ -10,6 +10,7 @@ namespace FES.Agents
         public const int StateSpending = SimOrder.Late + 5;
         public const int Labor = SimOrder.Late + 6;
         public const int Defense = SimOrder.Late + 7;
+        public const int Ventures = SimOrder.Late + 8;
         public const int AssetMarkets = SimOrder.Late + 9;
         public const int Records = SimOrder.Late + 10;
         public const int IncomeTax = SimOrder.Late + 15;

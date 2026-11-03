@@ -398,6 +398,15 @@ namespace FES.Data
             BankRunWithdrawShare = Permille(v, "finance.bank_run_withdraw_permille", BankRunWithdrawShare);
             RateSpikeMultiplier = Permille(v, "finance.rate_spike_permille", RateSpikeMultiplier);
             BankRunCover = Permille(v, "finance.run_cover_permille", BankRunCover);
+            VenturesPerContinent = Int(v, "venture.per_continent", VenturesPerContinent);
+            VentureShares = Int(v, "venture.shares", VentureShares);
+            VentureCapital = Long(v, "venture.capital", VentureCapital);
+            VentureVoyageWeeks = Int(v, "venture.voyage_weeks", VentureVoyageWeeks);
+            VentureLossPermille = Int(v, "venture.loss_permille", VentureLossPermille);
+            VentureMinMargin = Permille(v, "venture.min_margin_permille", VentureMinMargin);
+            VentureValueYears = Int(v, "venture.value_years", VentureValueYears);
+            if (VenturesPerContinent < 0 || VentureShares < 1 || VentureCapital < 1 || VentureVoyageWeeks < 1 || VentureLossPermille < 0 || VentureLossPermille > 1000 || VentureValueYears < 0)
+                throw new FormatException("config.csv: venture values out of range.");
             MarketCreditShare = Permille(v, "market.credit_share_permille", MarketCreditShare);
             MarketCreditWeight = Permille(v, "market.credit_weight_permille", MarketCreditWeight);
             MarketMomentum = Permille(v, "market.momentum_permille", MarketMomentum);
@@ -407,6 +416,7 @@ namespace FES.Data
             MarketPremiumCap = Permille(v, "market.premium_cap_permille", MarketPremiumCap);
             MarketIdleWeight = Permille(v, "market.idle_weight_permille", MarketIdleWeight);
             MarketPropertyIdleWeight = Permille(v, "market.property_idle_weight_permille", MarketPropertyIdleWeight);
+            MarketVentureIdleWeight = Permille(v, "market.venture_idle_weight_permille", MarketVentureIdleWeight);
             MarketRepayShare = Permille(v, "market.repay_permille", MarketRepayShare);
             MarketCrunchShare = Permille(v, "market.crunch_debt_share_permille", MarketCrunchShare);
             MarketHeatedPremium = Permille(v, "market.heated_permille", MarketHeatedPremium);

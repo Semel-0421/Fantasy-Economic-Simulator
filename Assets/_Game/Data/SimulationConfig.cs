@@ -460,6 +460,7 @@ namespace FES.Data
         /// <summary>DEC-131: what buyers expect rises by this weight of the quarter's new idle money over the market's value.</summary>
         public Fx MarketIdleWeight = Fx.FromPermille(400);
         public Fx MarketPropertyIdleWeight = Fx.FromPermille(20);
+        public Fx MarketVentureIdleWeight = Fx.FromPermille(30);
         /// <summary>DEC-131: the share of their margin debt households pay off in a year.</summary>
         public Fx MarketRepayShare = Fx.FromPermille(200);
         /// <summary>DEC-131: a property market's burst stops its nation's credit when its debt is at least this share of what the bank has lent.</summary>
@@ -469,6 +470,14 @@ namespace FES.Data
         public Fx MarketBurstPremium = Fx.FromPermille(2500);
         public Fx MarketLeverageLimit = Fx.FromPermille(600);
         public Fx MarketBurstDrop = Fx.FromPermille(300);
+        /// <summary>DEC-132: trading ventures per continent, their shares, the capital they raise, a voyage's weeks, the chance it is lost, the least margin they sail for, and the years of expected profit in their value.</summary>
+        public int VenturesPerContinent = 3;
+        public int VentureShares = 100;
+        public long VentureCapital = 20000;
+        public int VentureVoyageWeeks = 26;
+        public int VentureLossPermille = 100;
+        public Fx VentureMinMargin = Fx.FromPermille(200);
+        public int VentureValueYears = 2;
         /// <summary>DEC-131: a bank's cover (reserve over loans) under which a run starts and a heated market bursts; zero for none.</summary>
         public Fx BankRunCover = Fx.Zero;
         /// <summary>Loan rates are multiplied by this during a rate spike.</summary>

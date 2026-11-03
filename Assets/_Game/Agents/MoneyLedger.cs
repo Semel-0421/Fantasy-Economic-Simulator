@@ -57,6 +57,9 @@ namespace FES.Agents
             var groups = world.Get<GroupTable>();
             for (int g = 0; g < groups.Count; g++)
                 if (nodes.Continent[groups.Node[g]] == continent) money += groups.Cash[g];
+            var ventures = world.Get<VentureTable>();
+            for (int v = 0; v < ventures.Count; v++)
+                if (ventures.Continent[v] == continent) money += ventures.Cash[v];
             return money;
         }
 

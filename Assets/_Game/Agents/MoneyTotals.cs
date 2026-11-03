@@ -73,6 +73,8 @@ namespace FES.Agents
                 AddCash(nodes, agents.Node[a], nodes.Continent[agents.Home[a]], agents.Cash[a]);
             var groups = world.Get<GroupTable>();
             AddCash(nodes, groups.Node.AsArray(), groups.Cash.AsArray());
+            var ventures = world.Get<VentureTable>();
+            AddCash(nodes, ventures.Port.AsArray(), ventures.Cash.AsArray());
 
             // Traders' floats and households' cash are cash held there too (DEC-061).
             var purses = world.Get<PurseState>();

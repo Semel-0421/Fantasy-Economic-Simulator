@@ -164,11 +164,21 @@ namespace FES.Agents
                 int city = _groups.Node[guild];
                 value += Convert(CargoValue(holder, city), _nodes.Continent[city], continent);
             }
+            return value + AssetValue(continent);
+        }
+
+        // Shares, land and venture shares at their market price (DEC-130, DEC-132).
+        long AssetValue(int continent)
+        {
+            long value = 0;
             for (int r = 0; r < _shares.Count.Length; r++)
                 if (_shares.Holder[r] == ShareTable.PlayerHolder)
                     value += Convert(_shares.Count[r] * SharePrice(_shares.Facility[r]), _nodes.Continent[_facilities.Node[_shares.Facility[r]]], continent);
             for (int n = 0; n < _land.PlayerPlots.Length; n++)
                 if (_land.PlayerPlots[n] > 0) value += Convert(_land.PlayerPlots[n] * _land.Price(n, _db.Config), _nodes.Continent[n], continent);
+            var ventures = _world.Get<VentureTable>();
+            for (int v = 0; v < ventures.Count; v++)
+                if (ventures.PlayerShares[v] > 0) value += Convert(ventures.PlayerShares[v] * VentureBook.Price(_world, _db.Config, v), ventures.Continent[v], continent);
             return value;
         }
 
@@ -424,12 +434,19 @@ namespace FES.Agents
             }
         }
 
-        // Shares, then land, sold at their price to repay loan r: its whole balance after a default, or on a margin
-        // call what brings the debt back within the loan-to-value, the rest of the proceeds going to the player's
-        // deposit with the lender (DEC-130).
+        // Shares, venture shares, then land, sold at their price to repay loan r: its whole balance after a default, or on
+        // a margin call what brings the debt back within the loan-to-value, the rest of the proceeds going to the
+        // player's deposit with the lender (DEC-130, DEC-132).
         void SellAssets(SimContext ctx, int r, bool margin)
         {
             int continent = _sheet.NationContinent(_loans.Nation[r]);
+            SellShares(ctx, r, margin, continent);
+            SellVentureShares(ctx, r, margin, continent);
+            SellLand(ctx, r, margin, continent);
+        }
+
+        void SellShares(SimContext ctx, int r, bool margin, int continent)
+        {
             for (int row = _shares.Count.Length - 1; row >= 0; row--)
             {
                 if (row >= _shares.Count.Length || _shares.Holder[row] != ShareTable.PlayerHolder) continue;
@@ -441,6 +458,25 @@ namespace FES.Agents
                 long raised = ShareBook.SellForPlayer(ctx.World, _db, ctx.Turn, f, (int)Math.Min(int.MaxValue, (need + each - 1) / each));
                 if (raised > 0) Settle(ctx, r, CollateralKind.Shares, new FacilityId(f), from, raised, margin);
             }
+        }
+
+        void SellVentureShares(SimContext ctx, int r, bool margin, int continent)
+        {
+            var ventures = ctx.World.Get<VentureTable>();
+            for (int v = 0; v < ventures.Count; v++)
+            {
+                long need = Need(r, margin, continent);
+                if (need <= 0) return;
+                if (ventures.PlayerShares[v] <= 0) continue;
+                int from = ventures.Continent[v];
+                long each = Math.Max(1, _sheet.Convert(VentureBook.Price(ctx.World, _db.Config, v), from, continent));
+                long raised = VentureBook.SellForPlayer(ctx.World, _db.Config, ctx.Turn, v, (int)Math.Min(int.MaxValue, (need + each - 1) / each));
+                if (raised > 0) Settle(ctx, r, CollateralKind.Shares, FacilityId.None, from, raised, margin);
+            }
+        }
+
+        void SellLand(SimContext ctx, int r, bool margin, int continent)
+        {
             for (int n = 0; n < _land.PlayerPlots.Length; n++)
             {
                 // One plot at a time: each sold lowers the price of the next.

@@ -12,7 +12,7 @@ namespace FES.Tests
     /// <summary>Bills, government and corporate bonds (DEC-097).</summary>
     public class CreditTests
     {
-        static readonly string[] AllOff = { "credit.bill_cap_weeks,0", "credit.state_debt_permille,0", "credit.company_debt_permille,0", "credit.working_weeks,0", "households.luxury_tax_permille,0", "facility.max_listed_shares,0" };
+        static readonly string[] AllOff = { "credit.bill_cap_weeks,0", "credit.state_debt_permille,0", "credit.company_debt_permille,0", "credit.working_weeks,0", "households.luxury_tax_permille,0", "facility.max_listed_shares,0", "venture.per_continent,0" };
 
         // Only the credit a test names is on.
         static GameSimulation Build(params string[] extras) =>

@@ -131,3 +131,6 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
   move, and which is pulled back toward one.
 - [Confirmed] Each quarter a market publishes its price over the fundamental, leverage, credit growth and its bank's
   cover; it heats and bursts on published lines, never by chance.
+- [Confirmed] Trading ventures at ports with a route across the sea buy a far port's good and sell it at home, and pay
+  their profit by share; their shares trade on a continental exchange per continent, the third kind of asset market
+  (DEC-132).

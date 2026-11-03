@@ -149,11 +149,12 @@ namespace FES.Agents
         }
 
         /// <summary>Money for a nation's households, split by the population of its nodes (DEC-061).</summary>
-        public static void PayNationHouseholds(WorldState world, int nation, long amount)
+        public static void PayNationHouseholds(WorldState world, int nation, long amount, bool borrowed = false)
         {
             var nodes = world.Get<PurseState>().NationNodes[nation];
             var population = world.Get<HouseholdState>().Population;
             var cash = world.Get<HouseholdCash>().Cash;
+            var saved = world.Get<HouseholdCash>().SavedYear;
             long people = 0;
             int first = -1;
             foreach (int node in nodes)
@@ -169,9 +170,11 @@ namespace FES.Agents
                 if (population[node] <= 0) continue;
                 long share = amount * population[node] / people;
                 cash[node] += share;
+                if (borrowed) saved[node] -= share; // a loan, not income (DEC-131)
                 given += share;
             }
             cash[first] += amount - given;
+            if (borrowed) saved[first] -= amount - given;
         }
 
         // Government sits at the core towns, and pays there (DEC-104).

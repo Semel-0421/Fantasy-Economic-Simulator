@@ -34,7 +34,8 @@ namespace FES.Agents
 
             var facilities = builder.World.Add(new FacilityTable());
             SpawnFacilities(facilities, nodes, db, seed);
-            builder.World.Add(new LandState(nodes, db.Config, facilities));
+            var markets = builder.World.Add(new AssetMarkets(nodes, banks.NationCount));
+            builder.World.Add(new LandState(nodes, db.Config, facilities, markets));
             builder.World.Add(new ShareTable());
             var merchants = builder.World.Add(new AgentTable());
             SpawnMerchants(merchants, nodes, db.Config, seed);
@@ -60,6 +61,7 @@ namespace FES.Agents
             var bank = builder.World.Add(new BankState(banks.NationCount, nodes.ContinentCount));
             BankSystem.SetUpReserves(bank, banks, nodes, builder.World.Get<CurrencyState>(), db.Config);
             builder.World.Add(new LoanTable());
+            builder.World.Add(new MarginState());
             builder.World.Add(new AuctionTable());
             builder.World.Add(new NpcLoanTable());
             var purses = builder.World.Add(new PurseState(nodes, banks, builder.World.Get<HouseholdCash>()));
@@ -117,6 +119,7 @@ namespace FES.Agents
             builder.AddSystem(new StateSpendingSystem());
             builder.AddSystem(new LaborMarketSystem());
             builder.AddSystem(new DefenseSystem());
+            builder.AddSystem(new AssetMarketSystem());
             builder.AddSystem(new FinanceSystem());
             builder.AddSystem(new IncomeTaxSystem());
             builder.AddSystem(new NobleSystem());

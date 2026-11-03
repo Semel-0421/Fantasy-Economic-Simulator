@@ -229,6 +229,10 @@ namespace FES.Data
             if (LoanTermWeeks < 1) throw new FormatException("config.csv: bank.loan_term_weeks must be >= 1.");
             LoanToValue = Permille(v, "bank.loan_to_value_permille", LoanToValue);
             LoanGraceWeeks = Int(v, "bank.grace_weeks", LoanGraceWeeks);
+            MarginCallShare = Permille(v, "bank.margin_call_permille", MarginCallShare);
+            MarginCallWeeks = Int(v, "bank.margin_call_weeks", MarginCallWeeks);
+            if (MarginCallShare.Raw < LoanToValue.Raw || MarginCallWeeks < 0)
+                throw new FormatException("config.csv: bank.margin_call_permille must be >= bank.loan_to_value_permille, and bank.margin_call_weeks >= 0.");
             AuctionWeeks = Int(v, "bank.auction_weeks", AuctionWeeks);
             if (AuctionWeeks < 1) throw new FormatException("config.csv: bank.auction_weeks must be >= 1.");
             AuctionReserveShare = Permille(v, "bank.auction_reserve_permille", AuctionReserveShare);
@@ -393,6 +397,25 @@ namespace FES.Data
             BankRunDrain = Permille(v, "finance.bank_run_drain_permille", BankRunDrain);
             BankRunWithdrawShare = Permille(v, "finance.bank_run_withdraw_permille", BankRunWithdrawShare);
             RateSpikeMultiplier = Permille(v, "finance.rate_spike_permille", RateSpikeMultiplier);
+            BankRunCover = Permille(v, "finance.run_cover_permille", BankRunCover);
+            MarketCreditShare = Permille(v, "market.credit_share_permille", MarketCreditShare);
+            MarketCreditWeight = Permille(v, "market.credit_weight_permille", MarketCreditWeight);
+            MarketMomentum = Permille(v, "market.momentum_permille", MarketMomentum);
+            MarketReversion = Permille(v, "market.reversion_permille", MarketReversion);
+            MarketWeeklyMove = Permille(v, "market.weekly_move_permille", MarketWeeklyMove);
+            MarketPremiumFloor = Permille(v, "market.premium_floor_permille", MarketPremiumFloor);
+            MarketPremiumCap = Permille(v, "market.premium_cap_permille", MarketPremiumCap);
+            MarketIdleWeight = Permille(v, "market.idle_weight_permille", MarketIdleWeight);
+            MarketPropertyIdleWeight = Permille(v, "market.property_idle_weight_permille", MarketPropertyIdleWeight);
+            MarketRepayShare = Permille(v, "market.repay_permille", MarketRepayShare);
+            MarketCrunchShare = Permille(v, "market.crunch_debt_share_permille", MarketCrunchShare);
+            MarketHeatedPremium = Permille(v, "market.heated_permille", MarketHeatedPremium);
+            MarketBurstPremium = Permille(v, "market.burst_permille", MarketBurstPremium);
+            MarketLeverageLimit = Permille(v, "market.leverage_limit_permille", MarketLeverageLimit);
+            MarketBurstDrop = Permille(v, "market.burst_drop_permille", MarketBurstDrop);
+            if (MarketPremiumFloor.Raw <= 0 || MarketPremiumFloor > Fx.One || MarketPremiumCap < MarketBurstPremium
+                || MarketHeatedPremium > MarketBurstPremium || MarketBurstDrop.Raw < 0 || MarketBurstDrop >= Fx.One)
+                throw new FormatException("config.csv: market lines must keep floor <= 1 <= heated <= burst <= cap, and a drop below 1.");
         }
 
         void ApplyLicensesAndSpecialties(Dictionary<string, string> v)

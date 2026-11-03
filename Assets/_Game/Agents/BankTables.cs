@@ -70,6 +70,19 @@ namespace FES.Agents
         }
     }
 
+    /// <summary>DEC-130: the turn the bank called for margin on the player's loans, or -1.</summary>
+    public sealed class MarginState : IPersistentComponent
+    {
+        public int CalledTurn = -1;
+
+        public string Key => "agents.margin";
+        public int Version => 1;
+
+        public void Write(BinaryWriter writer) => writer.Write(CalledTurn);
+
+        public void Read(BinaryReader reader) => CalledTurn = reader.ReadInt32();
+    }
+
     /// <summary>The player's loans (SoA), at most one per nation's bank, in that nation's continent coin.</summary>
     public sealed class LoanTable : NativeTable
     {

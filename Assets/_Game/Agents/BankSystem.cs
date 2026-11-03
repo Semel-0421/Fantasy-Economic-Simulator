@@ -42,6 +42,23 @@ namespace FES.Agents
         CartCargo = 2,
         Facility = 3,
         Ship = 4,
+        Shares = 5,
+        Land = 6,
+    }
+
+    /// <summary>DEC-130: the debt rose above the call share of the collateral; shares and land are sold on <see cref="SaleTurn"/> unless it is brought back. <see cref="Shortfall"/> is what is over the loan-to-value, in the lending bank's coin.</summary>
+    public sealed class MarginCalled : ISimEvent
+    {
+        public readonly NodeId Nation;
+        public readonly long Shortfall;
+        public readonly int SaleTurn;
+
+        public MarginCalled(NodeId nation, long shortfall, int saleTurn)
+        {
+            Nation = nation;
+            Shortfall = shortfall;
+            SaleTurn = saleTurn;
+        }
     }
 
     /// <summary>Collateral the bank took for an overdue loan; <see cref="Value"/> is in the lending bank's coin.</summary>
@@ -99,12 +116,18 @@ namespace FES.Agents
         readonly MarketFlows _flows;
         readonly CurrencyState _currency;
         readonly GroupTable _groups;
+        readonly ShareTable _shares;
+        readonly LandState _land;
+        readonly WorldState _world;
         readonly List<CargoItem> _items = new List<CargoItem>();
         readonly List<int> _holders = new List<int>();
 
         public PlayerBalanceSheet(WorldState world, GameDatabase db)
         {
             _db = db;
+            _world = world;
+            _shares = world.Get<ShareTable>();
+            _land = world.Get<LandState>();
             _nodes = world.Get<NodeTable>();
             _banks = world.Get<NodeBanks>();
             _bank = world.Get<BankState>();
@@ -119,7 +142,7 @@ namespace FES.Agents
             _groups = world.Get<GroupTable>();
         }
 
-        /// <summary>Deposits, warehouse and cart cargo at market prices, and player facilities, in <paramref name="continent"/>'s coin.</summary>
+        /// <summary>Deposits, warehouse and cart cargo at market prices, player facilities, and shares and land at their price (DEC-130), in <paramref name="continent"/>'s coin.</summary>
         public long CollateralValue(int continent)
         {
             long value = 0;
@@ -141,8 +164,18 @@ namespace FES.Agents
                 int city = _groups.Node[guild];
                 value += Convert(CargoValue(holder, city), _nodes.Continent[city], continent);
             }
+            for (int r = 0; r < _shares.Count.Length; r++)
+                if (_shares.Holder[r] == ShareTable.PlayerHolder)
+                    value += Convert(_shares.Count[r] * SharePrice(_shares.Facility[r]), _nodes.Continent[_facilities.Node[_shares.Facility[r]]], continent);
+            for (int n = 0; n < _land.PlayerPlots.Length; n++)
+                if (_land.PlayerPlots[n] > 0) value += Convert(_land.PlayerPlots[n] * _land.Price(n, _db.Config), _nodes.Continent[n], continent);
             return value;
         }
+
+        public long SharePrice(int f) => ShareBook.Price(_world, _db, f);
+
+        /// <summary>DEC-130: how far the debt is above the loan-to-value of the collateral, in <paramref name="continent"/>'s coin.</summary>
+        public long MarginShortfall(int continent) => Debt(continent) - _db.Config.LoanToValue.MulInt(CollateralValue(continent));
 
         /// <summary>All loan balances, in <paramref name="continent"/>'s coin.</summary>
         public long Debt(int continent)
@@ -200,6 +233,9 @@ namespace FES.Agents
         AgentTable _agents;
         PurseState _purses;
         IncomeTaxState _books;
+        ShareTable _shares;
+        LandState _land;
+        MarginState _margin;
         readonly List<CargoItem> _items = new List<CargoItem>();
         readonly List<int> _holders = new List<int>();
 
@@ -229,6 +265,9 @@ namespace FES.Agents
             _agents = ctx.World.Get<AgentTable>();
             _purses = ctx.World.Get<PurseState>();
             _books = ctx.World.Get<IncomeTaxState>();
+            _shares = ctx.World.Get<ShareTable>();
+            _land = ctx.World.Get<LandState>();
+            _margin = ctx.World.Get<MarginState>();
         }
 
         /// <summary>Starting reserves: a config share of each continent's coin supply, split evenly over its nations.</summary>
@@ -257,6 +296,7 @@ namespace FES.Agents
                 _bank.PlayerDeposit[n] += _db.Config.DepositInterestPerYear.MulInt(_bank.PlayerDeposit[n]) / SimClock.WeeksPerYear;
 
             for (int r = _loans.Count - 1; r >= 0; r--) Service(ctx, r);
+            CheckMargin(ctx);
             for (int r = _npcLoans.Count - 1; r >= 0; r--) ServiceNpc(ctx, r);
             LendToNpcs(ctx);
             for (int a = _auctions.Count - 1; a >= 0; a--)
@@ -352,7 +392,91 @@ namespace FES.Agents
             SeizeStoredCargo(ctx, r);
             SeizeCart(ctx, r);
             SeizeShip(ctx, r);
+            SellAssets(ctx, r, false);
             SeizeFacilities(ctx, r);
+        }
+
+        // DEC-130: when the debt rises above the call share of the collateral, as when shares or land fall, the player has
+        // some weeks to bring it back; then the bank sells shares and land, week after week, until it is within the
+        // loan-to-value.
+        void CheckMargin(SimContext ctx)
+        {
+            int continent = _loans.Count > 0 ? _sheet.NationContinent(_loans.Nation[0]) : 0;
+            if (_loans.Count == 0 || _sheet.Debt(continent) <= _db.Config.MarginCallShare.MulInt(_sheet.CollateralValue(continent)))
+            {
+                _margin.CalledTurn = -1;
+                return;
+            }
+            if (_margin.CalledTurn < 0)
+            {
+                _margin.CalledTurn = ctx.Turn;
+                ctx.Events.Publish(new MarginCalled(LenderNode(0), _sheet.MarginShortfall(continent), ctx.Turn + _db.Config.MarginCallWeeks));
+                return;
+            }
+            if (ctx.Turn - _margin.CalledTurn < _db.Config.MarginCallWeeks) return;
+            for (int r = 0; r < _loans.Count; r++) SellAssets(ctx, r, true);
+            for (int r = _loans.Count - 1; r >= 0; r--)
+            {
+                if (_loans.Balance[r] > 0) continue;
+                int nation = _loans.Nation[r];
+                _loans.RemoveRow(r);
+                ctx.Events.Publish(new LoanRepaid(new NodeId(_banks.NationNode(nation)), ctx.Turn));
+            }
+        }
+
+        // Shares, then land, sold at their price to repay loan r: its whole balance after a default, or on a margin
+        // call what brings the debt back within the loan-to-value, the rest of the proceeds going to the player's
+        // deposit with the lender (DEC-130).
+        void SellAssets(SimContext ctx, int r, bool margin)
+        {
+            int continent = _sheet.NationContinent(_loans.Nation[r]);
+            for (int row = _shares.Count.Length - 1; row >= 0; row--)
+            {
+                if (row >= _shares.Count.Length || _shares.Holder[row] != ShareTable.PlayerHolder) continue;
+                long need = Need(r, margin, continent);
+                if (need <= 0) return;
+                int f = _shares.Facility[row];
+                int from = _nodes.Continent[_facilities.Node[f]];
+                long each = Math.Max(1, _sheet.Convert(_sheet.SharePrice(f), from, continent));
+                long raised = ShareBook.SellForPlayer(ctx.World, _db, ctx.Turn, f, (int)Math.Min(int.MaxValue, (need + each - 1) / each));
+                if (raised > 0) Settle(ctx, r, CollateralKind.Shares, new FacilityId(f), from, raised, margin);
+            }
+            for (int n = 0; n < _land.PlayerPlots.Length; n++)
+            {
+                // One plot at a time: each sold lowers the price of the next.
+                while (_land.PlayerPlots[n] > 0 && Need(r, margin, continent) > 0)
+                {
+                    long raised = _land.SellForPlayer(ctx.World, _db.Config, n, 1);
+                    if (raised <= 0) break;
+                    Settle(ctx, r, CollateralKind.Land, FacilityId.None, _nodes.Continent[n], raised, margin);
+                }
+            }
+        }
+
+        // What is still to raise for loan r. Each coin a margin sale raises lowers the debt by a coin and what may be
+        // borrowed by the loan-to-value, so the shortfall takes more than itself.
+        long Need(int r, bool margin, int continent)
+        {
+            if (!margin) return Owed(r);
+            long shortfall = _sheet.MarginShortfall(continent);
+            if (shortfall <= 0) return 0;
+            long keep = Math.Max(1, Fx.OneRaw - _db.Config.LoanToValue.Raw);
+            return Math.Min(_loans.Balance[r], (shortfall * Fx.OneRaw + keep - 1) / keep);
+        }
+
+        // A forced sale's proceeds, in `from` coins, repay loan r; what is left goes to the bank after a default
+        // (DEC-039), or to the player's deposit with it on a margin call.
+        void Settle(SimContext ctx, int r, CollateralKind kind, FacilityId facility, int from, long amount, bool margin)
+        {
+            int nation = _loans.Nation[r];
+            int continent = _sheet.NationContinent(nation);
+            long value = _sheet.Convert(amount, from, continent);
+            MoneyLedger.AcrossContinents(_bank, from, amount, continent, value);
+            long paid = Math.Min(value, _loans.Balance[r]);
+            Repay(r, paid);
+            _bank.Reserve[nation] += value - paid;
+            if (margin) _bank.PlayerDeposit[nation] += value - paid;
+            ctx.Events.Publish(new CollateralSeized(LenderNode(r), kind, facility, value, ctx.Turn));
         }
 
         NodeId LenderNode(int r) => new NodeId(_banks.NationNode(_loans.Nation[r]));

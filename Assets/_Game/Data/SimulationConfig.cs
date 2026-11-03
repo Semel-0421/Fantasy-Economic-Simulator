@@ -403,6 +403,9 @@ namespace FES.Data
         public Fx LoanToValue = Fx.FromPermille(500);
         /// <summary>Weeks a payment may stay overdue before the collateral is seized (DEC-037).</summary>
         public int LoanGraceWeeks = 4;
+        /// <summary>DEC-130: the bank calls for margin when the debt rises above this share of the collateral, and after these weeks sells shares and land until it is back within the loan-to-value.</summary>
+        public Fx MarginCallShare = Fx.FromPermille(750);
+        public int MarginCallWeeks = 2;
         /// <summary>Weeks a seized facility stays up for auction (DEC-039).</summary>
         public int AuctionWeeks = 2;
         /// <summary>An auction's reserve price, as a share of the facility's value; an NPC buys at it without a winning bid.</summary>
@@ -446,6 +449,28 @@ namespace FES.Data
         public Fx BankRunDrain = Fx.FromPermille(200);
         /// <summary>During a bank run the player may withdraw at most this share of the deposit, once a week.</summary>
         public Fx BankRunWithdrawShare = Fx.FromPermille(100);
+        /// <summary>DEC-131: the asset markets. Households draw this share of their borrowing room a week on a market not expected to fall; credit moves the premium by this weight of its share of the fundamental value; this share of the last quarter's change carries on; the premium is pulled back toward one by this share a year; it moves at most this share a week, within the floor and cap.</summary>
+        public Fx MarketCreditShare = Fx.FromPermille(5);
+        public Fx MarketCreditWeight = Fx.FromPermille(250);
+        public Fx MarketMomentum = Fx.FromPermille(900);
+        public Fx MarketReversion = Fx.FromPermille(300);
+        public Fx MarketWeeklyMove = Fx.FromPermille(30);
+        public Fx MarketPremiumFloor = Fx.FromPermille(200);
+        public Fx MarketPremiumCap = Fx.FromInt(10);
+        /// <summary>DEC-131: what buyers expect rises by this weight of the quarter's new idle money over the market's value.</summary>
+        public Fx MarketIdleWeight = Fx.FromPermille(400);
+        public Fx MarketPropertyIdleWeight = Fx.FromPermille(20);
+        /// <summary>DEC-131: the share of their margin debt households pay off in a year.</summary>
+        public Fx MarketRepayShare = Fx.FromPermille(200);
+        /// <summary>DEC-131: a property market's burst stops its nation's credit when its debt is at least this share of what the bank has lent.</summary>
+        public Fx MarketCrunchShare = Fx.FromPermille(100);
+        /// <summary>DEC-131: published lines. Heated and burst on the price over the fundamental; a burst also when credit shrinks above the leverage limit; the price falls by the drop at a burst.</summary>
+        public Fx MarketHeatedPremium = Fx.FromPermille(1500);
+        public Fx MarketBurstPremium = Fx.FromPermille(2500);
+        public Fx MarketLeverageLimit = Fx.FromPermille(600);
+        public Fx MarketBurstDrop = Fx.FromPermille(300);
+        /// <summary>DEC-131: a bank's cover (reserve over loans) under which a run starts and a heated market bursts; zero for none.</summary>
+        public Fx BankRunCover = Fx.Zero;
         /// <summary>Loan rates are multiplied by this during a rate spike.</summary>
         public Fx RateSpikeMultiplier = Fx.FromInt(2);
 

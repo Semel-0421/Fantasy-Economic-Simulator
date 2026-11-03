@@ -78,9 +78,16 @@ namespace FES.Agents
     /// <summary>DEC-129: what a share is worth, and the holders' part of a facility's dividends.</summary>
     public static class ShareBook
     {
-        /// <summary>[Draft] The facility's asking price (DEC-114) over its shares.</summary>
-        public static long Price(WorldState world, GameDatabase db, int f) =>
+        /// <summary>[Draft] The fundamental value of a share: the facility's asking price (DEC-114) over its shares.</summary>
+        public static long Fundamental(WorldState world, GameDatabase db, int f) =>
             Math.Max(1, BuyFacilityCommand.AskingPrice(world, db, f) / Math.Max(1, db.Config.FacilityShares));
+
+        /// <summary>The market price: the fundamental times the premium of the facility's nation's exchange (DEC-131).</summary>
+        public static long Price(WorldState world, GameDatabase db, int f)
+        {
+            int nation = world.Get<NodeBanks>().NationOf(world.Get<FacilityTable>().Node[f]);
+            return Math.Max(1, world.Get<AssetMarkets>().StockPremium(nation).MulInt(Fundamental(world, db, f)));
+        }
 
         /// <summary>Before the week's dividends: what each facility with outside holders had paid so far this year.</summary>
         public static void Snapshot(ShareTable shares, NativeList<long> dividendsYear, Dictionary<int, long> into)
@@ -156,6 +163,29 @@ namespace FES.Agents
             if (taken > kept) MoneyLedger.PayNationHouseholds(world, nation, taken - kept);
             shares.Add(f, ShareTable.Households(nation), sold);
             return kept;
+        }
+
+        /// <summary>DEC-130: shares the bank sells for the player. The group buys back what it can pay for, the nation's households the rest. Returns the coins raised.</summary>
+        public static long SellForPlayer(WorldState world, GameDatabase db, int turn, int f, int count)
+        {
+            var shares = world.Get<ShareTable>();
+            var facilities = world.Get<FacilityTable>();
+            var groups = world.Get<GroupTable>();
+            count = Math.Min(count, shares.Held(f, ShareTable.PlayerHolder));
+            long price = Price(world, db, f);
+            int group = facilities.Group[f];
+            int back = group >= 0 ? (int)Math.Min(count, Math.Max(0, groups.Cash[group]) / price) : 0;
+            if (back > 0) groups.Cash[group] -= back * price;
+            shares.Add(f, ShareTable.PlayerHolder, -back);
+            long raised = back * price;
+            int nation = world.Get<NodeBanks>().NationOf(facilities.Node[f]);
+            if (count == back || nation < 0) return raised;
+            long taken = BondDesk.TakeFromHouseholds(world, db.Config, turn, nation, (count - back) * price);
+            int sold = (int)(taken / price);
+            if (taken > sold * price) MoneyLedger.PayNationHouseholds(world, nation, taken - sold * price);
+            shares.Add(f, ShareTable.PlayerHolder, -sold);
+            shares.Add(f, ShareTable.Households(nation), sold);
+            return raised + sold * price;
         }
     }
 

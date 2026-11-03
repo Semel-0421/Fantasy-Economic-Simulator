@@ -16,13 +16,15 @@ namespace FES.Agents
     {
         public readonly int[] Plots, Used, PlayerPlots;
         readonly NodeTable _nodes;
+        readonly AssetMarkets _markets;
 
         public string Key => "agents.land";
         public int Version => 1;
 
-        public LandState(NodeTable nodes, SimulationConfig config, FacilityTable facilities)
+        public LandState(NodeTable nodes, SimulationConfig config, FacilityTable facilities, AssetMarkets markets)
         {
             _nodes = nodes;
+            _markets = markets;
             Plots = new int[nodes.Count];
             Used = new int[nodes.Count];
             PlayerPlots = new int[nodes.Count];
@@ -33,8 +35,12 @@ namespace FES.Agents
         /// <summary>Plots the node's households hold, for sale.</summary>
         public int Free(int n) => Math.Max(0, Plots[n] - Used[n] - PlayerPlots[n]);
 
-        public long Price(int n, SimulationConfig config) =>
+        /// <summary>The fundamental price, by scarcity.</summary>
+        public long Fundamental(int n, SimulationConfig config) =>
             config.LandValue[_nodes.Level[n]] * Plots[n] / Math.Max(1, Free(n));
+
+        /// <summary>The market price: the fundamental times the premium of the node's property market (DEC-131).</summary>
+        public long Price(int n, SimulationConfig config) => Math.Max(1, _markets.PropertyPremium(n).MulInt(Fundamental(n, config)));
 
         /// <summary>A facility takes a plot from the households, who are paid its price; false when none is free.</summary>
         public bool TryBuild(WorldState world, SimulationConfig config, int n, out long price)
@@ -44,6 +50,23 @@ namespace FES.Agents
             price = Price(n, config);
             Used[n]++;
             return true;
+        }
+
+        /// <summary>The bank sells the player's plots at the node to its households, one at a time at the price, as far as they can pay (DEC-130). Returns the coins raised.</summary>
+        public long SellForPlayer(WorldState world, SimulationConfig config, int n, int count)
+        {
+            long raised = 0;
+            var cash = world.Get<HouseholdCash>().Cash;
+            int households = _nodes.Absorbed ? _nodes.Core[n] : n;
+            for (; count > 0 && PlayerPlots[n] > 0; count--)
+            {
+                long price = Price(n, config);
+                if (cash[households] < price) break;
+                world.Get<PurseState>().PayHouseholds(n, -price);
+                PlayerPlots[n]--;
+                raised += price;
+            }
+            return raised;
         }
 
         public void Write(BinaryWriter writer)

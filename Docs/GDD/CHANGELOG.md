@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-131: stock exchanges and property markets with a premium over the fundamental, households' margin credit, published indicators and bursts; financial events follow bursts and bank cover, none drawn at random in the shipped data. Bank, road and policy tests turn the markets off. New golden hashes.
+- DEC-130: the player's shares and land are pledged at their price; margin calls sell them when the debt rises above 75% of the collateral. The NPC economy is unchanged; new golden hashes for the new config keys and the new `agents.margin` section.
 - DEC-129: facility shares, listed by groups for working cash, dividends by share, the player trades them at the nation's bank. Credit tests turn listing off. New golden hashes.
 - DEC-128: land, plots per node needed to build, a price by scarcity, the player buys and sells plots. New golden hashes.
 - DEC-127: alms from the top quintile, luxury demand that grows with wealth, a tax on luxury purchases. New golden hashes.

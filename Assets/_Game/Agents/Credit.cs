@@ -415,6 +415,21 @@ namespace FES.Agents
             return taken;
         }
 
+        /// <summary>Takes up to <paramref name="amount"/> from what one node's households offer this week (DEC-131). Returns the coins taken.</summary>
+        public static long TakeFromNode(WorldState world, SimulationConfig config, int turn, int households, long amount)
+        {
+            var offers = OffersOf(world, config, turn);
+            long part = Math.Min(amount, offers.Houses[households]);
+            if (part <= 0) return 0;
+            int nation = world.Get<PurseState>().NodeFloat[households];
+            offers.Houses[households] -= part;
+            if (nation < offers.Nations.Length) offers.Nations[nation] -= part;
+            var cash = world.Get<HouseholdCash>();
+            cash.Cash[households] -= part;
+            cash.SavedYear[households] += part;
+            return part;
+        }
+
         /// <summary>How much more a nation may owe: a share of its part of the continent's coins.</summary>
         public static long StateRoom(WorldState world, SimulationConfig config, int nation)
         {

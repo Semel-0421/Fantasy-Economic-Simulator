@@ -31,7 +31,12 @@ faster than its cash at the risk of losing what it owns.
   (DEC-030).
 - [Confirmed] Banks lend to the player, NPC facilities and NPC merchant groups (DEC-033, DEC-037).
 - [Confirmed] The loan limit is based on the value of collateral (DEC-037). Besides facilities, bank
-  deposits, owned ships, cargo stored in warehouses and cargo on the cart count (DEC-038).
+  deposits, owned ships, cargo stored in warehouses and cargo on the cart count (DEC-038), and shares and
+  land at their price (DEC-130).
+- [Confirmed] Financial events follow the asset markets (DEC-131): a burst brings a credit crunch on the nations its
+  market reaches, and a bank under its cover floor has a run. The shipped data draws none at random.
+- [Confirmed] A margin call: when the debt rises above a share of the collateral, the player has some weeks
+  to bring it back, then the bank sells shares and land until it is within the loan-to-value (DEC-130).
 - [Confirmed] Villages have no bank, so a new player cannot borrow at first (DEC-040).
 - [Confirmed] Loans are repaid in weekly instalments; interest rate and term are config values (DEC-037).
 - [Confirmed] After a grace period, an unpaid loan leads to seizure of the collateral (DEC-037, DEC-038).
@@ -161,7 +166,7 @@ faster than its cash at the risk of losing what it owns.
   - Instalments are taken automatically, from the deposit with the lender first, then from the coins of
     that continent the player carries, wherever they are.
   - Seizure takes deposits (any bank), then warehouse cargo, then the cart (at one of the lender's
-    branches), then facilities, until the debt is covered. Cargo is sold at the nearest market; what
+    branches), then the ship, then shares and land (DEC-130), then facilities, until the debt is covered. Cargo is sold at the nearest market; what
     exceeds the debt goes to the bank. Debt left after all assets stays owed. Only auctions for the
     player's own loan count as covering it. A deposit is taken only as far as its bank still holds the
     coins (DEC-107).
@@ -230,7 +235,10 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
   minted-coin distribution, deposit interest, instalments, seizure, auction close.
 - Commands: `BankTransferCommand` (deposit / withdraw), `ExchangeCommand`, `TakeLoanCommand`,
   `RepayLoanCommand`, `BidCommand`; `BuyGoodsCommand` can pay from the deposit at a branch.
-  `PlayerBalanceSheet` values collateral and debt for limits and seizure. A seized facility belongs to
+  `PlayerBalanceSheet` values collateral and debt for limits, seizure and margin calls; persistent
+  `MarginState` (`agents.margin`) holds the turn of a margin call, and `MarginCalled` announces it (DEC-130).
+  `AssetMarkets` (`agents.asset_markets`) holds each exchange's and property market's premium, margin debt and
+  indicators; `AssetMarketSystem` runs just before the finance records (DEC-131). A seized facility belongs to
   `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility. It cannot go bankrupt while held (DEC-109).
 - `NpcLoanTable` (persistent, with a borrower lookup) holds NPC loans; `BankSystem` services them and lends
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the

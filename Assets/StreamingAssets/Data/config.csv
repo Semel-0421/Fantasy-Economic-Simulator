@@ -162,3 +162,21 @@ land.village.value,500
 # A facility is split into shares; its group lets others hold at most 49, raising working cash from households before bonds (DEC-129).
 facility.shares,100
 facility.max_listed_shares,49
+# Shares and land are pledged at their price; above 75% of the collateral the bank calls for margin, and after two weeks sells them back to the loan-to-value (DEC-130).
+bank.margin_call_permille,750
+bank.margin_call_weeks,2
+# Stock exchanges and property markets: households borrow on what they hold and pay it off over the years; the price runs on credit, new idle money and the last quarter's change, and bursts on published lines; financial events follow bursts and bank cover, not dice (DEC-131).
+finance.event_chance_permille,0
+market.credit_share_permille,5
+market.credit_weight_permille,250
+market.momentum_permille,900
+market.reversion_permille,300
+market.idle_weight_permille,400
+market.property_idle_weight_permille,20
+market.repay_permille,200
+market.weekly_move_permille,30
+market.heated_permille,1500
+market.burst_permille,2500
+market.leverage_limit_permille,600
+market.burst_drop_permille,300
+market.crunch_debt_share_permille,100

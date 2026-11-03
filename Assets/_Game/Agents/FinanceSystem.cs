@@ -59,6 +59,7 @@ namespace FES.Agents
         FinanceState _finance;
         MoneyTotals _totals;
         CurrencyState _currency;
+        AssetMarkets _markets;
 
         public string Id => "agents.finance";
         public SimPhase Phase => SimPhase.Finance;
@@ -75,6 +76,7 @@ namespace FES.Agents
             _finance = ctx.World.Get<FinanceState>();
             _totals = ctx.World.Get<MoneyTotals>();
             _currency = ctx.World.Get<CurrencyState>();
+            _markets = ctx.World.Get<AssetMarkets>();
         }
 
         public void OnLoaded(SimContext ctx) => _totals.Invalidate();
@@ -105,6 +107,7 @@ namespace FES.Agents
             }
             for (int r = 0; r < _npcLoans.Count; r++) record.NationLent[_npcLoans.Nation[r]] += _npcLoans.Balance[r];
             for (int r = 0; r < _loans.Count; r++) record.NationLent[_loans.Nation[r]] += _loans.Balance[r];
+            for (int n = 0; n < _finance.NationCount; n++) record.NationLent[n] += _markets.NationDebt(n, _banks);
             for (int c = 0; c < _finance.ContinentCount; c++)
             {
                 record.ContinentTotal[c] = _totals.ContinentTotal[c];
@@ -115,8 +118,9 @@ namespace FES.Agents
             return record;
         }
 
-        // An event lasts at least a quarter and ends once the reserve ratio has recovered (DEC-047); a nation
-        // without one may draw a new one at random (DEC-044).
+        // An event lasts at least a quarter and ends once the reserve ratio has recovered (DEC-047). A nation without
+        // one has a credit crunch when one of its markets burst this quarter, a run when its bank's cover is under the
+        // floor (DEC-131), and otherwise may draw one at random (DEC-044; the sample data draws none).
         void UpdateEvent(SimContext ctx, int n, Fx ratio)
         {
             var nation = new NodeId(_banks.NationNode(n));
@@ -128,9 +132,15 @@ namespace FES.Agents
                 ctx.Events.Publish(new FinancialEventEnded(nation, current, ctx.Turn));
                 return;
             }
-            var rng = DetRandom.For(ctx.Seed, ctx.Turn, EventStream, n);
-            if (!rng.ChancePermille(_config.FinancialEventChancePermille)) return;
-            var kind = (FinancialEventKind)(1 + rng.NextInt(3));
+            FinancialEventKind kind;
+            if (_markets.BurstNation[n]) kind = FinancialEventKind.CreditCrunch;
+            else if (_config.BankRunCover.Raw > 0 && ratio < _config.BankRunCover) kind = FinancialEventKind.BankRun;
+            else
+            {
+                var rng = DetRandom.For(ctx.Seed, ctx.Turn, EventStream, n);
+                if (!rng.ChancePermille(_config.FinancialEventChancePermille)) return;
+                kind = (FinancialEventKind)(1 + rng.NextInt(3));
+            }
             _finance.Event[n] = (byte)kind;
             _finance.EventStart[n] = ctx.Turn;
             // [Draft] A run starts with the public taking a share of the bank's coins out.

@@ -124,3 +124,10 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
 - [Draft] 1% a year at full supply (`households.base_growth_permille`), falling 2% per full shortfall (`households.growth_response_permille`) (DEC-112, DEC-118), at most 1.3% (England and
   Wales 1851-1901, checked) and at least -4% (Ireland's famine, from memory, not checked).
 - [Confirmed] Continental goods are never necessities; they may be far dearer where they are scarce (DEC-103).
+
+## Asset markets (DEC-131)
+- [Confirmed] A stock exchange per nation and a property market per node: shares and land trade at their fundamental
+  value times the market's premium, which households' margin credit, new idle money and the last quarter's change
+  move, and which is pulled back toward one.
+- [Confirmed] Each quarter a market publishes its price over the fundamental, leverage, credit growth and its bank's
+  cover; it heats and bursts on published lines, never by chance.

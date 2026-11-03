@@ -16,7 +16,7 @@ namespace FES.Tests
         const string OtherNationCity = "bor_n1_r1_c1";
 
         static GameSimulation Build() => SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
-            "key,value\nfinance.event_chance_permille,0\n"), 42).Build();
+            "key,value\nfinance.event_chance_permille,0\nmarket.credit_share_permille,0\nmarket.momentum_permille,0\n"), 42).Build();
 
         static NodeId Node(GameSimulation sim, string key)
         {

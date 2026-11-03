@@ -70,14 +70,18 @@ fn write_all(
     w.write_u64(header.data_hash)?;
     w.write_u64(header.seed)?;
     w.write_i32(header.turn)?;
-    w.write_i32(sections.len() as i32)?;
+    w.write_i32(len_i32(sections.len(), "section count"))?;
     for s in sections {
         w.write_string(&s.key)?;
         w.write_i32(s.version)?;
-        w.write_i32(s.bytes.len() as i32)?;
+        w.write_i32(len_i32(s.bytes.len(), "section length"))?;
         w.write_bytes(&s.bytes)?;
     }
     Ok(())
+}
+
+fn len_i32(len: usize, what: &str) -> i32 {
+    i32::try_from(len).unwrap_or_else(|_| panic!("{what} {len} exceeds i32::MAX"))
 }
 
 /// Parses a save; any malformed input is an error.
@@ -126,7 +130,8 @@ fn read_section(r: &mut DotNetReader<'_>) -> Result<RawSection, SaveError> {
 /// Equals C# `WorldState.ComputeHash`.
 pub fn world_hash(sections: &[RawSection]) -> u64 {
     let mut sorted: Vec<&RawSection> = sections.iter().collect();
-    sorted.sort_by(|a, b| a.key.as_bytes().cmp(b.key.as_bytes()));
+    // C# StringComparer.Ordinal compares UTF-16 code units, not UTF-8 bytes.
+    sorted.sort_by(|a, b| a.key.encode_utf16().cmp(b.key.encode_utf16()));
     let mut w = DotNetWriter::new(FnvSink::new());
     for s in sorted {
         // FnvSink never fails.

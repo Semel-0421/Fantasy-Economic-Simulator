@@ -102,3 +102,31 @@ fn rejects_damaged_input() {
         assert!(read_save(&bytes[..n]).is_err(), "prefix {n}");
     }
 }
+
+#[test]
+fn world_hash_orders_keys_by_utf16_units() {
+    use fes_core::io::FnvSink;
+    // UTF-8 byte order puts U+FF61 first; UTF-16 code unit order puts U+1D504 (D835 DD04) first.
+    let sec = |k: &str| fes_save::RawSection {
+        key: k.to_string(),
+        version: 1,
+        bytes: vec![7],
+    };
+    let (a, b) = (sec("\u{FF61}"), sec("\u{1D504}"));
+    let mut w = DotNetWriter::new(FnvSink::new());
+    for s in [&b, &a] {
+        w.write_string(&s.key).unwrap();
+        w.write_i32(s.version).unwrap();
+        w.write_bytes(&s.bytes).unwrap();
+    }
+    let expected = w.into_inner().hash();
+    assert_eq!(world_hash(&[a.clone(), b.clone()]), expected);
+    assert_eq!(world_hash(&[b, a]), expected);
+}
+
+#[test]
+fn read_bool_accepts_any_nonzero() {
+    let mut r = fes_core::io::DotNetReader::new(&[0, 1, 2, 255]);
+    let got: Vec<bool> = (0..4).map(|_| r.read_bool().unwrap()).collect();
+    assert_eq!(got, [false, true, true, true]);
+}

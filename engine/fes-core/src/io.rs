@@ -11,8 +11,6 @@ pub enum IoError {
     InvalidLength,
     /// A string's bytes are not valid UTF-8.
     InvalidUtf8,
-    /// A bool byte other than 0 or 1.
-    InvalidBool(u8),
 }
 
 impl std::fmt::Display for IoError {
@@ -21,7 +19,6 @@ impl std::fmt::Display for IoError {
             Self::UnexpectedEof => write!(f, "unexpected end of data"),
             Self::InvalidLength => write!(f, "invalid length prefix"),
             Self::InvalidUtf8 => write!(f, "invalid UTF-8 string"),
-            Self::InvalidBool(b) => write!(f, "invalid bool byte {b}"),
         }
     }
 }
@@ -68,7 +65,7 @@ impl<W: Write> DotNetWriter<W> {
 
     /// 7-bit encoded UTF-8 byte length, then the bytes.
     pub fn write_string(&mut self, s: &str) -> io::Result<()> {
-        let mut n = s.len() as u32;
+        let mut n = i32::try_from(s.len()).expect("string longer than i32::MAX bytes") as u32;
         while n >= 0x80 {
             self.write_u8((n & 0x7F) as u8 | 0x80)?;
             n >>= 7;
@@ -122,12 +119,9 @@ impl<'a> DotNetReader<'a> {
         Ok(self.array::<1>()?[0])
     }
 
+    /// Any non-zero byte is true, as in .NET.
     pub fn read_bool(&mut self) -> Result<bool, IoError> {
-        match self.read_u8()? {
-            0 => Ok(false),
-            1 => Ok(true),
-            b => Err(IoError::InvalidBool(b)),
-        }
+        Ok(self.read_u8()? != 0)
     }
 
     pub fn read_i32(&mut self) -> Result<i32, IoError> {

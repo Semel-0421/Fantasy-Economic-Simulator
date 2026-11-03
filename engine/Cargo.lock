@@ -23,6 +23,9 @@ name = "fes-parity"
 version = "0.1.0"
 dependencies = [
  "fes-core",
+ "fes-data",
+ "fes-save",
+ "serde_json",
 ]
 
 [[package]]

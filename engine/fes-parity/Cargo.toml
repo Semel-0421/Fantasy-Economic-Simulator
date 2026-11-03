@@ -6,6 +6,9 @@ publish.workspace = true
 
 [dependencies]
 fes-core = { path = "../fes-core", features = ["testing"] }
+fes-data = { path = "../fes-data" }
+fes-save = { path = "../fes-save" }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

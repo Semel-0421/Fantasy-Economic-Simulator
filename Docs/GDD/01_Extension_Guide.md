@@ -82,9 +82,11 @@ of the next turn and publishes `CommandApplied` / `CommandRejected`. Add a match
 
 ## Add market flows
 
-Producers, consumers and merchants add supply/demand through `MarketFlows.AddSupply/AddDemand`
-(never `MarketStore` directly), so event modifiers apply. `TryFindNearestMarket` finds the node's own
-market or the nearest ancestor that trades the good.
+A trade done now goes through `MarketFlows.Buy` / `Sell`, which keep stock, supply and demand
+consistent and are not scaled by events. A week's production or consumption, written by a job, scales
+its quantities by the event multipliers (`MarketFlows.Multipliers`, indexed by `MultiplierIndex`) before
+adding them to the market. `TryFindNearestMarket` finds the node's own market or the nearest ancestor
+that trades the good.
 
 ## Add market effects
 

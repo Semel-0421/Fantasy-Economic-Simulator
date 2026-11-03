@@ -66,7 +66,6 @@ namespace FES.World
         public WorldLevel LevelOf(int node) => (WorldLevel)Level[node];
         public string KeyOf(int node) => _keys[node];
         public string NameOf(int node) => _names[node];
-        public bool IsCoreOf(int node, int classNode) => Core[classNode] == node;
         public bool Absorbed { get; private set; }
         public bool IsSeat(int node) => CoreStrength[node] > 0;
 

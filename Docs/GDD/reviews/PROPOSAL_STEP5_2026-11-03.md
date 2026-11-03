@@ -1,5 +1,5 @@
 # Proposal: step 5, margin and balance (2026-11-03)
-[Draft] For the owner's decision. Korean copy: [PROPOSAL_STEP5_2026-11-03.ko.md](PROPOSAL_STEP5_2026-11-03.ko.md). Nothing here is in the code: the trials were temporary and removed.
+Decided 2026-11-03: direction A (DEC-112), see Outcome. Korean copy: [PROPOSAL_STEP5_2026-11-03.ko.md](PROPOSAL_STEP5_2026-11-03.ko.md). Nothing here is in the code: the trials were temporary and removed.
 
 ## The problem
 The 25% traders' margin stops at the sale. Producers sell at 75% of the price but decide at 100%, so investors build what loses money (C20, C21). Separately, groups hold about five times what households hold (C23), and people keep falling (C18).

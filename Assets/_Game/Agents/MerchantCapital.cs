@@ -9,7 +9,6 @@ namespace FES.Agents
     /// </summary>
     public static class MerchantCapital
     {
-        public const int ClassCount = 4;
         public const int PlayerLike = 3;
 
         static readonly uint ClassStream = DetHash.Of("agents.merchant_capital");

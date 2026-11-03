@@ -567,6 +567,7 @@ namespace FES.Economy
         public static WeeklyWish Weekly(in DemandParams p, long weeklyAtAnchor, int price, long anchor,
             long luxuryShare, long necessityWeight, long luxuryWeight)
         {
+            if (weeklyAtAnchor == 0) return default; // every part below is a share of nothing
             if (anchor < 1) anchor = 1;
             long excess = ((price - anchor) << Fx.FractionBits) / anchor;
             long ratio = ((long)price << Fx.FractionBits) / anchor;
@@ -574,11 +575,13 @@ namespace FES.Economy
             long necessity = 0;
             if (necessityShare > 0)
             {
-                necessity = (DemandCurve.ConstantElasticity(p.Quintile1Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
-                    + DemandCurve.ConstantElasticity(p.Quintile2Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
-                    + DemandCurve.ConstantElasticity(p.Quintile3Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
-                    + DemandCurve.ConstantElasticity(p.Quintile4Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
-                    + DemandCurve.ConstantElasticity(p.Quintile5Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)) / Quintiles;
+                // The quintiles share the price ratio, so its logarithm is taken once.
+                long log = DemandCurve.LogOfRatio(ratio, p.NecessityChokeRaw);
+                necessity = (DemandCurve.ConstantElasticity(p.Quintile1Raw, ratio, log, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile2Raw, ratio, log, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile3Raw, ratio, log, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile4Raw, ratio, log, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile5Raw, ratio, log, p.MaxCheapRaw, p.NecessityChokeRaw)) / Quintiles;
             }
             long luxury = luxuryShare > 0 ? DemandCurve.Factor(p.LuxuryElasticityRaw, excess, p.MaxCheapRaw) : 0;
 
@@ -615,13 +618,20 @@ namespace FES.Economy
         /// anchor and nothing from the choke price on, which keeps a good nobody supplies from climbing without end.
         /// <paramref name="ratioRaw"/> is price / anchor, raw Fx. Integers only, the same on every platform.
         /// </summary>
-        public static long ConstantElasticity(long elasticityRaw, long ratioRaw, long maxRaw, long chokeRaw)
+        public static long ConstantElasticity(long elasticityRaw, long ratioRaw, long maxRaw, long chokeRaw) =>
+            ConstantElasticity(elasticityRaw, ratioRaw, LogOfRatio(ratioRaw, chokeRaw), maxRaw, chokeRaw);
+
+        /// <summary>The same, with <paramref name="logRaw"/> from <see cref="LogOfRatio"/>, for several elasticities at one price.</summary>
+        public static long ConstantElasticity(long elasticityRaw, long ratioRaw, long logRaw, long maxRaw, long chokeRaw)
         {
             if (ratioRaw >= chokeRaw) return 0;
             if (ratioRaw <= 0) return maxRaw;
-            long factor = Exp2(-Fx.RoundShift(elasticityRaw * Log2(ratioRaw)));
+            long factor = Exp2(-Fx.RoundShift(elasticityRaw * logRaw));
             return factor > maxRaw ? maxRaw : factor;
         }
+
+        /// <summary>log2 of the price ratio where the curve needs it (between nothing and the choke), else zero.</summary>
+        public static long LogOfRatio(long ratioRaw, long chokeRaw) => ratioRaw > 0 && ratioRaw < chokeRaw ? Log2(ratioRaw) : 0;
 
         const int Q30 = 30;
 
@@ -646,14 +656,53 @@ namespace FES.Economy
         static long Exp2(long yRaw)
         {
             long whole = yRaw >> Fx.FractionBits, fraction = yRaw - (whole << Fx.FractionBits);
-            long product = 1L << Q30;
-            for (int i = 1; i <= Fx.FractionBits; i++)
+            // The fraction's top eight bits from a table of the same products, the rest one by one.
+            long product = HighRoots[(int)(fraction >> (Fx.FractionBits - 8))];
+            for (int i = 9; i <= Fx.FractionBits; i++)
                 if ((fraction & (1L << (Fx.FractionBits - i))) != 0) product = (product * RootOfTwo(i)) >> Q30;
             int shift = Q30 - Fx.FractionBits - (int)whole;
             if (shift >= 62) return 0;
             if (shift <= 0) return long.MaxValue >> 1;
             return (product + (1L << (shift - 1))) >> shift;
         }
+
+        // For each value h of a fraction's top eight bits, the product of 2^(2^-i) over its set bits i = 1..8, in Q30,
+        // multiplied in that order from 2^30 exactly as Exp2 would (generated, not typed).
+        static readonly long[] HighRoots =
+        {
+            1073741824, 1076653033, 1079572136, 1082499152, 1085434106, 1088377015, 1091327905, 1094286794,
+            1097253708, 1100228664, 1103211687, 1106202796, 1109202017, 1112209368, 1115224874, 1118248554,
+            1121280436, 1124320535, 1127368877, 1130425483, 1133490379, 1136563582, 1139645119, 1142735009,
+            1145833280, 1148939948, 1152055041, 1155178578, 1158310586, 1161451084, 1164600098, 1167757648,
+            1170923762, 1174098457, 1177281762, 1180473696, 1183674285, 1186883551, 1190101519, 1193328211,
+            1196563653, 1199807865, 1203060875, 1206322703, 1209593377, 1212872916, 1216161349, 1219458696,
+            1222764985, 1226080236, 1229404478, 1232737731, 1236080022, 1239431374, 1242791814, 1246161363,
+            1249540051, 1252927897, 1256324930, 1259731171, 1263146650, 1266571387, 1270005411, 1273448744,
+            1276901417, 1280363447, 1283834865, 1287315693, 1290805961, 1294305690, 1297814909, 1301333641,
+            1304861916, 1308399755, 1311947187, 1315504236, 1319070930, 1322647293, 1326233354, 1329829136,
+            1333434672, 1337049979, 1340675090, 1344310028, 1347954823, 1351609498, 1355274084, 1358948604,
+            1362633088, 1366327560, 1370032051, 1373746584, 1377471189, 1381205891, 1384950721, 1388705702,
+            1392470869, 1396246239, 1400031848, 1403827718, 1407633882, 1411450364, 1415277194, 1419114399,
+            1422962010, 1426820050, 1430688553, 1434567542, 1438457050, 1442357102, 1446267729, 1450188958,
+            1454120821, 1458063341, 1462016553, 1465980481, 1469955158, 1473940610, 1477936869, 1481943961,
+            1485961920, 1489990770, 1494030546, 1498081273, 1502142984, 1506215706, 1510299471, 1514394307,
+            1518500250, 1522617321, 1526745556, 1530884982, 1535035633, 1539197536, 1543370724, 1547555225,
+            1551751075, 1555958298, 1560176929, 1564406997, 1568648536, 1572901573, 1577166142, 1581442272,
+            1585729999, 1590029348, 1594340356, 1598663050, 1602997466, 1607343632, 1611701583, 1616071348,
+            1620452964, 1624846457, 1629251863, 1633669212, 1638098540, 1642539875, 1646993253, 1651458704,
+            1655936264, 1660425962, 1664927834, 1669441910, 1673968227, 1678506814, 1683057709, 1687620940,
+            1692196546, 1696784555, 1701385006, 1705997928, 1710623358, 1715261327, 1719911873, 1724575026,
+            1729250826, 1733939299, 1738640487, 1743354418, 1748081133, 1752820661, 1757573040, 1762338303,
+            1767116487, 1771907625, 1776711754, 1781528907, 1786359124, 1791202434, 1796058877, 1800928485,
+            1805811301, 1810707351, 1815616677, 1820539312, 1825475297, 1830424661, 1835387447, 1840363686,
+            1845353418, 1850356677, 1855373504, 1860403931, 1865447999, 1870505740, 1875577197, 1880662401,
+            1885761397, 1890874214, 1896000895, 1901141474, 1906295992, 1911464484, 1916646990, 1921843546,
+            1927054194, 1932278967, 1937517907, 1942771050, 1948038438, 1953320105, 1958616094, 1963926440,
+            1969251187, 1974590367, 1979944026, 1985312198, 1990694926, 1996092246, 2001504202, 2006930829,
+            2012372172, 2017828265, 2023299154, 2028784873, 2034285468, 2039800974, 2045331437, 2050876892,
+            2056437385, 2062012951, 2067603636, 2073209477, 2078830520, 2084466800, 2090118364, 2095785248,
+            2101467499, 2107165154, 2112878259, 2118606852, 2124350979, 2130110677, 2135885994, 2141676967,
+        };
 
         // 2^(2^-i) in Q30.
         static long RootOfTwo(int i)

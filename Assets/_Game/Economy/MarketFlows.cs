@@ -35,11 +35,6 @@ namespace FES.Economy
         public int MultiplierIndex(int market, int category, ModifierTarget target) =>
             (market * CategoryCount + category) * ModifierTargets.Count + (int)target;
 
-        public long Multiplier(int market, int category, ModifierTarget target) => Multipliers[MultiplierIndex(market, category, target)];
-
-        public void AddSupply(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Supply);
-        public void AddDemand(int market, int cell, long quantity) => Add(market, cell, quantity, ModifierTarget.Demand);
-
         /// <summary>
         /// A purchase executed now at the current price. The units leave the stock at once (so they cannot be
         /// sold twice) and pass through this turn's supply into its demand, so the price sees the demand at
@@ -60,14 +55,6 @@ namespace FES.Economy
         {
             if (quantity < 0) throw new ArgumentOutOfRangeException(nameof(quantity));
             _store.AddSupplyRaw(cell, quantity);
-        }
-
-        void Add(int market, int cell, long quantity, ModifierTarget target)
-        {
-            int category = _store.GoodCategory[_store.CellGood[cell]];
-            long scaled = Fx.FromRaw(Multiplier(market, category, target)).MulInt(quantity);
-            if (target == ModifierTarget.Supply) _store.AddSupplyRaw(cell, scaled);
-            else _store.AddDemandRaw(cell, scaled);
         }
 
         /// <summary>Finds the nearest market (the node itself, then its ancestors) that trades <paramref name="good"/>.</summary>

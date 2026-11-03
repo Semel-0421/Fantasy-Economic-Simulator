@@ -62,13 +62,29 @@ flowchart LR
 | P13a | Money conservation: an invariant test (a continent's money changes only by minting), every source from nothing fixed, every sink routed (DEC-061), a purse per nation, starting household money = coin supply minus held money | SYS-MARKETS, SYS-BANKING | Done |
 | P13b | Households pay for consumption, demand follows their budget, traders' floats pay sellers and cap payouts, aggregate flows move value between floats; household cash per node | SYS-MARKETS | Done |
 | P13c | Dividends to groups and the top quintile, state spending above a reserve target, income per head derived yearly from measured income | SYS-MARKETS, SYS-INTEREST-GROUPS, SYS-BANKING | Done |
-| P14 | Seven ranks measured yearly (reach and influence), ruin check that ends the game | SYS-PROGRESSION | Ready |
-| P15 | Facility managers (Automated mode sells output), hiring merchant groups, free arbitrage then standing orders, wages | SYS-AUTOMATION | Ready |
-| P16 | Group investment (new facilities, level-ups, roads; one project per group a year), closure after two losing years | SYS-INTEREST-GROUPS, SYS-PRODUCTION | Ready |
+| P14 | Seven ranks measured yearly (reach and influence), ruin check that ends the game | SYS-PROGRESSION | Ready, not built |
+| P15 | Facility managers (Automated mode sells output), hiring merchant groups, free arbitrage then standing orders, wages | SYS-AUTOMATION | Ready, not built |
+| P16 | Group investment (new facilities, level-ups, roads; one project per group a year), closure after two losing years | SYS-INTEREST-GROUPS, SYS-PRODUCTION | Done (closure built, off: DEC-120) |
 | P17 | Large merchant groups and aggregate flows cross continents (65% share), exchanging at international banks; continental goods (DEC-096) | SYS-MERCHANTS | Done |
 | P13d | Price index from published totals (DEC-062), retuning with a ten-year sample run, turn cost within +1.5 ms | SYS-BANKING | Done |
 | P18 | Hexagonal tile map, with the map and nodes generated from the seed; state land development moves onto tiles (DEC-075) | SYS-INFRASTRUCTURE | Before front-end work |
 | P19 | War system; the army's safety effect (DEC-074) is its first piece | | Later |
+
+## Remaining work by priority (2026-11-04)
+
+What is left after DEC-135 (commit b8445ef), most important first. Planning of the contest entry happens in a separate session; balancing and measurement come last, as the owner decided.
+
+| # | Work | Why now | Source |
+|---|---|---|---|
+| 1 | Contest entry (Chroma Awards Season 2, deadline 2027-01-07 23:45 PT) | Needs screens, clear goals, audio, use of at least one AI tool, English text, a public web link that works embedded (so the turn must meet its budget single-threaded), a gameplay video and a thumbnail. Today three of the four judging criteria have nothing to score. | references/CHROMA_AWARDS_S2.md |
+| 2 | Web turn budget | On the web a full-scale turn averages 670 ms, worst 1,037 ms on the new-year turn (2026-11-04, after the demand curve speed-up; 1,039 and 1,557 ms before). Only the new-year turn is above the one-second budget; merchants (about 340 ms) and pricing (about 250 ms) take most of an ordinary turn, the demand forecast about 250 ms each quarter. | DEC-110, META C42 |
+| 3 | P14 ranks and ruin | Goals and the game's end. Not built. | SYS-PROGRESSION, DEC-063 |
+| 4 | Balancing (last, by the owner's order) | City necessities met 24 to 29%, population flat. Facility bankruptcies 1,641 to 2,702 and merchant bankruptcies 2,755 to 4,093 in 30 years (128 merchants). The top quintile holds 88 to 91% of household cash. Stock bubbles all burst in years 3 to 6. Land rent and the other [Draft] values of DEC-128 to DEC-135 are first values. | Baseline of six seeds over 30 years, 2026-11-04; META C18 |
+| 5 | P15 facility managers and hired merchant groups | Not built. The facility mode flag exists but production ignores it. | SYS-AUTOMATION, DEC-064 |
+| 6 | Review issues of medium weight not yet fixed | C30 glutted goods never decay. C31 [Confirmed] rules without code. C43 the bank turn scans every borrower and the cargo table. C45 the presentation boundary is untested. C47 golden runs never borrow or seize. | reviews/META_2026-11-02.md |
+| 7 | What the bubble work left out | Land bought to resell, groups borrowing on margin, NPC short selling, and a forced buy-back not returning shares the households no longer hold. State land projects still open primary producers in cities. | DEC-133, DEC-134, DEC-135 |
+| 8 | Later phases | P16 closure is built but off until facilities stop losing money (DEC-120). P12c privatization (shares are in, DEC-129). P18 hex map (the roadmap puts it before front-end work). P19 war. Q-030 price index basket (deferred). | This roadmap |
+| 9 | Review issues of low weight (21, C04 to C59) | Also the eight extra open items listed in the META review. | reviews/META_2026-11-02.md |
 
 ## Notes
 - P2 changes the player's cash into per-continent coin balances. Until P9 exists the player simply cannot
@@ -174,7 +190,8 @@ Trials, around the player, three seeds, year 30. Unchanged: 14.39M, -0.68%, 48/7
 Result with DEC-098. Every node detailed, six seeds, year 30: 15.26M, -0.09%, 46/92/98/146%, failures 6.3%, against 14.30M, -0.31%, 30/85/95/141%, 6.9%. Six other seeds: 15.30M, -0.16%, 56/92/93/148%, 6.2%, against 13.90M, -0.41%. Three seeds, year 60: 15.54M, +0.12%, 74/99/103/149%, 6.7%, city bread, ale and clothes at 69, 27 and 105% of anchor, against 13.97M, +0.06%, 51/95/104/151%. Bills: 2.2M issued a year, 0.2M lost at year 30; 3.1M and 0.46M at year 60. Reserves 6.5M and 8.2M, against 3.5M and 4.1M. Sea, year 30: 33.4 ships out, 33.2 back, 4,210 units of special goods and 6,839 of others; year 60: 7,499 and 6,501. City prices against anchor, at home and abroad: spice 44 and 143%, silk 46 and 138%, fur 57 and 151%, amber 72 and 151%.
 Around the player, six seeds, year 30: 15.64M, -0.35%, 52/86/88/122%, failures 0.8%, against 14.39M, -0.68%, 48/79/76/120%, 0.5% (three seeds). Six other seeds: 15.72M, -0.37%, 51/83/89/124%. Three seeds, year 60: 14.27M, -0.19%, 67/90/93/127%, 0.9%. Special goods are no longer in glut abroad: spice 27 and 108%, silk 33 and 135%, fur 37 and 142%, amber 33 and 112%. A city's week of budget is 86-94k against necessities of 111-124k, where with every node detailed it is 115-126k against 109-116k; floats still average 5.6-6.1M.
 
-## Remaining work
+## Earlier measurements and notes
+Kept as a record; the work left is listed by priority above.
 
 With DEC-107, seeds 1 to 3, reading year 30 only: 15.80M, -0.31%, city/village 82/152%, merchant groups failing 3.4%, trips 3,822 a year, of which forced 208, 4 groups idle, company tax 0.48M. With the same reading and the changes that touch NPCs turned off: 15.75M, -0.27%, 82/150%, 6.3%, trips 3,796, forced 171, 7 idle, 0.49M. Failures in a single year rest on a few groups (one seed had 15 of the 24 in the second reading), so only the absence of a large shift is measured.
 

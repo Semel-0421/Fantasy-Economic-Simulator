@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-11-04
+- Household demand takes the price ratio's logarithm once for all five quintiles, skips goods nobody buys, and takes 2^x from a table for the top eight bits: identical results, every golden hash unchanged. Web turn at full scale 670 ms on average from 1,039, worst 1,037 ms from 1,557.
+- Roadmap: remaining work listed by priority; P14 and P15 marked not built; PROPOSAL_STEP5 header marked decided. Unused template assets removed (Assets/Welcome, the 2D scene template); dead methods removed (MarketFlows.AddSupply/AddDemand, NodeTable.IsCoreOf, NobleState.IsRoyalDomain, MerchantCapital.ClassCount).
 - DEC-135: the state's subsidised producers and land projects open under a cap a node, planned land projects hold their places, subsidised workshops spread over the core towns. New golden hashes.
 
 ## 2026-11-03

@@ -76,8 +76,6 @@ namespace FES.Agents
             }
         }
 
-        public bool IsRoyalDomain(int city) => CityHolder[city] >= 0 && CityHolder[city] != city;
-
         public void Write(BinaryWriter writer)
         {
             writer.Write(Cash.Length);

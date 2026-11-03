@@ -238,6 +238,7 @@ namespace FES.Agents
             player.CoinsAt(player.Node) -= cost;
             ctx.World.Get<GroupTable>().Cash[ctx.World.Get<FacilityTable>().Group[Facility.Value]] += cost;
             ctx.World.Get<ShareTable>().Add(Facility.Value, ShareTable.PlayerHolder, Count);
+            ShortRules.Traded(ctx.World, false, Facility.Value, ctx.Turn);
         }
     }
 
@@ -271,6 +272,7 @@ namespace FES.Agents
             player.CoinsAt(player.Node) += value;
             ctx.World.Get<GroupTable>().Cash[ctx.World.Get<FacilityTable>().Group[Facility.Value]] -= value;
             ctx.World.Get<ShareTable>().Add(Facility.Value, ShareTable.PlayerHolder, -Count);
+            ShortRules.Traded(ctx.World, false, Facility.Value, ctx.Turn);
         }
     }
 }

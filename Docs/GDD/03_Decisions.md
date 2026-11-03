@@ -372,6 +372,17 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-133 The player sells short under a licence; the markets' screens
+- Date: 2026-11-03
+- Decision: [Confirmed] Step 6 of [PROPOSAL_BUBBLES_2026-11-03](reviews/PROPOSAL_BUBBLES_2026-11-03.md), with the owner's condition for short selling: a licence per exchange (a nation's stock exchange, or a continent's), bought at the exchange for a fee once the player has traded there for a year and holds a deposit at its bank.
+  - [Draft] The licence costs 1,000 (`short.licence_fee`), paid to the bank; it needs 52 weeks since the player's first trade on that exchange (`short.licence_weeks`) and a deposit of 5,000 at its bank (`short.licence_deposit`). Buying, selling, selling short and buying back all count as trading.
+  - [Draft] A short sale borrows a facility's shares from its group, or a venture's from its households, at most 20 on one asset (`short.max_lent_shares`), and sells them to the nation's households at the price, as far as their idle money goes. The proceeds go into the deposit at the exchange's bank (the facility's nation's, or the continental exchange's), which must then hold 150% of what buying back all the shorts there would cost (`short.open_permille`); that part of the deposit cannot be withdrawn and is not collateral for loans. A group's lent shares still count as its own for control; while they are out they count against what it may list. The player pays the lender 5% of the shorts' value a year, weekly, from the deposit (`short.fee_permille`); the lender keeps the dividends it gave up only through that fee.
+  - [Draft] Buying back pays the households at the price from the deposit and returns the shares. When the deposit falls under 130% of the shorts' value (`short.call_permille`), the bank calls for margin; after the call's weeks (DEC-130) it buys them all back, from the deposit, then the coins of its continent, and lends the rest as a loan.
+  - The screens (`SimulationView`, `PlayerActions`): every exchange's and property market's premium, published indicators (price over the fundamental, leverage, credit growth, bank cover), phase, bursts and margin debt; the published lines; a facility's share price, fundamental and holdings; land price and plots; ventures; the player's shorts and licences; and actions to trade shares, land and venture shares, buy a licence, sell short and buy back. There is no screen drawn yet: these are what one reads and calls.
+- Reason: the owner's choice that the player may take part in bubbles and sell short once a condition is met, with the indicators in view so a burst can be foreseen.
+- Limits: NPCs do not sell short. A forced buy-back takes shares back from the households as far as they hold them; the rest of what was lent is not returned to the group. Tested on the sample, not measured over 30 years: nothing changes for NPCs unless the player sells short. The web turn was not measured.
+- Impact: SYS-BANKING, SYS-MARKETS, 02_Data_Formats
+
 ### DEC-132 Trading ventures and the continental exchange
 - Date: 2026-11-03
 - Decision: [Confirmed] Step 5 of [PROPOSAL_BUBBLES_2026-11-03](reviews/PROPOSAL_BUBBLES_2026-11-03.md). A venture is a company with no facility, based at a port with a sea route to another continent; the sample has one on each continent.

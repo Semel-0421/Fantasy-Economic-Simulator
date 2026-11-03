@@ -134,3 +134,5 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
 - [Confirmed] Trading ventures at ports with a route across the sea buy a far port's good and sell it at home, and pay
   their profit by share; their shares trade on a continental exchange per continent, the third kind of asset market
   (DEC-132).
+- [Confirmed] The player sells short on an exchange whose licence they hold (a year of trading there and a deposit at
+  its bank), with a margin in the deposit that a rising price calls (DEC-133).

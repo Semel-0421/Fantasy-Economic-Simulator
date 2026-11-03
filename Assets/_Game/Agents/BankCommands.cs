@@ -49,6 +49,9 @@ namespace FES.Agents
             var bank = ctx.World.Get<BankState>();
             if (Amount > 0) return ctx.World.Get<PlayerState>().LocalCoins >= Amount ? CommandResult.Success : CommandResult.Fail("Not enough cash.");
             if (bank.PlayerDeposit[nation] < -Amount) return CommandResult.Fail("The account does not hold that much.");
+            var db = ctx.Services.Get<GameDatabase>();
+            if (bank.PlayerDeposit[nation] + Amount < ShortRules.Required(ctx.World, db, nation, db.Config.ShortOpenShare))
+                return CommandResult.Fail("The deposit holds the margin on short sales.");
             var finance = ctx.World.Get<FinanceState>();
             if (finance.EventOf(nation) == FinancialEventKind.BankRun)
             {

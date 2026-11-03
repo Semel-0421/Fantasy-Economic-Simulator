@@ -316,6 +316,7 @@ namespace FES.Agents
             player.CoinsAt(player.Node) -= cost;
             MoneyLedger.PayNationHouseholds(ctx.World, VentureBook.Nation(ctx.World, Venture), cost);
             ctx.World.Get<VentureTable>().PlayerShares[Venture] += Count;
+            ShortRules.Traded(ctx.World, true, Venture, ctx.Turn);
         }
     }
 
@@ -344,6 +345,7 @@ namespace FES.Agents
             var config = ctx.Services.Get<GameDatabase>().Config;
             var player = ctx.World.Get<PlayerState>();
             player.CoinsAt(player.Node) += VentureBook.SellForPlayer(ctx.World, config, ctx.Turn, Venture, Count);
+            ShortRules.Traded(ctx.World, true, Venture, ctx.Turn);
         }
     }
 }

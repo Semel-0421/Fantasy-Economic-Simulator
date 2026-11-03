@@ -147,7 +147,7 @@ namespace FES.Agents
         {
             long value = 0;
             for (int n = 0; n < _bank.PlayerDeposit.Length; n++)
-                value += Convert(_bank.PlayerDeposit[n], NationContinent(n), continent);
+                value += Convert(Math.Max(0, _bank.PlayerDeposit[n] - ShortRules.Required(_world, _db, n, _db.Config.ShortOpenShare)), NationContinent(n), continent);
             for (int f = 0; f < _facilities.Count; f++)
             {
                 if (_facilities.Owner[f] != OwnerIds.Player) continue;

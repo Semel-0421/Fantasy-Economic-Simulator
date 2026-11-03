@@ -13,6 +13,7 @@ namespace FES.Agents
         public const int Ventures = SimOrder.Late + 8;
         public const int AssetMarkets = SimOrder.Late + 9;
         public const int Records = SimOrder.Late + 10;
+        public const int Shorts = SimOrder.Late + 11;
         public const int IncomeTax = SimOrder.Late + 15;
         public const int Nobles = SimOrder.Late + 16;
         public const int Migration = SimOrder.Late + 17;

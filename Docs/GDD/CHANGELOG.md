@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-133: short selling under an exchange's licence, with a margin in the deposit and calls; the asset markets, shares, land, ventures and shorts in `SimulationView` and `PlayerActions`. New golden hashes.
 - DEC-132: trading ventures at ports, voyages across the sea paid out by share, the continental exchange; asset markets section version 2. Credit tests turn ventures off. New golden hashes.
 - DEC-131: stock exchanges and property markets with a premium over the fundamental, households' margin credit, published indicators and bursts; financial events follow bursts and bank cover, none drawn at random in the shipped data. Bank, road and policy tests turn the markets off. New golden hashes.
 - DEC-130: the player's shares and land are pledged at their price; margin calls sell them when the debt rises above 75% of the collateral. The NPC economy is unchanged; new golden hashes for the new config keys and the new `agents.margin` section.

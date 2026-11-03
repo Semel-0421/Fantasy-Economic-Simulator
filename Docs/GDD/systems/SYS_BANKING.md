@@ -239,7 +239,9 @@ P9 built the player's banking; P9b added NPC loans, money totals, records, stati
   `MarginState` (`agents.margin`) holds the turn of a margin call, and `MarginCalled` announces it (DEC-130).
   `AssetMarkets` (`agents.asset_markets`) holds each exchange's and property market's premium, margin debt and
   indicators; `AssetMarketSystem` runs just before the finance records (DEC-131). `VentureTable` (`agents.ventures`)
-  and `VentureSystem`, just before it, hold and run the trading ventures (DEC-132). A seized facility belongs to
+  and `VentureSystem`, just before it, hold and run the trading ventures (DEC-132). `ShortTable` (`agents.shorts`),
+  `ShortLicences` (`agents.short_licences`) and `ShortSystem`, after the records, hold and run the player's short
+  sales, whose margin locks part of the deposit (DEC-133). A seized facility belongs to
   `OwnerIds.Bank` until its auction closes; it keeps producing like an NPC facility. It cannot go bankrupt while held (DEC-109).
 - `NpcLoanTable` (persistent, with a borrower lookup) holds NPC loans; `BankSystem` services them and lends
   to NPCs below zero each week (a managed scan, about 0.3 ms per full-scale turn). `NpcLending` holds the

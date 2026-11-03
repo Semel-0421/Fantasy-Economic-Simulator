@@ -37,6 +37,8 @@ namespace FES.Agents
             var markets = builder.World.Add(new AssetMarkets(nodes, banks.NationCount));
             builder.World.Add(new LandState(nodes, db.Config, facilities, markets));
             builder.World.Add(new ShareTable());
+            builder.World.Add(new ShortTable());
+            builder.World.Add(new ShortLicences(markets.Count, banks.NationCount));
             var ventures = builder.World.Add(new VentureTable());
             VentureTable.Found(ventures, nodes, builder.World.Get<RouteTable>(), banks, db.Config);
             var merchants = builder.World.Add(new AgentTable());
@@ -125,6 +127,7 @@ namespace FES.Agents
             builder.AddSystem(new VentureSystem());
             builder.AddSystem(new AssetMarketSystem());
             builder.AddSystem(new FinanceSystem());
+            builder.AddSystem(new ShortSystem());
             builder.AddSystem(new IncomeTaxSystem());
             builder.AddSystem(new NobleSystem());
             builder.AddSystem(new MigrationSystem());

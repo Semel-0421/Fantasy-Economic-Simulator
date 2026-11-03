@@ -189,3 +189,11 @@ venture.voyage_weeks,26
 venture.loss_permille,100
 venture.min_margin_permille,200
 venture.value_years,2
+# Short selling under an exchange's licence: a year of trading there and a deposit at its bank, for a fee; the deposit holds 150% of a short's value on opening and is called under 130%; the lender is paid 5% a year (DEC-133).
+short.licence_fee,1000
+short.licence_deposit,5000
+short.licence_weeks,52
+short.open_permille,1500
+short.call_permille,1300
+short.fee_permille,50
+short.max_lent_shares,20

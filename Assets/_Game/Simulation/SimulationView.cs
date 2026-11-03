@@ -48,6 +48,99 @@ namespace FES.Simulation
         }
     }
 
+    /// <summary>An asset market as its screen shows it (DEC-131): the price over the fundamental now, and the quarter's published indicators. Filled by the view.</summary>
+    public struct AssetMarketInfo
+    {
+        public AssetMarketKind Kind;
+        /// <summary>The nation's node, the node, or the continental exchange's node.</summary>
+        public NodeId Node;
+        public Fx Premium;
+        public Fx PublishedPremium;
+        public Fx Leverage;
+        public Fx CreditGrowth;
+        /// <summary>The lending bank's reserve over its loans at the last quarter's record.</summary>
+        public Fx BankCover;
+        public AssetMarketPhase Phase;
+        public int Bursts;
+        public long MarginDebt;
+    }
+
+    /// <summary>The published lines a market heats and bursts on (DEC-131), so a burst can be foreseen.</summary>
+    public readonly struct MarketLines
+    {
+        public readonly Fx Heated;
+        public readonly Fx Burst;
+        public readonly Fx LeverageLimit;
+        /// <summary>Zero when no floor is set.</summary>
+        public readonly Fx BankCoverFloor;
+
+        public MarketLines(Fx heated, Fx burst, Fx leverageLimit, Fx bankCoverFloor)
+        {
+            Heated = heated;
+            Burst = burst;
+            LeverageLimit = leverageLimit;
+            BankCoverFloor = bankCoverFloor;
+        }
+    }
+
+    /// <summary>A facility's shares (DEC-129).</summary>
+    public readonly struct ShareQuote
+    {
+        public readonly long Price;
+        public readonly long Fundamental;
+        /// <summary>Shares others than its group hold.</summary>
+        public readonly int Outside;
+        public readonly int PlayerHeld;
+        public readonly int PlayerShort;
+
+        public ShareQuote(long price, long fundamental, int outside, int playerHeld, int playerShort)
+        {
+            Price = price;
+            Fundamental = fundamental;
+            Outside = outside;
+            PlayerHeld = playerHeld;
+            PlayerShort = playerShort;
+        }
+    }
+
+    /// <summary>A trading venture (DEC-132). Filled by the view.</summary>
+    public struct VentureInfo
+    {
+        public int Id;
+        public NodeId Port;
+        public NodeId Far;
+        /// <summary>The turn it comes home, or -1 in port.</summary>
+        public int SailUntil;
+        public long Cash;
+        public long Price;
+        public long Fundamental;
+        public int PlayerHeld;
+        public int PlayerShort;
+        public int Voyages;
+        public int Wrecks;
+    }
+
+    /// <summary>One of the player's short sales (DEC-133).</summary>
+    public readonly struct ShortInfo
+    {
+        public readonly bool Venture;
+        /// <summary>A facility, or a venture.</summary>
+        public readonly int Asset;
+        public readonly int Count;
+        public readonly long Price;
+        /// <summary>The nation whose bank holds its margin.</summary>
+        public readonly NodeId Bank;
+
+        public ShortInfo(bool venture, int asset, int count, long price, NodeId bank)
+        {
+            Venture = venture;
+            Asset = asset;
+            Count = count;
+            Price = price;
+            Bank = bank;
+        }
+    }
+
     /// <summary>One quarter's financial record of a nation (DEC-043), in its continent's coin.</summary>
     public readonly struct FinanceRecordInfo
     {
@@ -401,6 +494,100 @@ namespace FES.Simulation
         /// <summary>Money the households of a node hold (DEC-061).</summary>
         public long HouseholdCash(NodeId node) => _world.Get<FES.Economy.HouseholdCash>().Cash[node.Value];
 
+        // Asset markets, shares, land, ventures and short selling (DEC-128 to DEC-133)
+
+        public MarketLines MarketLines => new MarketLines(Database.Config.MarketHeatedPremium, Database.Config.MarketBurstPremium,
+            Database.Config.MarketLeverageLimit, Database.Config.BankRunCover);
+
+        /// <summary>Every exchange, and every property market with land for sale or credit on it.</summary>
+        public void GetAssetMarkets(List<AssetMarketInfo> into)
+        {
+            into.Clear();
+            var markets = _world.Get<AssetMarkets>();
+            var latest = _finance.Latest;
+            for (int m = 0; m < markets.Count; m++)
+            {
+                int node = markets.NodeOf(m, _banks), lender = markets.LenderOf(m, _banks);
+                if (node < 0 || lender < 0 || !Shown(markets, m, node)) continue;
+                into.Add(new AssetMarketInfo
+                {
+                    Kind = markets.KindOf(m),
+                    Node = new NodeId(node),
+                    Premium = Fx.FromRaw(markets.Premium[m]),
+                    PublishedPremium = Fx.FromRaw(markets.PublishedPremium[m]),
+                    Leverage = Fx.FromRaw(markets.PublishedLeverage[m]),
+                    CreditGrowth = Fx.FromRaw(markets.PublishedCreditGrowth[m]),
+                    BankCover = latest == null ? Fx.Zero : latest.ReserveRatio(lender),
+                    Phase = (AssetMarketPhase)markets.Phase[m],
+                    Bursts = markets.Bursts[m],
+                    MarginDebt = markets.Debt[m],
+                });
+            }
+        }
+
+        // A property market shows where its households live and have land for sale or credit on it.
+        bool Shown(AssetMarkets markets, int m, int node) =>
+            markets.KindOf(m) != AssetMarketKind.Property
+            || (markets.Households(node) == node && (_world.Get<LandState>().Free(node) > 0 || markets.Debt[m] != 0));
+
+        public ShareQuote Shares(FacilityId facility) => new ShareQuote(ShareBook.Price(_world, Database, facility.Value),
+            ShareBook.Fundamental(_world, Database, facility.Value), _world.Get<ShareTable>().Outside(facility.Value),
+            _world.Get<ShareTable>().Held(facility.Value, ShareTable.PlayerHolder), _world.Get<ShortTable>().Held(false, facility.Value));
+
+        public long LandPrice(NodeId node) => _world.Get<LandState>().Price(node.Value, Database.Config);
+        public int FreePlots(NodeId node) => _world.Get<LandState>().Free(node.Value);
+        public int PlayerPlots(NodeId node) => _world.Get<LandState>().PlayerPlots[node.Value];
+
+        public void GetVentures(List<VentureInfo> into)
+        {
+            into.Clear();
+            var ventures = _world.Get<VentureTable>();
+            var shorts = _world.Get<ShortTable>();
+            for (int v = 0; v < ventures.Count; v++)
+                into.Add(new VentureInfo
+                {
+                    Id = v,
+                    Port = new NodeId(ventures.Port[v]),
+                    Far = new NodeId(ventures.Far[v]),
+                    SailUntil = ventures.SailUntil[v],
+                    Cash = ventures.Cash[v],
+                    Price = VentureBook.Price(_world, Database.Config, v),
+                    Fundamental = VentureBook.Fundamental(ventures, Database.Config, v),
+                    PlayerHeld = ventures.PlayerShares[v],
+                    PlayerShort = shorts.Held(true, v),
+                    Voyages = ventures.Voyages[v],
+                    Wrecks = ventures.Wrecks[v],
+                });
+        }
+
+        public void GetShorts(List<ShortInfo> into)
+        {
+            into.Clear();
+            var shorts = _world.Get<ShortTable>();
+            for (int r = 0; r < shorts.Count; r++)
+            {
+                bool venture = shorts.Venture[r] != 0;
+                into.Add(new ShortInfo(venture, shorts.Asset[r], shorts.Shares[r], ShortRules.Price(_world, Database, venture, shorts.Asset[r]),
+                    new NodeId(_banks.NationNode(shorts.Bank[r]))));
+            }
+        }
+
+        /// <summary>Whether the player may sell short on a nation's exchange, or on a continent's.</summary>
+        public bool HasShortLicence(AssetMarketKind kind, int nationOrContinent)
+        {
+            var markets = _world.Get<AssetMarkets>();
+            int m = kind == AssetMarketKind.Venture ? markets.Venture(nationOrContinent) : AssetMarkets.Stock(nationOrContinent);
+            return _world.Get<ShortLicences>().Licensed[m] != 0;
+        }
+
+        /// <summary>The turn the player first traded on a nation's exchange, or a continent's, or -1.</summary>
+        public int FirstTradeTurn(AssetMarketKind kind, int nationOrContinent)
+        {
+            var markets = _world.Get<AssetMarkets>();
+            int m = kind == AssetMarketKind.Venture ? markets.Venture(nationOrContinent) : AssetMarkets.Stock(nationOrContinent);
+            return _world.Get<ShortLicences>().FirstTrade[m];
+        }
+
         MoneyTotals Totals
         {
             get
@@ -534,5 +721,23 @@ namespace FES.Simulation
 
         public void SetFacilityControl(FacilityId facility, ControlMode mode) =>
             _queue.Enqueue(new SetFacilityControlCommand(facility, mode));
+
+        // Shares, land, ventures and short selling (DEC-128 to DEC-133)
+
+        /// <summary>Buys a facility's shares from its group, at a branch of its nation's bank.</summary>
+        public void BuyShares(FacilityId facility, int count) => _queue.Enqueue(new BuyShareCommand(facility, count));
+        public void SellShares(FacilityId facility, int count) => _queue.Enqueue(new SellShareCommand(facility, count));
+        /// <summary>Buys a plot from the households where the player stands.</summary>
+        public void BuyPlot() => _queue.Enqueue(new BuyPlotCommand());
+        public void SellPlot() => _queue.Enqueue(new SellPlotCommand());
+        /// <summary>Buys a venture's shares from its households, at the continental exchange.</summary>
+        public void BuyVentureShares(int venture, int count) => _queue.Enqueue(new BuyVentureShareCommand(venture, count));
+        public void SellVentureShares(int venture, int count) => _queue.Enqueue(new SellVentureShareCommand(venture, count));
+        /// <summary>Buys the licence to sell short on the exchange the player stands at.</summary>
+        public void BuyShortLicence(AssetMarketKind kind) => _queue.Enqueue(new BuyShortLicenceCommand(kind));
+        public void SellShort(FacilityId facility, int count) => _queue.Enqueue(new SellShortCommand(false, facility.Value, count));
+        public void SellVentureShort(int venture, int count) => _queue.Enqueue(new SellShortCommand(true, venture, count));
+        public void CoverShort(FacilityId facility, int count) => _queue.Enqueue(new CoverShortCommand(false, facility.Value, count));
+        public void CoverVentureShort(int venture, int count) => _queue.Enqueue(new CoverShortCommand(true, venture, count));
     }
 }

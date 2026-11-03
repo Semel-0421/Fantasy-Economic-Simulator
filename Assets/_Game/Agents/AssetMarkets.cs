@@ -132,6 +132,25 @@ namespace FES.Agents
         public Fx PropertyPremium(int node) => Fx.FromRaw(Premium[Property(node)]);
         public Fx VenturePremium(int continent) => Fx.FromRaw(Premium[Venture(continent)]);
 
+        public AssetMarketKind KindOf(int market) =>
+            IsStock(market) ? AssetMarketKind.Stock : IsVenture(market) ? AssetMarketKind.Venture : AssetMarketKind.Property;
+
+        /// <summary>A market's node: its nation's, its own, or its continental exchange's; -1 for none.</summary>
+        public int NodeOf(int market, NodeBanks banks)
+        {
+            if (IsStock(market)) return banks.NationNode(market);
+            if (IsVenture(market)) return ExchangeNode(banks, market - Venture(0));
+            return market - NationCount;
+        }
+
+        /// <summary>The nation whose bank a market's households borrow from; -1 for none.</summary>
+        public int LenderOf(int market, NodeBanks banks)
+        {
+            if (IsStock(market)) return market;
+            if (IsVenture(market)) return VentureLender(banks, market - Venture(0));
+            return banks.NationOf(market - NationCount);
+        }
+
         /// <summary>Where a continent's exchange is (DEC-132): its international bank, else its seat, the continent's core town.</summary>
         public int ExchangeNode(NodeBanks banks, int continent)
         {
@@ -503,14 +522,8 @@ namespace FES.Agents
             ctx.Events.Publish(new MarketBurst(Kind(m), MarketNode(m), premium, ctx.Turn));
         }
 
-        AssetMarketKind Kind(int m) =>
-            _markets.IsStock(m) ? AssetMarketKind.Stock : _markets.IsVenture(m) ? AssetMarketKind.Venture : AssetMarketKind.Property;
+        AssetMarketKind Kind(int m) => _markets.KindOf(m);
 
-        NodeId MarketNode(int m)
-        {
-            if (_markets.IsStock(m)) return new NodeId(_banks.NationNode(m));
-            if (_markets.IsVenture(m)) return new NodeId(_markets.ExchangeNode(_banks, m - _markets.Venture(0)));
-            return new NodeId(m - _markets.NationCount);
-        }
+        NodeId MarketNode(int m) => new NodeId(_markets.NodeOf(m, _banks));
     }
 }

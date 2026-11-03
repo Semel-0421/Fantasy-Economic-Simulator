@@ -478,6 +478,14 @@ namespace FES.Data
         public int VentureLossPermille = 100;
         public Fx VentureMinMargin = Fx.FromPermille(200);
         public int VentureValueYears = 2;
+        /// <summary>DEC-133: short selling. The licence's fee, the deposit it needs, the weeks of trading before it; the deposit's share of a short's value on opening and its call line; the yearly fee to the lender; the most shares lent on one asset.</summary>
+        public long ShortLicenceFee = 1000;
+        public long ShortLicenceDeposit = 5000;
+        public int ShortLicenceWeeks = 52;
+        public Fx ShortOpenShare = Fx.FromPermille(1500);
+        public Fx ShortCallShare = Fx.FromPermille(1300);
+        public Fx ShortFee = Fx.FromPermille(50);
+        public int ShortMaxLentShares = 20;
         /// <summary>DEC-131: a bank's cover (reserve over loans) under which a run starts and a heated market bursts; zero for none.</summary>
         public Fx BankRunCover = Fx.Zero;
         /// <summary>Loan rates are multiplied by this during a rate spike.</summary>

@@ -398,6 +398,15 @@ namespace FES.Data
             BankRunWithdrawShare = Permille(v, "finance.bank_run_withdraw_permille", BankRunWithdrawShare);
             RateSpikeMultiplier = Permille(v, "finance.rate_spike_permille", RateSpikeMultiplier);
             BankRunCover = Permille(v, "finance.run_cover_permille", BankRunCover);
+            ShortLicenceFee = Long(v, "short.licence_fee", ShortLicenceFee);
+            ShortLicenceDeposit = Long(v, "short.licence_deposit", ShortLicenceDeposit);
+            ShortLicenceWeeks = Int(v, "short.licence_weeks", ShortLicenceWeeks);
+            ShortOpenShare = Permille(v, "short.open_permille", ShortOpenShare);
+            ShortCallShare = Permille(v, "short.call_permille", ShortCallShare);
+            ShortFee = Permille(v, "short.fee_permille", ShortFee);
+            ShortMaxLentShares = Int(v, "short.max_lent_shares", ShortMaxLentShares);
+            if (ShortLicenceFee < 0 || ShortLicenceDeposit < 0 || ShortLicenceWeeks < 0 || ShortCallShare < Fx.One || ShortOpenShare < ShortCallShare || ShortMaxLentShares < 0)
+                throw new FormatException("config.csv: short selling needs open >= call >= 1000 permille, and no negative values.");
             VenturesPerContinent = Int(v, "venture.per_continent", VenturesPerContinent);
             VentureShares = Int(v, "venture.shares", VentureShares);
             VentureCapital = Long(v, "venture.capital", VentureCapital);

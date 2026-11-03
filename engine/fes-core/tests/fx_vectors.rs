@@ -26,7 +26,9 @@ fn apply(op: &str, a: i64, b: i64) -> i64 {
 #[test]
 fn all_ops_match_csharp() {
     let data = fixture_json("primitives.json");
-    for row in data["fx"].as_array().unwrap() {
+    let rows = data["fx"].as_array().unwrap();
+    assert!(rows.len() >= 3000, "only {} fx rows", rows.len());
+    for row in rows {
         let op = row["op"].as_str().unwrap();
         let (a, b, want) = (num(row, "a"), num(row, "b"), num(row, "result"));
         let got = apply(op, a, b);

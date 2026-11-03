@@ -372,6 +372,11 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-136 The Rust port's C# reference is 4bf3804
+- Date: 2026-11-04
+- Decision: [Confirmed] The Rust port (spec `docs/superpowers/specs/2026-11-04-rust-web-port-design.md`) takes commit `4bf3804` as its C# reference. From this commit the C# simulation code is frozen; rule changes happen in Rust.
+- Web turn baseline for the port (DEC-110): Chrome, turns 0 to 53 after `c4470e2`, average 1.03 s, worst 1.64 s.
+
 ### DEC-135 The state's openings keep to a cap a node; subsidised workshops spread over the core towns
 - Date: 2026-11-04
 - Decision: [Confirmed] Option B of [PROPOSAL_SUBSIDY_CAP_2026-11-04](reviews/PROPOSAL_SUBSIDY_CAP_2026-11-04.md), with a cap of the subsidies' own, as the owner chose. A subsidy's yearly producer (DEC-074) opens at the node shortest of necessities where its type may stand, with a free plot (DEC-128), fewer facilities than the cap and the money for it all; a fine workshop that only a core town may hold (DEC-104) goes to the core town shortest of necessities, not always the capital. Where no node qualifies, none opens that year; the subsidy still pays output. The owner then had the same cap kept by the state's land projects (DEC-072): farmland and mines are planned only at a node with room under it. A land project planned at a node holds its place until it opens, for investment, subsidies and other land projects alike. [Draft] The cap is 24 (`state.max_per_node`), as investment's (DEC-080).

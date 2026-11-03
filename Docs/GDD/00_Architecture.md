@@ -135,8 +135,8 @@ are consumed at Late.
 
 Default cadence (`config.csv`): village 1, city 1, region 2, nation 4 (offset 1), continent 4.
 
-Budget: **one second a turn on a web build**, every node and agent computed (DEC-110). Met on the development desktop. Full-scale world, shipped rules:
-web player in Chrome, single-threaded, turns 0 to 53: at most 0.49 s on average, worst 0.84 s, new-year turn 0.77 s. Editor (same desktop, Burst and
+Budget: **one second a turn on a web build**, every node and agent computed (DEC-110). Missed at the last measurement. Full-scale world, shipped rules (4,460 merchant groups):
+web player in Chrome, single-threaded, turns 0 to 53 after `c4470e2`: 1.03 s on average, worst 1.64 s (new year), 19 of 54 turns over 1 s; an earlier build met it (0.49 s, worst 0.84 s). Commits after `c4470e2` (to the Rust reference `4bf3804`, DEC-136) are not re-measured. Editor (same desktop, Burst and
 safety checks on), turns 1 to 65: 0.63 s on average, worst 1.17 s, new-year turn 1.16 s. Weaker devices and Android are not yet profiled.
 
 To measure the web: run the explicit `FullScale_WritesWebBenchmarkData`, build WebGL with the scripting define `FES_BENCHMARK`, delete

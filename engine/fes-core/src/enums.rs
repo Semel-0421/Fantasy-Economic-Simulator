@@ -81,3 +81,10 @@ named_enum! {
     /// Simulation level of detail: per-entity stepping or summarized node-level flows.
     SimDetail { Aggregate = 0, Detailed = 1 }
 }
+
+/// How often a world level's markets are stepped: due when `(turn + offset) % period == 0`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TierCadence {
+    pub period: i32,
+    pub offset: i32,
+}

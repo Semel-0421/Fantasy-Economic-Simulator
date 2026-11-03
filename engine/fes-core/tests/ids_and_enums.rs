@@ -24,3 +24,9 @@ fn discriminants_match_csharp() {
     assert_eq!(QualityGrade::from_u8(2), Some(QualityGrade::High));
     assert_eq!(QualityGrade::from_u8(4), None);
 }
+
+#[test]
+fn read_string_replaces_invalid_utf8() {
+    let mut r = fes_core::io::DotNetReader::new(&[3, b'a', 0xFF, b'b']);
+    assert_eq!(r.read_string().unwrap(), "a\u{FFFD}b");
+}

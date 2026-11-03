@@ -37,18 +37,11 @@ use fes_core::det::det_hash;
 use reader::Reader;
 use std::collections::BTreeMap;
 
-pub use fes_core::WorldLevel;
+pub use fes_core::{TierCadence, WorldLevel};
 pub use fields::SimulationConfig;
 
 /// The name of the config file in a data source.
 pub const CONFIG_FILE: &str = "config.csv";
-
-/// How often a world level's markets are stepped: due when `(turn + offset) % period == 0`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct TierCadence {
-    pub period: i32,
-    pub offset: i32,
-}
 
 impl Default for SimulationConfig {
     /// The code defaults, same as `SimulationConfig::defaults()`.

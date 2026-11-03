@@ -91,3 +91,8 @@ Kept golden runs (spec section 6): `Default_Seed1_ThirtyYears`, `Default_Seed2`,
 a `long`) and 73 for `MulInt` (the `decimal` path, used when |a| or |b| > 2^31, whose rounded product does
 not fit a `long`; including the four `±(i64::MAX >> 16)` edge pairs). No other op threw: `/` by a zero raw
 returns zero, and the other ops wrap silently. The Rust port must not be expected to match these inputs.
+
+## Game data
+
+`fes-parity` reads the game data (CSV files) from `<repo>/Assets/StreamingAssets/Data` by default;
+`--data <dir>` overrides it. The engine shares this data with the Unity tree rather than keeping a copy.

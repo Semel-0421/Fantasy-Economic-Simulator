@@ -158,7 +158,8 @@ impl<'a> DotNetReader<'a> {
     pub fn read_string(&mut self) -> Result<String, IoError> {
         let n = self.read_7bit_len()?;
         let bytes = self.read_bytes(n)?;
-        String::from_utf8(bytes.to_vec()).map_err(|_| IoError::InvalidUtf8)
+        // .NET substitutes U+FFFD for invalid bytes.
+        Ok(String::from_utf8_lossy(bytes).into_owned())
     }
 }
 

@@ -50,6 +50,7 @@ impl DataSource for OverrideSource {
     }
 }
 
+// CRLF input is normalised to LF by `lines()`; the data hash is computed from parsed content.
 fn apply_overrides(text: &str, lines: &[String]) -> String {
     let mut kept: Vec<&str> = text.lines().collect();
     for line in lines {

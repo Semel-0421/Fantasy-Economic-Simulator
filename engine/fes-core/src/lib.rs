@@ -11,7 +11,8 @@ pub mod testing;
 
 pub use det::DetRandom;
 pub use enums::{
-    ControlMode, GuidanceAxis, IndustryTier, QualityGrade, RouteTerrain, SimDetail, WorldLevel,
+    ControlMode, GuidanceAxis, IndustryTier, QualityGrade, RouteTerrain, SimDetail, TierCadence,
+    WorldLevel,
 };
 pub use fx::Fx;
 pub use ids::{GoodId, NodeId};

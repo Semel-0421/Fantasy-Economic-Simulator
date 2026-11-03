@@ -279,3 +279,38 @@ fn map_without_routes_file_loads() {
     assert_eq!(map.nodes.len(), 1);
     assert!(map.routes.is_empty());
 }
+
+#[test]
+fn crlf_bom_data_directory_hashes_like_lf() {
+    let out = std::env::temp_dir().join(format!("fes-crlf-bom-{}", std::process::id()));
+    std::fs::create_dir_all(&out).unwrap();
+    for entry in std::fs::read_dir(data_dir()).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|e| e == "csv") {
+            let text = std::fs::read_to_string(&path)
+                .unwrap()
+                .replace("\r\n", "\n");
+            let converted = format!("\u{FEFF}{}", text.replace('\n', "\r\n"));
+            std::fs::write(out.join(path.file_name().unwrap()), converted).unwrap();
+        }
+    }
+    let source = FileDataSource::new(out.clone());
+    let expected = fixture_json("data/hashes.json");
+    let db = GameDatabase::load(&source).unwrap();
+    let map = MapDef::load(&source).unwrap();
+    let lf = GameDatabase::load(&shipped()).unwrap();
+    std::fs::remove_dir_all(&out).unwrap();
+    assert_eq!(db.content_hash(), lf.content_hash());
+    assert_eq!(db.content_hash(), hash_of(&expected, "content_hash"));
+    assert_eq!(data_hash(&db, &map), hash_of(&expected, "data_hash"));
+}
+
+#[test]
+fn invalid_utf8_reads_lossily() {
+    let dir = std::env::temp_dir().join(format!("fes-bad-utf8-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("x.csv"), [b'a', 0xFF, b'b']).unwrap();
+    let text = FileDataSource::new(dir.clone()).read_text("x.csv").unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(text, "a\u{FFFD}b");
+}

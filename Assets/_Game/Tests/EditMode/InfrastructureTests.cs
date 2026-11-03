@@ -113,9 +113,9 @@ namespace FES.Tests
         [Test]
         public void NationRoads_AreKeptFromTheReserve_OrDecay()
         {
-            // Without state spending or state enterprises' dividends the reserve moves only by road upkeep.
+            // Without state spending, state enterprises' dividends or the luxury tax the reserve moves only by road upkeep.
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
-                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), 42).Build();
+                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\nhouseholds.luxury_tax_permille,0\n"), 42).Build();
             var config = sim.Database.Config;
             config.MerchantMustAct = false; // merchants on the road would keep paying tolls into the reserve
             var banks = sim.World.Get<NodeBanks>();
@@ -146,7 +146,7 @@ namespace FES.Tests
         public void NationRoads_AreNotKeptWithThePlayersDeposit()
         {
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
-                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\n"), 42).Build();
+                "key,value\nbank.state_spending_permille,0\nfacility.dividend_permille,0\nstate.defense_permille,0\nstate.project_share_permille,0\nhouseholds.luxury_tax_permille,0\n"), 42).Build();
             var config = sim.Database.Config;
             config.MerchantMustAct = false;
             config.LodMode = 2; // detailed merchants' tolls would fill the reserve

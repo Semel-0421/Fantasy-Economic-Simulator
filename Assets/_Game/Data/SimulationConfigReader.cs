@@ -274,6 +274,11 @@ namespace FES.Data
             if (NeedMemoryWeeks < 0) throw new FormatException("config.csv: households.need_memory_weeks must be >= 0.");
             HouseholdBudgetWeeks = Int(v, "households.budget_weeks", HouseholdBudgetWeeks);
             if (HouseholdBudgetWeeks < 1) throw new FormatException("config.csv: households.budget_weeks must be >= 1.");
+            HouseholdAlmsShare = Permille(v, "households.alms_permille", HouseholdAlmsShare);
+            LuxuryWealthPerYear = Permille(v, "households.luxury_wealth_permille", LuxuryWealthPerYear);
+            LuxuryWealthCap = Permille(v, "households.luxury_wealth_cap_permille", LuxuryWealthCap);
+            if (LuxuryWealthCap.Raw < Fx.OneRaw) throw new FormatException("config.csv: households.luxury_wealth_cap_permille must be at least 1000.");
+            LuxuryTax = Permille(v, "households.luxury_tax_permille", LuxuryTax);
         }
 
         void ApplyTradersAndNobles(Dictionary<string, string> v)

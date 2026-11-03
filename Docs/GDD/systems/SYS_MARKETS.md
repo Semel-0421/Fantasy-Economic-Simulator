@@ -12,7 +12,7 @@ related: [SYS-PRODUCTION, SYS-BANKING, DEC-045]
 Prices should react the way people buy: bread sells in a crisis, silk does not.
 
 ## Rules
-- [Confirmed] Necessities follow a constant-elasticity curve: each quintile buys in proportion to (price / anchor) to the power of minus its elasticity, nothing from five times the anchor (DEC-126). Luxuries keep the straight line.
+- [Confirmed] Necessities follow a constant-elasticity curve: each quintile buys in proportion to (price / anchor) to the power of minus its elasticity, nothing from five times the anchor (DEC-126). Luxuries keep the straight line. The top quintile pays for the lower quintiles' necessities up to a share of its holdings, buys more luxuries the more it holds, and luxury purchases pay a tax to the state (DEC-127).
 - [Confirmed] Ordinary market goods are necessities or luxuries, with different price elasticity (DEC-045).
 - [Confirmed] Market demand includes weights that follow from that class (DEC-045).
 - [Confirmed] Each good is classed individually; higher grades lean toward luxury (DEC-048). A semi-necessity such as ale is closer to a luxury from mid grade up (DEC-091).

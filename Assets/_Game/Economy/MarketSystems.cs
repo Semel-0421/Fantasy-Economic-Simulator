@@ -80,9 +80,11 @@ namespace FES.Economy
                 int level = _nodes.Level[n];
                 _anchorMul[n] = _currency.PriceIndex[_nodes.Continent[n]].Raw;
                 _necessityWeight[n] = _households.NecessityWeight(n, level, _config).Raw;
-                _luxuryWeight[n] = _households.LuxuryWeight(n, level, _config).Raw;
                 _cash.Settle(n, _config.QuintileIncomeShare);
-                _budget[n] = _cash.NecessityBudgetFactor(n, _config.HouseholdBudgetWeeks);
+                long weeklyIncome = Fx.MulIntRaw(_households.Population[n], _households.IncomePerHead[n]);
+                _luxuryWeight[n] = Fx.RoundShift(_households.LuxuryWeight(n, level, _config).Raw
+                    * _cash.LuxuryWealthMul(n, weeklyIncome, _config.LuxuryWealthPerYear.Raw, _config.LuxuryWealthCap.Raw));
+                _budget[n] = _cash.NecessityBudgetFactor(n, _config.HouseholdBudgetWeeks, _config.HouseholdAlmsShare.Raw);
                 _luxuryBudget[n] = _cash.LuxuryBudgetFactor(n, _config.HouseholdBudgetWeeks);
             }
 

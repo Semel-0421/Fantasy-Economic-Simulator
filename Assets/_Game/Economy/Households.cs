@@ -203,14 +203,41 @@ namespace FES.Economy
         /// quintile wants a fifth of them and spends at most its cash over <paramref name="budgetWeeks"/> a week,
         /// necessities first (DEC-083, DEC-115).
         /// </summary>
-        public long NecessityBudgetFactor(int node, int budgetWeeks)
+        public long NecessityBudgetFactor(int node, int budgetWeeks) => NecessityBudgetFactor(node, budgetWeeks, 0);
+
+        /// <summary>
+        /// The same, with alms (DEC-127): what the lower quintiles cannot pay of their fifths, the top quintile pays, up to
+        /// <paramref name="almsRaw"/> of what it holds a week. The settlement takes it from whoever holds money.
+        /// </summary>
+        public long NecessityBudgetFactor(int node, int budgetWeeks, long almsRaw)
         {
-            int start = node * HouseholdDemand.Quintiles;
-            long fifth = DesiredNecessity[node] / HouseholdDemand.Quintiles, paid = 0;
+            int start = node * HouseholdDemand.Quintiles, top = start + HouseholdDemand.Quintiles - 1;
+            long fifth = DesiredNecessity[node] / HouseholdDemand.Quintiles, paid = 0, shortfall = 0;
             for (int q = 0; q < HouseholdDemand.Quintiles; q++)
-                paid += Math.Min(WeekBudget(start + q, budgetWeeks), fifth);
+            {
+                long own = Math.Min(WeekBudget(start + q, budgetWeeks), fifth);
+                paid += own;
+                if (start + q != top) shortfall += fifth - own;
+            }
+            paid += Math.Min(shortfall, Fx.MulIntRaw(Math.Max(0, QuintileCash[top]), almsRaw));
             return Share(paid, fifth * HouseholdDemand.Quintiles);
         }
+
+        /// <summary>DEC-127: luxury demand grows with what the top quintile holds, by <paramref name="perYearRaw"/> for each year of the node's income, up to <paramref name="capRaw"/> times.</summary>
+        public long LuxuryWealthMul(int node, long weeklyIncome, long perYearRaw, long capRaw)
+        {
+            long held = Math.Max(0, QuintileCash[node * HouseholdDemand.Quintiles + HouseholdDemand.Quintiles - 1]);
+            long years = Fx.FromRatio(held, Math.Max(1, weeklyIncome * SimClock.WeeksPerYear)).Raw;
+            long mul = Fx.OneRaw + Fx.RoundShift(perYearRaw * years);
+            return mul > capRaw ? capRaw : mul;
+        }
+
+        /// <summary>DEC-127: the tax on what households paid beyond the week's necessities.</summary>
+        public static long LuxuryTax(long spent, long desiredNecessity, long rateRaw) =>
+            Fx.MulIntRaw(Math.Max(0, spent - desiredNecessity), rateRaw);
+
+        /// <summary>Luxury tax paid since the start; not saved, for reading balance.</summary>
+        public long LuxuryTaxYear;
 
         /// <summary>The share of their wished luxuries that what each quintile has left after necessities pays for, so they follow the money.</summary>
         public long LuxuryBudgetFactor(int node, int budgetWeeks)

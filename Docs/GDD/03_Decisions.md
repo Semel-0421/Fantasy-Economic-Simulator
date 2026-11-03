@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-127 The rich pay alms, spend with their wealth, and pay a tax on luxuries
+- Date: 2026-11-03
+- Decision: [Confirmed] DEC-115's 80% income share stays. Directions B and D of [PROPOSAL_REDISTRIBUTION_2026-11-03](reviews/PROPOSAL_REDISTRIBUTION_2026-11-03.md), and luxury purchases carry a tax. Alms: what the lower quintiles of a node cannot pay of their fifths of the week's necessities, its top quintile pays. Wealth: luxury demand grows with what the top quintile holds. Tax: what households pay beyond the week's necessities pays a share to the state. [Draft] Alms up to 2% of the top's holdings a week (`households.alms_permille`), taken from whoever holds money as the settlement does (DEC-115). Luxury demand +100% for each year of the node's income the top holds, at most four times (`households.luxury_wealth_permille`, `households.luxury_wealth_cap_permille`). The tax is 10% of what households pay beyond the week's deliverable necessities (`households.luxury_tax_permille`), to the nation's reserve, or the continent's international bank outside any nation; the traders get the rest.
+- Reason: the owner's choice. Every coin a node earns is split 80% to the top again, so only money sent to the lower quintiles directly reaches them; in the trial, villages were fed and population rose by 0.6 to 1.1M, while level 3 did not move as its markets lack goods.
+- Limits: the wealth multiplier applies where markets price household demand; the forecast, made-to-order and merchants' household needs still read the plain luxury weight. The tax is reckoned on the week's deliverable necessities, not on each good.
+- Impact: SYS-MARKETS, SYS-BANKING, 02_Data_Formats
+
 ### DEC-126 Necessities follow a constant-elasticity curve
 - Date: 2026-11-03
 - Decision: [Confirmed] Each quintile buys necessities in proportion to (price / anchor) to the power of minus its elasticity (DEC-112's 0.6, scaled per quintile), instead of the straight line of DEC-048. Hungry households keep buying as prices climb. [Draft] Up to the cap below the anchor, as before, and nothing from five times the anchor (`demand.necessity_choke_permille`), which keeps a good nobody supplies from climbing without end. Luxuries keep the straight line. Computed in integers (log2 and 2^x in fixed point), the same on every platform.

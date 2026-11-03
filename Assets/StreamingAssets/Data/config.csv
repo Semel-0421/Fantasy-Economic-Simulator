@@ -21,6 +21,11 @@ households.nation.income_permille,300
 households.region.income_permille,300
 households.city.income_permille,500
 households.village.income_permille,2000
+# The rich pay for the hungry's necessities up to 2% of their holdings a week, buy more luxuries the more they hold, and pay a tenth of luxuries in tax (DEC-127).
+households.alms_permille,20
+households.luxury_wealth_permille,1000
+households.luxury_wealth_cap_permille,4000
+households.luxury_tax_permille,100
 # Cities work inputs; villages only raise them (DEC-076).
 producers.village.tertiary,0
 producers.city.secondary,6

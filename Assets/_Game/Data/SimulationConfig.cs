@@ -82,6 +82,13 @@ namespace FES.Data
         public int NeedMemoryWeeks = 52;
         /// <summary>Households spend at most their cash over this many weeks a week; demand shrinks to fit (DEC-061, P13b).</summary>
         public int HouseholdBudgetWeeks = 26;
+        /// <summary>DEC-127: the share of its holdings the top quintile may give a week to pay for the lower quintiles' necessities.</summary>
+        public Fx HouseholdAlmsShare = Fx.FromPermille(20);
+        /// <summary>DEC-127: luxury demand grows by this for each year of the node's income the top quintile holds, up to the cap.</summary>
+        public Fx LuxuryWealthPerYear = Fx.FromPermille(1000);
+        public Fx LuxuryWealthCap = Fx.FromInt(4);
+        /// <summary>DEC-127: the share of what households pay beyond their necessities that goes to the state.</summary>
+        public Fx LuxuryTax = Fx.FromPermille(100);
         /// <summary>Share of the money nobody holds at the start that goes to the traders' floats; households get the rest (P13b).</summary>
         public Fx TraderFloatShare = Fx.FromPermille(100);
         /// <summary>Loans to the traders' float (DEC-092): the weekly share of what households can spare beyond these weeks of spending, and of the bank's excess; zero is off.</summary>

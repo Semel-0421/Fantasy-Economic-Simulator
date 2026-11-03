@@ -119,10 +119,18 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             var spent = _households.Spent;
+            var rate = ctx.Services.Get<GameDatabase>().Config.LuxuryTax.Raw;
             for (int node = 0; node < spent.Length; node++)
             {
                 if (spent[node] == 0) continue;
-                _purses.Float[_purses.NodeFloat[node]] += spent[node];
+                // DEC-127: what they paid beyond the week's necessities carries a tax, which the state keeps.
+                long tax = HouseholdCash.LuxuryTax(spent[node], _households.DesiredNecessity[node], rate);
+                if (tax > 0)
+                {
+                    MoneyLedger.ToState(ctx.World, node, tax);
+                    _households.LuxuryTaxYear += tax;
+                }
+                _purses.Float[_purses.NodeFloat[node]] += spent[node] - tax;
                 _labor.QuarterSpending[_purses.NodeFloat[node]] += spent[node];
                 _households.SpentYear[node] += spent[node];
                 spent[node] = 0;

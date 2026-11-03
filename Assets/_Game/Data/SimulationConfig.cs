@@ -38,6 +38,8 @@ namespace FES.Data
 
         /// <summary>Price elasticity of necessities and of luxuries: the share of demand lost per 100% above the anchor (DEC-048).</summary>
         public Fx NecessityElasticity = Fx.FromPermille(500);
+        /// <summary>DEC-126: necessities follow a constant-elasticity curve; from this price / anchor on, none are bought.</summary>
+        public Fx NecessityChoke = Fx.FromInt(5);
         public Fx LuxuryElasticity = Fx.FromPermille(1500);
         /// <summary>Per grade: how far a necessity is bought like a luxury (higher grades lean toward luxury, DEC-048).</summary>
         public readonly Fx[] GradeLuxuryShare = { Fx.Zero, Fx.Zero, Fx.FromPermille(500), Fx.One };

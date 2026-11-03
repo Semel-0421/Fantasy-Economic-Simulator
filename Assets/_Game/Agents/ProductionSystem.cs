@@ -387,6 +387,8 @@ namespace FES.Agents
             if (!wasPlayer && ctx.World.Get<NpcLoanTable>().Find(NpcBorrowers.Facility(f)) >= 0)
             {
                 NpcLending.SeizeFacility(ctx, f);
+                _facilities.LossYears[f] = 0;
+                ctx.Events.Publish(new FacilityBankrupt(new FacilityId(f), false, _facilities.WarehouseClaimUntil[f], ctx.Turn)); // still a bankruptcy
                 return;
             }
             // A later operator's failure leaves a claim the player already has.

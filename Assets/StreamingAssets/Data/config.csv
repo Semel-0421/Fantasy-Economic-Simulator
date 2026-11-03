@@ -32,6 +32,8 @@ demand.city.weight_permille,4000
 demand.village.weight_permille,4950
 # Staple food: cereals 0.60 (Andreyeva 2010), 0.43 to 0.61 by income (Green 2013) (DEC-112).
 demand.necessity_elasticity_permille,600
+# Necessities follow a constant-elasticity curve, so hungry households keep buying as prices climb; none are bought from five times the anchor (DEC-126).
+demand.necessity_choke_permille,5000
 # Rural-urban migration over about fifteen years (DEC-079).
 migration.max_share_permille,80
 # Population grows below full supply: a slow pre-industrial rise that shortage slows and severe shortage reverses (DEC-112).

@@ -135,6 +135,7 @@ changing a default in code does.
 | state.facility_levy_permille | 500 | share of a state enterprise's dividends the state collects ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.class<0-2>.start_cash, merchants.class<0-2>.share_permille | 9500/1800/100, 100/300/400 | starting cash and share of the top, average and most common classes; the rest start with player.start_cash (DEC-119) |
+| demand.necessity_choke_permille | 5000 | price / anchor from which households buy no necessities; below it necessities follow a constant-elasticity curve (DEC-126) |
 | facility.repurpose_cost_permille | 500 | share of the new type's value that a change of use costs (DEC-125) |
 | facility.close_loss_years | 999 | losing tax years in a row that close a facility; 999 is off (DEC-120) |
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |

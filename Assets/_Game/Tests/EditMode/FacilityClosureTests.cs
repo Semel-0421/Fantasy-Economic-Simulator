@@ -1,7 +1,9 @@
 using System.Linq;
 using FES.Agents;
 using FES.Core;
+using FES.Economy;
 using FES.Simulation;
+using FES.World;
 using NUnit.Framework;
 
 namespace FES.Tests
@@ -35,6 +37,23 @@ namespace FES.Tests
                 sim.AdvanceTurn();
             }
             sim.AdvanceTurn(); // the new year's turn settles the books
+        }
+
+        // A failure the bank takes for its loan is still a bankruptcy, and counts as one.
+        [Test]
+        public void ASeizedFacility_CountsAsBankrupt()
+        {
+            using var sim = TestWorlds.BuildSample();
+            var facilities = sim.World.Get<FacilityTable>();
+            int f = Pick(sim, false);
+            int nation = sim.World.Get<NodeBanks>().NationOf(facilities.Node[f]);
+            sim.World.Get<BankState>().Reserve[nation] += Fortune;
+            Assert.Greater(NpcLending.Lend(sim.World, sim.Database.Config, NpcBorrowers.Facility(f), nation, 100), 0);
+            facilities.Cash[f] = -Fortune;
+            facilities.NegativeCashWeeks[f] = sim.Database.Config.FacilityBankruptWeeks;
+            sim.AdvanceTurn();
+            Assert.AreEqual(OwnerIds.Bank, facilities.Owner[f], "the bank took it for its loan");
+            Assert.IsTrue(sim.LastTurnEvents.OfType<FacilityBankrupt>().Any(e => e.Facility.Value == f));
         }
 
         [Test]

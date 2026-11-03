@@ -466,6 +466,8 @@ namespace FES.Economy
     {
         public long LuxuryElasticityRaw;
         public long MaxCheapRaw;
+        /// <summary>DEC-126: price / anchor from which households buy no necessities.</summary>
+        public long NecessityChokeRaw;
         /// <summary>Per income quintile, poorest first: the necessity elasticity times the quintile's sensitivity.</summary>
         public long Quintile1Raw, Quintile2Raw, Quintile3Raw, Quintile4Raw, Quintile5Raw;
 
@@ -473,6 +475,7 @@ namespace FES.Economy
         {
             LuxuryElasticityRaw = c.LuxuryElasticity.Raw,
             MaxCheapRaw = c.MaxCheapDemand.Raw,
+            NecessityChokeRaw = c.NecessityChoke.Raw,
             Quintile1Raw = QuintileElasticity(c, 0),
             Quintile2Raw = QuintileElasticity(c, 1),
             Quintile3Raw = QuintileElasticity(c, 2),
@@ -539,15 +542,16 @@ namespace FES.Economy
         {
             if (anchor < 1) anchor = 1;
             long excess = ((price - anchor) << Fx.FractionBits) / anchor;
+            long ratio = ((long)price << Fx.FractionBits) / anchor;
             long necessityShare = Fx.OneRaw - luxuryShare;
             long necessity = 0;
             if (necessityShare > 0)
             {
-                necessity = (DemandCurve.Factor(p.Quintile1Raw, excess, p.MaxCheapRaw)
-                    + DemandCurve.Factor(p.Quintile2Raw, excess, p.MaxCheapRaw)
-                    + DemandCurve.Factor(p.Quintile3Raw, excess, p.MaxCheapRaw)
-                    + DemandCurve.Factor(p.Quintile4Raw, excess, p.MaxCheapRaw)
-                    + DemandCurve.Factor(p.Quintile5Raw, excess, p.MaxCheapRaw)) / Quintiles;
+                necessity = (DemandCurve.ConstantElasticity(p.Quintile1Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile2Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile3Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile4Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)
+                    + DemandCurve.ConstantElasticity(p.Quintile5Raw, ratio, p.MaxCheapRaw, p.NecessityChokeRaw)) / Quintiles;
             }
             long luxury = luxuryShare > 0 ? DemandCurve.Factor(p.LuxuryElasticityRaw, excess, p.MaxCheapRaw) : 0;
 
@@ -576,6 +580,76 @@ namespace FES.Economy
             long factor = Fx.OneRaw - Fx.RoundShift(elasticityRaw * excessRaw);
             if (factor < 0) return 0;
             return factor > maxRaw ? maxRaw : factor;
+        }
+
+        /// <summary>
+        /// DEC-126: necessities, quantity relative to the anchor's: (price / anchor) to the power of minus the
+        /// elasticity, so hungry households keep buying as the price climbs, up to <paramref name="maxRaw"/> below the
+        /// anchor and nothing from the choke price on, which keeps a good nobody supplies from climbing without end.
+        /// <paramref name="ratioRaw"/> is price / anchor, raw Fx. Integers only, the same on every platform.
+        /// </summary>
+        public static long ConstantElasticity(long elasticityRaw, long ratioRaw, long maxRaw, long chokeRaw)
+        {
+            if (ratioRaw >= chokeRaw) return 0;
+            if (ratioRaw <= 0) return maxRaw;
+            long factor = Exp2(-Fx.RoundShift(elasticityRaw * Log2(ratioRaw)));
+            return factor > maxRaw ? maxRaw : factor;
+        }
+
+        const int Q30 = 30;
+
+        // log2 of a positive raw Fx, as raw Fx: the whole part from the top bit, the fraction by repeated squaring.
+        static long Log2(long xRaw)
+        {
+            int top = 0;
+            for (long v = xRaw; v > 1; v >>= 1) top++;
+            long result = (long)(top - Fx.FractionBits) << Fx.FractionBits;
+            long y = top >= Q30 ? xRaw >> (top - Q30) : xRaw << (Q30 - top);
+            for (int bit = Fx.FractionBits - 1; bit >= 0; bit--)
+            {
+                y = (y * y) >> Q30;
+                if (y < 2L << Q30) continue;
+                y >>= 1;
+                result += 1L << bit;
+            }
+            return result;
+        }
+
+        // 2 to a raw Fx power, as raw Fx: the fraction from the products of 2^(2^-i), the whole part as a shift.
+        static long Exp2(long yRaw)
+        {
+            long whole = yRaw >> Fx.FractionBits, fraction = yRaw - (whole << Fx.FractionBits);
+            long product = 1L << Q30;
+            for (int i = 1; i <= Fx.FractionBits; i++)
+                if ((fraction & (1L << (Fx.FractionBits - i))) != 0) product = (product * RootOfTwo(i)) >> Q30;
+            int shift = Q30 - Fx.FractionBits - (int)whole;
+            if (shift >= 62) return 0;
+            if (shift <= 0) return long.MaxValue >> 1;
+            return (product + (1L << (shift - 1))) >> shift;
+        }
+
+        // 2^(2^-i) in Q30.
+        static long RootOfTwo(int i)
+        {
+            switch (i)
+            {
+                case 1: return 1518500250;
+                case 2: return 1276901417;
+                case 3: return 1170923762;
+                case 4: return 1121280436;
+                case 5: return 1097253708;
+                case 6: return 1085434106;
+                case 7: return 1079572136;
+                case 8: return 1076653033;
+                case 9: return 1075196443;
+                case 10: return 1074468888;
+                case 11: return 1074105294;
+                case 12: return 1073923544;
+                case 13: return 1073832680;
+                case 14: return 1073787251;
+                case 15: return 1073764537;
+                default: return 1073753181;
+            }
         }
 
         /// <summary>

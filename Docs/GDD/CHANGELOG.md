@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-126: necessities follow a constant-elasticity curve, nothing from five times the anchor. New golden hashes.
+- A facility the bank seizes for its loan (DEC-037) now counts as bankrupt: the event is published and its losing years reset. New golden hashes.
 - DEC-125: a facility taken over after a bankruptcy may change its use once; facility table version 5. New golden hashes.
 - DEC-124: merchants sell necessities to households first. New golden hashes.
 - DEC-123: traders owe on bills no more than the coins they hold. New golden hashes.

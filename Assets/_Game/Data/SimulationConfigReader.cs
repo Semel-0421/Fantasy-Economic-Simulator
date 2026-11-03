@@ -245,6 +245,8 @@ namespace FES.Data
         void ApplyDemandAndHouseholds(Dictionary<string, string> v)
         {
             NecessityElasticity = Permille(v, "demand.necessity_elasticity_permille", NecessityElasticity);
+            NecessityChoke = Permille(v, "demand.necessity_choke_permille", NecessityChoke);
+            if (NecessityChoke.Raw <= Fx.OneRaw) throw new FormatException("config.csv: demand.necessity_choke_permille must be above 1000.");
             LuxuryElasticity = Permille(v, "demand.luxury_elasticity_permille", LuxuryElasticity);
             MaxCheapDemand = Permille(v, "demand.max_cheap_permille", MaxCheapDemand);
             if (MaxCheapDemand.Raw < Fx.One.Raw) throw new FormatException("config.csv: demand.max_cheap_permille must be >= 1000.");

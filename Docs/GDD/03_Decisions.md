@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-126 Necessities follow a constant-elasticity curve
+- Date: 2026-11-03
+- Decision: [Confirmed] Each quintile buys necessities in proportion to (price / anchor) to the power of minus its elasticity (DEC-112's 0.6, scaled per quintile), instead of the straight line of DEC-048. Hungry households keep buying as prices climb. [Draft] Up to the cap below the anchor, as before, and nothing from five times the anchor (`demand.necessity_choke_permille`), which keeps a good nobody supplies from climbing without end. Luxuries keep the straight line. Computed in integers (log2 and 2^x in fixed point), the same on every platform.
+- Reason: the owner's choice of direction C in [PROPOSAL_SHORTAGE_AUCTIONS_2026-11-03](reviews/PROPOSAL_SHORTAGE_AUCTIONS_2026-11-03.md). The proposal's C (normalise the quintiles) was already in (12dc576); what starved level 3 was the line: at 0.6 it reaches nothing at 2.67 times the anchor, and level 3 prices stood at about three times. On the new curve households take about half at three times the anchor.
+- Limits: at ten times the anchor an unsupplied good went past 20 times its base price within three years, as prices step 15% a week before demand stops; hence five.
+- Impact: SYS-MARKETS, 02_Data_Formats
+
 ### DEC-125 A facility taken over after a bankruptcy may change its use
 - Date: 2026-11-03
 - Decision: [Confirmed] A facility that another owner took over after a bankruptcy may change its use. [Draft] Taken over means won at the bank's auction, by the player or a local family, or passed to a family from a ruined player; an NPC group that keeps its facility under a new manager has taken nothing over. The use changes once, to any type a group could found there (DEC-096, DEC-104; primary producers only in villages), at level one, for half the new type's value (`facility.repurpose_cost_permille`), paid to the builders of the node. The player does it with a command; an NPC owner weighs it at the year's investment against growing and founding, for what the new use earns over the old.

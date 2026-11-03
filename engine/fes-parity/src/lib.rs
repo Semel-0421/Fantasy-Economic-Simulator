@@ -3,20 +3,27 @@ pub mod report;
 
 use fes_data::database::{data_hash, GameDatabase, CONFIG_FILE};
 use fes_data::{DataError, DataSource, FileDataSource, MapDef};
-use fes_save::{read_save, write_save};
+use fes_save::{read_save, write_save, RawSection};
 use report::{compare, section_line, summary_line, SectionStatus, Tally};
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
-/// Builds a section's turn-0 bytes from the definitions, the map and the seed.
-pub type BuildSection = fn(&GameDatabase, &MapDef, u64) -> Vec<u8>;
+/// Builds the whole turn-0 world (all sections) from the definitions, the map and the seed.
+pub type BuildWorld = fn(&GameDatabase, &MapDef, u64) -> Result<Vec<RawSection>, String>;
 
-/// Sections the Rust engine builds so far, by save key. Empty until Plan 2.
-pub fn ported_sections() -> Vec<(&'static str, BuildSection)> {
-    Vec::new()
+/// Save keys whose Rust build is considered ported. Empty until Plan 2.
+pub fn ported_sections() -> &'static [&'static str] {
+    &[]
 }
 
-pub struct Options {
+/// The builder used until a world exists; never called while no section is ported.
+pub fn no_world(_: &GameDatabase, _: &MapDef, _: u64) -> Result<Vec<RawSection>, String> {
+    Err("no world builder yet".to_string())
+}
+
+pub struct Options<'a> {
+    pub build: BuildWorld,
+    pub ported: &'a [&'a str],
     pub fixtures: PathBuf,
     /// The shipped data directory; defaults to `Assets/StreamingAssets/Data` above the fixtures.
     pub data: Option<PathBuf>,
@@ -86,12 +93,7 @@ fn run_names(opts: &Options) -> Result<Vec<String>, String> {
 }
 
 /// Checks one run, writing its report; returns the section tally and whether it failed.
-fn check_run(
-    opts: &Options,
-    name: &str,
-    sections: &[(&'static str, BuildSection)],
-    out: &mut String,
-) -> Result<(Tally, bool), String> {
+fn check_run(opts: &Options, name: &str, out: &mut String) -> Result<(Tally, bool), String> {
     let run_dir = opts.fixtures.join("runs").join(name);
     let data_dir = opts
         .data
@@ -125,16 +127,25 @@ fn check_run(
         failed = true;
         let _ = writeln!(out, "  round trip: MISMATCH");
     }
+    let built = if opts.ported.is_empty() {
+        Vec::new()
+    } else {
+        (opts.build)(&db, &map, header.seed).map_err(|e| format!("{name}: builder: {e}"))?
+    };
     let mut tally = Tally::default();
     for section in &raw {
-        let status = match sections.iter().find(|(k, _)| *k == section.key) {
-            Some((_, build)) => compare(&build(&db, &map, header.seed), &section.bytes),
-            None => SectionStatus::NotPorted,
+        let status = if opts.ported.contains(&section.key.as_str()) {
+            match built.iter().find(|b| b.key == section.key) {
+                Some(b) => compare(&b.bytes, &section.bytes),
+                None => SectionStatus::Different(0),
+            }
+        } else {
+            SectionStatus::NotPorted
         };
         tally.add(&status);
         section_line(out, &section.key, &status);
     }
-    for (key, _) in sections {
+    for key in opts.ported {
         if !raw.iter().any(|s| s.key == *key) {
             tally.add(&SectionStatus::Different(0));
             let _ = writeln!(out, "  {key}: ported-different (missing from save)");
@@ -145,7 +156,7 @@ fn check_run(
 }
 
 /// Runs the selected runs, appending the report to `out`; returns the process exit code.
-pub fn run(opts: &Options, sections: &[(&'static str, BuildSection)], out: &mut String) -> i32 {
+pub fn run(opts: &Options, out: &mut String) -> i32 {
     let names = match run_names(opts) {
         Ok(n) => n,
         Err(e) => {
@@ -153,10 +164,14 @@ pub fn run(opts: &Options, sections: &[(&'static str, BuildSection)], out: &mut 
             return 1;
         }
     };
+    if names.is_empty() {
+        let _ = writeln!(out, "error: no runs found");
+        return 1;
+    }
     let mut total = Tally::default();
     let mut failed = false;
     for name in &names {
-        match check_run(opts, name, sections, out) {
+        match check_run(opts, name, out) {
             Ok((t, f)) => {
                 total.ported += t.ported;
                 total.not_ported += t.not_ported;

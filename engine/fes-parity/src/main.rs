@@ -1,9 +1,9 @@
 //! `fes-parity --fixtures <dir> [--run <name>] [--data <dir>]`
-use fes_parity::{ported_sections, run, Options};
+use fes_parity::{no_world, ported_sections, run, Options};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-fn parse() -> Option<Options> {
+fn parse() -> Option<Options<'static>> {
     let mut args = std::env::args().skip(1);
     let (mut fixtures, mut data, mut run_name) = (None, None, None);
     while let Some(a) = args.next() {
@@ -16,6 +16,8 @@ fn parse() -> Option<Options> {
         }
     }
     Some(Options {
+        build: no_world,
+        ported: ported_sections(),
         fixtures: fixtures?,
         data,
         run: run_name,
@@ -28,7 +30,7 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     };
     let mut out = String::new();
-    let code = run(&opts, &ported_sections(), &mut out);
+    let code = run(&opts, &mut out);
     print!("{out}");
     ExitCode::from(u8::try_from(code).unwrap_or(1))
 }

@@ -3,6 +3,7 @@
 
 pub mod det;
 pub mod fx;
+pub mod io;
 #[cfg(feature = "testing")]
 pub mod testing;
 

@@ -4,5 +4,12 @@ edition.workspace = true
 version.workspace = true
 publish.workspace = true
 
+[dependencies]
+fes-core = { path = "../fes-core" }
+
+[dev-dependencies]
+fes-core = { path = "../fes-core", features = ["testing"] }
+serde_json = { workspace = true }
+
 [lints]
 workspace = true

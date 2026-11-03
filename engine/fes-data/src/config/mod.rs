@@ -93,6 +93,13 @@ impl CsvEnum for WorldLevel {
     }
 }
 
+impl Default for SimulationConfig {
+    /// The code defaults, same as `SimulationConfig::defaults()`.
+    fn default() -> Self {
+        Self::defaults()
+    }
+}
+
 impl SimulationConfig {
     /// Code defaults only.
     pub fn defaults() -> SimulationConfig {

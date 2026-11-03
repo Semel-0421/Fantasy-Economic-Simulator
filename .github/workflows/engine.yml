@@ -13,7 +13,7 @@ jobs:
           toolchain: 1.99.1
           components: rustfmt, clippy
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-features
       - run: bash scripts/check_file_length.sh
       - run: cargo run -p fes-parity -- --fixtures fixtures

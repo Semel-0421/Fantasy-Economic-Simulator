@@ -88,33 +88,101 @@ fn restated_default_hashes_like_the_default() {
     assert_eq!(restated.compute_hash(), defaults.compute_hash());
 }
 
+/// One override per C# `FormatException`, with the exact message text from `SimulationConfigReader.cs`.
+const FAILURES: &[(&str, &str)] = &[
+    ("households.village.population,0", "households.village.population and income must be positive."),
+    ("merchants.bankrupt_weeks,0", "merchants.bankrupt_weeks must be >= 1."),
+    ("merchants.reserve_upkeep_weeks,-1", "merchants.reserve_upkeep_weeks must be >= 0."),
+    ("merchants.class1.vehicle,3", "merchants.class1.vehicle must be 0, 1 or 2."),
+    ("merchants.class2.vehicle,-1", "merchants.class2.vehicle must be 0, 1 or 2."),
+    ("facility.shares,10", "facility.shares must be positive and facility.max_listed_shares below it."),
+    ("facility.max_listed_shares,-1", "facility.shares must be positive and facility.max_listed_shares below it."),
+    ("terrain.sea.extra_turns,-1", "terrain.sea.extra_turns must not be negative."),
+    ("danger.value_scale,0", "danger.value_scale must be >= 1."),
+    ("road.build_weeks,0", "road.build_weeks must be >= 1."),
+    ("bank.loan_term_weeks,0", "bank.loan_term_weeks must be >= 1."),
+    ("bank.margin_call_permille,100", "bank.margin_call_permille must be >= bank.loan_to_value_permille, and bank.margin_call_weeks >= 0."),
+    ("bank.margin_call_weeks,-1", "bank.margin_call_permille must be >= bank.loan_to_value_permille, and bank.margin_call_weeks >= 0."),
+    ("bank.auction_weeks,0", "bank.auction_weeks must be >= 1."),
+    ("policy.max_steps,20", "policy.step_permille x policy.max_steps must stay below 1000."),
+    ("policy.max_steps,-1", "policy.step_permille x policy.max_steps must stay below 1000."),
+    ("demand.necessity_choke_permille,1000", "demand.necessity_choke_permille must be above 1000."),
+    ("demand.max_cheap_permille,999", "demand.max_cheap_permille must be >= 1000."),
+    ("households.q1.income_share_permille,0", "household income shares must be positive."),
+    ("households.q1.income_share_permille,500", "households.q1..q5.income_share_permille must sum to 1000."),
+    ("households.need_memory_weeks,-1", "households.need_memory_weeks must be >= 0."),
+    ("households.budget_weeks,0", "households.budget_weeks must be >= 1."),
+    ("households.luxury_wealth_cap_permille,999", "households.luxury_wealth_cap_permille must be at least 1000."),
+    ("traders.loan_weeks,0", "traders.loan_weeks must be >= 1."),
+    ("state.max_per_node,-1", "state.max_per_node must be >= 0."),
+    ("state.defense_interval_weeks,0", "state.defense_interval_weeks must be >= 1."),
+    ("bank.max_rate_multiplier_permille,999", "bank.max_rate_multiplier_permille must be >= 1000."),
+    ("bank.npc_loan_term_weeks,0", "bank.npc_loan_term_weeks must be >= 1."),
+    ("finance.history_quarters,3", "finance.history_quarters must be >= 4."),
+    ("land.rent_ppm,-1", "land rent must not be negative, and groups list above where they buy back."),
+    ("land.rent_years,-1", "land rent must not be negative, and groups list above where they buy back."),
+    ("share.group_list_premium_permille,700", "land rent must not be negative, and groups list above where they buy back."),
+    ("short.licence_fee,-1", "short selling needs open >= call >= 1000 permille, and no negative values."),
+    ("short.call_permille,999", "short selling needs open >= call >= 1000 permille, and no negative values."),
+    ("short.open_permille,1200", "short selling needs open >= call >= 1000 permille, and no negative values."),
+    ("short.max_lent_shares,-1", "short selling needs open >= call >= 1000 permille, and no negative values."),
+    ("venture.shares,0", "venture values out of range."),
+    ("venture.loss_permille,1001", "venture values out of range."),
+    ("market.premium_floor_permille,0", "market lines must keep floor <= 1 <= heated <= burst <= cap, and a drop below 1."),
+    ("market.heated_permille,3000", "market lines must keep floor <= 1 <= heated <= burst <= cap, and a drop below 1."),
+    ("market.burst_drop_permille,1000", "market lines must keep floor <= 1 <= heated <= burst <= cap, and a drop below 1."),
+    ("specialty.grade_up_permille,1001", "specialty.grade_up_permille must be within 0..1000."),
+    ("merchants.judge_hops,0", "merchants.judge_hops must be >= 1."),
+    ("credit.bill_weeks,0", "credit weeks must be >= 1."),
+    ("credit.state_bond_weeks,0", "credit weeks must be >= 1."),
+    ("credit.company_bond_weeks,0", "credit weeks must be >= 1."),
+    ("merchants.cautious.range_level,Galaxy", "merchants.cautious.range_level 'Galaxy' is not a WorldLevel."),
+    ("merchants.peddler.distance_power,3", "merchants.peddler.distance_power must be 0, 1 or 2."),
+    ("facility.dividend_buffer_weeks,-1", "facility.dividend_buffer_weeks must be >= 0."),
+    ("facility.bankrupt_weeks,0", "facility.bankrupt_weeks must be >= 1."),
+    ("cargo.lost_warehouse_weeks,-1", "cargo.lost_warehouse_weeks must be >= 0."),
+    ("lod.focus_level,Galaxy", "lod.focus_level 'Galaxy' is not a WorldLevel."),
+    ("price.min,3000000000", "'price.min' = 3000000000 is out of int range."),
+    ("price.min,abc", "'price.min' = 'abc' is not an integer."),
+];
+
 #[test]
-fn validation_errors_use_the_csharp_text() {
-    let err = load_rows("bank.loan_term_weeks,0\n").err().unwrap();
-    assert_eq!(
-        err.to_string(),
-        "config.csv: bank.loan_term_weeks must be >= 1."
-    );
-    let err = load_rows("price.min,abc\n").err().unwrap();
-    assert_eq!(
-        err.to_string(),
-        "config.csv: 'price.min' = 'abc' is not an integer."
-    );
-    let err = load_rows("price.min,3000000000\n").err().unwrap();
-    assert_eq!(
-        err.to_string(),
-        "config.csv: 'price.min' = 3000000000 is out of int range."
-    );
-    let err = load_rows("lod.focus_level,Galaxy\n").err().unwrap();
-    assert_eq!(
-        err.to_string(),
-        "config.csv: lod.focus_level 'Galaxy' is not a WorldLevel."
-    );
-    let err = load_rows("merchants.class1.vehicle,3\n").err().unwrap();
-    assert_eq!(
-        err.to_string(),
-        "config.csv: merchants.class1.vehicle must be 0, 1 or 2."
-    );
+fn every_validation_error_uses_the_csharp_text() {
+    for (row, message) in FAILURES {
+        let err = load_rows(&format!(
+            "{row}
+"
+        ))
+        .err()
+        .unwrap_or_else(|| panic!("{row}: no error"));
+        assert_eq!(err.to_string(), format!("config.csv: {message}"), "{row}");
+    }
+}
+
+#[test]
+fn repeated_key_takes_the_last_value_and_reports_the_first_unknown() {
+    let config = load_rows(
+        "price.min,5
+price.min,9
+",
+    )
+    .unwrap();
+    assert_eq!(config.min_price, 9);
+    let err = load_rows(
+        "no.a,1
+price.min,2
+no.b,2
+no.a,3
+",
+    )
+    .err()
+    .unwrap();
+    assert_eq!(err.to_string(), "config.csv: unknown key 'no.a'.");
+}
+
+#[test]
+fn default_trait_gives_the_code_defaults() {
+    assert_eq!(SimulationConfig::default(), SimulationConfig::defaults());
 }
 
 #[test]

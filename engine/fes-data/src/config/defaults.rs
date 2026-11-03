@@ -481,7 +481,7 @@ fn part17(c: &mut SimulationConfig) {
 impl SimulationConfig {
     /// Every field at its code default, before any file value is applied.
     pub(super) fn code_defaults() -> Self {
-        let mut c = Self::default();
+        let mut c = Self::zeroed();
         part0(&mut c);
         part1(&mut c);
         part2(&mut c);

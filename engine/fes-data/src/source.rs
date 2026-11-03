@@ -26,12 +26,17 @@ impl DataSource for FileDataSource {
 
     fn read_text(&self, name: &str) -> Result<String, DataError> {
         let path = self.root.join(name);
-        std::fs::read_to_string(&path).map_err(|e| {
+        let text = std::fs::read_to_string(&path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 DataError::NotFound(format!("{name}: file not found."))
             } else {
                 DataError::Io(format!("{name}: {e}"))
             }
+        })?;
+        // C# File.ReadAllText drops a leading byte order mark, so this does too.
+        Ok(match text.strip_prefix('\u{feff}') {
+            Some(rest) => rest.to_string(),
+            None => text,
         })
     }
 }

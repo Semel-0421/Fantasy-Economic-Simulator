@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-125: a facility taken over after a bankruptcy may change its use once; facility table version 5. New golden hashes.
 - DEC-124: merchants sell necessities to households first. New golden hashes.
 - DEC-123: traders owe on bills no more than the coins they hold. New golden hashes.
 - DEC-122: groups in the red sell their bills on a bill market; loads leave two weeks of upkeep. New golden hashes.

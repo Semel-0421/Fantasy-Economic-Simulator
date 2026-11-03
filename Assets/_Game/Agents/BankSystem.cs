@@ -590,6 +590,7 @@ namespace FES.Agents
 
             _facilities.Owner[f] = won ? OwnerIds.Player : OwnerIds.Npc;
             _facilities.Mode[f] = (byte)(won ? ControlMode.Manual : ControlMode.Automated);
+            _facilities.Repurposable[f] = 1; // taken over by others (DEC-125)
             // [Draft] Without a winning bid a local family buys it.
             _facilities.Group[f] = won ? _groupTable.PlayerCompany() : MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
             // What the player left in the warehouse stays theirs for a while, or until they buy it back (DEC-052).

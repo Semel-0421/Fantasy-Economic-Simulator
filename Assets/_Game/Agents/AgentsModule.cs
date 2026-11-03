@@ -86,6 +86,7 @@ namespace FES.Agents
             builder.AddMigration(new PlayerStateV2Migration());
             builder.AddMigration(new FacilityTableV1Migration());
             builder.AddMigration(new FacilityTableV3Migration());
+            builder.AddMigration(new FacilityTableV4Migration());
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
             builder.AddMigration(new PurseStateV1Migration());

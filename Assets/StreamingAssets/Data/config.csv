@@ -145,3 +145,5 @@ merchants.hedge_chance_permille,60
 core.absorb,1
 # Off until facilities stop losing money as a rule: at 2, about 90% close within 30 years.
 facility.close_loss_years,999
+# A facility taken over after a bankruptcy may change its use once, for half the new type's value (DEC-125).
+facility.repurpose_cost_permille,500

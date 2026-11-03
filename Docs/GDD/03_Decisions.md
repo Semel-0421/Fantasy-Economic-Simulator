@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-125 A facility taken over after a bankruptcy may change its use
+- Date: 2026-11-03
+- Decision: [Confirmed] A facility that another owner took over after a bankruptcy may change its use. [Draft] Taken over means won at the bank's auction, by the player or a local family, or passed to a family from a ruined player; an NPC group that keeps its facility under a new manager has taken nothing over. The use changes once, to any type a group could found there (DEC-096, DEC-104; primary producers only in villages), at level one, for half the new type's value (`facility.repurpose_cost_permille`), paid to the builders of the node. The player does it with a command; an NPC owner weighs it at the year's investment against growing and founding, for what the new use earns over the old.
+- Reason: the owner's instruction. A bankrupt facility otherwise goes on making what ruined it.
+- Limits: the warehouse, cash and books stay as they were. A change of use is weighed only by the group that owns the facility, at its node.
+- Impact: SYS-PRODUCTION, SYS-BANKING, 02_Data_Formats
+
 ### DEC-124 Merchants sell necessities to households first
 - Date: 2026-11-03
 - Decision: [Confirmed] Direction A of [PROPOSAL_TRADER_COINS_2026-11-03](reviews/PROPOSAL_TRADER_COINS_2026-11-03.md). An arriving group sells necessities to the households first, paid from their cash at the price; the rest of the load goes to the market's traders as before (DEC-061). [Draft] The households take what they wish for this week at the price that their own stores, the stock and this week's supply do not cover, as far as their cash goes; the goods go to their stores (DEC-117), which they eat first. Groups judge a market worth the trip when such households hold the price of a lot. Only at home on the group's continent. `merchants.sell_to_households`.

@@ -184,6 +184,8 @@ namespace FES.Agents
         {
             public int Facility, Def;
             public long Cost, Gain;
+            /// <summary>DEC-125: the facility changes its use to <see cref="Def"/> rather than growing.</summary>
+            public bool Repurpose;
         }
 
         bool Invest(SimContext ctx, int node, int nationNode)
@@ -201,6 +203,7 @@ namespace FES.Agents
 
             var best = new Project { Facility = -1, Def = -1 };
             int count = WeighExpansions(node, group, cash, ref best);
+            WeighNewUses(node, group, cash, ref best);
             if (count < config.InvestmentMaxPerNode) WeighNewFacilities(node, cash, ref best);
             if (best.Def < 0) return false;
 
@@ -213,7 +216,8 @@ namespace FES.Agents
                 if (raised < best.Cost - own) return false;
             }
             _groups.Cash[group] -= best.Cost;
-            if (best.Facility >= 0) Expand(ctx, node, in best);
+            if (best.Repurpose) Repurpose(ctx, node, in best);
+            else if (best.Facility >= 0) Expand(ctx, node, in best);
             else Found(ctx, node, group, in best);
             _rooms.AddValue(group, config.FacilityValue[(int)_db.Facilities[best.Def].Tier]);
             return true;
@@ -239,6 +243,34 @@ namespace FES.Agents
                     best = new Project { Facility = f, Def = def.Index, Cost = cost, Gain = gain };
             }
             return count;
+        }
+
+        // DEC-125: a facility the group took over after a bankruptcy may become a type that earns more, for what it gains
+        // over what it earns now.
+        void WeighNewUses(int node, int group, long cash, ref Project best)
+        {
+            foreach (int f in _facilitiesAt[node])
+            {
+                if (_facilities.Repurposable[f] == 0 || _facilities.Level[f] == 0 || _facilities.Group[f] != group || _facilities.Owner[f] != OwnerIds.Npc) continue;
+                long now = Math.Max(0, FacilityGain(node, _db.Facilities[_facilities.DefIndex[f]], _facilities.Level[f]));
+                foreach (var def in _db.Facilities)
+                {
+                    if (def.Index == _facilities.DefIndex[f] || !FacilityRepurpose.MayStand(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
+                    long cost = FacilityRepurpose.Cost(def, _db.Config);
+                    long gain = FacilityGain(node, def, 1) - now;
+                    if (Better(gain, cost, best.Gain, best.Cost, cash))
+                        best = new Project { Facility = f, Def = def.Index, Cost = cost, Gain = gain, Repurpose = true };
+                }
+            }
+        }
+
+        long FacilityGain(int node, FacilityDef def, int level) =>
+            FacilityExpansion.OutputScale(level, _db.Config).MulInt(UnitMargin(node, def)) - _db.Config.FacilityUpkeep[(int)def.Tier] * level;
+
+        void Repurpose(SimContext ctx, int node, in Project project)
+        {
+            _purses.PayHouseholds(node, project.Cost);
+            FacilityRepurpose.Apply(ctx, project.Facility, _db.Facilities[project.Def]);
         }
 
         void WeighNewFacilities(int node, long cash, ref Project best)

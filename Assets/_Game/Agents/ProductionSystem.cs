@@ -97,7 +97,7 @@ namespace FES.Agents
         NativeList<int> _lineUpGood;
         NativeList<int> _lineUpCell;
         NativeList<int> _lineUpModifier;
-        int _linesForCount = -1;
+        int _linesForCount = -1, _linesForUses;
 
         NativeList<int> _playerOutputFacility;
         NativeList<int> _playerOutputGood;
@@ -178,7 +178,7 @@ namespace FES.Agents
 
         public void Execute(SimContext ctx)
         {
-            if (_linesForCount != _facilities.Count) BuildLines();
+            if (_linesForCount != _facilities.Count || _linesForUses != _facilities.UseChanges) BuildLines();
             ClearWeek();
             long[] subsidyBudget = OpenSubsidies();
             RunProduction(ctx);
@@ -394,7 +394,11 @@ namespace FES.Agents
             _facilities.Owner[f] = OwnerIds.Npc;
             _facilities.Mode[f] = (byte)ControlMode.Automated;
             // [Draft] An NPC group keeps its facility under a new manager; a player's goes to a local family.
-            if (wasPlayer) _facilities.Group[f] = MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
+            if (wasPlayer)
+            {
+                _facilities.Group[f] = MoneyLedger.FamilyAt(ctx.World, _groups, _db.Config, _facilities.Node[f]);
+                _facilities.Repurposable[f] = 1; // taken over by others (DEC-125)
+            }
             _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f], StartCash(f));
             _books.RestartFacility(f, _facilities.Cash[f]);
             _facilities.NegativeCashWeeks[f] = 0;
@@ -449,6 +453,7 @@ namespace FES.Agents
             }
             _lineStart.Add(_lineCell.Length);
             _linesForCount = _facilities.Count;
+            _linesForUses = _facilities.UseChanges;
         }
 
         void AddLines(int node, RecipeLine[] lines, bool isInput)

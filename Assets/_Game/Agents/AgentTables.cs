@@ -186,9 +186,23 @@ namespace FES.Agents
         public readonly NativeColumn<int> Group;
         /// <summary>Tax years in a row that ended at a loss; two close a facility (DEC-065).</summary>
         public readonly NativeColumn<int> LossYears;
+        /// <summary>1 when its owner took it over after a bankruptcy and may still change its use once (DEC-125).</summary>
+        public readonly NativeColumn<byte> Repurposable;
+
+        /// <summary>How many facilities changed their use since the start; not saved. Systems that keep recipes per facility watch it.</summary>
+        public int UseChanges { get; private set; }
 
         public override string Key => SectionKey;
-        public override int Version => 4;
+        public override int Version => 5;
+
+        /// <summary>DEC-125: the facility becomes another type, at level one, and may not change again.</summary>
+        public void ChangeUse(int f, int defIndex)
+        {
+            DefIndex[f] = defIndex;
+            Level[f] = 1;
+            Repurposable[f] = 0;
+            UseChanges++;
+        }
 
         public FacilityTable()
         {
@@ -203,6 +217,7 @@ namespace FES.Agents
             WarehouseClaimUntil = Column<int>();
             Group = Column<int>();
             LossYears = Column<int>();
+            Repurposable = Column<byte>();
         }
 
         public FacilityId Add(int node, int defIndex, int owner, ControlMode mode, int level, Fx efficiency, long cash)
@@ -218,6 +233,7 @@ namespace FES.Agents
             WarehouseClaimUntil.Add(-1);
             Group.Add(-1);
             LossYears.Add(0);
+            Repurposable.Add(0);
             return new FacilityId(Count - 1);
         }
     }
@@ -266,6 +282,26 @@ namespace FES.Agents
                 writer.Write(section);
                 writer.Write(rows);
                 for (int r = 0; r < rows; r++) writer.Write(0);
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 4 had no changes of use: no facility may change its use.</summary>
+    public sealed class FacilityTableV4Migration : ISaveMigration
+    {
+        public string SectionKey => FacilityTable.SectionKey;
+        public int FromVersion => 4;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write((byte)0);
             }
             return output.ToArray();
         }

@@ -128,6 +128,7 @@ namespace FES.Data
                 MerchantClassVehicle[c] = (byte)vehicle;
             }
             FacilityCloseLossYears = Int(v, "facility.close_loss_years", FacilityCloseLossYears);
+            FacilityRepurposeShare = Permille(v, "facility.repurpose_cost_permille", FacilityRepurposeShare);
             CoreStacking = Int(v, "core.stacking", CoreStacking ? 1 : 0) != 0;
             CoreDemandWeighted = Int(v, "core.demand_weighted", CoreDemandWeighted ? 1 : 0) != 0;
             CoreWeight[0] = Int(v, "core.continent.weight", CoreWeight[0]);

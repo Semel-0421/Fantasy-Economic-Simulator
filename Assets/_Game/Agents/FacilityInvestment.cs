@@ -118,6 +118,7 @@ namespace FES.Agents
         GroupDirectory _directory;
         DemandForecast _forecast;
         LandState _land;
+        DevelopmentState _development;
         CompanyRooms _rooms;
         // Scanning the tables for each of 1,580 nodes is most of a new-year turn.
         List<int>[] _facilitiesAt;
@@ -141,6 +142,7 @@ namespace FES.Agents
             _directory = new GroupDirectory(_groups, _nodes);
             _forecast = ctx.World.Get<DemandForecast>();
             _land = ctx.World.Get<LandState>();
+            _development = ctx.World.Get<DevelopmentState>();
             _rooms = new CompanyRooms(ctx.World, _db);
             _facilitiesAt = new List<int>[_nodes.Count];
             _groupsAt = new List<int>[_nodes.Count];
@@ -206,7 +208,7 @@ namespace FES.Agents
             var best = new Project { Facility = -1, Def = -1 };
             int count = WeighExpansions(node, group, cash, ref best);
             WeighNewUses(node, group, cash, ref best);
-            if (count < config.InvestmentMaxPerNode) WeighNewFacilities(node, cash, ref best);
+            if (count + _development.LandProjectsAt(node) < config.InvestmentMaxPerNode) WeighNewFacilities(node, cash, ref best); // planned land projects hold their places (DEC-135)
             if (best.Def < 0) return false;
 
             if (best.Cost > own)

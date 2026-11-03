@@ -359,6 +359,8 @@ namespace FES.Data
             SubsidyRate = Permille(v, "state.subsidy_rate_permille", SubsidyRate);
             SubsidyYears = Int(v, "state.subsidy_years", SubsidyYears);
             SubsidyMaxPerNation = Int(v, "state.subsidy_max_per_nation", SubsidyMaxPerNation);
+            StateMaxPerNode = Int(v, "state.max_per_node", StateMaxPerNode);
+            if (StateMaxPerNode < 0) throw new FormatException("config.csv: state.max_per_node must be >= 0.");
             StateTradeScore = Int(v, "state.trade_score_permille", StateTradeScore);
             if (DefenseIntervalWeeks < 1) throw new FormatException("config.csv: state.defense_interval_weeks must be >= 1.");
         }

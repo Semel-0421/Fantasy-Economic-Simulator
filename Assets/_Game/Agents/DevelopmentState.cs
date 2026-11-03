@@ -110,6 +110,15 @@ namespace FES.Agents
         public NativeArray<long> SubsidyLeft;
         readonly int _goods;
 
+        /// <summary>DEC-135: farmland and mines planned at a node; each will open a facility there, so its place is taken.</summary>
+        public int LandProjectsAt(int node)
+        {
+            int planned = 0;
+            foreach (var p in Projects)
+                if (p.Node == node && (p.Kind == StateProjectKind.Farmland || p.Kind == StateProjectKind.Mine)) planned++;
+            return planned;
+        }
+
         public string Key => "agents.development";
         public int Version => 1;
 

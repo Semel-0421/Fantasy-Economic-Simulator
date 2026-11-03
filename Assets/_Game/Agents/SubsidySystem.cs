@@ -8,8 +8,9 @@ namespace FES.Agents
     /// <summary>
     /// With money above its reserve target, a nation enacts a subsidy on the dearest good its markets carry and some
     /// facility type makes, for a few years. Producers are paid by what they make (<see cref="ProductionJob"/>). Each year
-    /// of a policy one more producer opens at the node shortest of necessities: run by a group already making the good,
-    /// or else by a new company founded for it, and the trade's guild is founded where a city has none (DEC-074).
+    /// of a policy one more producer opens at the node shortest of necessities where the good can be made, with a free plot
+    /// and room under the subsidies' cap a node (DEC-135): run by a group already making the good, or else by a new
+    /// company founded for it, and the trade's guild is founded where a city has none (DEC-074).
     /// The state stakes the new firms from its reserve, so no coins appear.
     /// </summary>
     public sealed class SubsidySystem : ISimSystem, ILoadListener
@@ -26,6 +27,7 @@ namespace FES.Agents
         GroupDirectory _groups;
         DevelopmentState _development;
         WorldState _world;
+        int[] _count = System.Array.Empty<int>();
 
         public string Id => "agents.subsidies";
         public SimPhase Phase => SimPhase.Finance;
@@ -68,6 +70,7 @@ namespace FES.Agents
                 ctx.Events.Publish(new SubsidyEnacted(new NodeId(_banks.NationNode(n)), new GoodId(good), ctx.Turn));
             }
             _development.RefreshSubsidyRates(config.SubsidyRate);
+            CountFacilities();
             foreach (var p in policies) OpenProducer(p);
         }
 
@@ -106,15 +109,14 @@ namespace FES.Agents
             foreach (var d in _db.Facilities)
                 foreach (var line in d.Recipe.Outputs)
                     if (line.Good.Value == policy.Good && def == null) def = d;
-            int site = ShortestOfNecessities(policy.Nation);
-            if (def == null || site < 0) return;
-            if (!FacilityPlaces.Allowed(def, _nodes, site)) site = _nodes.Core[_banks.NationNode(policy.Nation)]; // fine workshops stand at a core (DEC-104)
+            if (def == null) return;
             long facilityCash = config.FacilityStartCash[(int)def.Tier];
             long mostGroupCash = config.GroupStartCash[(int)GroupKind.Company] + config.GroupStartCash[(int)GroupKind.Guild]
                 + config.GroupStartCash[(int)GroupKind.PrivateEnterprise];
             var land = _world.Get<LandState>();
+            int site = Site(policy.Nation, def, land, facilityCash + mostGroupCash);
+            if (site < 0) return;
             long plot = land.Price(site, config);
-            if (!CanBuild(land, site, policy.Nation, facilityCash + mostGroupCash + plot)) return;
 
             int group = ExistingProducer(policy.Nation, def.Index);
             int groupsBefore = _groupTable.Count;
@@ -131,6 +133,15 @@ namespace FES.Agents
             _world.Get<PurseState>().PayHouseholds(site, plot);
             var id = _facilities.Add(site, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, facilityCash);
             _facilities.Group[id.Value] = group;
+            _count[site]++;
+        }
+
+        void CountFacilities()
+        {
+            if (_count.Length != _nodes.Count) _count = new int[_nodes.Count];
+            System.Array.Clear(_count, 0, _count.Length);
+            for (int f = 0; f < _facilities.Count; f++)
+                if (_facilities.Level[f] > 0) _count[_facilities.Node[f]]++;
         }
 
         // A free plot to build on (DEC-128) and the money for it all above the reserve's target.
@@ -147,15 +158,19 @@ namespace FES.Agents
             return -1;
         }
 
-        int ShortestOfNecessities(int nation)
+        // DEC-135: the node shortest of necessities where the good can be made (a fine workshop only at a core town, DEC-104),
+        // with a free plot, room under the cap and the money for it all; -1 for none.
+        int Site(int nation, FacilityDef def, LandState land, long cost)
         {
+            var config = _db.Config;
             int site = -1;
             long lowest = long.MaxValue;
             foreach (int node in _purses.NationNodes[nation])
             {
-                if (_nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
+                if (_nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node) || !FacilityPlaces.Allowed(def, _nodes, node)
+                    || _count[node] + _development.LandProjectsAt(node) >= config.StateMaxPerNode) continue;
                 long supplied = _population.NecessitySuppliedPermille(node);
-                if (supplied >= lowest) continue;
+                if (supplied >= lowest || !CanBuild(land, node, nation, cost + land.Price(node, config))) continue;
                 lowest = supplied;
                 site = node;
             }

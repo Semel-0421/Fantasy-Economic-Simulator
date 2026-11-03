@@ -203,3 +203,5 @@ land.rent_years,10
 finance.crunch_lifts_rates,1
 share.group_list_premium_permille,1300
 share.group_buyback_premium_permille,800
+# The state opens a subsidised producer, or a land project's, at the node shortest of necessities where it may stand, with a plot and fewer than 24 facilities; a fine workshop at the core town shortest of them (DEC-135).
+state.max_per_node,24

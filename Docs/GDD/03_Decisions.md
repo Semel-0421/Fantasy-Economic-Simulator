@@ -372,6 +372,13 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-135 The state's openings keep to a cap a node; subsidised workshops spread over the core towns
+- Date: 2026-11-04
+- Decision: [Confirmed] Option B of [PROPOSAL_SUBSIDY_CAP_2026-11-04](reviews/PROPOSAL_SUBSIDY_CAP_2026-11-04.md), with a cap of the subsidies' own, as the owner chose. A subsidy's yearly producer (DEC-074) opens at the node shortest of necessities where its type may stand, with a free plot (DEC-128), fewer facilities than the cap and the money for it all; a fine workshop that only a core town may hold (DEC-104) goes to the core town shortest of necessities, not always the capital. Where no node qualifies, none opens that year; the subsidy still pays output. The owner then had the same cap kept by the state's land projects (DEC-072): farmland and mines are planned only at a node with room under it. A land project planned at a node holds its place until it opens, for investment, subsidies and other land projects alike. [Draft] The cap is 24 (`state.max_per_node`), as investment's (DEC-080).
+- Reason: cities held up to 45 facilities, above investment's cap of 24, because subsidies had none: 56 to 80 of their 150 openings in 30 years went to cities already at it.
+- Limits: measured on seeds 1 to 3 over 30 years: the most at a node fell from 45 to 24, and all eight cities stand at 24, from 400 to 419 facilities in all. Land projects still open farms, pastures, dairies, fisheries and mines in cities, where investment builds primary producers only in villages; not changed.
+- Impact: SYS-STATE-ECONOMY, SYS-PRODUCTION, 02_Data_Formats
+
 ### DEC-134 What the bubble steps left out: rent, crunches that lift rates, groups trading their shares
 - Date: 2026-11-03
 - Decision: [Confirmed] The parts of [PROPOSAL_BUBBLES_2026-11-03](reviews/PROPOSAL_BUBBLES_2026-11-03.md) that steps 1 to 6 left out, built before balancing, which the owner set for the very end.

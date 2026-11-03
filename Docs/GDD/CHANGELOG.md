@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-04
+- DEC-135: the state's subsidised producers and land projects open under a cap a node, planned land projects hold their places, subsidised workshops spread over the core towns. New golden hashes.
+
 ## 2026-11-03
 - DEC-134: land rent and a plot's value from it, crunches that lift loan rates, groups listing and buying back their shares as prices move. New golden hashes.
 - DEC-133: short selling under an exchange's licence, with a margin in the deposit and calls; the asset markets, shares, land, ventures and shorts in `SimulationView` and `PlayerActions`. New golden hashes.

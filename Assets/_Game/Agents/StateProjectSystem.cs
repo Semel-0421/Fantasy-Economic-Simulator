@@ -114,6 +114,7 @@ namespace FES.Agents
             scores[(int)StateProjectKind.Harbor] = imports + config.StateTradeScore;
             scores[(int)StateProjectKind.Highway] = imports + config.StateTradeScore;
             scores[(int)StateProjectKind.Road] = config.StateRoadScore;
+            CountFacilities();
             for (int k = 0; k < config.StateProjectsPerYear; k++)
             {
                 int best = BestScore(scores);
@@ -137,6 +138,16 @@ namespace FES.Agents
             for (int kind = 0; kind < scores.Length; kind++)
                 if (scores[kind] > 0 && (best < 0 || scores[kind] > scores[best])) best = kind;
             return best;
+        }
+
+        int[] _count = Array.Empty<int>();
+
+        void CountFacilities()
+        {
+            if (_count.Length != _nodes.Count) _count = new int[_nodes.Count];
+            Array.Clear(_count, 0, _count.Length);
+            for (int f = 0; f < _facilities.Count; f++)
+                if (_facilities.Level[f] > 0) _count[_facilities.Node[f]]++;
         }
 
         long NecessityGapPermille(int nation)
@@ -228,7 +239,7 @@ namespace FES.Agents
             foreach (int node in _purses.NationNodes[nation])
             {
                 if (_development.LandLevel[node] >= _db.Config.StateLandMax || _nodes.Level[node] <= (int)WorldLevel.Nation || !FacilityPlaces.IsLand(_nodes, node)) continue;
-                if (Underway(kind, node, -1)) continue;
+                if (Underway(kind, node, -1) || _count[node] + _development.LandProjectsAt(node) >= _db.Config.StateMaxPerNode) continue; // DEC-135
                 long supplied = _population.NecessitySuppliedPermille(node);
                 if (supplied >= lowest) continue;
                 lowest = supplied;

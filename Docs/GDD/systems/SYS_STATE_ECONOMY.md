@@ -86,3 +86,6 @@ flowchart LR
 `NobleState`, `NobleSystem` and `Nobles.CollectTax` hold the houses; `MoneyLedger.PayNationWages` applies the wage weights.
 `LaborMarketSystem`, `IncomeTaxSystem`, `DefenseSystem` (with `DefensePurchaseJob`), `StateProjectSystem`, `SubsidySystem`,
 all in the Finance phase; state in `LaborState`, `IncomeTaxState`, `DevelopmentState`. Tests: `StateProjectTests`, `MoneyTests`.
+- [Confirmed] A subsidised producer opens where necessities are shortest among the nodes it may stand at, with a plot
+  and room under the state's cap a node; a fine workshop at the core town shortest of them. Land projects keep to the
+  same cap, and hold their places until they open (DEC-135).

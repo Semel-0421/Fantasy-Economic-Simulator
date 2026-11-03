@@ -486,6 +486,8 @@ namespace FES.Data
         public Fx ShortCallShare = Fx.FromPermille(1300);
         public Fx ShortFee = Fx.FromPermille(50);
         public int ShortMaxLentShares = 20;
+        /// <summary>DEC-135: the most facilities standing at a node where the state opens one: a subsidised producer, or a land project's.</summary>
+        public int StateMaxPerNode = 24;
         /// <summary>DEC-134: land rent as parts per million of the node's households' yearly income, split over its plots under houses, and the years of it in a plot's value.</summary>
         public long LandRentPpm = 30;
         public int LandRentYears = 10;

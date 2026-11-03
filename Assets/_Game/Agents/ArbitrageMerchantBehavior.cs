@@ -363,6 +363,7 @@ namespace FES.Agents
             job.NodeLicenseRow = _nodeLicenseRow;
             job.Licensed = _policy.Licensed;
             job.NodeFloat = _purses.NodeFloat;
+            job.Imports = _world.Get<DevelopmentState>().Imports;
             job.ContinentPriceIndex = _continentIndex;
             job.OutStart = _routes.OutStart;
             job.OutCount = _routes.OutCount;

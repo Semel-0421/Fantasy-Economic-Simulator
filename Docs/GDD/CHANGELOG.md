@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-11-03
+- C29: detailed merchants' sales outside their home nation count as the buyers' imports, so the state's import score works in detailed nodes. [Draft] Cargo does not remember where it was bought, so a group bringing foreign goods home is not counted. New golden hashes.
 - Merchants' premiums and refunds pass through the origin city's guild (C27, DEC-061). New golden hashes.
 - DEC-118: home production in villages only; new preserved food category with two goods and two facilities. New golden hashes.
 - DEC-117: households grow beans, vegetables and cheese, eat them first and send the surplus to market. New golden hashes.

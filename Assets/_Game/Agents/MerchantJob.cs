@@ -169,6 +169,8 @@ namespace FES.Agents
         public NativeArray<int> Supply;
         public NativeArray<int> Demand;
         public NativeArray<long> Float;
+        /// <summary>Per float: value paid this year to groups from other nations (C29).</summary>
+        public NativeArray<long> Imports;
         public NativeArray<long> HouseholdCash;
         public NativeArray<long> TollsByNode;
         /// <summary>Per node: the group row of the guild behind its policies, or -1 where only households stand behind them.</summary>
@@ -589,6 +591,7 @@ namespace FES.Agents
             Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + units);
             AgentCash[a] += proceeds;
             Float[NodeFloat[node]] -= units * price;
+            CountImport(a, node, units * price);
             if (abroad)
             {
                 International[NodeContinent[node]] += units * price;
@@ -610,10 +613,18 @@ namespace FES.Agents
             Supply[cell] = MarketStore.ClampToNonNegativeInt(Supply[cell] + billed);
             AgentCash[a] += received;
             CargoQuantity[row] -= (int)billed;
+            CountImport(a, node, billed * price);
             TripStats[8] += billed * price;
             ClaimCover(a, purse, billed, carried, billed * price - Fx.MulIntRaw(billed * price, BillDiscountRaw), false);
             BookSale(a, billed, billed * price - Fx.MulIntRaw(billed * price, BillDiscountRaw), ref carried);
             TripStats[16] += Fx.MulIntRaw(billed * price, BillDiscountRaw);
+        }
+
+        // [Draft] A sale to traders outside the group's home nation is their import; cargo does not remember where it was bought.
+        void CountImport(int a, int node, long paid)
+        {
+            int payer = NodeFloat[node];
+            if (payer != NodeFloat[AgentHome[a]]) Imports[payer] += paid;
         }
 
         // The chance of an encounter on a route with a load of this value; bigger vehicles draw more of them (DEC-085).

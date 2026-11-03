@@ -226,6 +226,7 @@ namespace FES.Agents
             int count = 0;
             foreach (int f in _facilitiesAt[node])
             {
+                if (_facilities.Level[f] == 0) continue; // closed: its place is free
                 count++;
                 if (_facilities.Group[f] != group || _facilities.Owner[f] != OwnerIds.Npc) continue;
                 var def = _db.Facilities[_facilities.DefIndex[f]];

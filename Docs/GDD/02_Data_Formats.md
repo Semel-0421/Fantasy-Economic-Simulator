@@ -106,7 +106,10 @@ changing a default in code does.
 | migration.vacancy_permille, migration.emancipation_lead_years, migration.freed_per_year_permille, migration.redemption_years, migration.redemption_permille, households.urban_penalty_permille | 200, 3, 100, 49, 50, 0 | emancipation, redemption and the urban penalty (DEC-079) |
 | facility.expansion_bonus_permille, facility.max_level, facility.unaided_output_permille | 0, 5, 700 | expansion and output without tools (DEC-080, DEC-081) |
 | facility.output_wage_permille, state.public_wage_permille | 0, 0 | wages by output and public town wages (DEC-082) |
-| merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle{0,1,2}.start_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 0, 3, 100 | merchant vehicles (DEC-084) |
+| merchants.vehicle{0,1,2}.capacity_permille, merchants.vehicle_cash_times, merchants.vehicle_wear_permille | 1000, 3, 100 | merchant vehicles (DEC-084) |
+| merchants.sell_to_households | 1 | an arriving group sells necessities to the households first, at the price (DEC-124) |
+| credit.bill_sale_discount_permille, merchants.reserve_upkeep_weeks | 150, 2 | the bill market's discount on what can be collected, 0 closes it; weeks of upkeep a group keeps in coins when it buys (DEC-122) |
+| merchants.class<0-3>.vehicle | 0 | the vehicle each capital class starts with: 0 pack, 1 cart, 2 wagon (DEC-121) |
 | merchants.vehicle{0,1,2}.cost_permille, .danger_permille, .premium_permille, .cash_times; merchants.risk_aversion; orders.lead_weeks, orders.expiry_weeks; production.forecast_enabled, production.forecast_min_permille | 1000, 1000, 1000, 3; 1; 8, 52; 0, 100 | DEC-085; goods.csv gains made_to_order |
 | core.absorb, core.stacking, core.demand_weighted | 1, 0, 1 (DEC-104) | classes hold no market; strength by highest or sum; cores keep their classes' demand per head ([Draft]) |
 | core.continent.weight, core.nation.weight, core.region.weight, core.wage_permille, core.demand_permille | 3, 2, 1, 100, 50 (DEC-104) | a core's strength, and what a point is worth ([Draft]) |
@@ -131,7 +134,8 @@ changing a default in code does.
 | state.land_bonus_permille, state.land_max, state.harbor_bonus_permille, state.harbor_max, state.highway_bonus_permille | 100, 5, 100, 3, 200 | output and charge bonuses of projects ([Draft]) |
 | state.facility_levy_permille | 500 | share of a state enterprise's dividends the state collects ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
-| merchants.<level>.start_cash | 5000/4000/3000/2000/1000 | starting cash per merchant group |
+| merchants.class<0-2>.start_cash, merchants.class<0-2>.share_permille | 9500/1800/100, 100/300/400 | starting cash and share of the top, average and most common classes; the rest start with player.start_cash (DEC-119) |
+| facility.close_loss_years | 999 | losing tax years in a row that close a facility; 999 is off (DEC-120) |
 | merchants.<level>.max_weight, merchants.<level>.max_size | 4000/4000/2000/1000/400, 3200/3200/1600/800/300 | cargo limits per merchant group ([Draft]) |
 | merchants.<level>.upkeep, merchants.bankrupt_weeks | 50/40/30/20/10, 5 | weekly upkeep of a detailed group, weeks below zero before bankruptcy ([Draft]) |
 | merchants.traits, merchants.rumors | 1, 0 | merchant traits; judging prices by memory and rumor ([Draft]) |

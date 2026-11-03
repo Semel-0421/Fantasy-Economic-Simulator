@@ -199,6 +199,8 @@ namespace FES.Agents
     /// <summary>What credit did, for reading balance.</summary>
     public sealed class CreditStats : IWorldComponent
     {
+        /// <summary>DEC-122: coins groups got for the bills they sold, and the face of those bills.</summary>
+        public long BillsSold, BillsSoldFace;
         public long BillsIssued, BillsDiscounted, BillsPaid, BillsLost, StateRaised, CompanyRaised, GroupsToppedUp, BondsPaid, BondsLost, Defaults;
     }
 
@@ -287,6 +289,24 @@ namespace FES.Agents
         }
     }
 
+    /// <summary>
+    /// DEC-122: a group short of coins sells the bills it holds to its nation's households with idle money, so that a
+    /// group owed more than it owes is not ruined waiting. Buyers pay for the part the traders could pay now, less a discount.
+    /// </summary>
+    public static class BillMarket
+    {
+        /// <summary>What a bill fetches: its face as far as the traders' coins cover all they owe on bills, less the discount.</summary>
+        public static long Price(long face, long traderCoins, long owed, Fx discount)
+        {
+            if (traderCoins <= 0 || owed <= 0) return 0;
+            long collectable = traderCoins >= owed ? face : (long)((System.Numerics.BigInteger)face * traderCoins / owed);
+            return collectable - discount.MulInt(collectable);
+        }
+
+        /// <summary>DEC-123: what a nation's traders may owe on bills in all: weeks of what households wish to buy, and no more than the coins they hold, so that a bill can be paid when it falls due. Bills already owed come off it.</summary>
+        public static long Room(long wishesRoom, long traderCoins) => Math.Min(wishesRoom, Math.Max(0, traderCoins));
+    }
+
     public static class BondDesk
     {
         static BondOffers OffersOf(WorldState world, SimulationConfig config, int turn)
@@ -369,6 +389,30 @@ namespace FES.Agents
             return raised;
         }
 
+        /// <summary>Takes up to <paramref name="amount"/> from what a nation's households offer this week, in proportion. Returns the coins taken, which the caller pays on.</summary>
+        public static long TakeFromHouseholds(WorldState world, SimulationConfig config, int turn, int nation, long amount)
+        {
+            var offers = OffersOf(world, config, turn);
+            var purses = world.Get<PurseState>();
+            var cash = world.Get<HouseholdCash>();
+            long offered = 0;
+            foreach (int node in purses.NationNodes[nation]) offered += offers.Houses[node];
+            long want = Math.Min(amount, offered);
+            if (want <= 0) return 0;
+            long taken = 0;
+            foreach (int node in purses.NationNodes[nation])
+            {
+                long part = want / offered * offers.Houses[node] + want % offered * offers.Houses[node] / offered;
+                if (part <= 0) continue;
+                offers.Houses[node] -= part;
+                offers.Nations[nation] -= part;
+                cash.Cash[node] -= part;
+                cash.SavedYear[node] += part;
+                taken += part;
+            }
+            return taken;
+        }
+
         /// <summary>How much more a nation may owe: a share of its part of the continent's coins.</summary>
         public static long StateRoom(WorldState world, SimulationConfig config, int nation)
         {
@@ -422,7 +466,7 @@ namespace FES.Agents
         FinanceState _finance;
         bool[] _stateBehind;
         CompanyRooms _rooms;
-        long[] _floatPot;
+        long[] _floatPot, _owed;
         int[] _nationsOnContinent;
 
         public string Id => "agents.credit";
@@ -455,6 +499,7 @@ namespace FES.Agents
             _rooms = new CompanyRooms(ctx.World, _db);
             _stateBehind = new bool[_banks.NationCount];
             _floatPot = new long[_purses.Count];
+            _owed = new long[_purses.Count];
             _nationsOnContinent = new int[_nodes.ContinentCount];
             for (int n = 0; n < _banks.NationCount; n++) _nationsOnContinent[_nodes.Continent[_banks.NationNode(n)]]++;
             RefreshRoom();
@@ -463,6 +508,7 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             PayBills(ctx);
+            SellBillsOfGroupsInTheRed(ctx);
             ServiceBonds(ctx);
             KeepFacilitiesInCash(ctx);
             SellStateBonds(ctx);
@@ -496,6 +542,44 @@ namespace FES.Agents
                     _bills.RemoveRow(r);
                 }
             }
+        }
+
+        // DEC-122: a group below zero sells its bills, one by one until it is out of the red, to households with idle money.
+        void SellBillsOfGroupsInTheRed(SimContext ctx)
+        {
+            var config = _db.Config;
+            if (config.BillSaleDiscount.Raw <= 0 || _bills.Count == 0) return;
+            Array.Clear(_owed, 0, _owed.Length);
+            for (int r = 0; r < _bills.Count; r++) _owed[_bills.Purse[r]] += _bills.Face[r];
+            for (int r = _bills.Count - 1; r >= 0; r--)
+            {
+                int holder = _bills.Holder[r];
+                if (holder >= 0 && _agents.Cash[holder] < 0 && _bills.Purse[r] < _purses.NationCount) SellBill(ctx, r, holder);
+            }
+        }
+
+        // As far as buyers pay; what they do not pay for stays with the group.
+        void SellBill(SimContext ctx, int r, int holder)
+        {
+            int purse = _bills.Purse[r];
+            long face = _bills.Face[r];
+            long price = BillMarket.Price(face, _purses.Float[purse], _owed[purse], _db.Config.BillSaleDiscount);
+            if (price <= 0) return;
+            long paid = BondDesk.TakeFromHouseholds(_world, _db.Config, ctx.Turn, purse, price);
+            if (paid <= 0) return;
+            long sold = paid >= price ? face : (long)((System.Numerics.BigInteger)face * paid / price);
+            if (sold < face)
+            {
+                _bills.Face[r] -= sold;
+                _bills.Holder.Add(BillHolders.Households);
+                _bills.Purse.Add(purse);
+                _bills.Face.Add(sold);
+                _bills.DueTurn.Add(_bills.DueTurn[r]);
+            }
+            else _bills.Holder[r] = BillHolders.Households;
+            _agents.Cash[holder] += paid;
+            _stats.BillsSold += paid;
+            _stats.BillsSoldFace += sold;
         }
 
         void PayHolder(int holder, int purse, long coins)
@@ -660,7 +744,7 @@ namespace FES.Agents
             {
                 long wishes = 0;
                 foreach (int node in _purses.NationNodes[n]) wishes += _cash.Desired[node];
-                _room.Room[n] = config.BillCapWeeks * wishes;
+                _room.Room[n] = BillMarket.Room(config.BillCapWeeks * wishes, _purses.Float[n]);
                 if (_finance.EventOf(n) == FinancialEventKind.CreditCrunch) continue;
                 int continent = _nodes.Continent[_banks.NationNode(n)];
                 long target = config.StateReserveTarget.MulInt(config.BankInitialReserveShare.MulInt(_currency.CoinSupply[continent]) / Math.Max(1, _nationsOnContinent[continent]));

@@ -184,6 +184,7 @@ namespace FES.Agents
                 long paid = Pay(_facilities.Node[f], profit, _facilities.Cash[f]);
                 _facilities.Cash[f] -= paid;
                 companies += paid;
+                CloseAfterLosses(ctx, f, profit);
             }
             for (int a = 0; a < _agents.Count; a++)
             {
@@ -194,6 +195,22 @@ namespace FES.Agents
             }
             OpenBooks();
             ctx.Events.Publish(new IncomeTaxCollected(ctx.Clock.Year - 1, households, companies));
+        }
+
+        // [Draft] Only what a group runs for profit: the player decides for themself, a bank's sale settles what it holds,
+        // the state founds no new mines, and a loan is the bank's to call. What the facility holds or owes falls to the
+        // households around, as when an operator fails (DEC-051). The row stays, at level 0, so facility ids stay stable.
+        void CloseAfterLosses(SimContext ctx, int f, long profit)
+        {
+            if (_facilities.Level[f] == 0) return;
+            _facilities.LossYears[f] = profit < 0 && _facilities.Owner[f] == OwnerIds.Npc ? _facilities.LossYears[f] + 1 : 0;
+            var db = ctx.Services.Get<GameDatabase>();
+            if (_facilities.LossYears[f] < db.Config.FacilityCloseLossYears || db.Facilities[_facilities.DefIndex[f]].StateOwned) return;
+            if (_world.Get<NpcLoanTable>().Find(NpcBorrowers.Facility(f)) >= 0) return;
+            MoneyLedger.PayLocalHouseholds(_world, _facilities.Node[f], _facilities.Cash[f]);
+            _facilities.Cash[f] = 0;
+            _facilities.Level[f] = 0;
+            ctx.Events.Publish(new FacilityClosed(new FacilityId(f), ctx.Turn));
         }
 
         long Pay(int node, long profit, long cash)

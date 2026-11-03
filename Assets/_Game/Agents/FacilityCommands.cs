@@ -143,6 +143,7 @@ namespace FES.Agents
         {
             var facilities = ctx.World.Get<FacilityTable>();
             if (!Facility.IsValid || Facility.Value >= facilities.Count) return CommandResult.Fail("Unknown facility.");
+            if (facilities.Level[Facility.Value] == 0) return CommandResult.Fail("The facility is closed.");
             if (Price < 0) return CommandResult.Fail("Price must not be negative.");
             if (!GuidanceAxes.IsValid(Axis)) return CommandResult.Fail("Unknown guidance axis.");
             if (facilities.Owner[Facility.Value] != OwnerIds.Npc) return CommandResult.Fail("Facility is not for sale.");

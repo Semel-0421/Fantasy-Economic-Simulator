@@ -372,6 +372,48 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-124 Merchants sell necessities to households first
+- Date: 2026-11-03
+- Decision: [Confirmed] Direction A of [PROPOSAL_TRADER_COINS_2026-11-03](reviews/PROPOSAL_TRADER_COINS_2026-11-03.md). An arriving group sells necessities to the households first, paid from their cash at the price; the rest of the load goes to the market's traders as before (DEC-061). [Draft] The households take what they wish for this week at the price that their own stores, the stock and this week's supply do not cover, as far as their cash goes; the goods go to their stores (DEC-117), which they eat first. Groups judge a market worth the trip when such households hold the price of a lot. Only at home on the group's continent. `merchants.sell_to_households`.
+- Reason: necessities piled up at half price where they were made while another level starved at three times the price with coins in hand; merchants could not be paid there, as the traders' coins fill only when households buy.
+- Limits: market modifiers are left out of the households' wish. What households pay merchants does not enter their year's spending records.
+- Impact: SYS-MERCHANTS, SYS-MARKETS, 02_Data_Formats
+
+### DEC-123 Traders owe on bills no more than the coins they hold
+- Date: 2026-11-03
+- Decision: [Confirmed] A nation's traders may owe on bills, in all, no more than the coins they hold, besides the weeks of households' wishes of DEC-097.
+- Reason: over two years traders were given 740,000 to 880,000 of bills and paid about 5%; 450,000 to 620,000 were protested (three seeds). Their coins came to 0.3 to 0.4% of what they owed, so the bills sold on the market of DEC-122 for about 2% of face.
+- Limits: six seeds, 30 years: bills are paid (none protested in two years), 20.0M to 20.5M people at -0.26 to -0.38% a year, against 18.7M to 19.4M before. But merchant failures over 30 years nearly doubled (7,352 to 8,550, against 3,918 to 5,352), and by year 20 no group has a cart or wagon. Groups now find fewer traders who can pay.
+- Impact: SYS-BANKING
+
+### DEC-122 Groups in the red sell their bills; loads leave two weeks of upkeep
+- Date: 2026-11-03
+- Decision: [Confirmed] A merchant group below zero sells the bills it holds on a bill market, so that a group owed more than it owes is not ruined waiting for them. A bill sells below its face, at a price that follows whether it can be collected. A group buying a load keeps at least two weeks of upkeep in coins. [Draft] The buyers are the households of the owing nation, from the idle money they offer for bonds (DEC-097); they then hold the bill and collect its face. The price is the face as far as the traders' coins cover all bills they owe, less 15% (`credit.bill_sale_discount_permille`). The group sells bill by bill until it is out of the red; what buyers do not pay for stays with it. Reserve weeks: `merchants.reserve_upkeep_weeks`.
+- Reason: bills fall due in 8 weeks and a group fails after 5 weeks below zero. Over two years, 25 to 39% of merchant failures held bills, almost all worth more than the group's debt, 210,000 to 260,000 coins of face in all (three seeds). Groups spent all their cash on a load, so one slow sale put them below zero. Nearly every group failed within three years, and its vehicle went with it.
+- Limits: only households buy, not groups or banks. A holder's share is rounded down by node, as in bond sales, so a few coins of face can stay with the group.
+- Impact: SYS-BANKING, SYS-MERCHANTS, 02_Data_Formats
+
+### DEC-121 Each capital class starts with its vehicle
+- Date: 2026-11-03
+- Decision: [Confirmed] The top class starts with a wagon, the average and most common classes with a cart, and the class with the player's start on pack animals. Vehicle shares by chance at the start are gone. A group replacing a bankrupt one still starts on pack animals, as the old group's vehicle was sold.
+- Reason: the user's instruction, after DEC-119 left vehicles and capital unlinked.
+- Limits: a group of 100 coins starts with a cart it cannot afford to replace once worn.
+- Impact: SYS-MERCHANTS, 02_Data_Formats
+
+### DEC-120 Losing facilities close, switched off for now
+- Date: 2026-11-03
+- Decision: DEC-065's closure is built and off (`facility.close_loss_years` 999). [Draft] A group's facility with two losing tax years in a row closes: level 0, the row kept, its cash or debt to the households around, no reopening or sale. Player, bank-held and state facilities and those with a loan stay open.
+- Reason: at 2 years, about 90% of facilities close within 30 years (38 to 43 of about 450 to 510 left open, three seeds); at 3, 5 and 10 years 42 to 90 are left. With closure off, 278 of 348 private facilities had lost money ten years running at year 30 (seed 1), and few go bankrupt. The losses come first.
+- Limits: why facilities lose money has not been examined. A closed row stays in the table.
+- Impact: SYS-PRODUCTION, 02_Data_Formats
+
+### DEC-119 Merchants start in four classes of capital
+- Date: 2026-11-03
+- Decision: [Confirmed] Merchants start in four classes, by what merchants earn at year 20: top, average, most common, and the same start as the player. [Draft] The values are coins held at year 20, three seeds, closure off, since a year's income averaged -585 to 546 and its mode was near zero: top tenth 9,500, mean 1,800, mode 100, player 500. Shares 10/30/40/20%, drawn from the seed and the row, whatever the node. A replacement after bankruptcy starts in its group's class. Capital by node level (5,000 to 1,000) is gone.
+- Reason: the user's instruction, as a group with a wagon and one on foot at the same level started with the same money.
+- Limits: six seeds, year 30: 18.77M to 19.42M people, -0.36 to -0.43% a year; the classes' averages draw together but keep their order at the top. At year 20 before this change almost no group had a cart or wagon, against 50% at the start, so vehicles and capital are not linked here. Year 20 was measured on the old start.
+- Impact: SYS-MERCHANTS, 02_Data_Formats
+
 ### DEC-118 Only villages grow food at home; preserved food
 - Date: 2026-11-03
 - Decision: [Confirmed] households make food at home only in rural nodes (village level); a node judged a city makes none. [Confirmed] A new category, preserved food, holds dried and pickled foods: they do not spoil, take less room and are worth more than fresh food, and households can make them too. [Draft] Pickled vegetables (price 14, size 2) and dried beans (price 13, size 2), base demand 4 each, 10 units per thousand villagers a week at home, and new facilities pickler and bean_dryer. Traders' unpaid surplus of preserved food waits at home instead of spoiling.

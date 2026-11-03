@@ -49,7 +49,6 @@ namespace FES.Data
                     throw new FormatException($"config.csv: households.{level}.population and income must be positive.");
                 LevelWageWeight[l] = Permille(v, $"labor.{level}.wage_weight_permille", LevelWageWeight[l]);
                 MerchantsPerNode[l] = Int(v, $"merchants.{level}", MerchantsPerNode[l]);
-                MerchantStartCash[l] = Long(v, $"merchants.{level}.start_cash", MerchantStartCash[l]);
                 MerchantMaxWeight[l] = Long(v, $"merchants.{level}.max_weight", MerchantMaxWeight[l]);
                 MerchantMaxSize[l] = Long(v, $"merchants.{level}.max_size", MerchantMaxSize[l]);
                 MerchantUpkeep[l] = Long(v, $"merchants.{level}.upkeep", MerchantUpkeep[l]);
@@ -71,11 +70,13 @@ namespace FES.Data
             ProductionVariancePermille = Int(v, "production.variance_permille", ProductionVariancePermille);
             MerchantBankruptWeeks = Int(v, "merchants.bankrupt_weeks", MerchantBankruptWeeks);
             if (MerchantBankruptWeeks < 1) throw new FormatException("config.csv: merchants.bankrupt_weeks must be >= 1.");
+            MerchantReserveUpkeepWeeks = Int(v, "merchants.reserve_upkeep_weeks", MerchantReserveUpkeepWeeks);
+            if (MerchantReserveUpkeepWeeks < 0) throw new FormatException("config.csv: merchants.reserve_upkeep_weeks must be >= 0.");
+            MerchantSellToHouseholds = Int(v, "merchants.sell_to_households", MerchantSellToHouseholds ? 1 : 0) != 0;
             MerchantFlowShare = Permille(v, "merchants.flow_permille", MerchantFlowShare);
             for (int k = 0; k < MerchantVehicleCapacity.Length; k++)
             {
                 MerchantVehicleCapacity[k] = Permille(v, $"merchants.vehicle{k}.capacity_permille", MerchantVehicleCapacity[k]);
-                MerchantVehicleStartShare[k] = Permille(v, $"merchants.vehicle{k}.start_permille", MerchantVehicleStartShare[k]);
                 MerchantVehicleCashTimes[k] = Int(v, $"merchants.vehicle{k}.cash_times", MerchantVehicleCashTimes[k]);
                 MerchantVehicleCost[k] = Permille(v, $"merchants.vehicle{k}.cost_permille", MerchantVehicleCost[k]);
                 MerchantVehicleDanger[k] = Permille(v, $"merchants.vehicle{k}.danger_permille", MerchantVehicleDanger[k]);
@@ -115,6 +116,18 @@ namespace FES.Data
         {
             LodMode = Int(v, "lod.mode", LodMode);
             CoreAbsorb = Int(v, "core.absorb", CoreAbsorb ? 1 : 0) != 0;
+            for (int c = 0; c < MerchantClassCash.Length; c++)
+            {
+                MerchantClassCash[c] = Long(v, $"merchants.class{c}.start_cash", MerchantClassCash[c]);
+                MerchantClassSharePermille[c] = Int(v, $"merchants.class{c}.share_permille", MerchantClassSharePermille[c]);
+            }
+            for (int c = 0; c < MerchantClassVehicle.Length; c++)
+            {
+                int vehicle = Int(v, $"merchants.class{c}.vehicle", MerchantClassVehicle[c]);
+                if (vehicle < 0 || vehicle > 2) throw new FormatException($"config.csv: merchants.class{c}.vehicle must be 0, 1 or 2.");
+                MerchantClassVehicle[c] = (byte)vehicle;
+            }
+            FacilityCloseLossYears = Int(v, "facility.close_loss_years", FacilityCloseLossYears);
             CoreStacking = Int(v, "core.stacking", CoreStacking ? 1 : 0) != 0;
             CoreDemandWeighted = Int(v, "core.demand_weighted", CoreDemandWeighted ? 1 : 0) != 0;
             CoreWeight[0] = Int(v, "core.continent.weight", CoreWeight[0]);
@@ -412,6 +425,7 @@ namespace FES.Data
             BillRepayShare = Permille(v, "credit.bill_repay_permille", BillRepayShare);
             BillDefaultWeeks = Int(v, "credit.bill_default_weeks", BillDefaultWeeks);
             BillBankFloor = Permille(v, "credit.bill_bank_floor_permille", BillBankFloor);
+            BillSaleDiscount = Permille(v, "credit.bill_sale_discount_permille", BillSaleDiscount);
             BillProducers = Int(v, "credit.bill_producers", BillProducers ? 1 : 0) != 0;
             BondBuyShare = Permille(v, "credit.bond_buy_permille", BondBuyShare);
             BondKeepWeeks = Int(v, "credit.bond_keep_weeks", BondKeepWeeks);

@@ -55,7 +55,7 @@ raw materials propagate to finished goods, and each node's specialties give ever
   the player's and those a bank holds before auction do not. A facility without a group pays the
   households of its node.
 - [Confirmed] Interest groups build new facilities and raise levels (DEC-065); a facility that loses money
-  two years in a row closes (DEC-065).
+  two years in a row closes (DEC-065). [Draft] Built and switched off for now (DEC-120).
 - [Confirmed] A facility with a manager sells its output and buys its inputs on its own (DEC-064,
   SYS-AUTOMATION).
 - [Draft] Claim period on a lost warehouse: 8 weeks (`cargo.lost_warehouse_weeks`); during it the player

@@ -63,6 +63,7 @@ namespace FES.Agents
     public sealed class LaborMarketSystem : ISimSystem
     {
         SimulationConfig _config;
+        ulong _seed;
         NodeTable _nodes;
         AgentTable _agents;
         PurseState _purses;
@@ -80,6 +81,7 @@ namespace FES.Agents
         public void Initialize(SimContext ctx)
         {
             _config = ctx.Services.Get<GameDatabase>().Config;
+            _seed = ctx.Seed;
             _nodes = ctx.World.Get<NodeTable>();
             _agents = ctx.World.Get<AgentTable>();
             _purses = ctx.World.Get<PurseState>();
@@ -102,7 +104,7 @@ namespace FES.Agents
             for (int a = 0; a < _agents.Count; a++)
             {
                 if (_agents.Owner[a] != OwnerIds.Npc) continue;
-                long buffer = _config.LaborMerchantBuffer.MulInt(_config.MerchantStartCash[_agents.Scale[a]]);
+                long buffer = _config.LaborMerchantBuffer.MulInt(MerchantCapital.Start(_config, _seed, a));
                 long excess = _agents.Cash[a] - buffer;
                 if (excess <= 0) continue;
                 int node = MoneyLedger.MerchantSettlesAt(_nodes, _agents, a), purse = _purses.NodeFloat[node];

@@ -13,6 +13,7 @@ Money has a place: national banks hold it, international banks change it, and lo
 faster than its cash at the risk of losing what it owns.
 
 ## Rules
+- [Confirmed] A merchant group below zero sells the bills it holds to its nation's households, below face, at a price that follows whether the traders can pay (DEC-122). Traders may owe on bills no more than the coins they hold (DEC-123).
 - [Confirmed] Each nation runs a bank with branches only at its core towns (DEC-104, which replaces every city of DEC-032).
 - [Confirmed] National banks belong to their nation and international banks to their continent (DEC-041).
 - [Confirmed] Money is aggregated as each nation's total and each continent's total (DEC-041).

@@ -13,6 +13,7 @@ Merchant groups move goods between markets, so regional price gaps close over ti
 without scripting. Their counts per node are already in config (`merchants.<level>`).
 
 ## Rules
+- [Confirmed] Merchants start in four classes of capital: top, average, most common, and the player's own start (DEC-119). Each class starts with its vehicle: top a wagon, average and most common a cart, the player's start pack animals (DEC-121). A group keeps two weeks of upkeep in coins when it buys a load, and below zero it sells its bills below face (DEC-122). On arrival it sells necessities to the households first, paid from their cash at the price; the rest goes to the traders (DEC-124).
 - [Confirmed] Merchants choose trades by arbitrage: buy where a good is cheap, sell where it is dear, when the
   price gap exceeds the transport cost (DEC-003).
 - [Confirmed] Merchants carry real cargo, limited by size and weight capacity (DEC-003, DEC-009).

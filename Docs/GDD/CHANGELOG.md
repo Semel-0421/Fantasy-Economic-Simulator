@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-11-03
+- DEC-124: merchants sell necessities to households first. New golden hashes.
+- DEC-123: traders owe on bills no more than the coins they hold. New golden hashes.
+- DEC-122: groups in the red sell their bills on a bill market; loads leave two weeks of upkeep. New golden hashes.
+- DEC-121: each capital class starts with its vehicle. New golden hashes.
+- DEC-119: merchants start in four classes of capital. DEC-120: facility closure built and off. New golden hashes.
 - C34: superseded rules corrected in the documents; the user confirmed DEC-104 over DEC-032 and DEC-069: bank branches and smithies only at core towns.
 - C29: detailed merchants' sales outside their home nation count as the buyers' imports, so the state's import score works in detailed nodes. [Draft] Cargo does not remember where it was bought, so a group bringing foreign goods home is not counted. New golden hashes.
 - Merchants' premiums and refunds pass through the origin city's guild (C27, DEC-061). New golden hashes.

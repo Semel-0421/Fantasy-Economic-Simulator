@@ -54,8 +54,15 @@ state.public_wage_permille,30
 merchants.vehicle0.capacity_permille,500
 merchants.vehicle1.capacity_permille,1000
 merchants.vehicle2.capacity_permille,3000
-merchants.vehicle1.start_permille,350
-merchants.vehicle2.start_permille,150
+# Each capital class starts with its vehicle (DEC-121): top a wagon, average and most common a cart, the player's start packs.
+merchants.class0.vehicle,2
+merchants.class1.vehicle,1
+merchants.class2.vehicle,1
+merchants.class3.vehicle,0
+# A group keeps two weeks of upkeep in coins when it buys a load (DEC-122).
+merchants.reserve_upkeep_weeks,2
+# An arriving group sells necessities to the households first, at the price, from their cash; the rest goes to the traders (DEC-124).
+merchants.sell_to_households,1
 # Orders, quarterly factory plans, and vehicle running costs and risks (DEC-085).
 production.forecast_enabled,1
 # Plans lean on what households want and reach raw goods (DEC-091).
@@ -121,6 +128,8 @@ traders.float_keep_weeks,8
 merchants.flow_wage_permille,1000
 # Bills for what traders cannot pay, government and corporate bonds on idle money, groups keeping their facilities in working cash (DEC-097).
 credit.bill_cap_weeks,8
+# A group below zero sells its bills to households, priced by what the traders can pay, less a discount (DEC-122).
+credit.bill_sale_discount_permille,150
 credit.state_debt_permille,300
 credit.company_debt_permille,500
 credit.working_weeks,4
@@ -134,3 +143,5 @@ merchants.hedge_floor_permille,900
 merchants.hedge_chance_permille,60
 # Classes hold no market; core towns take their people and roles (DEC-104).
 core.absorb,1
+# Off until facilities stop losing money as a rule: at 2, about 90% close within 30 years.
+facility.close_loss_years,999

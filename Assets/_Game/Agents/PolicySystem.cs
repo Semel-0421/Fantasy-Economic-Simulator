@@ -284,7 +284,7 @@ namespace FES.Agents
                     int nation = NationOf(agents.Home[a]);
                     if (nation < 0) continue;
                     var h = Get(g, nation);
-                    long stake = config.MerchantStartCash[agents.Scale[a]];
+                    long stake = MerchantCapital.Start(config, ctx.Seed, a);
                     h.Assets += stake + Math.Max(0, agents.Cash[a]);
                     h.Jobs += config.JobsPerMerchantGroup;
                     h.InputValue += stake; // merchants pay the tolls

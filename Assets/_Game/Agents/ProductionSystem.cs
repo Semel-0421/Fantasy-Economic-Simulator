@@ -29,6 +29,19 @@ namespace FES.Agents
         }
     }
 
+    /// <summary>A facility lost money two years in a row and closed (DEC-065).</summary>
+    public sealed class FacilityClosed : ISimEvent
+    {
+        public readonly FacilityId Facility;
+        public readonly int Turn;
+
+        public FacilityClosed(FacilityId facility, int turn)
+        {
+            Facility = facility;
+            Turn = turn;
+        }
+    }
+
     /// <summary>The claim on a lost facility's warehouse ran out; what was left in it is gone.</summary>
     public sealed class LostWarehouseCleared : ISimEvent
     {
@@ -385,6 +398,7 @@ namespace FES.Agents
             _facilities.Cash[f] = MoneyLedger.FundNewOperator(ctx.World, _facilities.Group[f], _facilities.Node[f], _facilities.Cash[f], StartCash(f));
             _books.RestartFacility(f, _facilities.Cash[f]);
             _facilities.NegativeCashWeeks[f] = 0;
+            _facilities.LossYears[f] = 0;
             _facilities.WarehouseClaimUntil[f] = claimUntil;
             ctx.Events.Publish(new FacilityBankrupt(new FacilityId(f), wasPlayer, claimUntil, ctx.Turn));
         }

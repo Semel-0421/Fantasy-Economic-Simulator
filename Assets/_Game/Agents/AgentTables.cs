@@ -184,9 +184,11 @@ namespace FES.Agents
         public readonly NativeColumn<int> WarehouseClaimUntil;
         /// <summary>The interest group owning an NPC facility, or the player's company; -1 for none (DEC-055).</summary>
         public readonly NativeColumn<int> Group;
+        /// <summary>Tax years in a row that ended at a loss; two close a facility (DEC-065).</summary>
+        public readonly NativeColumn<int> LossYears;
 
         public override string Key => SectionKey;
-        public override int Version => 3;
+        public override int Version => 4;
 
         public FacilityTable()
         {
@@ -200,6 +202,7 @@ namespace FES.Agents
             NegativeCashWeeks = Column<int>();
             WarehouseClaimUntil = Column<int>();
             Group = Column<int>();
+            LossYears = Column<int>();
         }
 
         public FacilityId Add(int node, int defIndex, int owner, ControlMode mode, int level, Fx efficiency, long cash)
@@ -214,6 +217,7 @@ namespace FES.Agents
             NegativeCashWeeks.Add(0);
             WarehouseClaimUntil.Add(-1);
             Group.Add(-1);
+            LossYears.Add(0);
             return new FacilityId(Count - 1);
         }
     }
@@ -242,6 +246,26 @@ namespace FES.Agents
                 for (int r = 0; r < rows; r++) writer.Write(0); // NegativeCashWeeks
                 writer.Write(rows);
                 for (int r = 0; r < rows; r++) writer.Write(-1); // WarehouseClaimUntil
+            }
+            return output.ToArray();
+        }
+    }
+
+    /// <summary>Version 3 counted no losing years.</summary>
+    public sealed class FacilityTableV3Migration : ISaveMigration
+    {
+        public string SectionKey => FacilityTable.SectionKey;
+        public int FromVersion => 3;
+
+        public byte[] Migrate(byte[] section)
+        {
+            int rows = new BinaryReader(new MemoryStream(section)).ReadInt32();
+            using var output = new MemoryStream();
+            using (var writer = new BinaryWriter(output))
+            {
+                writer.Write(section);
+                writer.Write(rows);
+                for (int r = 0; r < rows; r++) writer.Write(0);
             }
             return output.ToArray();
         }

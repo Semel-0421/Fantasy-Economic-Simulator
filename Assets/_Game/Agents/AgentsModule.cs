@@ -85,6 +85,7 @@ namespace FES.Agents
             builder.AddMigration(new PlayerStateV1Migration());
             builder.AddMigration(new PlayerStateV2Migration());
             builder.AddMigration(new FacilityTableV1Migration());
+            builder.AddMigration(new FacilityTableV3Migration());
             builder.AddMigration(new AgentTableV1Migration());
             builder.AddMigration(new PlayerShipV1Migration());
             builder.AddMigration(new PurseStateV1Migration());
@@ -254,7 +255,7 @@ namespace FES.Agents
                 var level = nodes.LevelOf(n);
                 for (int k = 0; k < config.MerchantsPerNode[(int)level]; k++)
                 {
-                    var id = table.Add(nodes.Absorbed ? nodes.Core[n] : n, OwnerIds.Npc, level, ControlMode.Automated, config.MerchantStartCash[(int)level]);
+                    var id = table.Add(nodes.Absorbed ? nodes.Core[n] : n, OwnerIds.Npc, level, ControlMode.Automated, MerchantCapital.Start(config, seed, table.Count));
                     if (config.MerchantTraitsEnabled) table.Trait[id.Value] = (byte)DetRandom.For(seed, 0, TraitStream, id.Value).NextInt(MerchantTraits.Count);
                     table.Vehicle[id.Value] = MerchantVehicles.AtStart(config, seed, id.Value);
                 }

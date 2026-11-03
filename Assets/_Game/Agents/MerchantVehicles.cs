@@ -23,15 +23,9 @@ namespace FES.Agents
     {
         public const byte Pack = 0, Cart = 1, Wagon = 2;
         public const int Count = 3;
-        static readonly uint StartStream = DetHash.Of("agents.merchant_vehicle_start");
-
-        public static byte AtStart(SimulationConfig config, ulong seed, int merchant)
-        {
-            long roll = DetRandom.For(seed, 0, StartStream, merchant).NextFx01().Raw;
-            long wagon = config.MerchantVehicleStartShare[Wagon].Raw;
-            if (roll < wagon) return Wagon;
-            return roll < wagon + config.MerchantVehicleStartShare[Cart].Raw ? Cart : Pack;
-        }
+        /// <summary>A group starts with its capital class's vehicle (DEC-121).</summary>
+        public static byte AtStart(SimulationConfig config, ulong seed, int merchant) =>
+            config.MerchantClassVehicle[MerchantCapital.ClassOf(config, seed, merchant)];
 
         /// <summary>The good that makes a vehicle; false for packs, or where the data has no such good.</summary>
         public static bool TryGood(GameDatabase db, byte vehicle, out GoodId good)

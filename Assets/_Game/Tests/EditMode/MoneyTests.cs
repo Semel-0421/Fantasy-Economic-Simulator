@@ -277,7 +277,7 @@ namespace FES.Tests
                 var labor = sim.World.Get<LaborState>();
                 var households = sim.World.Get<HouseholdCash>();
                 int a = Enumerable.Range(0, agents.Count).First(i => purses.NodeFloat[agents.Node[i]] < purses.NationCount);
-                long start = sim.Database.Config.MerchantStartCash[agents.Scale[a]];
+                long start = MerchantCapital.Start(sim.Database.Config, sim.Context.Seed, a);
                 agents.Cash[a] = start + 1_000_000;
                 households.Cash[agents.Node[a]] -= 1_000_000;
                 labor.Employment[purses.NodeFloat[agents.Node[a]]] = Fx.FromPermille(employmentPermille).Raw;

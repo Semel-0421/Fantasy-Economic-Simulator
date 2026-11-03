@@ -208,13 +208,16 @@ namespace FES.Data
         public readonly int[] MerchantsPerNode = { 50, 50, 30, 10, 3 };
 
         /// <summary>Starting cash of one merchant group, per level of its home node.</summary>
-        public readonly long[] MerchantStartCash = { 5000, 4000, 3000, 2000, 1000 };
+        /// <summary>Top, average, most common; the fourth class starts with the player's cash (<see cref="FES.Agents.MerchantCapital"/>).</summary>
+        public readonly long[] MerchantClassCash = { 9500, 1800, 100 };
+        public readonly int[] MerchantClassSharePermille = { 100, 300, 400 };
 
         /// <summary>Cargo limits of one merchant group, per level of its home node (DEC-013).</summary>
         /// <summary>Per vehicle (pack, cart, wagon, DEC-084): how far it multiplies a group's cargo and flow.</summary>
         public readonly Fx[] MerchantVehicleCapacity = { Fx.One, Fx.One, Fx.One };
         /// <summary>Per vehicle: the share of groups starting with it; pack takes the rest.</summary>
-        public readonly Fx[] MerchantVehicleStartShare = { Fx.Zero, Fx.Zero, Fx.Zero };
+        /// <summary>The vehicle each capital class starts with, by <see cref="FES.Agents.MerchantCapital"/> class.</summary>
+        public readonly byte[] MerchantClassVehicle = { 0, 0, 0, 0 };
         /// <summary>A group buys the next vehicle when its cash is this many times the price; the yearly chance a vehicle wears down one step.</summary>
         public readonly int[] MerchantVehicleCashTimes = { 0, 3, 3 };
         /// <summary>Per vehicle (DEC-085): how far it multiplies running costs, encounter chance and insurance premium.</summary>
@@ -252,6 +255,7 @@ namespace FES.Data
         public int LodMode = 1;
         /// <summary>Continents, nations and regions are classes only: their people, producers and groups stand at their core towns (DEC-104).</summary>
         public bool CoreAbsorb = true;
+        public int FacilityCloseLossYears = 2;
         /// <summary>Per class level, continent to region: what being its core is worth. A town that is core of several takes the highest, or with stacking the sum (DEC-104).</summary>
         public readonly int[] CoreWeight = { 3, 2, 1 };
         public bool CoreStacking = false;
@@ -296,6 +300,10 @@ namespace FES.Data
 
         /// <summary>A detailed merchant group goes bankrupt after this many weeks in a row with cash below zero.</summary>
         public int MerchantBankruptWeeks = 5;
+        /// <summary>DEC-122: weeks of upkeep a group keeps in coins when it buys a load.</summary>
+        public int MerchantReserveUpkeepWeeks = 2;
+        /// <summary>DEC-124: an arriving group sells necessities to the households first, at the price, from their cash.</summary>
+        public bool MerchantSellToHouseholds = true;
 
         /// <summary>
         /// Aggregate trade: share of the origin's stock moved per week along a route, per unit of margin over
@@ -502,6 +510,8 @@ namespace FES.Data
         public Fx BillRepayShare = Fx.FromPermille(250);
         public int BillDefaultWeeks = 26;
         public Fx BillBankFloor = Fx.FromPermille(500);
+        /// <summary>DEC-122: what buyers take off a bill's collectable part when a group short of coins sells it; zero closes the market.</summary>
+        public Fx BillSaleDiscount = Fx.FromPermille(150);
         /// <summary>Producers too take bills for what traders cannot pay (DEC-097).</summary>
         public bool BillProducers = false;
         /// <summary>Bonds (DEC-097): the weekly share of idle money holders offer, weeks of spending households keep, and times its starting cash a group keeps.</summary>

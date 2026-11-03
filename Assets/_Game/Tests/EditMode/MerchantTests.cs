@@ -109,7 +109,7 @@ namespace FES.Tests
             }
             Assert.AreEqual(1, bankrupt.Count);
             Assert.AreEqual(agents.Home[a], agents.Node[a]);
-            Assert.AreEqual(sim.Database.Config.MerchantStartCash[agents.Scale[a]], agents.Cash[a]);
+            Assert.AreEqual(MerchantCapital.Start(sim.Database.Config, sim.Context.Seed, a), agents.Cash[a]);
         }
 
         [Test]
@@ -237,7 +237,7 @@ namespace FES.Tests
         public void NewYear_SetsWeightsByFitness_AndAShareOfGroupsHandsOver()
         {
             using var sim = SimulationBuilder.FromData(TestWorlds.SampleWith(GameDatabase.ConfigFile,
-                "key,value\nmerchants.generation_permille,500\nmerchants.mutation_permille,0\n"), 42).Build();
+                "key,value\nmerchants.generation_permille,500\nmerchants.mutation_permille,0\nmerchants.fitness_capital_permille,0\n"), 42).Build();
             var agents = sim.World.Get<AgentTable>();
             var genetics = sim.World.Get<MerchantGenetics>();
             var nodes = sim.World.Get<NodeTable>();
@@ -246,7 +246,8 @@ namespace FES.Tests
             long uniform = genetics.Weight[first];
             for (int t = 0; t < SimClock.WeeksPerYear; t++) sim.AdvanceTurn();
             var before = agents.Trait.AsArray().ToArray();
-            var cash = agents.Cash.AsArray().ToArray();
+            // Only the failures tell the traits apart: capital counts for nothing, and only trait 0 failed this year.
+            for (int t = 0; t < MerchantTraits.Count; t++) genetics.YearBankruptcies[first + t] = 0;
             genetics.YearBankruptcies[first] = 1000; // trait 0 failed everywhere this year
             sim.AdvanceTurn();
             Assert.Less(genetics.Weight[first], uniform, "a failing trait is drawn less");

@@ -106,7 +106,8 @@ namespace FES.Agents
         TripSearch NewSearch(int a, int node)
         {
             int trait = AgentTrait[a];
-            long cash = AgentCash[a], spendRaw = TraitSpendRaw[trait];
+            // DEC-122: weeks of upkeep stay in coins, so a slow sale does not ruin the group.
+            long cash = Max(0, AgentCash[a] - ReserveUpkeepWeeks * Upkeep(a)), spendRaw = TraitSpendRaw[trait];
             long loadWeight = 0, loadSize = 0;
             for (int r = FirstRow[a]; r >= 0; r = NextRow[r])
             {
@@ -210,7 +211,7 @@ namespace FES.Agents
             int to = RouteTo[r];
             long perUnitRaw = Fx.RoundShift(RouteCostPerUnitRaw[r] * VehicleCostRaw[AgentVehicle[a]]);
             long toll = Fx.MulIntRaw(there, TollRate(to, offer.Good));
-            if (!TradersPay(a, to, Price[toCell])) there = 0;
+            if (!TradersPay(a, to, toCell, Price[toCell])) there = 0;
             unit.Sell = Max(there, Beyond(a, to, search.Node, offer.Good, in search.Reach, JudgeHops - 1));
             unit.BaseFee = Fx.MulIntRaw(RouteBaseFee[r], VehicleCostRaw[AgentVehicle[a]]);
             unit.MarginRaw = ((unit.Sell - offer.Buy - toll) << Fx.FractionBits) - perUnitRaw;
@@ -270,7 +271,7 @@ namespace FES.Agents
         }
 
         long SoldAt(int a, int node, int cell, int good, long worth, in GroupReach reach) =>
-            cell >= 0 && (reach.Licensed || !NeedsLicense(node, good)) && TradersPay(a, node, Price[cell]) ? worth : 0;
+            cell >= 0 && (reach.Licensed || !NeedsLicense(node, good)) && TradersPay(a, node, cell, Price[cell]) ? worth : 0;
 
         void AddBid(int cell, long units) => InputBid[cell] = MarketStore.ClampToNonNegativeInt(InputBid[cell] + units);
 

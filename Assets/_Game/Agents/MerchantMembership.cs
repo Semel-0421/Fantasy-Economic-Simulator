@@ -58,7 +58,7 @@ namespace FES.Agents
 
         void DealWithAssociation(SimContext ctx, int a, int association, bool year)
         {
-            long start = _config.MerchantStartCash[_agents.Scale[a]];
+            long start = MerchantCapital.Start(_config, ctx.Seed, a);
             if (year && _agents.Cash[a] > start)
             {
                 long fee = _config.MerchantMemberFee.MulInt(_agents.Cash[a] - start);

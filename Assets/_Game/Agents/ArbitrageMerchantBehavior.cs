@@ -42,6 +42,7 @@ namespace FES.Agents
         BillTable _bills;
         BillRoom _billRoom;
         NativeArray<long> _billStats;
+        HouseholdNeeds _needs;
         NativeArray<long> _nodeSpend;
         NativeArray<long> _vehicleCapacity;
         NativeArray<long> _vehicleCost;
@@ -245,6 +246,8 @@ namespace FES.Agents
             for (int p = 0; p < _hedgeRoom.Length; p++)
                 _hedgeRoom[p] = _db.Config.HedgeFee.Raw > 0 && p < _purses.NationCount ? _db.Config.HedgeBankShare.MulInt(_bank.Spendable(p)) : 0;
 
+            _needs ??= new HouseholdNeeds(_world, _db);
+            _needs.Refresh();
             var job = new DetailedMerchantJob { Seed = ctx.Seed, Turn = ctx.Turn };
             SetRules(ref job);
             SetPlaces(ref job);
@@ -319,6 +322,7 @@ namespace FES.Agents
             job.BaseGoodCount = _policy.BaseGoodCount;
             job.CategoryCount = _flows.CategoryCount;
             job.BankruptWeeks = _db.Config.MerchantBankruptWeeks;
+            job.ReserveUpkeepWeeks = _db.Config.MerchantReserveUpkeepWeeks;
             job.MerchantHolderBase = CargoHolders.MerchantBase;
             job.CashLossRaw = _db.Config.EncounterCashLoss.Raw;
             job.CargoLossRaw = _db.Config.EncounterCargoLoss.Raw;
@@ -437,6 +441,8 @@ namespace FES.Agents
             job.Demand = _markets.Demand;
             job.Float = _purses.Float;
             job.HouseholdCash = _world.Get<HouseholdCash>().Cash;
+            job.HouseholdNeed = _needs.Units;
+            job.HomeGrown = _world.Get<HouseholdCash>().HomeGrown;
             job.TollsByNode = _tollsByNode;
             var groups = _world.Get<GroupTable>();
             if (_insurersForGroups != groups.Count)
@@ -477,7 +483,7 @@ namespace FES.Agents
             _agents.Destination[a] = -1;
             _agents.ArrivalTurn[a] = -1;
             _agents.Cash[a] = MoneyLedger.FundNewOperator(ctx.World, _agents.Group[a], _agents.Home[a], _agents.Cash[a],
-                _db.Config.MerchantStartCash[_agents.Scale[a]]);
+                MerchantCapital.Start(_db.Config, ctx.Seed, a));
             ctx.World.Get<IncomeTaxState>().RestartMerchant(a, _agents.Cash[a]);
             _agents.NegativeCashWeeks[a] = 0;
             _agents.Memory[a] = NodeMemory.Empty;
@@ -611,6 +617,7 @@ namespace FES.Agents
             _traits?.Dispose();
             _coinRate.DisposeIfCreated();
             _billStats.DisposeIfCreated();
+            _needs?.Dispose();
             _international.DisposeIfCreated();
             _routeToward.DisposeIfCreated();
             _nodePort.DisposeIfCreated();

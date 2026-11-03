@@ -27,7 +27,7 @@ namespace FES.Tests
             public readonly int A, Here, There;
             readonly RouteTable _routes;
 
-            public Scene(bool samePurse = true, bool bills = false, int spread = 0)
+            public Scene(bool samePurse = true, bool bills = false, int spread = 0, string good = "wheat")
             {
                 Sim = SimulationBuilder.FromData(TestWorlds.SampleConfig("lod.mode,1", bills ? "credit.bill_cap_weeks,8" : "credit.bill_cap_weeks,0", "markets.trader_spread_permille," + spread), 42).Build();
                 Sim.AdvanceTurn(); // LOD is set on the first turn
@@ -37,7 +37,7 @@ namespace FES.Tests
                 Purses = Sim.World.Get<PurseState>();
                 Stats = Sim.World.Get<MerchantTripStats>();
                 _routes = Sim.World.Get<RouteTable>();
-                Assert.IsTrue(Sim.Database.TryGetGood("wheat", QualityGrade.Mid, out Wheat));
+                Assert.IsTrue(Sim.Database.TryGetGood(good, QualityGrade.Mid, out Wheat));
                 var nodes = Sim.World.Get<NodeTable>();
                 int route = Enumerable.Range(0, _routes.Count).First(r =>
                     nodes.Continent[_routes.From[r]] == nodes.Continent[_routes.To[r]]
@@ -323,6 +323,60 @@ namespace FES.Tests
             Assert.IsTrue(s.Agents.IsTravelling(s.A));
             Assert.AreEqual((100 - s.Markets.Stock[cell]) * 10L, s.Agents.LoadCost[s.A]);
             Assert.Greater(s.Agents.LoadCost[s.A], 0);
+        }
+
+        // DEC-124: households take necessities first, paying the price from their own cash; the goods go to their stores.
+        [Test]
+        public void Households_BuyNecessitiesFirst_EvenWhereTradersHaveNoCoins()
+        {
+            using var s = new Scene(good: "bread");
+            s.Load(100, 500);
+            s.Prices(10, 10);
+            s.SetFloat(s.Here, 0);
+            var households = s.Sim.World.Get<HouseholdCash>();
+            households.Cash[s.Here] = Plenty;
+            Assert.IsTrue(s.Markets.TryFindCell(s.Here, s.Wheat, out int cell));
+            int stored = households.HomeGrown[cell];
+            long cash = s.Agents.Cash[s.A], money = s.Money(), upkeep = s.Stats.SpentUpkeep;
+            s.Run();
+            upkeep = s.Stats.SpentUpkeep - upkeep;
+            long bought = households.HomeGrown[cell] - stored;
+            Assert.Greater(bought, 0, "the households took some");
+            Assert.AreEqual(100 - bought, s.Carried());
+            Assert.AreEqual(cash + bought * 10 - upkeep, s.Agents.Cash[s.A], "at the price, not the traders' offer, less the week's upkeep");
+            Assert.AreEqual(money, s.Money());
+        }
+
+        [Test]
+        public void WhatHouseholdsDoNotNeed_GoesToTheTraders()
+        {
+            using var s = new Scene(good: "bread");
+            s.Load(100_000, 50_000);
+            s.Prices(10, 10);
+            s.SetFloat(s.Here, Plenty);
+            var households = s.Sim.World.Get<HouseholdCash>();
+            households.Cash[s.Here] = Plenty;
+            Assert.IsTrue(s.Markets.TryFindCell(s.Here, s.Wheat, out int cell));
+            int stored = households.HomeGrown[cell];
+            s.Run();
+            Assert.Less(households.HomeGrown[cell] - stored, 100_000, "a week's need, not the whole load");
+            Assert.AreEqual(0, s.Carried(), "the rest sold to the traders");
+        }
+
+        [Test]
+        public void BuyingALoad_KeepsTwoWeeksOfUpkeep()
+        {
+            using var s = new Scene();
+            s.Prices(10, 1_000);
+            Assert.IsTrue(s.Markets.TryFindCell(s.Here, s.Wheat, out int cell));
+            s.Markets.Stock[cell] = 100_000;
+            s.Agents.Cash[s.A] = 2_000;
+            long upkeep = s.Stats.SpentUpkeep;
+            s.Run();
+            upkeep = s.Stats.SpentUpkeep - upkeep;
+            Assert.Greater(upkeep, 0);
+            Assert.Greater(s.Agents.LoadCost[s.A], 0, "it bought");
+            Assert.GreaterOrEqual(s.Agents.Cash[s.A], upkeep, "a week's upkeep is left after paying this week's");
         }
 
         [Test]

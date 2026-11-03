@@ -37,6 +37,7 @@ namespace FES.Agents
         public int BaseGoodCount;
         public int CategoryCount;
         public int BankruptWeeks;
+        public int ReserveUpkeepWeeks;
         public int MerchantHolderBase;
         public long CashLossRaw;
         public long CargoLossRaw;
@@ -172,6 +173,9 @@ namespace FES.Agents
         /// <summary>Per float: value paid this year to groups from other nations (C29).</summary>
         public NativeArray<long> Imports;
         public NativeArray<long> HouseholdCash;
+        /// <summary>DEC-124: per cell, necessities households still wish to buy this week, and their stores, which they eat first.</summary>
+        public NativeArray<long> HouseholdNeed;
+        public NativeArray<int> HomeGrown;
         public NativeArray<long> TollsByNode;
         /// <summary>Per node: the group row of the guild behind its policies, or -1 where only households stand behind them.</summary>
         [ReadOnly] public NativeArray<int> NodeInsurer;
@@ -493,12 +497,14 @@ namespace FES.Agents
 
         // Whether the traders of a market can pay for a fair lot at this price, in coins or, at home, in bills (DEC-096).
         // A price means nothing where no one has the money: that is how groups stranded on top of the world.
-        bool TradersPay(int a, int node, long price)
+        // DEC-124: households who wish for a lot of a necessity and hold its price pay as well, at home on the continent.
+        bool TradersPay(int a, int node, int cell, long price)
         {
             if (JudgeCoinUnits <= 0) return true;
             long lot = JudgeCoinUnits * price;
             int purse = NodeFloat[node];
-            return Float[purse] >= lot || (!Abroad(a, node) && !NoBills(a) && BillRoom[purse] >= lot);
+            if (Float[purse] >= lot || (!Abroad(a, node) && !NoBills(a) && BillRoom[purse] >= lot)) return true;
+            return !Abroad(a, node) && HouseholdNeed[cell] >= JudgeCoinUnits && HouseholdCash[node] >= lot;
         }
 
         // The player's groups deal in coins: only bonds are open to the player (DEC-102).
@@ -564,10 +570,31 @@ namespace FES.Agents
                 if (NeedsLicense(node, good) && !HoldsLicenses(a)) continue;
                 int cell = FindCell(node, good);
                 if (cell < 0) continue;
+                SellToHouseholds(a, node, row, cell, ref carried);
                 long price = OfferAt(cell);
                 SellForCoins(a, node, row, cell, price, ref carried);
                 SellForBills(a, node, row, cell, price, ref carried);
             }
+        }
+
+        // DEC-124: the households take the necessities they wish for this week first, at the price, as far as their cash
+        // goes; the goods go to their stores. Only at home on its continent: foreign coins pass through the traders.
+        void SellToHouseholds(int a, int node, int row, int cell, ref long carried)
+        {
+            long price = Price[cell];
+            if (HouseholdNeed[cell] <= 0 || price <= 0 || Abroad(a, node)) return;
+            long units = Min(Min(CargoQuantity[row], HouseholdNeed[cell]), Max(0, HouseholdCash[node]) / price);
+            if (units <= 0) return;
+            long paid = units * price;
+            HouseholdCash[node] -= paid;
+            AgentCash[a] += paid;
+            HouseholdNeed[cell] -= units;
+            HomeGrown[cell] = MarketStore.ClampToNonNegativeInt(HomeGrown[cell] + units);
+            CargoQuantity[row] -= (int)units;
+            CountImport(a, node, paid);
+            TripStats[8] += paid;
+            ClaimCover(a, NodeFloat[node], units, carried, paid, false);
+            BookSale(a, units, paid, ref carried);
         }
 
         void SellForCoins(int a, int node, int row, int cell, long price, ref long carried)

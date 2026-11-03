@@ -305,6 +305,7 @@ namespace FES.Agents
         public void Execute(SimContext ctx)
         {
             var config = _db.Config;
+            PayRent(config);
             if (config.MarketCreditShare.Raw <= 0 && config.MarketMomentum.Raw <= 0) return;
             Fundamentals(config);
             for (int m = 0; m < _markets.Count; m++)
@@ -314,6 +315,30 @@ namespace FES.Agents
                 Reprice(m, net, config);
             }
             if (ctx.Clock.IsQuarterEnd) CloseQuarter(ctx, config);
+        }
+
+        // DEC-134: the node's households pay the player a week of rent on their plots there, as far as their coins go, into
+        // the deposit at the nation's bank (the coins carried, outside any nation). Their own plots they pay themselves.
+        void PayRent(SimulationConfig config)
+        {
+            if (config.LandRentPpm <= 0) return;
+            var cash = _world.Get<HouseholdCash>().Cash;
+            var player = _world.Get<PlayerState>();
+            for (int n = 0; n < _land.PlayerPlots.Length; n++)
+            {
+                if (_land.PlayerPlots[n] <= 0) continue;
+                int households = _markets.Households(n);
+                long rent = Math.Min(_land.PlayerPlots[n] * _land.YearRent(n, config) / SimClock.WeeksPerYear, Math.Max(0, cash[households]));
+                if (rent <= 0) continue;
+                _world.Get<PurseState>().PayHouseholds(n, -rent);
+                int nation = _banks.NationOf(n);
+                if (nation < 0) player.CoinsAt(n) += rent;
+                else
+                {
+                    _bank.PlayerDeposit[nation] += rent;
+                    _bank.Reserve[nation] += rent;
+                }
+            }
         }
 
         // The fundamental value of what each market's households hold: their shares at the facilities' prices (DEC-129),
@@ -410,6 +435,7 @@ namespace FES.Agents
 
         void CloseQuarter(SimContext ctx, SimulationConfig config)
         {
+            GroupsTrade(ctx, config);
             Array.Clear(_markets.BurstNation, 0, _markets.BurstNation.Length);
             _markets.HistoryIndex = (_markets.HistoryIndex + 1) % AssetMarkets.History;
             IdleMoney(config);
@@ -422,6 +448,42 @@ namespace FES.Agents
                 Publish(m, premium, value, config, out var leverage, out var growth);
                 Judge(ctx, m, premium, leverage, growth, config);
             }
+        }
+
+        // DEC-134: on a dear exchange groups list what they may of their facilities' shares, for their own cash; on a cheap
+        // one groups with spare cash buy back the households' shares, with half of it.
+        void GroupsTrade(SimContext ctx, SimulationConfig config)
+        {
+            if (config.GroupListPremium.Raw <= 0 && config.GroupBuybackPremium.Raw <= 0) return;
+            var facilities = _world.Get<FacilityTable>();
+            var groups = _world.Get<GroupTable>();
+            for (int f = 0; f < facilities.Count; f++)
+            {
+                int group = facilities.Group[f];
+                int nation = _banks.NationOf(facilities.Node[f]);
+                if (facilities.Owner[f] != OwnerIds.Npc || group < 0 || nation < 0 || facilities.Level[f] == 0 || groups.IsPlayer[group] != 0
+                    || _db.Facilities[facilities.DefIndex[f]].StateOwned) continue;
+                var premium = Fx.FromRaw(_markets.Premium[nation]);
+                if (config.GroupListPremium.Raw > 0 && premium >= config.GroupListPremium)
+                {
+                    int room = config.FacilityMaxListedShares - _shares.Outside(f);
+                    if (room > 0) groups.Cash[group] += ShareBook.List(_world, _db, ctx.Turn, f, nation, room * ShareBook.Price(_world, _db, f));
+                }
+                else if (config.GroupBuybackPremium.Raw > 0 && premium <= config.GroupBuybackPremium) BuyBack(f, group, nation, config, groups);
+            }
+        }
+
+        void BuyBack(int f, int group, int nation, SimulationConfig config, GroupTable groups)
+        {
+            int held = _shares.Held(f, ShareTable.Households(nation));
+            long spare = groups.Cash[group] - config.BondGroupKeepTimes * config.GroupStartCash[groups.Kind[group]];
+            if (held <= 0 || spare <= 0) return;
+            long price = ShareBook.Price(_world, _db, f);
+            int count = (int)Math.Min(held, spare / 2 / price);
+            if (count <= 0) return;
+            groups.Cash[group] -= count * price;
+            MoneyLedger.PayNationHouseholds(_world, nation, count * price);
+            _shares.Add(f, ShareTable.Households(nation), -count);
         }
 
         // Buyers expect the last quarter's change to go on, and new idle money looks for something to buy.

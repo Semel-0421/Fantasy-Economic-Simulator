@@ -197,3 +197,9 @@ short.open_permille,1500
 short.call_permille,1300
 short.fee_permille,50
 short.max_lent_shares,20
+# What the bubble steps left out (DEC-134): land under houses earns rent, 30 parts per million of the node's income a year, ten years of it in a plot's value; a crunch lifts loan rates; groups list their shares on a dear exchange and buy them back on a cheap one.
+land.rent_ppm,30
+land.rent_years,10
+finance.crunch_lifts_rates,1
+share.group_list_premium_permille,1300
+share.group_buyback_premium_permille,800

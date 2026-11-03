@@ -18,14 +18,14 @@ namespace FES.Tests
 
         static readonly (string name, ulong seed, int years, string[] config, string hash)[] Runs =
         {
-            ("Default_Seed1_ThirtyYears", 1, 30, new string[0], "DFD186F94CE80AFF7971C80B7B7314B4"),
-            ("Default_Seed2", 2, 5, new string[0], "FDB26D54AAFCCA45CDF37A4253C93A8D"),
-            ("Default_Seed3", 3, 5, new string[0], "986CC6E7636020FA23F272C150BC197F"),
-            ("Aggregate", 1, 5, new[] { "lod.mode,2" }, "298E5F67382521969A881DDBBB02AEF0"),
-            ("Mixed", 1, 5, new[] { "lod.mode,0" }, "0ECDCCF94B923592FDD25801640BE5D3"),
-            ("Rumors", 1, 5, new[] { "merchants.rumors,1" }, "01F55DD52E249BA1C01FFBCEA331979C"),
-            ("PlainMerchants", 1, 5, new[] { "merchants.must_act,0", "merchants.bids,0", "merchants.weigh_sales,0", "merchants.judge_hops,1" }, "40E9B070A8DC88945C4392BA2A19F484"),
-            ("NoBills", 1, 5, new[] { "credit.bill_cap_weeks,0" }, "3673AFF917FC5F93251ACEF15E91CC77"),
+            ("Default_Seed1_ThirtyYears", 1, 30, new string[0], "F0192F25685A8BF90F2646A6160A1490"),
+            ("Default_Seed2", 2, 5, new string[0], "80D2296DF16C8E6DBAFC5F7B23AC6A38"),
+            ("Default_Seed3", 3, 5, new string[0], "8CBA20A37EB92A4E9C12CC44800FF626"),
+            ("Aggregate", 1, 5, new[] { "lod.mode,2" }, "EE033C1B0C6CCBFDFA95A4ABFF8CF720"),
+            ("Mixed", 1, 5, new[] { "lod.mode,0" }, "D5CD8E057341C7BE96C5E7936187A38F"),
+            ("Rumors", 1, 5, new[] { "merchants.rumors,1" }, "3E6D8CE63A3B221E9C8E4B7B6F70ED0F"),
+            ("PlainMerchants", 1, 5, new[] { "merchants.must_act,0", "merchants.bids,0", "merchants.weigh_sales,0", "merchants.judge_hops,1" }, "56390FF03008F28F8233C5D0DFFAEFFA"),
+            ("NoBills", 1, 5, new[] { "credit.bill_cap_weeks,0" }, "164EFE072BB314F8EEA54E0674D90893"),
         };
 
         static IEnumerable<TestCaseData> Cases() => Runs.Select(r => new TestCaseData(r.seed, r.years, r.config, r.hash).SetName("GoldenRun_" + r.name));

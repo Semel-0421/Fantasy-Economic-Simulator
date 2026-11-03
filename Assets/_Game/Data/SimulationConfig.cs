@@ -486,6 +486,14 @@ namespace FES.Data
         public Fx ShortCallShare = Fx.FromPermille(1300);
         public Fx ShortFee = Fx.FromPermille(50);
         public int ShortMaxLentShares = 20;
+        /// <summary>DEC-134: land rent as parts per million of the node's households' yearly income, split over its plots under houses, and the years of it in a plot's value.</summary>
+        public long LandRentPpm = 30;
+        public int LandRentYears = 10;
+        /// <summary>DEC-134: a credit crunch lifts loan rates as a rate spike does.</summary>
+        public bool CrunchLiftsRates = true;
+        /// <summary>DEC-134: groups list their facilities' shares at or above this premium, and buy them back at or below that; zero for never.</summary>
+        public Fx GroupListPremium = Fx.FromPermille(1300);
+        public Fx GroupBuybackPremium = Fx.FromPermille(800);
         /// <summary>DEC-131: a bank's cover (reserve over loans) under which a run starts and a heated market bursts; zero for none.</summary>
         public Fx BankRunCover = Fx.Zero;
         /// <summary>Loan rates are multiplied by this during a rate spike.</summary>

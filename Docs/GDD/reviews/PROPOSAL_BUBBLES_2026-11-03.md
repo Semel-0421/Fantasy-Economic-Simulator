@@ -1,5 +1,5 @@
 # Proposal: credit bubbles, a stock market and a property market (2026-11-03)
-Decided 2026-11-03: start with step 1, land, on these values (DEC-128). Built: steps 1 to 6 (DEC-128 to DEC-133). Korean copy: [PROPOSAL_BUBBLES_2026-11-03.ko.md](PROPOSAL_BUBBLES_2026-11-03.ko.md). Nothing here is in the code. Code as of `1d56283`.
+Decided 2026-11-03: start with step 1, land, on these values (DEC-128). Built: steps 1 to 6 (DEC-128 to DEC-133), and what they left out (DEC-134). Korean copy: [PROPOSAL_BUBBLES_2026-11-03.ko.md](PROPOSAL_BUBBLES_2026-11-03.ko.md). Nothing here is in the code. Code as of `1d56283`.
 
 ## What the owner decided
 1. Three assets for speculation: shares in facilities (A), shares in trading ventures (C), and land (D).

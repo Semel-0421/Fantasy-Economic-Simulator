@@ -219,7 +219,9 @@ namespace FES.Agents
             if (reserveRatio < config.TargetReserveRatio)
                 multiplier = reserveRatio.Raw <= 0 ? config.MaxLoanRateMultiplier : Fx.Min(config.TargetReserveRatio / reserveRatio, config.MaxLoanRateMultiplier);
             var rate = config.LoanInterestPerYear * multiplier;
-            return ev == FinancialEventKind.RateSpike ? rate * config.RateSpikeMultiplier : rate;
+            // A rate spike, and since DEC-134 a credit crunch, which follows a burst (DEC-131), lift the rate.
+            bool lifted = ev == FinancialEventKind.RateSpike || (ev == FinancialEventKind.CreditCrunch && config.CrunchLiftsRates);
+            return lifted ? rate * config.RateSpikeMultiplier : rate;
         }
 
         /// <summary>Interest for a whole term at a yearly rate, added up front (DEC-037).</summary>

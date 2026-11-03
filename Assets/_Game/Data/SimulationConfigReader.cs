@@ -24,6 +24,7 @@ namespace FES.Data
             ApplyLaborTaxAndDefense(v);
             ApplyStateProjects(v);
             ApplyBankRatesAndFinance(v);
+            ApplyAssetMarkets(v);
             ApplyLicensesAndSpecialties(v);
             ApplyMerchantJudgement(v);
             ApplyCredit(v);
@@ -398,6 +399,18 @@ namespace FES.Data
             BankRunWithdrawShare = Permille(v, "finance.bank_run_withdraw_permille", BankRunWithdrawShare);
             RateSpikeMultiplier = Permille(v, "finance.rate_spike_permille", RateSpikeMultiplier);
             BankRunCover = Permille(v, "finance.run_cover_permille", BankRunCover);
+        }
+
+        // DEC-131 to DEC-134: land rent, short selling, ventures and the asset markets.
+        void ApplyAssetMarkets(Dictionary<string, string> v)
+        {
+            LandRentPpm = Long(v, "land.rent_ppm", LandRentPpm);
+            LandRentYears = Int(v, "land.rent_years", LandRentYears);
+            CrunchLiftsRates = Int(v, "finance.crunch_lifts_rates", CrunchLiftsRates ? 1 : 0) != 0;
+            GroupListPremium = Permille(v, "share.group_list_premium_permille", GroupListPremium);
+            GroupBuybackPremium = Permille(v, "share.group_buyback_premium_permille", GroupBuybackPremium);
+            if (LandRentPpm < 0 || LandRentYears < 0 || (GroupListPremium.Raw > 0 && GroupListPremium <= GroupBuybackPremium))
+                throw new FormatException("config.csv: land rent must not be negative, and groups list above where they buy back.");
             ShortLicenceFee = Long(v, "short.licence_fee", ShortLicenceFee);
             ShortLicenceDeposit = Long(v, "short.licence_deposit", ShortLicenceDeposit);
             ShortLicenceWeeks = Int(v, "short.licence_weeks", ShortLicenceWeeks);

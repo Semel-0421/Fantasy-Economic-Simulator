@@ -33,6 +33,7 @@ faster than its cash at the risk of losing what it owns.
 - [Confirmed] The loan limit is based on the value of collateral (DEC-037). Besides facilities, bank
   deposits, owned ships, cargo stored in warehouses and cargo on the cart count (DEC-038), and shares and
   land at their price (DEC-130).
+- [Confirmed] A credit crunch lifts loan rates as a rate spike does (DEC-134).
 - [Confirmed] Financial events follow the asset markets (DEC-131): a burst brings a credit crunch on the nations its
   market reaches, and a bank under its cover floor has a run. The shipped data draws none at random.
 - [Confirmed] A margin call: when the debt rises above a share of the collateral, the player has some weeks

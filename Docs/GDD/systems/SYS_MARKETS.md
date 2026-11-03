@@ -136,3 +136,5 @@ See SYS-STATE-ECONOMY (DEC-070, DEC-071). Measured income per head is after the 
   (DEC-132).
 - [Confirmed] The player sells short on an exchange whose licence they hold (a year of trading there and a deposit at
   its bank), with a margin in the deposit that a rising price calls (DEC-133).
+- [Confirmed] Land under houses earns rent, part of a plot's value; groups list their shares on a dear exchange and
+  buy them back on a cheap one (DEC-134).

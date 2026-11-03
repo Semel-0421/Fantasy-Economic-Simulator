@@ -17,14 +17,16 @@ namespace FES.Agents
         public readonly int[] Plots, Used, PlayerPlots;
         readonly NodeTable _nodes;
         readonly AssetMarkets _markets;
+        readonly HouseholdState _households;
 
         public string Key => "agents.land";
         public int Version => 1;
 
-        public LandState(NodeTable nodes, SimulationConfig config, FacilityTable facilities, AssetMarkets markets)
+        public LandState(NodeTable nodes, SimulationConfig config, FacilityTable facilities, AssetMarkets markets, HouseholdState households)
         {
             _nodes = nodes;
             _markets = markets;
+            _households = households;
             Plots = new int[nodes.Count];
             Used = new int[nodes.Count];
             PlayerPlots = new int[nodes.Count];
@@ -35,9 +37,19 @@ namespace FES.Agents
         /// <summary>Plots the node's households hold, for sale.</summary>
         public int Free(int n) => Math.Max(0, Plots[n] - Used[n] - PlayerPlots[n]);
 
-        /// <summary>The fundamental price, by scarcity.</summary>
+        /// <summary>The fundamental price: by scarcity, and some years of the plot's rent (DEC-134).</summary>
         public long Fundamental(int n, SimulationConfig config) =>
-            config.LandValue[_nodes.Level[n]] * Plots[n] / Math.Max(1, Free(n));
+            config.LandValue[_nodes.Level[n]] * Plots[n] / Math.Max(1, Free(n)) + config.LandRentYears * YearRent(n, config);
+
+        /// <summary>
+        /// DEC-134: [Draft] a plot not under a facility, under houses, earns a share of the node's households' income, split
+        /// over those plots, so rent per plot rises as facilities take land and as the town earns more.
+        /// </summary>
+        public long YearRent(int n, SimulationConfig config)
+        {
+            long weekly = Fx.MulIntRaw(_households.Population[n], _households.IncomePerHead[n]);
+            return weekly * SimClock.WeeksPerYear / 1_000_000 * config.LandRentPpm / Math.Max(1, Plots[n] - Used[n]);
+        }
 
         /// <summary>The market price: the fundamental times the premium of the node's property market (DEC-131).</summary>
         public long Price(int n, SimulationConfig config) => Math.Max(1, _markets.PropertyPremium(n).MulInt(Fundamental(n, config)));

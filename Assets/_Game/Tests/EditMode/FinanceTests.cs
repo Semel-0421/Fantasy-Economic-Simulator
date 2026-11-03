@@ -310,7 +310,7 @@ namespace FES.Tests
                 int k = banks.NationIndex(e.Nation.Value);
                 Assert.AreEqual(e.Kind, finance.EventOf(k));
                 if (e.Kind == FinancialEventKind.BankRun) Assert.Less(bank.Reserve[k], reserves[k]);
-                var expectedRate = e.Kind == FinancialEventKind.RateSpike ? config.LoanInterestPerYear * config.RateSpikeMultiplier : config.LoanInterestPerYear;
+                var expectedRate = e.Kind == FinancialEventKind.RateSpike || e.Kind == FinancialEventKind.CreditCrunch ? config.LoanInterestPerYear * config.RateSpikeMultiplier : config.LoanInterestPerYear;
                 Assert.AreEqual(expectedRate.Raw, finance.LoanRate[k]);
             }
 

@@ -35,7 +35,7 @@ namespace FES.Agents
             var facilities = builder.World.Add(new FacilityTable());
             SpawnFacilities(facilities, nodes, db, seed);
             var markets = builder.World.Add(new AssetMarkets(nodes, banks.NationCount));
-            builder.World.Add(new LandState(nodes, db.Config, facilities, markets));
+            builder.World.Add(new LandState(nodes, db.Config, facilities, markets, builder.World.Get<HouseholdState>()));
             builder.World.Add(new ShareTable());
             builder.World.Add(new ShortTable());
             builder.World.Add(new ShortLicences(markets.Count, banks.NationCount));

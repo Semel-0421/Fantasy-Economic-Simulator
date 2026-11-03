@@ -372,6 +372,16 @@ related: [SYS-MARKETS, SYS-MERCHANTS, SYS-PRODUCTION, SYS-INVENTORY, SYS-TRAVEL-
 
 ## Decision log
 
+### DEC-134 What the bubble steps left out: rent, crunches that lift rates, groups trading their shares
+- Date: 2026-11-03
+- Decision: [Confirmed] The parts of [PROPOSAL_BUBBLES_2026-11-03](reviews/PROPOSAL_BUBBLES_2026-11-03.md) that steps 1 to 6 left out, built before balancing, which the owner set for the very end.
+  - [Draft] Rent (proposal section 1): a plot not under a facility, under houses, earns 30 parts per million of its node's households' yearly income (`land.rent_ppm`), split over those plots, so rent per plot rises as facilities take land and as the town earns more. A plot's fundamental value is its scarcity price (DEC-128) plus ten years of rent (`land.rent_years`). The households pay rent on the player's plots each week, as far as their coins go, into the player's deposit at the nation's bank; on their own plots they pay themselves, and a facility's plot belongs to its owner, so no rent moves there.
+  - A credit crunch lifts loan rates as a rate spike does (proposal section 4, `finance.crunch_lifts_rates`).
+  - [Draft] Supply and buyers (proposal section 3): each quarter, on an exchange at 1.3 or more (`share.group_list_premium_permille`) groups list what they may of their facilities' shares to the nation's households, for their own cash; at 0.8 or less (`share.group_buyback_premium_permille`) groups with cash above twice their starting cash buy back the households' shares with half of what is above.
+- Reason: the owner's instruction to go on with the next step and leave balancing and measurement to the last.
+- Limits: not measured. Land is not yet bought to be resold, and groups do not borrow on margin. With the shipped values a city plot's rent is about 260 over ten years and a village's about 2,700, beside scarcity prices of about 2,400 and 800: first values for the balancing step.
+- Impact: SYS-BANKING, SYS-MARKETS, SYS-PRODUCTION, 02_Data_Formats
+
 ### DEC-133 The player sells short under a licence; the markets' screens
 - Date: 2026-11-03
 - Decision: [Confirmed] Step 6 of [PROPOSAL_BUBBLES_2026-11-03](reviews/PROPOSAL_BUBBLES_2026-11-03.md), with the owner's condition for short selling: a licence per exchange (a nation's stock exchange, or a continent's), bought at the exchange for a fee once the player has traded there for a year and holds a deposit at its bank.

@@ -32,12 +32,12 @@ mod state_projects;
 mod tiers_and_terrain;
 mod traders_and_nobles;
 
-use crate::csv::CsvEnum;
 use crate::{CsvTable, DataError};
 use fes_core::det::det_hash;
 use reader::Reader;
 use std::collections::BTreeMap;
 
+pub use fes_core::WorldLevel;
 pub use fields::SimulationConfig;
 
 /// The name of the config file in a data source.
@@ -48,49 +48,6 @@ pub const CONFIG_FILE: &str = "config.csv";
 pub struct TierCadence {
     pub period: i32,
     pub offset: i32,
-}
-
-/// A node's level in the world tree.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum WorldLevel {
-    #[default]
-    Continent,
-    Nation,
-    Region,
-    City,
-    Village,
-}
-
-impl WorldLevel {
-    /// Every level, in enum order.
-    pub const ALL: [WorldLevel; 5] = [
-        WorldLevel::Continent,
-        WorldLevel::Nation,
-        WorldLevel::Region,
-        WorldLevel::City,
-        WorldLevel::Village,
-    ];
-
-    /// The C# enum name.
-    pub fn name(self) -> &'static str {
-        match self {
-            WorldLevel::Continent => "Continent",
-            WorldLevel::Nation => "Nation",
-            WorldLevel::Region => "Region",
-            WorldLevel::City => "City",
-            WorldLevel::Village => "Village",
-        }
-    }
-}
-
-impl CsvEnum for WorldLevel {
-    const TYPE_NAME: &'static str = "WorldLevel";
-
-    fn from_name(name: &str) -> Option<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|level| level.name().eq_ignore_ascii_case(name))
-    }
 }
 
 impl Default for SimulationConfig {

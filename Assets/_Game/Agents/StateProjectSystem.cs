@@ -336,6 +336,9 @@ namespace FES.Agents
         void OpenFacility(in StateProject p)
         {
             _development.LandLevel[p.Node]++;
+            var land = _world.Get<LandState>();
+            land.Plots[p.Node]++; // the state opens new land for it (DEC-128)
+            land.Used[p.Node]++;
             var def = _db.Facilities[p.DefIndex];
             // A family must exist to buy it at auction; the state stakes it, as nothing else made its coins.
             var groups = _world.Get<GroupTable>();

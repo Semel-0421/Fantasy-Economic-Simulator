@@ -117,6 +117,7 @@ namespace FES.Agents
         GroupTable _groups;
         GroupDirectory _directory;
         DemandForecast _forecast;
+        LandState _land;
         CompanyRooms _rooms;
         // Scanning the tables for each of 1,580 nodes is most of a new-year turn.
         List<int>[] _facilitiesAt;
@@ -139,6 +140,7 @@ namespace FES.Agents
             _groups = ctx.World.Get<GroupTable>();
             _directory = new GroupDirectory(_groups, _nodes);
             _forecast = ctx.World.Get<DemandForecast>();
+            _land = ctx.World.Get<LandState>();
             _rooms = new CompanyRooms(ctx.World, _db);
             _facilitiesAt = new List<int>[_nodes.Count];
             _groupsAt = new List<int>[_nodes.Count];
@@ -277,9 +279,11 @@ namespace FES.Agents
         {
             var config = _db.Config;
             int level = _nodes.Level[node];
+            if (_land.Free(node) <= 0) return; // DEC-128: no plot to build on
+            long plot = _land.Price(node, config);
             foreach (var def in _db.Facilities)
             {
-                long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier];
+                long cost = config.FacilityValue[(int)def.Tier] + config.FacilityStartCash[(int)def.Tier] + plot;
                 if (cost > cash || def.StateOwned || !Allowed(def, level) || !FacilityPlaces.Allowed(def, _nodes, node) || !Wanted(node, def, Fx.One)) continue;
                 long gain = UnitMargin(node, def) - config.FacilityUpkeep[(int)def.Tier];
                 if (Better(gain, cost, best.Gain, best.Cost, cash))
@@ -303,7 +307,8 @@ namespace FES.Agents
             for (int g = groupsBefore; g < _groups.Count; g++) _groups.Cash[group] -= _groups.Cash[g];
             var chosen = _db.Facilities[project.Def];
             long start = config.FacilityStartCash[(int)chosen.Tier];
-            _purses.PayHouseholds(node, project.Cost - start);
+            _land.TryBuild(ctx.World, config, node, out _);
+            _purses.PayHouseholds(node, project.Cost - start); // the builders, and the plot's price to the households who sold it
             var id = _facilities.Add(node, project.Def, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, start);
             _facilities.Group[id.Value] = group;
             _facilitiesAt[node].Add(id.Value);

@@ -112,7 +112,9 @@ namespace FES.Agents
             long facilityCash = config.FacilityStartCash[(int)def.Tier];
             long mostGroupCash = config.GroupStartCash[(int)GroupKind.Company] + config.GroupStartCash[(int)GroupKind.Guild]
                 + config.GroupStartCash[(int)GroupKind.PrivateEnterprise];
-            if (MoneyLedger.StateExcess(_world, config, policy.Nation) < facilityCash + mostGroupCash) return;
+            var land = _world.Get<LandState>();
+            long plot = land.Price(site, config);
+            if (!CanBuild(land, site, policy.Nation, facilityCash + mostGroupCash + plot)) return;
 
             int group = ExistingProducer(policy.Nation, def.Index);
             int groupsBefore = _groupTable.Count;
@@ -124,9 +126,16 @@ namespace FES.Agents
             _groups.PrivateAt(site, config);
             for (int g = groupsBefore; g < _groupTable.Count; g++) _bank.Reserve[policy.Nation] -= _groupTable.Cash[g];
             _bank.Reserve[policy.Nation] -= facilityCash;
+            land.TryBuild(_world, config, site, out _);
+            _bank.Reserve[policy.Nation] -= plot; // the state buys the plot from the households there
+            _world.Get<PurseState>().PayHouseholds(site, plot);
             var id = _facilities.Add(site, def.Index, OwnerIds.Npc, ControlMode.Automated, 1, Fx.One, facilityCash);
             _facilities.Group[id.Value] = group;
         }
+
+        // A free plot to build on (DEC-128) and the money for it all above the reserve's target.
+        bool CanBuild(LandState land, int site, int nation, long cost) =>
+            land.Free(site) > 0 && MoneyLedger.StateExcess(_world, _db.Config, nation) >= cost;
 
         int ExistingProducer(int nation, int defIndex)
         {

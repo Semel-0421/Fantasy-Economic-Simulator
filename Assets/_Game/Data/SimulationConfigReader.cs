@@ -163,6 +163,12 @@ namespace FES.Data
                 FacilityUpkeep[t] = Long(v, $"facility.{tier}.upkeep", FacilityUpkeep[t]);
                 FacilityValue[t] = Long(v, $"facility.{tier}.value", FacilityValue[t]);
             }
+            for (int l = 0; l < WorldLevels.Count; l++)
+            {
+                string level = ((WorldLevel)l).ToString().ToLowerInvariant();
+                LandPlots[l] = Int(v, $"land.{level}.plots", LandPlots[l]);
+                LandValue[l] = Long(v, $"land.{level}.value", LandValue[l]);
+            }
             for (int t = 0; t < RouteTerrains.Count; t++)
             {
                 string terrain = ((RouteTerrain)t).ToString().ToLowerInvariant();

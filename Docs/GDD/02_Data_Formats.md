@@ -135,6 +135,7 @@ changing a default in code does.
 | state.facility_levy_permille | 500 | share of a state enterprise's dividends the state collects ([Draft]) |
 | merchants.<level> | 50/50/30/10/3 | merchant groups per node |
 | merchants.class<0-2>.start_cash, merchants.class<0-2>.share_permille | 9500/1800/100, 100/300/400 | starting cash and share of the top, average and most common classes; the rest start with player.start_cash (DEC-119) |
+| land.<level>.plots, land.<level>.value | 10/10/10/40/12, 2000/2000/2000/1500/500 | plots per node and a plot's value when all are free (DEC-128) |
 | households.alms_permille, households.luxury_wealth_permille, households.luxury_wealth_cap_permille, households.luxury_tax_permille | 20, 1000, 4000, 100 | the top quintile's weekly alms limit; luxury demand per year of income held and its cap; the tax on luxury purchases (DEC-127) |
 | demand.necessity_choke_permille | 5000 | price / anchor from which households buy no necessities; below it necessities follow a constant-elasticity curve (DEC-126) |
 | facility.repurpose_cost_permille | 500 | share of the new type's value that a change of use costs (DEC-125) |

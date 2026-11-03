@@ -411,6 +411,9 @@ namespace FES.Data
         public readonly long[] FacilityValue = { 3000, 8000, 5000 };
         /// <summary>DEC-125: share of the new type's value that a change of use costs.</summary>
         public Fx FacilityRepurposeShare = Fx.FromPermille(500);
+        /// <summary>DEC-128: plots per node by level, and a plot's value when all are free.</summary>
+        public readonly int[] LandPlots = { 10, 10, 10, 40, 12 };
+        public readonly long[] LandValue = { 2000, 2000, 2000, 1500, 500 };
         /// <summary>Share of each continent's starting coin supply its international bank holds, to change coins with (P13a).</summary>
         public Fx InternationalBankReserveShare = Fx.FromPermille(20);
         /// <summary>Reserve ratio (reserve over reserve plus loans owed) below which loan rates rise (DEC-042).</summary>

@@ -154,3 +154,8 @@ core.absorb,1
 facility.close_loss_years,999
 # A facility taken over after a bankruptcy may change its use once, for half the new type's value (DEC-125).
 facility.repurpose_cost_permille,500
+# Plots per node and a plot's value when all are free; a facility needs one, and the price rises as they get few (DEC-128).
+land.city.plots,40
+land.village.plots,12
+land.city.value,1500
+land.village.value,500

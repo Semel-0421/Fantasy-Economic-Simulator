@@ -11,6 +11,7 @@ use fes_save::{read_save, RawSection};
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 const MAGIC: &[u8; 8] = b"FESSTEP1";
 
@@ -113,6 +114,8 @@ pub enum StepResult {
 #[derive(Clone, Debug, Default)]
 pub struct ReplayReport {
     pub steps: Vec<StepResult>,
+    /// Wall time of each ported system's run (id, time), in record order; excludes the compare.
+    pub timings: Vec<(String, Duration)>,
 }
 
 impl ReplayReport {
@@ -151,9 +154,11 @@ pub fn replay_turn_with(
         for s in &record.sections {
             expected.insert(s.key.clone(), s.clone());
         }
-        report
-            .steps
-            .push(replay_record(&mut sim, record, &expected, ported)?);
+        let (result, took) = replay_record(&mut sim, record, &expected, ported)?;
+        if let Some(t) = took {
+            report.timings.push((record.label.clone(), t));
+        }
+        report.steps.push(result);
         if sim.world_hash() != record.world_hash {
             return Err(invalid(format!(
                 "{}: world hash {} differs from recorded {} after resync",
@@ -171,11 +176,14 @@ fn replay_record(
     record: &StepRecord,
     expected: &BTreeMap<String, RawSection>,
     ported: &[&str],
-) -> Result<StepResult, SimError> {
+) -> Result<(StepResult, Option<Duration>), SimError> {
     let label = record.label.clone();
+    let mut took = None;
     let runs_rust = match label.split_once(':') {
         Some(("system", id)) if ported.contains(&id) => {
+            let start = Instant::now();
             sim.pipeline.run_system(id, &mut sim.ctx)?;
+            took = Some(start.elapsed());
             true
         }
         Some(("system", _)) => false,
@@ -193,7 +201,7 @@ fn replay_record(
         for s in &record.sections {
             sim.ctx.world.load_section(s)?;
         }
-        return Ok(StepResult::Applied { label });
+        return Ok((StepResult::Applied { label }, None));
     }
     let mut first = None;
     // Resync: the recorded state wins from here on.
@@ -207,10 +215,11 @@ fn replay_record(
             sim.ctx.world.load_section(e)?;
         }
     }
-    Ok(match first {
+    let result = match first {
         Some((key, offset)) => StepResult::Different { label, key, offset },
         None => StepResult::Equal { label },
-    })
+    };
+    Ok((result, took))
 }
 
 /// Offset of the first differing byte (the shorter length when one is a prefix of the other).

@@ -19,3 +19,4 @@ jobs:
       - run: cargo test --all-features
       - run: bash scripts/check_file_length.sh
       - run: cargo run -p fes-parity -- --fixtures fixtures
+      - run: cargo run -p fes-parity -- --fixtures fixtures --steps

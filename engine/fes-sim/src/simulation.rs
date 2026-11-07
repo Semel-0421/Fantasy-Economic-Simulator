@@ -121,6 +121,12 @@ impl Simulation {
         &self.ctx.world
     }
 
+    /// Mutable access for tests that stage a state before stepping.
+    #[cfg(feature = "testing")]
+    pub fn context_mut(&mut self) -> &mut SimContext {
+        &mut self.ctx
+    }
+
     pub fn context(&self) -> &SimContext {
         &self.ctx
     }

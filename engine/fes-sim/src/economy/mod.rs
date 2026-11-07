@@ -5,7 +5,9 @@ pub mod household_cash;
 pub mod households;
 pub mod layout;
 pub mod markets;
+pub mod modifier_fold;
 pub mod modifiers;
+pub mod world_events;
 
 use crate::error::SimError;
 use crate::module::{Module, SimBuilder};
@@ -19,7 +21,9 @@ pub use household_cash::HouseholdCash;
 pub use households::HouseholdState;
 pub use layout::MarketLayoutBuilder;
 pub use markets::{MarketFlows, MarketStore};
+pub use modifier_fold::ModifierFoldSystem;
 pub use modifiers::{MarketModifier, MarketModifierTable};
+pub use world_events::{WorldEventStarted, WorldEventSystem};
 
 /// Writes a column the way C# `NativeIO.WriteArray` does: its length, then the elements.
 pub(crate) fn write_i32s(w: &mut DotNetWriter<Vec<u8>>, column: &[i32]) {
@@ -62,7 +66,7 @@ pub(crate) fn read_i64s(r: &mut DotNetReader, column: &mut [i64]) -> Result<(), 
 }
 
 /// Registers markets, modifiers, flows, currency, households and household cash (C# `EconomyModule`).
-/// Requires the world module. Registers no systems yet.
+/// Requires the world module. Registers the world-event and modifier-fold systems.
 pub struct EconomyModule;
 
 impl Module for EconomyModule {
@@ -91,6 +95,8 @@ impl Module for EconomyModule {
         b.world.add(MarketModifierTable::default())?;
         b.world.add(currency)?;
         b.world.add(households)?;
-        b.world.add(cash)
+        b.world.add(cash)?;
+        b.add_system(Box::new(WorldEventSystem))?;
+        b.add_system(Box::new(ModifierFoldSystem))
     }
 }

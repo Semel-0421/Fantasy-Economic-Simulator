@@ -17,6 +17,7 @@ pub mod ledger;
 pub mod licenses;
 pub mod loans;
 pub mod lod;
+pub mod lod_system;
 pub mod merchants;
 pub mod migration;
 pub mod module;
@@ -50,6 +51,7 @@ pub use land::LandState;
 pub use licenses::LicenseTable;
 pub use loans::{NpcLoanTable, TraderLoans};
 pub use lod::LodState;
+pub use lod_system::{DefaultLodPolicy, LodPolicy, LodPolicyService, LodSystem};
 pub use merchants::{AgentTable, NodeMemory};
 pub use migration::MigrationState;
 pub use module::AgentsModule;
@@ -158,5 +160,8 @@ pub fn add_society_tables(b: &mut SimBuilder) -> Result<(), SimError> {
     let lod = LodState::new(nodes.count());
     b.world.add(policy)?;
     b.world.add(GuidanceState::default())?;
-    b.services.add(lod)
+    b.services.add(lod)?;
+    b.services
+        .add(LodPolicyService(Box::new(DefaultLodPolicy)))?;
+    b.add_system(Box::new(LodSystem))
 }

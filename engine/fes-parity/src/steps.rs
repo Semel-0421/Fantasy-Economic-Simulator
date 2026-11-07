@@ -6,7 +6,12 @@ use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
 /// Rust systems that run in step replays; every other recorded system is applied from the record.
-pub const PORTED_SYSTEMS: &[&str] = &["core.commands"];
+pub const PORTED_SYSTEMS: &[&str] = &[
+    "core.commands",
+    "agents.lod",
+    "economy.world_events",
+    "economy.modifier_fold",
+];
 
 pub struct StepOptions {
     pub fixtures: PathBuf,

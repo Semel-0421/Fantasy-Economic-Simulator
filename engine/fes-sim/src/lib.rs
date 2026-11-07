@@ -7,6 +7,8 @@ pub mod context;
 pub mod economy;
 pub mod error;
 pub mod events;
+#[cfg(feature = "testing")]
+pub mod full_run;
 pub mod module;
 pub mod pipeline;
 #[cfg(feature = "testing")]

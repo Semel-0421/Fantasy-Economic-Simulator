@@ -1,5 +1,6 @@
 //! Parity runner: compares the Rust engine to the C# fixtures, section by section.
 pub mod report;
+pub mod runs;
 pub mod steps;
 
 use fes_data::database::{data_hash, GameDatabase, CONFIG_FILE};

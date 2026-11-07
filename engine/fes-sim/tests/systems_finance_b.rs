@@ -14,11 +14,13 @@ use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::groups::KIND_STATE_ENTERPRISE;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
 use fes_sim::agents::investment::{output_scale, FacilityFounded};
+use fes_sim::agents::merchant_vehicles::{MerchantVehicleSystem, CART, PACK};
 use fes_sim::agents::migration_system::{EmancipationEnacted, MigrationSystem};
 use fes_sim::agents::nobles::collect_tax;
 use fes_sim::agents::places::{allowed, project_kind};
 use fes_sim::agents::state_projects::{StateProjectFinished, StateProjectSystem};
 use fes_sim::agents::subsidies::{SubsidyEnacted, SubsidySystem};
+use fes_sim::agents::OrderTable;
 use fes_sim::agents::PurseState;
 use fes_sim::agents::{
     AgentTable, BankState, FacilityTable, IncomeTaxState, NobleState, NpcLoanTable,
@@ -38,6 +40,7 @@ const NEW: &[&str] = &[
     "agents.state_projects",
     "agents.subsidies",
     "agents.investment",
+    "agents.merchant_vehicles",
 ];
 /// Earlier askers of this turn's bond offers (C# `BondOffers`) run in Rust too, so investment sees
 /// the offers they left (see `plan4-audit.md`).
@@ -607,4 +610,45 @@ fn expansion_output_grows_faster_than_the_level() {
     assert_eq!(output_scale(1, config), fes_core::Fx::ONE);
     assert_eq!(output_scale(2, config), fes_core::Fx::from_permille(2500));
     assert_eq!(output_scale(5, config), fes_core::Fx::from_int(10));
+}
+
+// ---- merchant vehicles (C# MerchantVehicleSystem; InvestmentTests.Merchants_BuyBetterVehicles
+// needs agents.orders, Task 6) ----
+
+#[test]
+fn a_rich_group_on_pack_animals_orders_a_cart_once() {
+    let mut sim = build_sample(&["merchants.vehicle_wear_permille,0"]);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    let agents = sim.context_mut().world.get_mut::<AgentTable>();
+    let a = (0..agents.count())
+        .find(|&a| agents.mode[a] == 1)
+        .expect("automated group");
+    agents.vehicle[a] = PACK;
+    agents.cash[a] = 1_000_000_000;
+    let orders = |sim: &Simulation| {
+        let o = sim.context().world.get::<OrderTable>();
+        (0..o.count())
+            .filter(|&r| o.buyer[r] == a as i32)
+            .map(|r| o.vehicle[r])
+            .collect::<Vec<_>>()
+    };
+    sim.context_mut()
+        .world
+        .get_mut::<OrderTable>()
+        .buyer
+        .retain(|_| true);
+    let before = orders(&sim).len();
+    MerchantVehicleSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let placed = orders(&sim);
+    assert_eq!(placed.len(), before + 1);
+    assert_eq!(*placed.last().unwrap(), CART);
+    MerchantVehicleSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    assert_eq!(orders(&sim).len(), before + 1, "one order at a time");
 }

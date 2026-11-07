@@ -31,6 +31,7 @@ pub mod licenses;
 pub mod loans;
 pub mod lod;
 pub mod lod_system;
+pub mod merchant_vehicles;
 pub mod merchants;
 pub mod migration;
 pub mod migration_system;

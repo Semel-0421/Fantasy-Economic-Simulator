@@ -80,6 +80,9 @@ impl Module for AgentsModule {
         ))?;
         b.add_system(Box::new(super::subsidies::SubsidySystem::default()))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))?;
-        b.add_system(Box::new(super::investment::InvestmentSystem::default()))
+        b.add_system(Box::new(super::investment::InvestmentSystem::default()))?;
+        b.add_system(Box::new(
+            super::merchant_vehicles::MerchantVehicleSystem::default(),
+        ))
     }
 }

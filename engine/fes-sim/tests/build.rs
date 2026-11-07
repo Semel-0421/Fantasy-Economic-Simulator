@@ -197,6 +197,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("economy.pricing")
         .remove_system("economy.currency")
         .remove_system("agents.merchants")
+        .remove_system("agents.banks")
         .remove_system("agents.roads")
         .remove_system("agents.state_spending")
         .remove_system("agents.labor")

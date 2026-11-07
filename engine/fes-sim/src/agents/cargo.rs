@@ -11,9 +11,24 @@ native_table! {
     }
 }
 
+/// C# `CargoHolders.PlayerCart`.
+pub const PLAYER_CART: i32 = 0;
+const GUILD_HALL_BASE: i32 = 3 << 28;
+
 /// C# `CargoHolders.Warehouse`: the holder id of a facility's warehouse.
 pub fn warehouse_holder(facility: i32) -> i32 {
     (1 << 28) + facility
+}
+
+/// C# `CargoHolders.Merchant`: the load of a merchant group.
+pub fn merchant_holder(agent: i32) -> i32 {
+    (2 << 28) + agent
+}
+
+/// C# `CargoHolders.IsGuildHall`: the guild whose hall `holder` is, if it is one.
+pub fn guild_hall_of(holder: i32) -> Option<i32> {
+    let guild = holder.wrapping_sub(GUILD_HALL_BASE);
+    (holder >= GUILD_HALL_BASE && guild < (1 << 28)).then_some(guild)
 }
 
 /// A carrier's or store's limits (C# `CargoCapacity`).
@@ -78,6 +93,27 @@ impl CargoTable {
                 self.remove_row_swap_back(r);
             }
         }
+    }
+
+    /// C# `Collect`: the holder's `(good, quantity)` rows, sorted by good.
+    pub fn collect(&self, holder: i32) -> Vec<(i32, i32)> {
+        let mut items: Vec<(i32, i32)> = (0..self.count())
+            .filter(|&r| self.holder[r] == holder)
+            .map(|r| (self.good[r], self.quantity[r]))
+            .collect();
+        items.sort_by_key(|item| item.0);
+        items
+    }
+
+    /// C# `CollectHolders`: distinct holders with any cargo, in row order.
+    pub fn collect_holders(&self) -> Vec<i32> {
+        let mut holders = Vec::new();
+        for &h in &self.holder {
+            if !holders.contains(&h) {
+                holders.push(h);
+            }
+        }
+        holders
     }
 
     /// Total (weight, size) the holder carries.

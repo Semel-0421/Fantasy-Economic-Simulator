@@ -45,7 +45,13 @@ impl BankState {
         }
     }
 
-    fn distribute(&mut self, banks: &NodeBanks, nodes: &NodeTable, continent: i32, amount: i64) {
+    pub(crate) fn distribute(
+        &mut self,
+        banks: &NodeBanks,
+        nodes: &NodeTable,
+        continent: i32,
+        amount: i64,
+    ) {
         let members: Vec<usize> = (0..banks.nation_count(nodes))
             .filter(|&n| nodes.continent[banks.nation_node(nodes, n) as usize] == continent)
             .map(|n| n as usize)

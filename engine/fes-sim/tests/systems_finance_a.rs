@@ -1,6 +1,7 @@
 //! Finance group A against the recorded C# turns, and the C# unit tests ported
 //! (`MoneyTests.RichMerchant_PaysWages_ScaledByEmployment`,
-//! `StateProjectTests.Defense_PassesWhatItBuysThroughSupply_SoStockFallsOnce`).
+//! `StateProjectTests.Defense_PassesWhatItBuysThroughSupply_SoStockFallsOnce`,
+//! `InfrastructureTests.NationRoads_*`, `MoneyTests.Employment_FollowsRealSpending`).
 mod common;
 
 use common::{build_sample, data_dir};
@@ -11,13 +12,17 @@ use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::defense::DefenseSystem;
 use fes_sim::agents::labor_market::LaborMarketSystem;
 use fes_sim::agents::merchants::capital_start;
+use fes_sim::agents::roads::RoadLost;
 use fes_sim::agents::{AgentTable, BankState, LaborState, PurseState};
 use fes_sim::economy::{HouseholdCash, MarketStore};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
-use fes_sim::System;
+use fes_sim::world::roads::{MAX_CONDITION, NO_OWNER};
+use fes_sim::world::{NodeBanks, NodeTable, RoadState, RouteTable};
+use fes_sim::{Simulation, System};
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: [&str; 4] = [
+const NEW: [&str; 5] = [
+    "agents.banks",
     "agents.roads",
     "agents.state_spending",
     "agents.labor",
@@ -99,4 +104,125 @@ fn defense_passes_what_it_buys_through_supply() {
         assert_eq!(before.demand[c] + units, after.demand[c], "demand {c}");
     }
     assert!(bought > 0);
+}
+
+/// C# `InfrastructureTests`: without state spending, dividends or the luxury tax, and with idle
+/// aggregate merchants paying no tolls, the reserve moves only by road upkeep.
+const ROADS_ONLY: &[&str] = &[
+    "bank.state_spending_permille,0",
+    "facility.dividend_permille,0",
+    "state.defense_permille,0",
+    "state.project_share_permille,0",
+    "households.luxury_tax_permille,0",
+    "market.credit_share_permille,0",
+    "market.momentum_permille,0",
+    "merchants.must_act,0",
+    "lod.mode,2",
+];
+
+fn node(sim: &Simulation, key: &str) -> i32 {
+    let nodes = sim.context().services.get::<NodeTable>();
+    nodes.try_find(key).expect(key).0
+}
+
+/// C# `TravelCosts.FindRoute`.
+fn route(sim: &Simulation, from: &str, to: &str) -> usize {
+    let (from, to) = (node(sim, from), node(sim, to));
+    let routes = sim.context().services.get::<RouteTable>();
+    (0..routes.count())
+        .find(|&r| routes.from[r] == from && routes.to[r] == to)
+        .expect("a route")
+}
+
+fn city_nation(sim: &Simulation) -> usize {
+    let services = &sim.context().services;
+    let nodes = services.get::<NodeTable>();
+    services
+        .get::<NodeBanks>()
+        .nation_of(nodes, node(sim, "aur_n1_r1_c1")) as usize
+}
+
+#[test]
+fn nation_roads_are_kept_from_the_reserve_or_decay() {
+    let mut sim = build_sample(ROADS_ONLY);
+    let config = sim.context().services.database.config.clone();
+    let nation = city_nation(&sim);
+    let roads = sim.world().get::<RoadState>();
+    let own = (0..roads.condition.len())
+        .filter(|&r| roads.is_paved(r) && roads.owner[r] == nation as i32)
+        .count() as i64;
+    assert_eq!(4, own);
+
+    let reserve = sim.world().get::<BankState>().reserve[nation];
+    sim.step().expect("step");
+    let after = sim.world().get::<BankState>().reserve[nation];
+    assert_eq!(reserve - own * config.road_upkeep, after);
+
+    let paved = route(&sim, "aur_n1_r1_c1", "aur_n1_r1_c2");
+    sim.context_mut().world.get_mut::<BankState>().reserve[nation] = 0;
+    sim.step().expect("step");
+    let condition = sim.world().get::<RoadState>().condition[paved];
+    assert_eq!(MAX_CONDITION - config.road_decay_permille, condition);
+
+    sim.context_mut().world.get_mut::<RoadState>().condition[paved] = config.road_decay_permille;
+    sim.step().expect("step");
+    let roads = sim.world().get::<RoadState>();
+    assert_eq!(0, roads.condition[paved]);
+    assert_eq!(NO_OWNER, roads.owner[paved]);
+    let from = node(&sim, "aur_n1_r1_c1");
+    let lost = sim
+        .context()
+        .events
+        .turn_log()
+        .iter()
+        .filter_map(|e| (**e).as_any().downcast_ref::<RoadLost>().copied())
+        .any(|e| e.from == from);
+    assert!(lost);
+}
+
+#[test]
+fn nation_roads_are_not_kept_with_the_players_deposit() {
+    let mut sim = build_sample(ROADS_ONLY);
+    let config = sim.context().services.database.config.clone();
+    let nation = city_nation(&sim);
+    let paved = route(&sim, "aur_n1_r1_c1", "aur_n1_r1_c2");
+    let bank = sim.context_mut().world.get_mut::<BankState>();
+    bank.reserve[nation] = 100_000;
+    bank.player_deposit[nation] = 100_000;
+    sim.step().expect("step");
+    let condition = sim.world().get::<RoadState>().condition[paved];
+    assert_eq!(MAX_CONDITION - config.road_decay_permille, condition);
+}
+
+/// C# `MoneyTests.Employment_FollowsRealSpending`, over the ported pipeline.
+#[test]
+fn employment_follows_real_spending() {
+    let mut sim = build_sample(&[]);
+    let quarter = 13;
+    for _ in 0..quarter * 2 {
+        sim.step().expect("step");
+    }
+    let rate = |sim: &Simulation| sim.world().get::<LaborState>().rate(0).raw();
+    let steady = rate(&sim);
+
+    sim.context_mut()
+        .world
+        .get_mut::<LaborState>()
+        .long_run_activity[0] *= 4;
+    for _ in 0..quarter {
+        sim.step().expect("step");
+    }
+    assert!(rate(&sim) < steady, "spending far below its long-run level");
+
+    let low = rate(&sim);
+    sim.context_mut()
+        .world
+        .get_mut::<LaborState>()
+        .long_run_activity[0] /= 16;
+    for _ in 0..quarter {
+        sim.step().expect("step");
+    }
+    assert!(rate(&sim) > low, "spending far above its long-run level");
+    let max = sim.context().services.database.config.labor_max_employment;
+    assert!(rate(&sim) <= max.raw());
 }

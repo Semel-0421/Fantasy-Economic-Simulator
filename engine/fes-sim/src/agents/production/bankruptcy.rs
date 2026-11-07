@@ -1,12 +1,14 @@
 //! Bankrupt facilities get a new operator or go to the bank's auction, and lost warehouses are
 //! cleared after their claim (C# `ProductionSystem.GoBankrupt`, `ExpireWarehouseClaims`,
 //! `NpcLending.SeizeFacility`).
+use crate::agents::asset_prices::Refs;
 use crate::agents::cargo::warehouse_holder;
 use crate::agents::facilities::{MODE_AUTOMATED, OWNER_BANK, OWNER_NPC, OWNER_PLAYER};
 use crate::agents::money_ledger::{family_at, fund_new_operator, pay_local_households};
 use crate::agents::{AuctionTable, CargoTable, FacilityTable, IncomeTaxState, NpcLoanTable};
 use crate::context::SimContext;
-use crate::world::{NodeBanks, NodeTable};
+use crate::events::EventBus;
+use crate::world::{NodeBanks, NodeTable, WorldState};
 use std::sync::Arc;
 
 /// A facility ran out of cash and got a new operator (C# `FacilityBankrupt`; no subscriber).
@@ -109,35 +111,52 @@ pub fn restart_facility(books: &mut IncomeTaxState, f: usize, cash: i64) {
 pub fn seize_facility(ctx: &mut SimContext, f: usize) {
     let db = Arc::clone(&ctx.services.database);
     let turn = ctx.turn();
-    let loans = ctx.world.get_mut::<NpcLoanTable>();
+    let r = Refs {
+        db: &db,
+        nodes: ctx.services.get::<NodeTable>(),
+        banks: ctx.services.get::<NodeBanks>(),
+    };
+    seize_facility_in(&mut ctx.world, &mut ctx.events, r, turn, f);
+}
+
+/// C# `NpcLending.SeizeFacility` over the world.
+pub fn seize_facility_in(
+    world: &mut WorldState,
+    events: &mut EventBus,
+    r: Refs,
+    turn: i32,
+    f: usize,
+) {
+    let db = r.db;
+    let loans = world.get_mut::<NpcLoanTable>();
     let row = loans.find(f as i32).expect("a facility with a loan");
     let nation = loans.nation[row];
     loans.remove_row_swap_back(row);
 
-    let nodes = ctx.services.get::<NodeTable>();
-    let facilities = ctx.world.get_mut::<FacilityTable>();
+    let nodes = r.nodes;
+    let facilities = world.get_mut::<FacilityTable>();
     facilities.owner[f] = OWNER_BANK;
     facilities.mode[f] = MODE_AUTOMATED;
     let (cash, node) = (facilities.cash[f], facilities.node[f]);
     if cash < 0 {
-        pay_local_households(&mut ctx.world, nodes, node, cash);
+        pay_local_households(world, nodes, node, cash);
     }
-    let facilities = ctx.world.get_mut::<FacilityTable>();
+    let facilities = world.get_mut::<FacilityTable>();
     facilities.cash[f] = cash.max(0);
     facilities.negative_cash_weeks[f] = 0;
     let tier = db.facilities[facilities.def_index[f] as usize].tier as usize;
     let value = db.config.facility_value[tier] * i64::from(facilities.level[f]);
-    restart_facility(ctx.world.get_mut::<IncomeTaxState>(), f, cash.max(0));
+    restart_facility(world.get_mut::<IncomeTaxState>(), f, cash.max(0));
     let reserve = db.config.auction_reserve_share.mul_int(value);
-    let auctions = ctx.world.get_mut::<AuctionTable>();
+    let auctions = world.get_mut::<AuctionTable>();
     auctions.facility.push(f as i32);
     auctions.nation.push(nation);
     auctions.closes_turn.push(turn + db.config.auction_weeks);
     auctions.reserve_price.push(reserve);
     auctions.player_bid.push(0);
     auctions.for_player_loan.push(0);
-    let nation_node = ctx.services.get::<NodeBanks>().nation_node(nodes, nation);
-    ctx.events.publish(NpcLoanDefaulted {
+    let nation_node = r.banks.nation_node(nodes, nation);
+    events.publish(NpcLoanDefaulted {
         facility: f as i32,
         merchant: -1,
         nation_node,

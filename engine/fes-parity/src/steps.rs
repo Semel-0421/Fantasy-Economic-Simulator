@@ -21,6 +21,7 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "agents.merchants",
     "agents.state_spending",
     "agents.labor",
+    "agents.banks",
     "agents.roads",
     "agents.defense",
 ];

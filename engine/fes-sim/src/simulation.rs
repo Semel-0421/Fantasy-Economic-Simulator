@@ -35,8 +35,8 @@ pub struct TurnReport {
 }
 
 pub struct Simulation {
-    ctx: SimContext,
-    pipeline: TurnPipeline,
+    pub(crate) ctx: SimContext,
+    pub(crate) pipeline: TurnPipeline,
     data_hash: u64,
 }
 
@@ -84,10 +84,20 @@ impl Simulation {
     /// Builds a world from the definitions and the save's seed, then reads every section of the save
     /// into it. The save must come from the same definitions and map.
     pub fn load(db: GameDatabase, map: MapDef, bytes: &[u8]) -> Result<Simulation, SimError> {
+        Self::load_with(db, map, bytes, |b| b)
+    }
+
+    /// Like `load`, with `configure` applied to the builder (after the default modules) so a caller
+    /// can replace or remove systems.
+    pub fn load_with(
+        db: GameDatabase,
+        map: MapDef,
+        bytes: &[u8],
+        configure: impl FnOnce(SimulationBuilder) -> SimulationBuilder,
+    ) -> Result<Simulation, SimError> {
         let (header, sections) = read_save(bytes)?;
-        let mut sim = SimulationBuilder::new(db, map, header.seed)
-            .with_default_modules()?
-            .build()?;
+        let builder = SimulationBuilder::new(db, map, header.seed).with_default_modules()?;
+        let mut sim = configure(builder).build()?;
         if header.data_hash != sim.data_hash {
             return Err(SimError::Invalid(format!(
                 "Save data hash {} differs from the definitions' {}.",

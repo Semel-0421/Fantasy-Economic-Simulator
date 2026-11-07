@@ -8,7 +8,7 @@ publish.workspace = true
 fes-core = { path = "../fes-core", features = ["testing"] }
 fes-data = { path = "../fes-data" }
 fes-save = { path = "../fes-save" }
-fes-sim = { path = "../fes-sim" }
+fes-sim = { path = "../fes-sim", features = ["testing"] }
 serde_json = { workspace = true }
 
 [lints]

@@ -103,6 +103,17 @@ impl WorldState {
         out
     }
 
+    /// Reads one section into its existing component. An unknown key is an error.
+    pub fn load_section(&mut self, s: &RawSection) -> Result<(), SimError> {
+        let index = *self
+            .by_key
+            .get(s.key.as_str())
+            .ok_or_else(|| SimError::UnknownSection(s.key.clone()))?;
+        let mut r = DotNetReader::new(&s.bytes);
+        self.components[index].read(&mut r, s.version)?;
+        Ok(())
+    }
+
     /// Reads every component from its section. An unknown or missing key is an error.
     pub fn load_sections(&mut self, sections: &[RawSection]) -> Result<(), SimError> {
         let mut seen = vec![false; self.components.len()];

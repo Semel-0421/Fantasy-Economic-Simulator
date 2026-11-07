@@ -84,6 +84,16 @@ impl TurnPipeline {
         Ok(())
     }
 
+    /// Runs the system with this id once, outside a turn (used by the step-replay harness).
+    pub fn run_system(&mut self, id: &str, ctx: &mut SimContext) -> Result<(), SimError> {
+        match self.systems.iter_mut().find(|s| s.id() == id) {
+            Some(s) => s.execute(ctx),
+            None => Err(SimError::Invalid(format!(
+                "no system '{id}' in the pipeline"
+            ))),
+        }
+    }
+
     pub fn advance(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
         ctx.events.begin_turn();
         let mut i = 0;

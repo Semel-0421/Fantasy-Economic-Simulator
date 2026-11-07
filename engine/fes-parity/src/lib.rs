@@ -1,5 +1,6 @@
 //! Parity runner: compares the Rust engine to the C# fixtures, section by section.
 pub mod report;
+pub mod steps;
 
 use fes_data::database::{data_hash, GameDatabase, CONFIG_FILE};
 use fes_data::{DataError, DataSource, FileDataSource, MapDef};
@@ -93,19 +94,28 @@ fn run_names(opts: &Options) -> Result<Vec<String>, String> {
     }
 }
 
-/// Checks one run, writing its report; returns the section tally and whether it failed.
-fn check_run(opts: &Options, name: &str, out: &mut String) -> Result<(Tally, bool), String> {
-    let run_dir = opts.fixtures.join("runs").join(name);
-    let data_dir = opts
-        .data
-        .clone()
-        .unwrap_or_else(|| opts.fixtures.join("../../Assets/StreamingAssets/Data"));
+/// The definitions and map of one run: the shipped data with the run's config overrides.
+pub fn load_definitions(
+    run_dir: &Path,
+    fixtures: &Path,
+    data: Option<&Path>,
+) -> Result<(GameDatabase, MapDef), String> {
+    let data_dir = data
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| fixtures.join("../../Assets/StreamingAssets/Data"));
     let inner = FileDataSource::new(data_dir);
     let base = inner.read_text(CONFIG_FILE).map_err(|e| e.to_string())?;
-    let config = apply_overrides(&base, &config_overrides(&run_dir)?);
+    let config = apply_overrides(&base, &config_overrides(run_dir)?);
     let source = OverrideSource { inner, config };
     let db = GameDatabase::load(&source).map_err(|e| e.to_string())?;
     let map = MapDef::load(&source).map_err(|e| e.to_string())?;
+    Ok((db, map))
+}
+
+/// Checks one run, writing its report; returns the section tally and whether it failed.
+fn check_run(opts: &Options, name: &str, out: &mut String) -> Result<(Tally, bool), String> {
+    let run_dir = opts.fixtures.join("runs").join(name);
+    let (db, map) = load_definitions(&run_dir, &opts.fixtures, opts.data.as_deref())?;
     let path = run_dir.join("start.save");
     let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     let (header, raw) = read_save(&bytes).map_err(|e| format!("{name}: {e}"))?;

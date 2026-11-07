@@ -9,6 +9,8 @@ pub mod error;
 pub mod events;
 pub mod module;
 pub mod pipeline;
+#[cfg(feature = "testing")]
+pub mod replay;
 pub mod schedule;
 pub mod simulation;
 #[cfg(feature = "testing")]

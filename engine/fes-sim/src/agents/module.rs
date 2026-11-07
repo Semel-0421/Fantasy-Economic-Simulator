@@ -83,6 +83,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::investment::InvestmentSystem::default()))?;
         b.add_system(Box::new(
             super::merchant_vehicles::MerchantVehicleSystem::default(),
-        ))
+        ))?;
+        b.add_system(Box::new(super::order_system::OrderSystem))
     }
 }

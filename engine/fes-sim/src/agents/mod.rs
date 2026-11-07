@@ -38,6 +38,7 @@ pub mod migration_system;
 pub mod module;
 pub mod money_ledger;
 pub mod nobles;
+pub mod order_system;
 pub mod orders;
 pub mod places;
 pub mod player;

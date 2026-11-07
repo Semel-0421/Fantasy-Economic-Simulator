@@ -38,6 +38,7 @@ namespace FES.Tests
             Directory.CreateDirectory(Root);
             WritePrimitives();
             WriteData();
+            WriteBuild();
             foreach (var run in GoldenRuns().Where(r => KeptRuns.Contains(r.name)))
                 ExportRun(run.name, run.seed, run.years, run.config, run.hash);
         }
@@ -64,6 +65,7 @@ namespace FES.Tests
             try
             {
                 File.WriteAllBytes(Path.Combine(dir, "start.save"), SaveBytes(sim));
+                File.WriteAllText(Path.Combine(dir, "turn0.json"), SectionRecord(sim) + "\n", new UTF8Encoding(false));
                 if (stepped) Directory.CreateDirectory(Path.Combine(dir, "steps"));
 
                 using var turns = new StreamWriter(Path.Combine(dir, "turns.json"), false, new UTF8Encoding(false));
@@ -96,10 +98,14 @@ namespace FES.Tests
             }
         }
 
-        static string TurnRecord(GameSimulation sim)
+        static string TurnRecord(GameSimulation sim) => SectionRecord(sim, true);
+
+        static string SectionRecord(GameSimulation sim, bool withTurn = false)
         {
             var sb = new StringBuilder();
-            sb.Append("{\"turn\":").Append(sim.Turn).Append(",\"world_hash\":").Append(ParityJson.Serialize(sim.ComputeHash()));
+            sb.Append('{');
+            if (withTurn) sb.Append("\"turn\":").Append(sim.Turn).Append(',');
+            sb.Append("\"world_hash\":").Append(ParityJson.Serialize(sim.ComputeHash()));
             sb.Append(",\"sections\":{");
             bool first = true;
             foreach (var p in sim.World.PersistentComponents)
@@ -215,6 +221,53 @@ namespace FES.Tests
         {
             using var sha = SHA256.Create();
             return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").Substring(0, 32);
+        }
+
+        // ---------------------------------------------------------------- build
+
+        static void WriteBuild()
+        {
+            string dir = Path.Combine(Root, "build");
+            Directory.CreateDirectory(dir);
+            using var sim = SimulationBuilder.FromData(TestWorlds.Sample(), 1).Build();
+            var nodes = sim.World.Get<FES.World.NodeTable>();
+            var routes = sim.World.Get<FES.World.RouteTable>();
+
+            var nodeRows = new List<object>();
+            for (int n = 0; n < nodes.Count; n++)
+            {
+                var children = new List<int>();
+                for (int k = nodes.ChildStart[n]; k < nodes.ChildStart[n] + nodes.ChildCount[n]; k++) children.Add(nodes.Children[k]);
+                nodeRows.Add(new
+                {
+                    key = nodes.KeyOf(n),
+                    level = (int)nodes.Level[n],
+                    parent = nodes.Parent[n],
+                    continent = nodes.Continent[n],
+                    core = nodes.Core[n],
+                    child_start = nodes.ChildStart[n],
+                    child_count = nodes.ChildCount[n],
+                    children,
+                });
+            }
+            var routeRows = new List<object>();
+            for (int r = 0; r < routes.Count; r++)
+                routeRows.Add(new { from = routes.From[r], to = routes.To[r], travel_turns = routes.TravelTurns[r], cost_per_unit = routes.CostPerUnit[r], base_fee = routes.BaseFee[r], terrain = (int)routes.Terrain[r] });
+            var outgoing = new List<object>();
+            for (int n = 0; n < nodes.Count; n++)
+            {
+                var idx = new List<int>();
+                for (int k = routes.OutStart[n]; k < routes.OutStart[n] + routes.OutCount[n]; k++) idx.Add(routes.RouteIndex[k]);
+                outgoing.Add(new { out_start = routes.OutStart[n], out_count = routes.OutCount[n], routes = idx });
+            }
+            Write(Path.Combine(dir, "nodes.json"), new { nodes = nodeRows, routes = routeRows, outgoing });
+
+            var systems = new List<object>();
+            foreach (var s in sim.Systems) systems.Add(new { id = s.Id, phase = s.Phase, order = s.Order });
+            var modules = new List<object>();
+            foreach (var m in ModuleOrder.Sort(new List<ISimModule>(SimulationBuilder.DefaultModules())))
+                modules.Add(new { id = m.Id, requires = m.Requires });
+            Write(Path.Combine(dir, "systems.json"), new { systems, modules });
         }
 
         // ---------------------------------------------------------------- data

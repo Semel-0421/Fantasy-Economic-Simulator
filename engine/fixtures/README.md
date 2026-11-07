@@ -62,6 +62,8 @@ Kept golden runs (spec section 6): `Default_Seed1_ThirtyYears`, `Default_Seed2`,
   `sections` maps each persistent component key to the FNV-1a 64 hash of the bytes its `Write` produces
   (section bytes only, no key or version). `final_sha256_32` is the first 32 hex digits of SHA-256 of the
   final save, equal to the `GoldenRunTests` hash.
+- `turn0.json`: `{world_hash, sections}` in the `turns.json` entry format, for the built world before any turn
+  (`start.save` content). Hashes are decimal u64 strings.
 - `steps/turn_<t>.bin.gz` (`Default_Seed1_ThirtyYears` only, t in 0, 1, 3, 51, 52, 53, 103, 104; `t` is
   the clock turn before the turn runs). Gzip of, little-endian, strings as .NET `BinaryWriter` strings
   (7-bit-encoded length prefix, UTF-8 bytes):
@@ -96,3 +98,13 @@ returns zero, and the other ops wrap silently. The Rust port must not be expecte
 
 `fes-parity` reads the game data (CSV files) from `<repo>/Assets/StreamingAssets/Data` by default;
 `--data <dir>` overrides it. The engine shares this data with the Unity tree rather than keeping a copy.
+
+### `build/` (Default_Seed1 built world, Plan 2)
+
+- `nodes.json`: `{nodes, routes, outgoing}`. `nodes` is the `NodeTable` in built order: `key, level, parent,
+  continent, core, child_start, child_count, children` (the CSR slice). `routes` is the `RouteTable`:
+  `from, to, travel_turns, cost_per_unit, base_fee, terrain`. `outgoing` has one row per node:
+  `out_start, out_count, routes` (route indices from `RouteIndex`). Not exported: `CoreStrength`, which is
+  zero until classes are absorbed.
+- `systems.json`: `{systems, modules}`. `systems` is every system in pipeline order (`id, phase, order`);
+  `modules` is `ModuleOrder.Sort` of the default modules (`id, requires`).

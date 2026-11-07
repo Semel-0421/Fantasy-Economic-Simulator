@@ -29,11 +29,12 @@ fn start_save_roundtrips_byte_for_byte() {
 
 #[test]
 fn world_hash_matches_turn_zero() {
-    // turns.json has no turn-0 entry. This Default_Seed1 value was derived independently: replaying
-    // steps/turn_0.bin.gz over start.save reproduces turns[0].world_hash exactly, and the same
-    // replay hashes the untouched start sections to this value.
-    let (_, sections) = read_save(&start_save("Default_Seed1_ThirtyYears")).unwrap();
-    assert_eq!(world_hash(&sections), 16777473626865726879);
+    // turn0.json is the C# world hash of the built world before any turn.
+    for run in RUNS {
+        let (_, sections) = read_save(&start_save(run)).unwrap();
+        let turn0 = fixture_json(&format!("runs/{run}/turn0.json"));
+        assert_eq!(world_hash(&sections), u(&turn0["world_hash"]), "{run}");
+    }
 }
 
 #[test]

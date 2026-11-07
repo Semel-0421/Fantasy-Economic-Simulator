@@ -13,6 +13,7 @@ use fes_sim::agents::development::SubsidyPolicy;
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::groups::KIND_STATE_ENTERPRISE;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
+use fes_sim::agents::investment::{output_scale, FacilityFounded};
 use fes_sim::agents::migration_system::{EmancipationEnacted, MigrationSystem};
 use fes_sim::agents::nobles::collect_tax;
 use fes_sim::agents::places::{allowed, project_kind};
@@ -36,7 +37,11 @@ const NEW: &[&str] = &[
     "agents.migration",
     "agents.state_projects",
     "agents.subsidies",
+    "agents.investment",
 ];
+/// Earlier askers of this turn's bond offers (C# `BondOffers`) run in Rust too, so investment sees
+/// the offers they left (see `plan4-audit.md`).
+const OFFER_USERS: &[&str] = &["agents.ventures", "agents.asset_markets"];
 const WEEKS_PER_YEAR: i32 = 52;
 
 #[test]
@@ -49,7 +54,8 @@ fn finance_b_matches_on_every_sampled_turn() {
             "runs/Default_Seed1_ThirtyYears/steps/turn_{t}.bin.gz"
         ));
         let step = StepFile::read(&path).expect("step file");
-        let report = replay_turn(&step, &db, &map, NEW).expect("replay");
+        let rust: Vec<&str> = OFFER_USERS.iter().chain(NEW).copied().collect();
+        let report = replay_turn(&step, &db, &map, &rust).expect("replay");
         assert_eq!(report.first_difference(), None, "turn {t}");
         for id in NEW {
             let label = format!("system:{id}");
@@ -310,7 +316,6 @@ fn migrants_savings_are_no_income() {
 }
 
 #[test]
-#[ignore = "towns gain jobs only once investment and state projects are ported"]
 fn towns_short_of_workers_bring_emancipation() {
     let mut sim = build_sample(&[]);
     let mut enacted = false;
@@ -576,4 +581,30 @@ fn a_land_project_passes_over_a_node_at_the_cap() {
     let cap = format!("state.max_per_node,{}", live_at(&sim, city));
     let (sim, city) = plan_with_cap(&cap);
     assert!(!land_project_at(&sim, city));
+}
+
+// ---- investment (InvestmentTests) ----
+
+#[test]
+fn investment_founds_and_expands() {
+    let mut sim = build_sample(&[]);
+    let at_start = sim.context().world.get::<FacilityTable>().count();
+    let mut founded = 0;
+    for _ in 0..3 * WEEKS_PER_YEAR {
+        founded += of::<FacilityFounded>(&step(&mut sim)).len();
+    }
+    assert!(founded > 0);
+    let facilities = sim.context().world.get::<FacilityTable>();
+    assert!(facilities.count() >= at_start + founded);
+    let max = sim.context().services.database.config.facility_max_level;
+    assert!(facilities.level.iter().all(|&l| l <= max));
+}
+
+#[test]
+fn expansion_output_grows_faster_than_the_level() {
+    let sim = build_sample(&["facility.expansion_bonus_permille,250"]);
+    let config = &sim.context().services.database.config;
+    assert_eq!(output_scale(1, config), fes_core::Fx::ONE);
+    assert_eq!(output_scale(2, config), fes_core::Fx::from_permille(2500));
+    assert_eq!(output_scale(5, config), fes_core::Fx::from_int(10));
 }

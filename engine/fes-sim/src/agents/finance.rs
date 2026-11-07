@@ -204,6 +204,13 @@ impl IncomeTaxState {
             last_companies: vec![0; continents],
         }
     }
+
+    /// C# `RestartMerchant`: a replaced group's book starts over.
+    pub fn restart_merchant(&mut self, a: usize, cash: i64) {
+        if let Some(start) = self.merchant_start.get_mut(a) {
+            *start = cash;
+        }
+    }
 }
 
 impl Component for IncomeTaxState {

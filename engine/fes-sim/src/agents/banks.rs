@@ -61,6 +61,11 @@ impl BankState {
         }
         self.international_reserve[c] += amount - share * members.len() as i64;
     }
+
+    /// C# `Spendable`: the reserve above the player's deposits.
+    pub fn spendable(&self, nation: usize) -> i64 {
+        (self.reserve[nation] - self.player_deposit[nation]).max(0)
+    }
 }
 
 impl Component for BankState {

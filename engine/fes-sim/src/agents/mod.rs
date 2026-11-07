@@ -33,6 +33,8 @@ pub mod purses_systems;
 pub mod securities;
 pub mod seeding;
 pub mod ship;
+pub mod travel;
+pub mod travel_costs;
 
 use crate::economy::{CurrencyState, MarketStore};
 use crate::error::SimError;
@@ -57,7 +59,7 @@ pub use licenses::LicenseTable;
 pub use loans::{NpcLoanTable, TraderLoans};
 pub use lod::LodState;
 pub use lod_system::{DefaultLodPolicy, LodPolicy, LodPolicyService, LodSystem};
-pub use merchants::{AgentTable, NodeMemory};
+pub use merchants::{AgentTable, MerchantBankrupt, MerchantSystem, MerchantTraitTable, NodeMemory};
 pub use migration::MigrationState;
 pub use module::AgentsModule;
 pub use nobles::NobleState;
@@ -69,6 +71,7 @@ pub use purses::PurseState;
 pub use purses_systems::{HomeSurplusSystem, HouseholdSpendingSystem};
 pub use securities::{AssetMarkets, ShareTable, ShortLicences, ShortTable, VentureTable};
 pub use ship::PlayerShip;
+pub use travel::{PlayerArrived, TravelSystem};
 
 /// C# `AddFinanceAndStateTables`, in C# order: banks, loans, margin, auctions, NPC loans, purses,
 /// labor, income tax, development, nobles, orders, contracts, demand forecast, trip stats, trader

@@ -1,5 +1,25 @@
 //! Merchant groups and their turn-0 spawn (C# `AgentTable`, `AgentsModule.SpawnMerchants`,
 //! `MerchantCapital`, `MerchantVehicles.AtStart`; section `agents.merchants`).
+mod aggregate;
+mod bankrupt;
+pub mod flow_job;
+mod job;
+mod job_bids;
+mod job_carry;
+mod job_coins;
+mod job_sales;
+mod job_search;
+mod job_trip;
+mod needs;
+mod state;
+mod statics;
+mod system;
+pub mod traits;
+
+pub use bankrupt::MerchantBankrupt;
+pub use system::{refresh_tolls, MerchantSystem};
+pub use traits::MerchantTraitTable;
+
 use super::columns::{native_table, Elem};
 use super::facilities::{MODE_AUTOMATED, OWNER_NPC};
 use crate::world::NodeTable;

@@ -4,11 +4,11 @@
 //! rebuilt by the Rust load path (`on_loaded`) from the recorded state.
 use crate::agents::lod_system::LodPolicyService;
 use crate::agents::production::fill_subsidy_rates;
-use crate::agents::{DevelopmentState, LodState};
+use crate::agents::{DevelopmentState, LodState, PolicyState};
 use crate::context::SimContext;
 use crate::economy::modifier_fold::fold_multipliers;
 use crate::economy::{MarketFlows, MarketModifierTable, MarketStore};
-use crate::world::NodeTable;
+use crate::world::{NodeBanks, NodeTable, NodeTolls};
 
 /// One derivable service.
 #[derive(Clone, Copy, Debug)]
@@ -42,6 +42,13 @@ pub fn service_checks() -> Vec<ServiceCheck> {
             rebuilt_on_load: true,
             sources: &["economy.modifiers"],
             differ: multipliers_differ,
+        },
+        ServiceCheck {
+            label: "service:NodeTolls",
+            writer: "agents.policy",
+            rebuilt_on_load: true,
+            sources: &["agents.policy"],
+            differ: tolls_differ,
         },
         ServiceCheck {
             label: "service:DevelopmentState.subsidy_rate",
@@ -80,6 +87,22 @@ fn multipliers_differ(ctx: &SimContext) -> Option<usize> {
         ctx.world.get::<MarketModifierTable>().active(),
     );
     first_difference(&flows.multipliers, &fresh)
+}
+
+/// C# `PolicySystem.ApplyTolls` from the saved toll steps: tariffs, then surcharges.
+fn tolls_differ(ctx: &SimContext) -> Option<usize> {
+    let live = ctx.services.get::<NodeTolls>();
+    let mut fresh = live.clone();
+    fresh.apply_steps(
+        ctx.services.get::<NodeTable>(),
+        ctx.services.get::<NodeBanks>(),
+        &ctx.world.get::<PolicyState>().toll_step,
+        ctx.services.database.config.policy_step,
+    );
+    first_difference(&live.tariff, &fresh.tariff).or_else(|| {
+        first_difference(&live.specialty_surcharge, &fresh.specialty_surcharge)
+            .map(|i| i + live.tariff.len())
+    })
 }
 
 /// C# `SubsidySystem.OnLoaded` -> `RefreshSubsidyRates`; Rust refreshes it in production.

@@ -73,4 +73,11 @@ impl NpcLoanTable {
     pub fn find(&self, borrower: i32) -> Option<usize> {
         self.borrower.iter().rposition(|&b| b == borrower)
     }
+
+    /// Drops a borrower's loan, if any, by swap-back (C# `WriteOff`): what is owed is lost.
+    pub fn write_off(&mut self, borrower: i32) {
+        if let Some(row) = self.find(borrower) {
+            self.remove_row_swap_back(row);
+        }
+    }
 }

@@ -154,6 +154,18 @@ fn city_of(nodes: &NodeTable, node: i32) -> i32 {
     }
 }
 
+/// The group row of the guild that insures trips from `node` (its city's), or -1 (C#
+/// `MoneyLedger.InsuranceGuild`).
+pub fn insurance_guild(groups: &GroupTable, nodes: &NodeTable, node: i32) -> i32 {
+    let city = city_of(nodes, node);
+    if city < 0 {
+        return -1;
+    }
+    (0..groups.count())
+        .find(|&g| groups.kind[g] == KIND_GUILD && groups.node[g] == city)
+        .map_or(-1, |g| g as i32)
+}
+
 fn pick(candidates: &[i32], index: usize) -> i32 {
     if candidates.is_empty() {
         -1

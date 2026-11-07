@@ -43,6 +43,15 @@ impl BillRoom {
             bank_spent: vec![0; floats],
         }
     }
+
+    /// C# `SettleBank`: what the banks paid on bills leaves their reserves.
+    pub fn settle_bank(&mut self, reserve: &mut [i64]) {
+        let n = reserve.len().min(self.bank_spent.len());
+        for (r, spent) in reserve[..n].iter_mut().zip(&mut self.bank_spent[..n]) {
+            *r -= *spent;
+            *spent = 0;
+        }
+    }
 }
 
 impl Component for BillRoom {

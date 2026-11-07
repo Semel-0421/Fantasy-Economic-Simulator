@@ -190,12 +190,13 @@ fn load_then_save_is_identity() {
 #[test]
 fn step_without_state_changing_systems_only_advances_the_clock() {
     let run = &runs()[0];
-    // Production and pricing change state every turn; without them no ported system does on turn 0.
+    // Production, pricing and merchants change state every turn; without them no ported system does on turn 0.
     let mut sim = SimulationBuilder::from_data(&overridden_source(&run.dir), run.seed)
         .expect("builder")
         .remove_system("agents.production")
         .remove_system("economy.pricing")
         .remove_system("economy.currency")
+        .remove_system("agents.merchants")
         .build()
         .expect("build");
     let before = sim.world().sections();

@@ -74,7 +74,7 @@ impl NodeSpecialties {
 /// Toll rates of every node (DEC-014): a share of the value of cargo entering it, plus a surcharge
 /// on goods in its specialty categories. Raw `Fx` shares; the rates in force are the map's times the
 /// nation's toll policy (DEC-058).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NodeTolls {
     pub tariff: Vec<i64>,
     pub specialty_surcharge: Vec<i64>,
@@ -117,6 +117,22 @@ impl NodeTolls {
             tariff,
             specialty_surcharge: surcharge,
         })
+    }
+
+    /// C# `PolicySystem.ApplyTolls`: every node inside a nation at the map's rates times
+    /// `1 + policy_step * toll_step[nation]`; nodes outside nations keep the map's rates. One pass
+    /// over the nodes gives what C# gets from `ScaleNation` per nation.
+    pub fn apply_steps(&mut self, nodes: &NodeTable, banks: &NodeBanks, steps: &[i32], step: Fx) {
+        for n in 0..nodes.count() {
+            let nation_node = nodes.ancestor_at(n as i32, WorldLevel::Nation);
+            if nation_node < 0 {
+                continue;
+            }
+            let nation = banks.nation_index(nodes, nation_node) as usize;
+            let scale = Fx::ONE + step * Fx::from_int(i64::from(steps[nation]));
+            self.tariff[n] = scale.mul_int(self.base_tariff[n]);
+            self.specialty_surcharge[n] = scale.mul_int(self.base_surcharge[n]);
+        }
     }
 
     /// Sets the rates of every node inside `nation_node` to the map's times `scale`.

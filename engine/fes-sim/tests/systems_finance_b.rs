@@ -3,18 +3,21 @@
 //! `SubsidySiteTests`, `InvestmentTests`).
 mod common;
 
-use common::{build_sample, data_dir};
+use common::{build, build_sample, data_dir, sample_with_config};
 use fes_core::testing::fixtures_dir;
 use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::facilities::OWNER_NPC;
+use fes_sim::agents::groups::KIND_STATE_ENTERPRISE;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
 use fes_sim::agents::migration_system::{EmancipationEnacted, MigrationSystem};
 use fes_sim::agents::nobles::collect_tax;
+use fes_sim::agents::state_projects::StateProjectFinished;
 use fes_sim::agents::{
     AgentTable, BankState, FacilityTable, IncomeTaxState, NobleState, NpcLoanTable,
 };
+use fes_sim::agents::{DevelopmentState, GroupTable};
 use fes_sim::economy::{HouseholdCash, HouseholdState};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
 use fes_sim::world::{NodeBanks, NodeTable};
@@ -22,7 +25,12 @@ use fes_sim::{SimEvent, Simulation, System};
 use std::sync::Arc;
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: &[&str] = &["agents.income_tax", "agents.nobles", "agents.migration"];
+const NEW: &[&str] = &[
+    "agents.income_tax",
+    "agents.nobles",
+    "agents.migration",
+    "agents.state_projects",
+];
 const WEEKS_PER_YEAR: i32 = 52;
 
 #[test]
@@ -307,4 +315,68 @@ fn towns_short_of_workers_bring_emancipation() {
         }
     }
     assert!(enacted);
+}
+
+// ---- state projects (StateProjectTests) ----
+
+#[test]
+fn projects_are_funded_and_finished() {
+    let config = "key,value
+facility.bankrupt_weeks,100000
+bank.npc_max_reserve_share_permille,0
+                  bank.state_reserve_target_permille,0
+state.project_weeks,4
+state.subsidy_max_per_nation,0
+";
+    let mut sim = build(&sample_with_config(config), 42);
+    let before = sim.context().world.get::<FacilityTable>().count();
+    let mut finished = 0;
+    for _ in 0..3 * WEEKS_PER_YEAR {
+        finished += of::<StateProjectFinished>(&step(&mut sim)).len();
+    }
+    assert!(finished > 0);
+    let world = &sim.context().world;
+    let facilities = world.get::<FacilityTable>();
+    let land: i32 = world.get::<DevelopmentState>().land_level.iter().sum();
+    assert_eq!(
+        land as usize,
+        facilities.count() - before,
+        "each land project opens one state facility"
+    );
+    let groups = world.get::<GroupTable>();
+    let state = (before..facilities.count())
+        .filter(|&f| {
+            let g = facilities.group[f];
+            g >= 0 && groups.kind[g as usize] == KIND_STATE_ENTERPRISE
+        })
+        .count();
+    assert!(state as i32 >= land);
+}
+
+#[test]
+fn projects_of_a_year_run_one_at_a_time_in_a_queue() {
+    let mut sim = build(
+        &sample_with_config(
+            "key,value
+bank.state_reserve_target_permille,0
+",
+        ),
+        42,
+    );
+    let mut queued = false;
+    for _ in 0..2 * WEEKS_PER_YEAR + 2 {
+        step(&mut sim);
+        let projects = &sim.context().world.get::<DevelopmentState>().projects;
+        let mut nations: Vec<i32> = projects.iter().map(|p| p.nation).collect();
+        nations.dedup();
+        for n in nations {
+            let under_way = projects
+                .iter()
+                .filter(|p| p.nation == n && p.done_turn >= 0)
+                .count();
+            assert!(under_way <= 1, "one under way");
+            queued |= projects.iter().any(|p| p.nation == n && p.done_turn < 0);
+        }
+    }
+    assert!(queued, "later projects wait their turn");
 }

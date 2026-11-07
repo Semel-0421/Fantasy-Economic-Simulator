@@ -1,5 +1,4 @@
 //! The economy module: markets, event modifiers, currency, households and their cash (C# `FES.Economy`).
-//! Turn-0 state only; the systems arrive with the pricing and currency ports.
 pub mod currency;
 pub mod household_cash;
 pub mod households;
@@ -7,6 +6,7 @@ pub mod layout;
 pub mod markets;
 pub mod modifier_fold;
 pub mod modifiers;
+pub mod pricing;
 pub mod world_events;
 
 use crate::error::SimError;
@@ -23,6 +23,7 @@ pub use layout::MarketLayoutBuilder;
 pub use markets::{MarketFlows, MarketStore};
 pub use modifier_fold::ModifierFoldSystem;
 pub use modifiers::{MarketModifier, MarketModifierTable};
+pub use pricing::{market_view, GoodQuote, MarketView, PricingSystem};
 pub use world_events::{WorldEventStarted, WorldEventSystem};
 
 /// Writes a column the way C# `NativeIO.WriteArray` does: its length, then the elements.
@@ -66,7 +67,7 @@ pub(crate) fn read_i64s(r: &mut DotNetReader, column: &mut [i64]) -> Result<(), 
 }
 
 /// Registers markets, modifiers, flows, currency, households and household cash (C# `EconomyModule`).
-/// Requires the world module. Registers the world-event and modifier-fold systems.
+/// Requires the world module. Registers the world-event, modifier-fold and pricing systems.
 pub struct EconomyModule;
 
 impl Module for EconomyModule {
@@ -97,6 +98,7 @@ impl Module for EconomyModule {
         b.world.add(households)?;
         b.world.add(cash)?;
         b.add_system(Box::new(WorldEventSystem))?;
-        b.add_system(Box::new(ModifierFoldSystem))
+        b.add_system(Box::new(ModifierFoldSystem))?;
+        b.add_system(Box::new(PricingSystem))
     }
 }

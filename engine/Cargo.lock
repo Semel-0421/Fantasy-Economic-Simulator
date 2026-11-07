@@ -45,6 +45,7 @@ dependencies = [
  "fes-data",
  "fes-save",
  "fes-sim",
+ "serde_json",
 ]
 
 [[package]]

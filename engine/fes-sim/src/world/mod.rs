@@ -1,9 +1,21 @@
-//! The component trait and the typed world container (C# `WorldState`).
+//! The component trait and the typed world container (C# `WorldState`), plus the world module.
+pub mod extras;
+pub mod nodes;
+pub mod roads;
+pub mod routes;
+
 use crate::error::SimError;
+use crate::module::{Module, SimBuilder};
 use fes_core::io::{DotNetReader, DotNetWriter, IoError};
 use fes_save::{world_hash, RawSection};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::sync::Arc;
+
+pub use extras::{NodeBanks, NodePorts, NodeSpecialties, NodeTolls, RouteHazards};
+pub use nodes::{build_nodes, NodeTable};
+pub use roads::RoadState;
+pub use routes::{build_routes, RouteTable};
 
 /// State that is saved, loaded and included in the determinism hash.
 pub trait Component: Any {
@@ -114,5 +126,44 @@ impl WorldState {
     /// FNV-1a over every section; equals C# `WorldState.ComputeHash`.
     pub fn hash(&self) -> u64 {
         world_hash(&self.sections())
+    }
+}
+
+/// Registers the world hierarchy, routes, the static tables derived from the map, and `world.roads`.
+/// Requires the `MapDef` and `GameDatabase` services (carried by `Services`).
+pub struct WorldModule;
+
+impl Module for WorldModule {
+    fn id(&self) -> &'static str {
+        "world"
+    }
+
+    fn requires(&self) -> &[&'static str] {
+        &[]
+    }
+
+    fn register(&self, b: &mut SimBuilder) -> Result<(), SimError> {
+        let map = Arc::clone(&b.services.map);
+        let db = Arc::clone(&b.services.database);
+        let config = &db.config;
+        let mut nodes = build_nodes(&map, config)?;
+        if config.core_absorb {
+            nodes.absorb(&config.core_weight, config.core_stacking);
+        }
+        let routes = build_routes(&map, &nodes, config)?;
+        let specialties = NodeSpecialties::new(&map, &nodes, &db)?;
+        let tolls = NodeTolls::new(&map, &nodes, config)?;
+        let banks = NodeBanks::new(&map, &nodes)?;
+        let hazards = RouteHazards::new(&map, &nodes, &routes, config)?;
+        let ports = NodePorts::new(&map, &nodes, &routes)?;
+        let roads = RoadState::new(&map, &routes, &banks, &nodes)?;
+        b.services.add(nodes)?;
+        b.services.add(routes)?;
+        b.services.add(specialties)?;
+        b.services.add(tolls)?;
+        b.services.add(banks)?;
+        b.services.add(hazards)?;
+        b.services.add(ports)?;
+        b.world.add(roads)
     }
 }

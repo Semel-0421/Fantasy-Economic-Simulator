@@ -5,20 +5,28 @@ mod common;
 
 use common::build_sample;
 use fes_core::testing::fixtures_dir;
+use fes_core::Fx;
 use fes_core::QualityGrade;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
+use fes_sim::agents::demand_forecast::DemandForecastSystem;
+use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::merchant_vehicles::{CART, PACK};
 use fes_sim::agents::order_system::MerchantVehicleBought;
+use fes_sim::agents::order_system::QUARTER_WEEKS;
+use fes_sim::agents::production::lines::find_nearest_market;
 use fes_sim::agents::{AgentTable, OrderTable};
+use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
+use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
 use fes_sim::world::NodeTable;
+use fes_sim::System;
 use fes_sim::{SimEvent, Simulation};
 use std::sync::Arc;
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: &[&str] = &["agents.orders"];
+const NEW: &[&str] = &["agents.orders", "agents.demand_forecast"];
 /// Earlier askers of this turn's bond offers (C# `BondOffers`) run in Rust too, so credit sees
 /// the offers they left (see `plan4-audit.md`).
 const OFFER_USERS: &[&str] = &[
@@ -114,4 +122,209 @@ fn order_reserves_stock_then_is_collected_after_the_lead_time() {
         step(&mut sim);
     }
     assert_eq!(sim.context().world.get::<AgentTable>().vehicle[0], CART);
+}
+
+// ---- demand forecast (ForecastTests) ----
+
+/// A quarter's planning on empty markets where nothing has lately sold.
+fn at_quarter(lines: &[&str]) -> Simulation {
+    let mut sim = build_sample(lines);
+    loop {
+        step(&mut sim);
+        if sim.context().turn() % QUARTER_WEEKS == 0 {
+            break;
+        }
+    }
+    let world = &mut sim.context_mut().world;
+    world.get_mut::<MarketStore>().stock.fill(0);
+    let forecast = world.get_mut::<DemandForecast>();
+    forecast.forecast.fill(0);
+    forecast.stock_at_start.fill(0);
+    forecast.produced.fill(0);
+    sim
+}
+
+fn plan(sim: &mut Simulation) {
+    DemandForecastSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+}
+
+fn config_mut(sim: &mut Simulation) -> &mut fes_data::SimulationConfig {
+    &mut Arc::make_mut(&mut sim.context_mut().services.database).config
+}
+
+/// The cells the NPC facilities of a kind read their plans at, one per market.
+fn plan_cells(sim: &Simulation, facility: &str) -> Vec<usize> {
+    let ctx = sim.context();
+    let db = &ctx.services.database;
+    let nodes = ctx.services.get::<NodeTable>();
+    let markets = ctx.world.get::<MarketStore>();
+    let facilities = ctx.world.get::<FacilityTable>();
+    let mut cells = Vec::new();
+    for f in 0..facilities.count() {
+        let def = &db.facilities[facilities.def_index[f] as usize];
+        if def.key != facility || facilities.owner[f] != OWNER_NPC {
+            continue;
+        }
+        let good = db.recipes[def.recipe].outputs[0].good.0;
+        let (_, cell) = find_nearest_market(nodes, markets, facilities.node[f], good).unwrap();
+        if !cells.contains(&cell) {
+            cells.push(cell);
+        }
+    }
+    assert!(!cells.is_empty(), "no {facility}");
+    cells
+}
+
+fn plan_of(sim: &Simulation, facility: &str) -> i64 {
+    sim.context().world.get::<DemandForecast>().plan[plan_cells(sim, facility)[0]]
+}
+
+fn min_plan(sim: &Simulation) -> i64 {
+    sim.context()
+        .services
+        .database
+        .config
+        .forecast_min_plan
+        .raw()
+}
+
+fn stock_all(sim: &mut Simulation, good: &str, grade: QualityGrade, quantity: i32) {
+    let id = sim
+        .context()
+        .services
+        .database
+        .try_get_good(good, grade)
+        .unwrap()
+        .0;
+    let markets = sim.context_mut().world.get_mut::<MarketStore>();
+    for c in 0..markets.cell_count() {
+        if markets.cell_good[c] == id {
+            markets.stock[c] = quantity;
+        }
+    }
+}
+
+#[test]
+fn plan_follows_what_households_want_though_nothing_sold() {
+    let mut sim = at_quarter(&[]);
+    plan(&mut sim);
+    assert!(plan_of(&sim, "bakery") > min_plan(&sim));
+    config_mut(&mut sim).forecast_household_weight = Fx::ZERO;
+    plan(&mut sim);
+    assert_eq!(plan_of(&sim, "bakery"), min_plan(&sim));
+}
+
+#[test]
+fn plan_carries_demand_up_the_chain_to_raw_goods() {
+    let mut sim = at_quarter(&[]);
+    plan(&mut sim);
+    for kind in ["mill", "wheat_farm", "barley_farm", "iron_mine"] {
+        assert!(plan_of(&sim, kind) > min_plan(&sim), "{kind}");
+    }
+}
+
+#[test]
+fn plan_stock_at_the_market_cuts_it_to_the_least() {
+    let mut sim = at_quarter(&[]);
+    stock_all(&mut sim, "wheat", QualityGrade::Mid, 10_000_000);
+    plan(&mut sim);
+    assert_eq!(plan_of(&sim, "wheat_farm"), min_plan(&sim));
+    assert!(plan_of(&sim, "mill") > min_plan(&sim));
+}
+
+#[test]
+fn plan_stock_elsewhere_does_not_stop_makers_serving_their_own_market() {
+    let mut sim = at_quarter(&["production.forecast_cover_permille,0"]);
+    let cells = plan_cells(&sim, "dairy");
+    assert!(cells.len() > 1);
+    plan(&mut sim);
+    let before = sim.context().world.get::<DemandForecast>().plan[cells[1]];
+    let glut = cells[0];
+    let db = sim.context().services.database.clone();
+    let markets = sim.context_mut().world.get_mut::<MarketStore>();
+    let node = (0..markets.market_count())
+        .find(|&n| {
+            let start = markets.market_cell_start[n] as usize;
+            glut >= start && glut < start + markets.market_cell_count[n] as usize
+        })
+        .unwrap();
+    for grade in [
+        QualityGrade::Low,
+        QualityGrade::Mid,
+        QualityGrade::High,
+        QualityGrade::Best,
+    ] {
+        let cheese = db.try_get_good("cheese", grade).unwrap().0;
+        if let Some(c) = markets.try_find_cell(node, cheese) {
+            markets.stock[c] = 10_000_000;
+        }
+    }
+    plan(&mut sim);
+    let p = &sim.context().world.get::<DemandForecast>().plan;
+    assert!(p[glut] < p[cells[1]]);
+    assert!(p[cells[1]] > min_plan(&sim));
+    assert!(p[cells[1]] <= before);
+}
+
+#[test]
+fn plan_demand_of_markets_without_makers_falls_to_makers_with_capacity_to_spare() {
+    let mut sim = at_quarter(&["production.forecast_cover_permille,0"]);
+    plan(&mut sim);
+    let before = plan_of(&sim, "dairy");
+    assert!(before < Fx::ONE_RAW);
+    let seats: Vec<usize> = {
+        let nodes = sim.context().services.get::<NodeTable>();
+        (0..nodes.count())
+            .filter(|&n| nodes.is_seat(n as i32))
+            .collect()
+    };
+    let population = &mut sim
+        .context_mut()
+        .world
+        .get_mut::<HouseholdState>()
+        .population;
+    for n in seats {
+        population[n] *= 20;
+    }
+    plan(&mut sim);
+    assert!(plan_of(&sim, "dairy") > before);
+}
+
+#[test]
+fn plan_leaves_primary_producers_running_when_they_do_not_plan() {
+    let mut sim = build_sample(&["production.forecast_primary,0"]);
+    for _ in 0..=QUARTER_WEEKS {
+        step(&mut sim);
+    }
+    assert_eq!(plan_of(&sim, "wheat_farm"), Fx::ONE_RAW);
+}
+
+#[test]
+fn plan_adds_open_orders_from_anywhere_in_the_nation() {
+    let mut sim = at_quarter(&[]);
+    let db = sim.context().services.database.clone();
+    let cart = db.try_get_good("cart", QualityGrade::Mid).unwrap().0;
+    plan(&mut sim);
+    assert_eq!(plan_of(&sim, "cartwright"), min_plan(&sim));
+    let turn = sim.context().turn();
+    let world = &mut sim.context_mut().world;
+    let facilities = world.get::<FacilityTable>();
+    let f = (0..facilities.count())
+        .find(|&i| db.facilities[facilities.def_index[i] as usize].key == "cartwright")
+        .unwrap();
+    let purses = world.get::<PurseState>();
+    let nation = purses.node_float[facilities.node[f] as usize] as usize;
+    let markets = world.get::<MarketStore>();
+    let order_node = *purses.nation_nodes[nation]
+        .iter()
+        .find(|&&n| markets.try_find_cell(n as usize, cart).is_some())
+        .unwrap();
+    let cell = markets.try_find_cell(order_node as usize, cart).unwrap();
+    world
+        .get_mut::<OrderTable>()
+        .add(-1, order_node, cell as i32, 100_000, turn, 0);
+    plan(&mut sim);
+    assert_eq!(plan_of(&sim, "cartwright"), Fx::ONE_RAW);
 }

@@ -197,6 +197,10 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("economy.pricing")
         .remove_system("economy.currency")
         .remove_system("agents.merchants")
+        .remove_system("agents.roads")
+        .remove_system("agents.state_spending")
+        .remove_system("agents.labor")
+        .remove_system("agents.defense")
         .build()
         .expect("build");
     let before = sim.world().sections();

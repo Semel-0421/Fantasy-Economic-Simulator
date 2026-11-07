@@ -184,3 +184,83 @@ pub fn family_at(
     }
     family
 }
+
+/// Where a merchant group's dues are settled: where it is, or its home while abroad (C#
+/// `MerchantSettlesAt`).
+pub fn merchant_settles_at(nodes: &NodeTable, node: i32, home: i32) -> i32 {
+    if nodes.continent[node as usize] == nodes.continent[home as usize] {
+        node
+    } else {
+        home
+    }
+}
+
+/// How far a town's weekly budget falls short of the necessities it would buy (C# `TownShortfall`).
+pub fn town_shortfall(
+    levels: &NodeTable,
+    households: &HouseholdCash,
+    config: &SimulationConfig,
+    node: i32,
+) -> i64 {
+    if levels.level_of(node) == WorldLevel::Village {
+        return 0;
+    }
+    let n = node as usize;
+    households.desired_necessity[n]
+        - households.cash[n].max(0) / i64::from(config.household_budget_weeks.max(1))
+}
+
+/// Public wages to a nation's towns by their shortfall; by the usual wage weights if none falls
+/// short (C# `PayNationTownWages`).
+pub fn pay_nation_town_wages(
+    world: &mut WorldState,
+    levels: &NodeTable,
+    config: &SimulationConfig,
+    nation: i32,
+    amount: i64,
+) {
+    let (total, first) = {
+        let purses = world.get::<PurseState>();
+        let households = world.get::<HouseholdCash>();
+        let mut total = 0i64;
+        let mut first = -1;
+        for &node in &purses.nation_nodes[nation as usize] {
+            let gap = town_shortfall(levels, households, config, node);
+            if gap <= 0 {
+                continue;
+            }
+            total += gap;
+            if first < 0 {
+                first = node;
+            }
+        }
+        (total, first)
+    };
+    if first < 0 {
+        pay_nation_wages(world, levels, config, nation, amount);
+        return;
+    }
+    let (purses, households) = world.get2_mut::<PurseState, HouseholdCash>();
+    let nodes = &purses.nation_nodes[nation as usize];
+    let mut given = 0i64;
+    for &node in nodes {
+        let gap = town_shortfall(levels, households, config, node);
+        if gap <= 0 {
+            continue;
+        }
+        let share = amount / total * gap + amount % total * gap / total;
+        households.cash[node as usize] += share;
+        given += share;
+    }
+    households.cash[first as usize] += amount - given;
+}
+
+/// A payment in one coin settles a debt in another through the international banks (C#
+/// `AcrossContinents`).
+pub fn across_continents(bank: &mut BankState, from: i32, paid: i64, to: i32, received: i64) {
+    if from == to {
+        return;
+    }
+    bank.international_reserve[from as usize] += paid;
+    bank.international_reserve[to as usize] -= received;
+}

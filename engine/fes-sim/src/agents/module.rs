@@ -63,6 +63,10 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::ProductionSystem))?;
         b.add_system(Box::new(super::HouseholdSpendingSystem))?;
         b.add_system(Box::new(super::HomeSurplusSystem))?;
+        b.add_system(Box::new(super::roads::RoadSystem))?;
+        b.add_system(Box::new(super::state_spending::StateSpendingSystem))?;
+        b.add_system(Box::new(super::labor_market::LaborMarketSystem::default()))?;
+        b.add_system(Box::new(super::defense::DefenseSystem::default()))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

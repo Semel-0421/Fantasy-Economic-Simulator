@@ -74,6 +74,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::shorts::ShortSystem))?;
         b.add_system(Box::new(super::income_tax::IncomeTaxSystem))?;
         b.add_system(Box::new(super::nobles::NobleSystem))?;
+        b.add_system(Box::new(super::migration_system::MigrationSystem::default()))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

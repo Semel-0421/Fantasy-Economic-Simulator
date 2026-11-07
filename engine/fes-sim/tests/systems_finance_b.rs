@@ -10,17 +10,19 @@ use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
+use fes_sim::agents::migration_system::{EmancipationEnacted, MigrationSystem};
 use fes_sim::agents::nobles::collect_tax;
 use fes_sim::agents::{
     AgentTable, BankState, FacilityTable, IncomeTaxState, NobleState, NpcLoanTable,
 };
+use fes_sim::economy::{HouseholdCash, HouseholdState};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
 use fes_sim::world::{NodeBanks, NodeTable};
 use fes_sim::{SimEvent, Simulation, System};
 use std::sync::Arc;
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: &[&str] = &["agents.income_tax", "agents.nobles"];
+const NEW: &[&str] = &["agents.income_tax", "agents.nobles", "agents.migration"];
 const WEEKS_PER_YEAR: i32 = 52;
 
 #[test]
@@ -242,4 +244,67 @@ fn houses_gather_money_over_two_years() {
             .sum::<i64>()
             > 0
     );
+}
+
+// ---- migration (MigrationTests) ----
+
+fn rural_permille(sim: &Simulation) -> i64 {
+    let nodes = sim.context().services.get::<NodeTable>();
+    let people = &sim.context().world.get::<HouseholdState>().population;
+    let rural: i64 = (0..nodes.count())
+        .filter(|&n| nodes.level_of(n as i32) == WorldLevel::Village)
+        .map(|n| people[n])
+        .sum();
+    rural * 1000 / people.iter().sum::<i64>()
+}
+
+#[test]
+fn villagers_move_to_towns() {
+    let mut sim = build_sample(&[]);
+    let share = rural_permille(&sim);
+    for _ in 0..5 * WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    assert!(rural_permille(&sim) < share);
+}
+
+#[test]
+fn migrants_savings_are_no_income() {
+    let mut sim = build_sample(&[]);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    let ctx = sim.context_mut();
+    let nodes = ctx.services.get::<NodeTable>();
+    let count = nodes.count();
+    let cash = ctx.world.get_mut::<HouseholdCash>();
+    for n in 0..count {
+        if nodes.level_of(n as i32) != WorldLevel::Village {
+            cash.cash[n] += 100_000_000; // towns pay better, so people move
+        }
+    }
+    let income: Vec<i64> = (0..count).map(|n| cash.year_income(n)).collect();
+    let held = cash.cash.clone();
+    MigrationSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let cash = sim.context().world.get::<HouseholdCash>();
+    assert!((0..count).any(|n| cash.cash[n] != held[n]), "savings moved");
+    let after: Vec<i64> = (0..count).map(|n| cash.year_income(n)).collect();
+    assert_eq!(income, after);
+}
+
+#[test]
+#[ignore = "towns gain jobs only once investment and state projects are ported"]
+fn towns_short_of_workers_bring_emancipation() {
+    let mut sim = build_sample(&[]);
+    let mut enacted = false;
+    for _ in 0..10 * WEEKS_PER_YEAR {
+        enacted = !of::<EmancipationEnacted>(&step(&mut sim)).is_empty();
+        if enacted {
+            break;
+        }
+    }
+    assert!(enacted);
 }

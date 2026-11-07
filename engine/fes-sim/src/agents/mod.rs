@@ -32,6 +32,7 @@ pub mod lod;
 pub mod lod_system;
 pub mod merchants;
 pub mod migration;
+pub mod migration_system;
 pub mod module;
 pub mod money_ledger;
 pub mod nobles;

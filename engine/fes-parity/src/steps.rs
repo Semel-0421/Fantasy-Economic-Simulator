@@ -30,6 +30,7 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "agents.shorts",
     "agents.income_tax",
     "agents.nobles",
+    "agents.migration",
 ];
 
 pub struct StepOptions {

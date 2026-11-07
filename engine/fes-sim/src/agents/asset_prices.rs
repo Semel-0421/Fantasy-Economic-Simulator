@@ -232,10 +232,14 @@ pub fn asking_price(world: &WorldState, r: Refs, f: usize) -> i64 {
     facility_value(r.db, facilities, f) + earnings + facilities.cash[f].max(0)
 }
 
-/// C# `ShareBook.Price`: the asking price over the shares, times the nation's stock premium.
+/// C# `ShareBook.Fundamental`: the asking price over the shares.
+pub fn share_fundamental(world: &WorldState, r: Refs, f: usize) -> i64 {
+    (asking_price(world, r, f) / i64::from(r.db.config.facility_shares.max(1))).max(1)
+}
+
+/// C# `ShareBook.Price`: the fundamental times the nation's stock premium.
 pub fn share_price(world: &WorldState, r: Refs, f: usize) -> i64 {
-    let fundamental =
-        (asking_price(world, r, f) / i64::from(r.db.config.facility_shares.max(1))).max(1);
+    let fundamental = share_fundamental(world, r, f);
     let node = world.get::<FacilityTable>().node[f];
     let nation = r.banks.nation_of(r.nodes, node);
     world
@@ -349,4 +353,42 @@ pub fn sell_venture_shares_for_player(
     let sold = whole_shares(world, nation, taken, price);
     world.get_mut::<VentureTable>().player_shares[v] -= sold;
     i64::from(sold) * price
+}
+
+/// C# `ShareBook.List`: a group raises up to `amount` by listing shares to the nation's
+/// households, keeping control. Returns the coins raised.
+pub fn list_shares(
+    world: &mut WorldState,
+    offers: &mut BondOffers,
+    r: Refs,
+    turn: i32,
+    f: usize,
+    nation: i32,
+    amount: i64,
+) -> i64 {
+    let fi = f as i32;
+    let room = r.db.config.facility_max_listed_shares - world.get::<ShareTable>().outside(fi);
+    let price = share_price(world, r, f);
+    let whole = amount / price + i64::from(amount % price > 0);
+    let wanted = i64::from(room).min(whole) as i32;
+    if wanted <= 0 {
+        return 0;
+    }
+    let want = i64::from(wanted) * price;
+    let taken = take_from_households(world, offers, &r.db.config, turn, nation, want);
+    let sold = (taken / price) as i32;
+    if sold <= 0 {
+        if taken > 0 {
+            pay_nation_households(world, nation, taken); // too little for a share: back to them
+        }
+        return 0;
+    }
+    let kept = i64::from(sold) * price;
+    if taken > kept {
+        pay_nation_households(world, nation, taken - kept);
+    }
+    world
+        .get_mut::<ShareTable>()
+        .add(fi, households_holder(nation), sold);
+    kept
 }

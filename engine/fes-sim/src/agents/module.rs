@@ -69,6 +69,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::labor_market::LaborMarketSystem::default()))?;
         b.add_system(Box::new(super::defense::DefenseSystem::default()))?;
         b.add_system(Box::new(super::ventures::VentureSystem))?;
+        b.add_system(Box::new(super::asset_markets::AssetMarketSystem::default()))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

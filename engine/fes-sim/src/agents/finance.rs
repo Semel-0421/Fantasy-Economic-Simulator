@@ -95,7 +95,42 @@ pub struct FinanceState {
     pub published_loan_rate: Vec<i64>,
 }
 
+/// C# `FinancialEventKind`.
+pub mod event_kind {
+    pub const NONE: u8 = 0;
+    pub const BANK_RUN: u8 = 1;
+    pub const CREDIT_CRUNCH: u8 = 2;
+    pub const RATE_SPIKE: u8 = 3;
+}
+
+/// C# `FinanceRules.ReserveRatio`: the share of a bank's funds still in its vault; one for a bank
+/// that has lent nothing.
+pub fn reserve_ratio(reserve: i64, lent: i64) -> Fx {
+    let funds = reserve.max(0) + lent.max(0);
+    if funds == 0 {
+        Fx::ONE
+    } else {
+        Fx::from_ratio(reserve.max(0), funds)
+    }
+}
+
+impl FinanceRecord {
+    /// C# `ReserveRatio`.
+    pub fn reserve_ratio(&self, nation: usize) -> Fx {
+        reserve_ratio(self.nation_reserve[nation], self.nation_lent[nation])
+    }
+}
+
 impl FinanceState {
+    /// C# `EventOf`.
+    pub fn event_of(&self, nation: usize) -> u8 {
+        self.event[nation]
+    }
+
+    /// C# `Latest`.
+    pub fn latest(&self) -> Option<&FinanceRecord> {
+        self.records.last()
+    }
     pub fn new(nation_count: usize, continent_count: usize, base_rate: Fx) -> Self {
         Self {
             nation_count,

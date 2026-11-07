@@ -97,3 +97,28 @@ pub fn take_from_households(
     }
     taken
 }
+
+/// C# `TakeFromNode`: up to `amount` from what one node's households offer this week.
+pub fn take_from_node(
+    world: &mut WorldState,
+    offers: &mut BondOffers,
+    config: &SimulationConfig,
+    turn: i32,
+    households: usize,
+    amount: i64,
+) -> i64 {
+    offers_of(offers, world, config, turn);
+    let part = amount.min(offers.houses[households]);
+    if part <= 0 {
+        return 0;
+    }
+    let nation = world.get::<PurseState>().node_float[households] as usize;
+    offers.houses[households] -= part;
+    if nation < offers.nations.len() {
+        offers.nations[nation] -= part;
+    }
+    let cash = world.get_mut::<HouseholdCash>();
+    cash.cash[households] -= part;
+    cash.saved_year[households] += part;
+    part
+}

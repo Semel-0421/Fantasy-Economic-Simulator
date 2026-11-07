@@ -1,5 +1,6 @@
 //! The agents module (C# `FES.Agents`): the player, merchants, facilities, groups, finance, society,
 //! policy and securities tables. The systems arrive with the ports.
+pub mod asset_markets;
 pub mod asset_prices;
 pub mod balance_sheet;
 pub mod bank_npc;

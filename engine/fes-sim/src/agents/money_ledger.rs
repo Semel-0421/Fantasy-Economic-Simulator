@@ -53,6 +53,16 @@ pub fn pay_local_households(world: &mut WorldState, nodes: &NodeTable, node: i32
 
 /// Money for a nation's households, split by population (C# `PayNationHouseholds`, not borrowed).
 pub fn pay_nation_households(world: &mut WorldState, nation: i32, amount: i64) {
+    pay_nation_households_as(world, nation, amount, false);
+}
+
+/// C# `PayNationHouseholds(..., borrowed: true)`: a loan, not income (DEC-131), so it also comes
+/// off what the households saved this year.
+pub fn lend_nation_households(world: &mut WorldState, nation: i32, amount: i64) {
+    pay_nation_households_as(world, nation, amount, true);
+}
+
+fn pay_nation_households_as(world: &mut WorldState, nation: i32, amount: i64, borrowed: bool) {
     let nodes = world.get::<PurseState>().nation_nodes[nation as usize].clone();
     let population = world.get::<HouseholdState>().population.clone();
     let people: i64 = nodes
@@ -63,7 +73,7 @@ pub fn pay_nation_households(world: &mut WorldState, nation: i32, amount: i64) {
     let Some(&first) = nodes.iter().find(|&&n| population[n as usize] > 0) else {
         return;
     };
-    let cash = &mut world.get_mut::<HouseholdCash>().cash;
+    let households = world.get_mut::<HouseholdCash>();
     let mut given = 0i64;
     for &node in &nodes {
         let p = population[node as usize];
@@ -71,10 +81,16 @@ pub fn pay_nation_households(world: &mut WorldState, nation: i32, amount: i64) {
             continue;
         }
         let share = amount * p / people;
-        cash[node as usize] += share;
+        households.cash[node as usize] += share;
+        if borrowed {
+            households.saved_year[node as usize] -= share;
+        }
         given += share;
     }
-    cash[first as usize] += amount - given;
+    households.cash[first as usize] += amount - given;
+    if borrowed {
+        households.saved_year[first as usize] -= amount - given;
+    }
 }
 
 fn wage_weight(nodes: &NodeTable, config: &SimulationConfig, node: i32) -> Fx {

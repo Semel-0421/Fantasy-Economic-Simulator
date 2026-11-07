@@ -100,6 +100,13 @@ impl Component for HouseholdCash {
 }
 
 impl HouseholdCash {
+    /// What a node's households received since the year began: wages, dividends, public wages and the like.
+    pub fn year_income(&self, node: usize) -> i64 {
+        self.cash[node] + self.spent[node] - self.cash_year_start[node]
+            + self.spent_year[node]
+            + self.saved_year[node]
+    }
+
     /// C# `HouseholdCash.StartYear`: starts measuring a new year's income.
     pub fn start_year(&mut self) {
         for n in 0..self.cash.len() {

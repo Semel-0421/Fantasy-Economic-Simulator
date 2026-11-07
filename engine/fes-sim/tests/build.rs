@@ -195,6 +195,7 @@ fn step_with_no_systems_advances_the_clock() {
         .expect("builder")
         .remove_system("agents.production")
         .remove_system("economy.pricing")
+        .remove_system("economy.currency")
         .build()
         .expect("build");
     let before = sim.world().sections();

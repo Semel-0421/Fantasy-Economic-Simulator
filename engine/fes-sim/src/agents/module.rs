@@ -60,6 +60,7 @@ impl Module for AgentsModule {
         seed_money(&mut b.world, nodes, &db.config);
         b.add_system(Box::new(super::ProductionSystem))?;
         b.add_system(Box::new(super::HouseholdSpendingSystem))?;
-        b.add_system(Box::new(super::HomeSurplusSystem))
+        b.add_system(Box::new(super::HomeSurplusSystem))?;
+        b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

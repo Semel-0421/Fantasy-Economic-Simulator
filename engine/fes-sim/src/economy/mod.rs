@@ -1,5 +1,6 @@
 //! The economy module: markets, event modifiers, currency, households and their cash (C# `FES.Economy`).
 pub mod currency;
+pub mod currency_system;
 pub mod household_cash;
 pub mod households;
 pub mod layout;
@@ -17,6 +18,7 @@ use fes_core::io::{DotNetReader, DotNetWriter, IoError};
 use std::sync::Arc;
 
 pub use currency::{CurrencyState, GoldStandardCurrencyModel};
+pub use currency_system::{CurrencyMinted, CurrencyModel, CurrencyModelService, CurrencySystem};
 pub use household_cash::HouseholdCash;
 pub use households::HouseholdState;
 pub use layout::MarketLayoutBuilder;
@@ -92,6 +94,8 @@ impl Module for EconomyModule {
         let households = HouseholdState::new(nodes, &map, &db.config);
         let cash = HouseholdCash::new(nodes.count(), markets.cell_count());
         b.services.add(flows)?;
+        b.services
+            .add(CurrencyModelService(Box::new(GoldStandardCurrencyModel)))?;
         b.world.add(markets)?;
         b.world.add(MarketModifierTable::default())?;
         b.world.add(currency)?;
@@ -99,6 +103,7 @@ impl Module for EconomyModule {
         b.world.add(cash)?;
         b.add_system(Box::new(WorldEventSystem))?;
         b.add_system(Box::new(ModifierFoldSystem))?;
-        b.add_system(Box::new(PricingSystem))
+        b.add_system(Box::new(PricingSystem))?;
+        b.add_system(Box::new(CurrencySystem))
     }
 }

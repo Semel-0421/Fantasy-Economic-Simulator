@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["fes-core", "fes-save", "fes-data", "fes-parity"]
+members = ["fes-core", "fes-save", "fes-data", "fes-parity", "fes-sim"]
 
 [workspace.package]
 edition = "2021"

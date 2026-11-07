@@ -1,0 +1,19 @@
+[package]
+name = "fes-sim"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[features]
+testing = ["fes-core/testing"]
+
+[dependencies]
+fes-core = { path = "../fes-core" }
+fes-save = { path = "../fes-save" }
+
+[dev-dependencies]
+fes-sim = { path = ".", features = ["testing"] }
+fes-core = { path = "../fes-core", features = ["testing"] }
+
+[lints]
+workspace = true

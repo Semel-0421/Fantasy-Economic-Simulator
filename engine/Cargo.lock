@@ -25,6 +25,7 @@ dependencies = [
  "fes-core",
  "fes-data",
  "fes-save",
+ "fes-sim",
  "serde_json",
 ]
 
@@ -34,6 +35,15 @@ version = "0.1.0"
 dependencies = [
  "fes-core",
  "serde_json",
+]
+
+[[package]]
+name = "fes-sim"
+version = "0.1.0"
+dependencies = [
+ "fes-core",
+ "fes-save",
+ "fes-sim",
 ]
 
 [[package]]

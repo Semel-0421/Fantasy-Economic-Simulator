@@ -2,6 +2,7 @@
 pub mod clock;
 pub mod commands;
 pub mod context;
+pub mod economy;
 pub mod error;
 pub mod events;
 pub mod module;

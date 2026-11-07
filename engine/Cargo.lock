@@ -42,6 +42,7 @@ name = "fes-sim"
 version = "0.1.0"
 dependencies = [
  "fes-core",
+ "fes-data",
  "fes-save",
  "fes-sim",
 ]

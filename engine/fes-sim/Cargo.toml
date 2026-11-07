@@ -9,6 +9,7 @@ testing = ["fes-core/testing"]
 
 [dependencies]
 fes-core = { path = "../fes-core" }
+fes-data = { path = "../fes-data" }
 fes-save = { path = "../fes-save" }
 
 [dev-dependencies]

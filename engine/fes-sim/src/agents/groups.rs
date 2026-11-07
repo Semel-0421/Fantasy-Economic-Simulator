@@ -139,7 +139,7 @@ impl GroupTable {
 }
 
 /// The city a node's guilds sit in: the node itself if a city, its city if a village, else -1.
-fn city_of(nodes: &NodeTable, node: i32) -> i32 {
+pub fn city_of(nodes: &NodeTable, node: i32) -> i32 {
     match nodes.level_of(node) {
         WorldLevel::City => node,
         WorldLevel::Village => {

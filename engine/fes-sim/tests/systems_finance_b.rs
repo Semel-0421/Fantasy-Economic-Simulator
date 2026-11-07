@@ -5,15 +5,20 @@ mod common;
 
 use common::{build, build_sample, data_dir, sample_with_config};
 use fes_core::testing::fixtures_dir;
+use fes_core::IndustryTier;
 use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
+use fes_sim::agents::development::SubsidyPolicy;
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::groups::KIND_STATE_ENTERPRISE;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
 use fes_sim::agents::migration_system::{EmancipationEnacted, MigrationSystem};
 use fes_sim::agents::nobles::collect_tax;
-use fes_sim::agents::state_projects::StateProjectFinished;
+use fes_sim::agents::places::{allowed, project_kind};
+use fes_sim::agents::state_projects::{StateProjectFinished, StateProjectSystem};
+use fes_sim::agents::subsidies::{SubsidyEnacted, SubsidySystem};
+use fes_sim::agents::PurseState;
 use fes_sim::agents::{
     AgentTable, BankState, FacilityTable, IncomeTaxState, NobleState, NpcLoanTable,
 };
@@ -30,6 +35,7 @@ const NEW: &[&str] = &[
     "agents.nobles",
     "agents.migration",
     "agents.state_projects",
+    "agents.subsidies",
 ];
 const WEEKS_PER_YEAR: i32 = 52;
 
@@ -379,4 +385,195 @@ bank.state_reserve_target_permille,0
         }
     }
     assert!(queued, "later projects wait their turn");
+}
+
+// ---- subsidies (StateProjectTests, SubsidySiteTests) ----
+
+#[test]
+fn subsidy_opens_producers() {
+    let mut sim = build(
+        &sample_with_config(
+            "key,value
+bank.state_reserve_target_permille,0
+",
+        ),
+        42,
+    );
+    let before = sim.context().world.get::<FacilityTable>().count();
+    let mut enacted = 0;
+    for _ in 0..4 * WEEKS_PER_YEAR {
+        enacted += of::<SubsidyEnacted>(&step(&mut sim)).len();
+    }
+    assert!(enacted > 0);
+    assert!(sim.context().world.get::<FacilityTable>().count() > before);
+}
+
+/// C# `SubsidySiteTests.Ready`: a new year, a rich nation 0, and one subsidy on the good of the
+/// first type that `fits`.
+fn ready(
+    lines: &[&str],
+    fits: impl Fn(&fes_data::defs::FacilityDef) -> bool,
+) -> (Simulation, usize) {
+    let mut lines = lines.to_vec();
+    lines.push("state.subsidy_max_per_nation,1");
+    let mut sim = build_sample(&lines);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    let db = Arc::clone(&sim.context().services.database);
+    let def = db
+        .facilities
+        .iter()
+        .find(|d| !d.state_owned && !db.recipes[d.recipe].outputs.is_empty() && fits(d))
+        .expect("def");
+    let good = db.recipes[def.recipe].outputs[0].good.0;
+    let world = &mut sim.context_mut().world;
+    let development = world.get_mut::<DevelopmentState>();
+    development.subsidies.clear();
+    development.subsidies.push(SubsidyPolicy {
+        nation: 0,
+        good,
+        end_year: 9_999,
+    });
+    world.get_mut::<BankState>().reserve[0] += 10_000_000;
+    (sim, def.index as usize)
+}
+
+/// Necessities met in permille at each of the nation's nodes; the rest at 1000.
+fn shortage(sim: &mut Simulation, short: &[(i32, i64)]) {
+    let world = &mut sim.context_mut().world;
+    let nodes = world.get::<PurseState>().nation_nodes[0].clone();
+    let households = world.get_mut::<HouseholdState>();
+    for n in nodes {
+        households.necessity_wanted[n as usize] = 1000;
+        households.necessity_met[n as usize] = 1000;
+    }
+    for &(n, met) in short {
+        households.necessity_met[n as usize] = met;
+    }
+}
+
+fn live_at(sim: &Simulation, node: i32) -> usize {
+    let f = sim.context().world.get::<FacilityTable>();
+    (0..f.count())
+        .filter(|&i| f.node[i] == node && f.level[i] > 0)
+        .count()
+}
+
+fn open(sim: &mut Simulation) -> i32 {
+    let before = sim.context().world.get::<FacilityTable>().count();
+    SubsidySystem::default().execute(sim.context_mut()).unwrap();
+    let f = sim.context().world.get::<FacilityTable>();
+    if f.count() > before {
+        f.node[f.count() - 1]
+    } else {
+        -1
+    }
+}
+
+fn cities(sim: &Simulation, def: usize) -> Vec<i32> {
+    let nodes = sim.context().services.get::<NodeTable>();
+    let def = &sim.context().services.database.facilities[def];
+    sim.context().world.get::<PurseState>().nation_nodes[0]
+        .iter()
+        .copied()
+        .filter(|&n| nodes.level_of(n) == WorldLevel::City && allowed(def, nodes, n))
+        .collect()
+}
+
+fn workshop(d: &fes_data::defs::FacilityDef) -> bool {
+    !d.core_only && d.tier != IndustryTier::Primary
+}
+
+#[test]
+fn a_node_at_the_cap_is_passed_over_for_the_next_shortest() {
+    // The cap is the facility count at the first city, read from an identical world first.
+    let (probe, def) = ready(&[], workshop);
+    let first = cities(&probe, def);
+    assert!(first.len() >= 2);
+    let cap = format!("state.max_per_node,{}", live_at(&probe, first[0]));
+    let (mut sim, def) = ready(&[&cap], workshop);
+    let c = cities(&sim, def);
+    shortage(&mut sim, &[(c[0], 0), (c[1], 500)]);
+    assert_eq!(open(&mut sim), c[1]);
+}
+
+#[test]
+fn with_no_room_anywhere_no_producer_opens() {
+    let (mut sim, _) = ready(&["state.max_per_node,0"], workshop);
+    assert_eq!(open(&mut sim), -1);
+}
+
+#[test]
+fn a_workshop_for_a_core_goes_to_the_core_shortest_of_necessities() {
+    let (mut sim, def) = ready(&[], |d| d.core_only);
+    let nodes = sim.context().services.get::<NodeTable>();
+    let banks = sim.context().services.get::<NodeBanks>();
+    let capital = nodes.core[banks.nation_node(nodes, 0) as usize];
+    let seats = cities(&sim, def);
+    assert!(seats.contains(&capital));
+    let Some(&other) = seats.iter().find(|&&n| n != capital) else {
+        return; // the nation has no second core town
+    };
+    let village = *sim.context().world.get::<PurseState>().nation_nodes[0]
+        .iter()
+        .find(|&&n| nodes.level_of(n) == WorldLevel::Village)
+        .expect("village");
+    shortage(&mut sim, &[(village, 0), (other, 300), (capital, 600)]);
+    assert_eq!(
+        open(&mut sim),
+        other,
+        "not the capital, and not the village where it cannot stand"
+    );
+}
+
+fn land_project_at(sim: &Simulation, node: i32) -> bool {
+    sim.context()
+        .world
+        .get::<DevelopmentState>()
+        .projects
+        .iter()
+        .any(|p| {
+            p.node == node && (p.kind == project_kind::FARMLAND || p.kind == project_kind::MINE)
+        })
+}
+
+/// A new year with nation 0 rich and short of farmland at its first city; the planner runs once.
+fn plan_with_cap(cap: &str) -> (Simulation, i32) {
+    let mut sim = build_sample(&[cap]);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    let nodes = sim.context().services.get::<NodeTable>();
+    let nation = sim.context().world.get::<PurseState>().nation_nodes[0].clone();
+    let city = *nation
+        .iter()
+        .find(|&&n| nodes.level_of(n) == WorldLevel::City)
+        .unwrap();
+    let short: Vec<(i32, i64)> = nation
+        .iter()
+        .map(|&n| (n, if n == city { 0 } else { 200 }))
+        .collect();
+    shortage(&mut sim, &short);
+    let world = &mut sim.context_mut().world;
+    world.get_mut::<BankState>().reserve[0] += 10_000_000;
+    world.get_mut::<DevelopmentState>().projects.clear();
+    StateProjectSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    (sim, city)
+}
+
+#[test]
+fn a_land_project_passes_over_a_node_at_the_cap() {
+    let (sim, city) = plan_with_cap("state.max_per_node,999");
+    assert!(
+        land_project_at(&sim, city),
+        "without a cap the neediest town gets the land project"
+    );
+    let cap = format!("state.max_per_node,{}", live_at(&sim, city));
+    let (sim, city) = plan_with_cap(&cap);
+    assert!(!land_project_at(&sim, city));
 }

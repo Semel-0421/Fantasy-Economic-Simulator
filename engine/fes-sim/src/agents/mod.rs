@@ -50,6 +50,7 @@ pub mod ship;
 pub mod shorts;
 pub mod state_projects;
 pub mod state_spending;
+pub mod subsidies;
 pub mod travel;
 pub mod travel_costs;
 pub mod ventures;

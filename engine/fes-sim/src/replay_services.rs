@@ -57,6 +57,13 @@ pub fn service_checks() -> Vec<ServiceCheck> {
             sources: &["agents.development"],
             differ: subsidy_rate_differs,
         },
+        ServiceCheck {
+            label: "service:DevelopmentState.subsidy_rate",
+            writer: "agents.subsidies",
+            rebuilt_on_load: false,
+            sources: &["agents.development"],
+            differ: subsidy_rate_differs,
+        },
     ]
 }
 

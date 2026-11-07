@@ -78,6 +78,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(
             super::state_projects::StateProjectSystem::default(),
         ))?;
+        b.add_system(Box::new(super::subsidies::SubsidySystem::default()))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

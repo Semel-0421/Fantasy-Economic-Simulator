@@ -5,7 +5,8 @@ use fes_core::io::{DotNetReader, DotNetWriter, FnvSink, IoError};
 use std::io::Write;
 
 const MAGIC: u32 = 0x5345_4646;
-const FORMAT_VERSION: i32 = 1;
+/// The save container format this crate writes and reads.
+pub const FORMAT_VERSION: i32 = 1;
 
 /// The fixed-size save header.
 #[derive(Debug, Clone, PartialEq, Eq)]

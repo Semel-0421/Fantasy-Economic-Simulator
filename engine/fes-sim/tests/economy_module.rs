@@ -1,4 +1,3 @@
-use fes_core::io::DotNetReader;
 use fes_core::testing::fixtures_dir;
 use fes_data::database::{GameDatabase, CONFIG_FILE};
 use fes_data::{DataError, DataSource, FileDataSource, MapDef};
@@ -157,37 +156,5 @@ fn economy_household_cash_round_trips_start_save() {
     assert_round_trip_with("economy.household_cash", fresh::<HouseholdCash>);
 }
 
-/// `MoneyLedger.Seed` (agents module, C# `AgentsModule.Register`) fills `cash` and, through
-/// `StartYear`, `cash_year_start` after this module has built the component, so the saved turn-0
-/// section differs from the economy module's own build in exactly those two columns. The comparison
-/// clears them in the saved section; the agents module task proves them (and the whole section).
-#[test]
-fn economy_household_cash_build_matches_start_save() {
-    let runs = fixtures_dir().join("runs");
-    let mut checked = 0;
-    for entry in std::fs::read_dir(&runs).expect("runs dir") {
-        let dir = entry.expect("entry").path();
-        let save_path = dir.join("start.save");
-        if !save_path.exists() {
-            continue;
-        }
-        let data = std::fs::read(&save_path).expect("start.save");
-        let (header, saved) = read_save(&data).expect("save");
-        let builder = registered(&overridden_source(&dir), header.seed);
-        let built = builder.world.get::<HouseholdCash>();
-        let section = saved
-            .iter()
-            .find(|s| s.key == "economy.household_cash")
-            .expect("saved section");
-        let mut expected = built.clone();
-        expected
-            .read(&mut DotNetReader::new(&section.bytes), section.version)
-            .expect("read saved");
-        assert!(expected.cash.iter().any(|c| *c != 0), "seeded cash");
-        expected.cash = built.cash.clone();
-        expected.cash_year_start = built.cash_year_start.clone();
-        assert_eq!(&expected, built, "run {}", dir.display());
-        checked += 1;
-    }
-    assert_eq!(checked, 4);
-}
+// `economy.household_cash` is completed by `MoneyLedger.Seed` in the agents module, so its build is
+// compared against `start.save` with that module (tests/agents_finance.rs).

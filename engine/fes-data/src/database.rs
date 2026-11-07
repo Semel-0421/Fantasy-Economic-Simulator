@@ -38,7 +38,7 @@ pub fn data_hash(db: &GameDatabase, map: &MapDef) -> u64 {
     combine(db.content_hash(), map.compute_hash())
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GameDatabase {
     pub config: SimulationConfig,
     pub categories: Vec<GoodCategoryDef>,

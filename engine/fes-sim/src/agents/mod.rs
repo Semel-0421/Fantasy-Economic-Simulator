@@ -1,12 +1,15 @@
-//! The agents module (C# `FES.Agents`): the player, finance, society, policy and securities tables so
-//! far. Merchants, facilities and groups are added by a later task; the systems arrive with the ports.
+//! The agents module (C# `FES.Agents`): the player, merchants, facilities, groups, finance, society,
+//! policy and securities tables. The systems arrive with the ports.
 pub mod banks;
 pub mod cargo;
 pub mod columns;
 pub mod contracts;
 pub mod credit;
 pub mod development;
+pub mod facilities;
 pub mod finance;
+pub mod genetics;
+pub mod groups;
 pub mod guidance;
 pub mod labor;
 pub mod land;
@@ -14,19 +17,21 @@ pub mod ledger;
 pub mod licenses;
 pub mod loans;
 pub mod lod;
+pub mod merchants;
 pub mod migration;
+pub mod module;
 pub mod nobles;
 pub mod orders;
 pub mod player;
 pub mod policy;
 pub mod purses;
 pub mod securities;
+pub mod seeding;
 pub mod ship;
 
-use crate::clock::SimClock;
 use crate::economy::{CurrencyState, MarketStore};
 use crate::error::SimError;
-use crate::module::{Module, SimBuilder};
+use crate::module::SimBuilder;
 use crate::world::{NodeBanks, NodeTable, RouteTable};
 use std::sync::Arc;
 
@@ -35,14 +40,19 @@ pub use cargo::CargoTable;
 pub use contracts::ContractTable;
 pub use credit::{BillRoom, BillTable, BondOffers, BondTable, CreditStats};
 pub use development::DevelopmentState;
+pub use facilities::FacilityTable;
 pub use finance::{FinanceRecord, FinanceState, IncomeTaxState, MoneyTotals};
+pub use genetics::MerchantGenetics;
+pub use groups::{GroupTable, GuildMembershipTable};
 pub use guidance::GuidanceState;
 pub use labor::LaborState;
 pub use land::LandState;
 pub use licenses::LicenseTable;
 pub use loans::{NpcLoanTable, TraderLoans};
 pub use lod::LodState;
+pub use merchants::{AgentTable, NodeMemory};
 pub use migration::MigrationState;
+pub use module::AgentsModule;
 pub use nobles::NobleState;
 pub use orders::{DemandForecast, MerchantTripStats, OrderTable};
 pub use player::PlayerState;
@@ -137,8 +147,9 @@ pub fn add_securities_tables(b: &mut SimBuilder, facility_nodes: &[i32]) -> Resu
     b.world.add(ventures)
 }
 
-/// The policy and guidance tables and the unsaved LOD state. C# adds them after the merchants,
-/// groups and guild memberships; the merchant task inserts those before this call.
+/// The policy and guidance tables and the unsaved LOD state, which C# adds after the merchants,
+/// groups and guild memberships (the LOD state after the ledger seed; it is unsaved, so the
+/// position does not change any section).
 pub fn add_society_tables(b: &mut SimBuilder) -> Result<(), SimError> {
     let db = Arc::clone(&b.services.database);
     let nodes = b.services.get::<NodeTable>();
@@ -148,31 +159,4 @@ pub fn add_society_tables(b: &mut SimBuilder) -> Result<(), SimError> {
     b.world.add(policy)?;
     b.world.add(GuidanceState::default())?;
     b.services.add(lod)
-}
-
-/// Registers the agents tables. Requires the world and economy modules; registers no systems yet.
-pub struct AgentsModule;
-
-impl Module for AgentsModule {
-    fn id(&self) -> &'static str {
-        "agents"
-    }
-
-    fn requires(&self) -> &[&'static str] {
-        &["world", "economy"]
-    }
-
-    fn register(&self, b: &mut SimBuilder) -> Result<(), SimError> {
-        let db = Arc::clone(&b.services.database);
-        let seed = b.world.get::<SimClock>().seed;
-        let player = PlayerState::at_start(b.services.get::<NodeTable>(), &db.config, seed)?;
-        b.world.add(player)?;
-        b.world.add(CargoTable::default())?;
-        b.world.add(LicenseTable::default())?;
-        b.world.add(PlayerShip::default())?;
-        add_finance_and_state_tables(b)?;
-        // The facility task passes the spawned facilities' nodes here.
-        add_securities_tables(b, &[])?;
-        add_society_tables(b)
-    }
 }

@@ -1,5 +1,5 @@
 //! `fes-parity --fixtures <dir> [--run <name>] [--data <dir>]`
-use fes_parity::{no_world, ported_sections, run, Options};
+use fes_parity::{ported_sections, run, Options};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -16,7 +16,7 @@ fn parse() -> Option<Options<'static>> {
         }
     }
     Some(Options {
-        build: no_world,
+        build: fes_sim::build_world,
         ported: ported_sections(),
         fixtures: fixtures?,
         data,

@@ -53,6 +53,11 @@ impl CommandQueue {
         self.queue.push(Arc::new(command));
     }
 
+    /// Like `enqueue`, for a command already boxed as a trait object.
+    pub fn enqueue_boxed(&mut self, command: Box<dyn Command>) {
+        self.queue.push(Arc::from(command));
+    }
+
     /// Commands applied in this turn's Commands phase, in order.
     pub fn applied_this_turn(&self) -> &[Arc<dyn Command>] {
         &self.applied

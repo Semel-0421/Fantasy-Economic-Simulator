@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 /// Builds the whole turn-0 world (all sections) from the definitions, the map and the seed.
 pub type BuildWorld = fn(&GameDatabase, &MapDef, u64) -> Result<Vec<RawSection>, String>;
 
-/// Save keys whose Rust build is considered ported. Empty until Plan 2.
+/// Save keys whose Rust build is considered ported: every turn-0 section.
 pub fn ported_sections() -> &'static [&'static str] {
-    &[]
+    fes_sim::TURN0_KEYS
 }
 
 /// The builder used until a world exists; never called while no section is ported.

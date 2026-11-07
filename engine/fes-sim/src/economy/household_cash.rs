@@ -97,3 +97,15 @@ impl Component for HouseholdCash {
         read_i32s(r, &mut self.home_grown)
     }
 }
+
+impl HouseholdCash {
+    /// C# `HouseholdCash.StartYear`: starts measuring a new year's income.
+    pub fn start_year(&mut self) {
+        for n in 0..self.cash.len() {
+            self.cash_year_start[n] = self.cash[n] + self.spent[n];
+            self.spent_settled[n] -= self.spent_year[n];
+            self.spent_year[n] = 0;
+            self.saved_year[n] = 0;
+        }
+    }
+}

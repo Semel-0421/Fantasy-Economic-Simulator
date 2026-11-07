@@ -1,4 +1,5 @@
 //! Simulation core: components, the world container, the clock, the tier schedule and the turn pipeline.
+pub mod agents;
 pub mod clock;
 pub mod commands;
 pub mod context;

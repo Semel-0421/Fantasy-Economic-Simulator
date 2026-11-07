@@ -21,7 +21,7 @@ use fes_sim::world::{NodeBanks, NodeTable, RoadState, RouteTable};
 use fes_sim::{Simulation, System};
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: [&str; 7] = [
+const NEW: [&str; 8] = [
     "agents.banks",
     "agents.roads",
     "agents.state_spending",
@@ -29,6 +29,7 @@ const NEW: [&str; 7] = [
     "agents.defense",
     "agents.ventures",
     "agents.asset_markets",
+    "agents.finance",
 ];
 
 #[test]

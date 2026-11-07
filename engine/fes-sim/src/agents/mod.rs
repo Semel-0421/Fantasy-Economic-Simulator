@@ -16,6 +16,7 @@ pub mod defense;
 pub mod development;
 pub mod facilities;
 pub mod finance;
+pub mod finance_system;
 pub mod genetics;
 pub mod groups;
 pub mod guidance;

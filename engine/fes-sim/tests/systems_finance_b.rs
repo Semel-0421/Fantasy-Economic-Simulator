@@ -5,17 +5,22 @@ mod common;
 
 use common::{build_sample, data_dir};
 use fes_core::testing::fixtures_dir;
+use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::income_tax::{IncomeTaxCollected, IncomeTaxSystem};
-use fes_sim::agents::{AgentTable, FacilityTable, IncomeTaxState, NpcLoanTable};
+use fes_sim::agents::nobles::collect_tax;
+use fes_sim::agents::{
+    AgentTable, BankState, FacilityTable, IncomeTaxState, NobleState, NpcLoanTable,
+};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
+use fes_sim::world::{NodeBanks, NodeTable};
 use fes_sim::{SimEvent, Simulation, System};
 use std::sync::Arc;
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: &[&str] = &["agents.income_tax"];
+const NEW: &[&str] = &["agents.income_tax", "agents.nobles"];
 const WEEKS_PER_YEAR: i32 = 52;
 
 #[test]
@@ -162,4 +167,79 @@ fn state_facilities_stay_open() {
     year(&mut sim, f, -FORTUNE);
     year(&mut sim, f, -FORTUNE);
     assert!(sim.context().world.get::<FacilityTable>().level[f] > 0);
+}
+
+// ---- nobles (NobleTests) ----
+
+fn village(sim: &Simulation) -> i32 {
+    let nodes = sim.context().services.get::<NodeTable>();
+    let state = sim.context().world.get::<NobleState>();
+    (0..nodes.count() as i32)
+        .find(|&n| {
+            let city = nodes.ancestor_at(n, WorldLevel::City);
+            nodes.level_of(n) == WorldLevel::Village
+                && city >= 0
+                && state.city_holder[city as usize] == city
+        })
+        .expect("village")
+}
+
+#[test]
+fn tax_royal_house_and_nobles_take_their_shares_before_the_state() {
+    let mut sim = build_sample(&[]);
+    let v = village(&sim);
+    let ctx = sim.context_mut();
+    let nodes = ctx.services.get::<NodeTable>();
+    let banks = ctx.services.get::<NodeBanks>();
+    let config = &ctx.services.database.config;
+    let city = nodes.ancestor_at(v, WorldLevel::City);
+    let nation = nodes.ancestor_at(v, WorldLevel::Nation);
+    let index = banks.nation_index(nodes, nation) as usize;
+    let reserve = ctx.world.get::<BankState>().reserve[index];
+    collect_tax(&mut ctx.world, nodes, banks, config, v, 1000);
+    let state = ctx.world.get::<NobleState>();
+    let cash = |n: i32| state.cash[n as usize];
+    assert_eq!(cash(nation), config.noble_royal_share.mul_int(1000));
+    assert_eq!(cash(city), config.noble_city_share.mul_int(1000));
+    assert_eq!(cash(v), config.noble_village_share.mul_int(1000));
+    assert_eq!(
+        ctx.world.get::<BankState>().reserve[index] - reserve,
+        1000 - cash(nation) - cash(city) - cash(v)
+    );
+}
+
+#[test]
+fn lord_who_cannot_protect_loses_aid_for_the_year() {
+    let mut sim = build_sample(&[]);
+    let v = village(&sim) as usize;
+    let lord = sim.context().world.get::<NobleState>().lord[v];
+    for _ in 0..WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    let state = sim.context_mut().world.get_mut::<NobleState>();
+    state.protection_owed[v] = i64::MAX / 2;
+    state.cash[v] = 1000;
+    step(&mut sim);
+    let state = sim.context().world.get::<NobleState>();
+    assert!(!state.contract_holds[v]);
+    assert_eq!(state.protection_owed[v], 0);
+    assert!(lord > -1);
+    assert_eq!(state.lord[v], lord);
+}
+
+#[test]
+fn houses_gather_money_over_two_years() {
+    let mut sim = build_sample(&[]);
+    for _ in 0..2 * WEEKS_PER_YEAR + 5 {
+        step(&mut sim);
+    }
+    assert!(
+        sim.context()
+            .world
+            .get::<NobleState>()
+            .cash
+            .iter()
+            .sum::<i64>()
+            > 0
+    );
 }

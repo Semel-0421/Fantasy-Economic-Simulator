@@ -1,7 +1,8 @@
 //! Who holds each fief (C# `Nobles.cs`, `agents.nobles`, version 1). The map decides the holders,
 //! so only money and contracts are saved.
 use super::columns::read_len;
-use super::money_ledger::to_state;
+use super::money_ledger::{pay_households, pay_nation_wages, to_state};
+use super::purses::PurseState;
 use crate::world::{Component, NodeBanks, NodeTable, WorldState};
 use fes_core::io::{DotNetReader, DotNetWriter, IoError};
 use fes_core::WorldLevel;
@@ -125,4 +126,112 @@ pub fn collect_tax(
         }
     }
     to_state(world, nodes, banks, node, rest);
+}
+
+/// A lord failed to pay the protection owed, so the vassal withholds aid for a year (C#
+/// `NobleContractBroken`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NobleContractBroken {
+    pub vassal: i32,
+    pub lord: i32,
+    pub turn: i32,
+}
+
+/// C# `FinanceOrder.Nobles`.
+pub const ORDER: i32 = crate::pipeline::sim_order::LATE + 16;
+
+/// `agents.nobles` (C# `NobleSystem`, DEC-076): each week a house spends a share of its purse on
+/// the people of its fief; each year lords pay protection, then vassals pay aid, villages first.
+pub struct NobleSystem;
+
+impl crate::pipeline::System for NobleSystem {
+    fn id(&self) -> &'static str {
+        "agents.nobles"
+    }
+
+    fn phase(&self) -> crate::pipeline::SimPhase {
+        crate::pipeline::SimPhase::Finance
+    }
+
+    fn order(&self) -> i32 {
+        ORDER
+    }
+
+    fn execute(
+        &mut self,
+        ctx: &mut crate::context::SimContext,
+    ) -> Result<(), crate::error::SimError> {
+        let config = &ctx.services.database.config;
+        let nodes = ctx.services.get::<NodeTable>();
+        let count = nodes.count();
+        if ctx.clock().is_new_year() && ctx.turn() > 0 {
+            let turn = ctx.turn();
+            for n in 0..count {
+                protect(&mut ctx.world, &mut ctx.events, nodes, n, turn);
+            }
+            // Nodes are sorted by level, so this walks villages first.
+            let state = ctx.world.get_mut::<NobleState>();
+            for n in (0..count).rev() {
+                pay_aid(state, config, n);
+            }
+        }
+        for n in 0..count {
+            let state = ctx.world.get_mut::<NobleState>();
+            let spent = config.noble_spend_share.mul_int(state.cash[n].max(0));
+            if spent <= 0 {
+                continue;
+            }
+            state.cash[n] -= spent;
+            let purses = ctx.world.get::<PurseState>();
+            let nation = if nodes.level_of(n as i32) == WorldLevel::Nation {
+                purses.node_float[n]
+            } else {
+                -1
+            };
+            if nation >= 0 && (nation as usize) < purses.nation_count {
+                pay_nation_wages(&mut ctx.world, nodes, config, nation, spent);
+            } else {
+                pay_households(&mut ctx.world, nodes, n as i32, spent);
+            }
+        }
+        Ok(())
+    }
+}
+
+fn protect(
+    world: &mut WorldState,
+    events: &mut crate::events::EventBus,
+    nodes: &NodeTable,
+    vassal: usize,
+    turn: i32,
+) {
+    let state = world.get_mut::<NobleState>();
+    let lord = state.lord[vassal];
+    if lord < 0 {
+        return;
+    }
+    let owed = state.protection_owed[vassal];
+    let paid = owed.min(state.cash[lord as usize].max(0));
+    state.cash[lord as usize] -= paid;
+    state.protection_owed[vassal] = 0;
+    state.contract_holds[vassal] = paid >= owed;
+    pay_households(world, nodes, vassal as i32, paid);
+    if paid < owed {
+        events.publish(NobleContractBroken {
+            vassal: vassal as i32,
+            lord,
+            turn,
+        });
+    }
+}
+
+fn pay_aid(state: &mut NobleState, config: &SimulationConfig, vassal: usize) {
+    let lord = state.lord[vassal];
+    if lord < 0 || !state.contract_holds[vassal] {
+        return;
+    }
+    let aid = config.noble_aid_share.mul_int(state.cash[vassal].max(0));
+    state.cash[vassal] -= aid;
+    state.cash[lord as usize] += aid;
+    state.protection_owed[vassal] = config.noble_protection_share.mul_int(aid);
 }

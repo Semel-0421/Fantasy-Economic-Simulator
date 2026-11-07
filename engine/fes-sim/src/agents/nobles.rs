@@ -1,9 +1,11 @@
 //! Who holds each fief (C# `Nobles.cs`, `agents.nobles`, version 1). The map decides the holders,
 //! so only money and contracts are saved.
 use super::columns::read_len;
-use crate::world::{Component, NodeTable};
+use super::money_ledger::to_state;
+use crate::world::{Component, NodeBanks, NodeTable, WorldState};
 use fes_core::io::{DotNetReader, DotNetWriter, IoError};
 use fes_core::WorldLevel;
+use fes_data::SimulationConfig;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NobleState {
@@ -89,4 +91,38 @@ impl Component for NobleState {
         }
         Ok(())
     }
+}
+
+/// Income tax raised at a node (C# `Nobles.CollectTax`): the royal house takes its share first, then
+/// the city's holder and the village's noble; the state's reserve gets the rest. Outside a nation it
+/// all goes to the state.
+pub fn collect_tax(
+    world: &mut WorldState,
+    nodes: &NodeTable,
+    banks: &NodeBanks,
+    config: &SimulationConfig,
+    node: i32,
+    amount: i64,
+) {
+    let nation = nodes.ancestor_at(node, WorldLevel::Nation);
+    let mut rest = amount;
+    if nation >= 0 {
+        let state = world.get_mut::<NobleState>();
+        let royal = config.noble_royal_share.mul_int(amount);
+        state.cash[nation as usize] += royal;
+        rest -= royal;
+        let city = nodes.ancestor_at(node, WorldLevel::City);
+        if city >= 0 {
+            let holder = state.city_holder[city as usize];
+            let share = config.noble_city_share.mul_int(amount);
+            state.cash[holder as usize] += share;
+            rest -= share;
+        }
+        if nodes.level_of(node) == WorldLevel::Village {
+            let share = config.noble_village_share.mul_int(amount);
+            state.cash[node as usize] += share;
+            rest -= share;
+        }
+    }
+    to_state(world, nodes, banks, node, rest);
 }

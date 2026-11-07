@@ -21,6 +21,7 @@ pub mod genetics;
 pub mod groups;
 pub mod guidance;
 pub mod household_growth;
+pub mod income_tax;
 pub mod labor;
 pub mod labor_market;
 pub mod land;

@@ -203,6 +203,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("agents.labor")
         .remove_system("agents.defense")
         .remove_system("agents.ventures")
+        .remove_system("agents.income_tax")
         .remove_system("agents.asset_markets")
         .remove_system("agents.finance")
         .remove_system("agents.shorts")

@@ -72,6 +72,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::asset_markets::AssetMarketSystem::default()))?;
         b.add_system(Box::new(super::finance_system::FinanceSystem))?;
         b.add_system(Box::new(super::shorts::ShortSystem))?;
+        b.add_system(Box::new(super::income_tax::IncomeTaxSystem))?;
         b.add_system(Box::new(super::HouseholdGrowthSystem))
     }
 }

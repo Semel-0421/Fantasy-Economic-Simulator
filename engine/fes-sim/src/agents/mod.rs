@@ -45,6 +45,7 @@ pub mod ship;
 pub mod state_spending;
 pub mod travel;
 pub mod travel_costs;
+pub mod ventures;
 
 use crate::economy::{CurrencyState, MarketStore};
 use crate::error::SimError;

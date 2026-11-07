@@ -202,6 +202,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("agents.state_spending")
         .remove_system("agents.labor")
         .remove_system("agents.defense")
+        .remove_system("agents.ventures")
         .build()
         .expect("build");
     let before = sim.world().sections();

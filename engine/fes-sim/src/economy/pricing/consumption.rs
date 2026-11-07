@@ -11,14 +11,14 @@ const TARGET_VALUE: usize = 2;
 const TARGET_DEMAND: usize = 1;
 
 /// Per-turn numbers the pricing jobs read (C# `PricingSystem` scratch arrays and job constants).
-pub struct Scratch {
+pub struct Scratch<'a> {
     pub demand: DemandParams,
     pub category_count: usize,
     pub specialty_anchor_mul_raw: i64,
     pub turn: i32,
     pub need_memory_weeks: i32,
     /// Per node: level.
-    pub level: Vec<u8>,
+    pub level: &'a [u8],
     /// Per node: currency price index of its continent (raw Q16).
     pub anchor_mul: Vec<i64>,
     pub necessity_weight: Vec<i64>,
@@ -30,7 +30,7 @@ pub struct Scratch {
     /// Per level demand weight (raw Q16).
     pub level_weight: Vec<i64>,
     /// `MarketFlows::multipliers`.
-    pub modifier_mul: Vec<i64>,
+    pub modifier_mul: &'a [i64],
 }
 
 /// The mutable state a pricing job works on.
@@ -70,7 +70,7 @@ fn deliverable(wished: i64, supply: i32, stock: i32, demand: i32) -> i64 {
     }
 }
 
-impl Scratch {
+impl Scratch<'_> {
     fn modifier_base(&self, market: usize, good: usize, markets: &MarketStore) -> usize {
         (market * self.category_count + markets.good_category[good] as usize) * MODIFIER_TARGETS
     }

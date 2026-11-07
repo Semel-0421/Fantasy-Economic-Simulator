@@ -102,3 +102,22 @@ fn tier_schedule_matches_csharp() {
         1
     );
 }
+
+#[test]
+fn get2_mut_borrows_two_components_in_either_order() {
+    let mut w = WorldState::new();
+    w.add(Halfwidth(1)).unwrap();
+    w.add(Astral(2)).unwrap();
+    let (a, b) = w.get2_mut::<Astral, Halfwidth>();
+    std::mem::swap(&mut a.0, &mut b.0);
+    let (h, a) = w.get2_mut::<Halfwidth, Astral>();
+    assert_eq!((h.0, a.0), (2, 1));
+}
+
+#[test]
+#[should_panic(expected = "distinct")]
+fn get2_mut_rejects_the_same_component() {
+    let mut w = WorldState::new();
+    w.add(Halfwidth(1)).unwrap();
+    let _ = w.get2_mut::<Halfwidth, Halfwidth>();
+}

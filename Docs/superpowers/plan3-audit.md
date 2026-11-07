@@ -246,3 +246,32 @@ Unchanged from Global Constraints. Nothing is moved to Plan 4.
 `agents.merchants` (writes `economy.markets` and `agents.merchants`), `agents.travel`, `agents.banks` and the other
 Finance systems are replayed by applying their recorded section changes, as the plan says. Their unsaved caches
 (`BondOffers`, `MoneyTotals`, `NodeTolls`) are not read by any system in scope.
+
+## Service checks in the step replay
+
+The step records hold saved sections only, so the replay cannot compare unsaved services with C#.
+`fes_sim::replay_services::service_checks` instead compares each derivable service, after every Rust-run record
+(ported system, dispatch, clock), with the same service rebuilt from the recorded state by the Rust load path; a
+mismatch is reported as `Different` with key `service:<name>` and the first differing element as offset. A service is
+checked only while it is fresh: after its writer ran in Rust (or after the load, when the load rebuilds it) and before
+any record changes one of its source sections, because C# keeps it stale over such changes too.
+
+| Service | Rebuild compared against | Writer | Sources |
+|---|---|---|---|
+| `LodState.detail` | `LodPolicyService.evaluate` (`LodSystem::on_loaded`) | `agents.lod` | `agents.player`, `agents.facilities`, `agents.merchants` |
+| `MarketFlows.multipliers` | `fold_multipliers` (`ModifierFoldSystem::on_loaded`) | `economy.modifier_fold` | `economy.modifiers` |
+| `DevelopmentState.subsidy_rate` | `fill_subsidy_rates` (C# `SubsidySystem.OnLoaded`) | `agents.production` | `agents.development` |
+
+Unchecked (not derivable from saved state, or not a service a ported system reads across records):
+
+- `DevelopmentState.subsidy_left`: scratch written and read inside one production run; its effect reaches
+  `agents.banks` reserves, which the section compare covers.
+- The production line cache: not kept in Rust (lines are rebuilt every turn), so there is nothing to check.
+- `GroupDirectory`, `FacilityTable.UseChanges`, `HouseholdCash.LuxuryTaxYear`: not kept as Rust state.
+- Static services (`HouseholdState._demandScale`, `PurseState.NodeFloat`, `NationNodes`, `TierSchedule`,
+  `NodeTable.Core`/`CoreStrength`/`Absorbed`): built with the world, never written by a system; covered by their own
+  unit tests.
+- Plan 4 caches (`BondOffers`, `MoneyTotals`, `NodeTolls`): their systems are not ported.
+
+With lod mode 1 in the fixtures, the `LodState.detail` check is trivially all-detailed; modes 0 and 2 are covered by
+unit tests in `fes-sim/tests/systems_production.rs` (aggregate expected-value output, and pricing consuming it).

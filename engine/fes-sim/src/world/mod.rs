@@ -68,6 +68,23 @@ impl WorldState {
             .expect("type index matches component")
     }
 
+    /// Two distinct components at once, both mutable. Panics if `A` and `B` are the same type.
+    pub fn get2_mut<A: Component, B: Component>(&mut self) -> (&mut A, &mut B) {
+        let (ia, ib) = (self.index_of::<A>(), self.index_of::<B>());
+        assert_ne!(ia, ib, "get2_mut needs two distinct components");
+        let (low, high) = self.components.split_at_mut(ia.max(ib));
+        let (first, second) = (low[ia.min(ib)].as_mut(), high[0].as_mut());
+        let (a, b): (&mut dyn Any, &mut dyn Any) = if ia < ib {
+            (first, second)
+        } else {
+            (second, first)
+        };
+        (
+            a.downcast_mut::<A>().expect("type index matches component"),
+            b.downcast_mut::<B>().expect("type index matches component"),
+        )
+    }
+
     pub fn try_get<C: Component>(&self) -> Option<&C> {
         let index = *self.by_type.get(&TypeId::of::<C>())?;
         let any: &dyn Any = self.components[index].as_ref();

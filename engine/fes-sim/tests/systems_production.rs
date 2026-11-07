@@ -1,15 +1,19 @@
 //! `agents.production` against the recorded C# turns, plus unit tests ported from the C#
 //! `ProductionTests` (only the systems ported so far run in these worlds).
 use fes_core::testing::fixtures_dir;
+use fes_core::{Fx, SimDetail};
 use fes_core::{GoodId, IndustryTier};
 use fes_data::database::{GameDatabase, CONFIG_FILE};
 use fes_data::{DataError, DataSource, FileDataSource, MapDef};
 use fes_sim::agents::cargo::warehouse_holder;
 use fes_sim::agents::facilities::{OWNER_NPC, OWNER_PLAYER};
+use fes_sim::agents::production::lines::{build_lines, Lines};
 use fes_sim::agents::production::FacilityBankrupt;
-use fes_sim::agents::{CargoTable, FacilityTable};
+use fes_sim::agents::{CargoTable, DemandForecast, DevelopmentState, FacilityTable, LodState};
+use fes_sim::economy::MarketFlows;
 use fes_sim::economy::MarketStore;
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
+use fes_sim::world::{NodeSpecialties, NodeTable};
 use fes_sim::{Simulation, SimulationBuilder};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -331,5 +335,181 @@ fn player_output_overflow_is_sold() {
     assert!(weight <= 20 && size <= 20 && weight > 0);
     assert!(
         sim.world().get::<FacilityTable>().cash[farm] > cash - upkeep(&sim, IndustryTier::Primary)
+    );
+}
+
+/// A world running only lod, world events, the fold and production (plus pricing when asked),
+/// with every facility but `keep` idled at level 0 so the produced column is `keep`'s alone.
+fn lod_world(mode: &str, with_pricing: bool) -> Simulation {
+    let source = With {
+        inner: FileDataSource::new(data_dir()),
+        config: vec![("lod.mode".to_string(), mode.to_string())],
+    };
+    let mut b = SimulationBuilder::from_data(&source, 42)
+        .expect("builder")
+        .remove_system("agents.household_spending")
+        .remove_system("agents.home_surplus")
+        .remove_system("agents.households")
+        .remove_system("economy.currency");
+    if !with_pricing {
+        b = b.remove_system("economy.pricing");
+    }
+    b.build().expect("build")
+}
+
+fn lines_now(sim: &Simulation) -> Lines {
+    let ctx = sim.context();
+    let w = sim.world();
+    build_lines(
+        &ctx.services.database,
+        ctx.services.get::<NodeTable>(),
+        w.get::<MarketStore>(),
+        ctx.services.get::<MarketFlows>(),
+        ctx.services.get::<NodeSpecialties>(),
+        w.get::<FacilityTable>(),
+        w.get::<DevelopmentState>(),
+    )
+}
+
+/// The first output line of `f`.
+fn first_output(lines: &Lines, f: usize) -> usize {
+    (lines.start[f]..lines.start[f + 1])
+        .find(|&k| lines.is_input[k] == 0)
+        .expect("an output line")
+}
+
+/// An NPC facility without aid lines, whose lines all have a market, on a node `lod` leaves
+/// aggregate.
+fn plain_aggregate_facility(sim: &Simulation, lines: &Lines) -> Option<usize> {
+    let facilities = sim.world().get::<FacilityTable>();
+    let detail = &sim.context().services.get::<LodState>().detail;
+    (0..facilities.count()).find(|&f| {
+        let mut r = lines.start[f]..lines.start[f + 1];
+        facilities.owner[f] == OWNER_NPC
+            && detail[facilities.node[f] as usize] == SimDetail::Aggregate as u8
+            && r.clone().any(|k| lines.is_input[k] == 0)
+            && r.all(|k| lines.is_input[k] <= 1 && lines.cell[k] >= 0)
+    })
+}
+
+/// C# `ProductionJob.PlannedOutput` (ProductionJobs.cs:125-135, aggregate branch: no `NextSpread`)
+/// and `MakeOutput`/`Emit` (ProductionJobs.cs:236-258, `upgraded = MulIntRaw(quantity,
+/// GradeUpChanceRaw)` when not detailed): what `f` adds to each cell this week.
+fn expected_aggregate_output(sim: &Simulation, lines: &Lines, f: usize) -> Vec<(usize, i64)> {
+    let ctx = sim.context();
+    let c = &ctx.services.database.config;
+    let facilities = sim.world().get::<FacilityTable>();
+    let plan = &sim.world().get::<DemandForecast>().plan;
+    let mul = &ctx.services.get::<MarketFlows>().multipliers;
+    let level = i64::from(facilities.level[f]);
+    let r = lines.start[f]..lines.start[f + 1];
+    let mut output = Fx::from_raw(facilities.efficiency[f])
+        * Fx::from_int(level)
+        * (Fx::ONE + c.facility_expansion_bonus * Fx::from_int(level - 1));
+    output = output * Fx::from_raw(plan[lines.cell[first_output(lines, f)] as usize]);
+    let mut out = Vec::new();
+    for k in r.filter(|&k| lines.is_input[k] == 0) {
+        let quantity = Fx::mul_int_raw(i64::from(lines.quantity[k]), output.raw());
+        let quantity = Fx::mul_int_raw(quantity, lines.output_mul[k]);
+        let mut upgraded = 0;
+        if lines.up_good[k] >= 0 {
+            upgraded = Fx::mul_int_raw(quantity, c.specialty_grade_up_chance.raw());
+            if lines.up_cell[k] >= 0 {
+                let q = Fx::mul_int_raw(upgraded, mul[lines.up_modifier[k] as usize]);
+                out.push((
+                    lines.up_cell[k] as usize,
+                    i64::from(MarketStore::clamp_to_non_negative_int(q)),
+                ));
+            }
+        }
+        if lines.cell[k] >= 0 {
+            let q = Fx::mul_int_raw(quantity - upgraded, mul[lines.modifier[k] as usize]);
+            out.push((
+                lines.cell[k] as usize,
+                i64::from(MarketStore::clamp_to_non_negative_int(q)),
+            ));
+        }
+    }
+    out
+}
+
+/// Gives `keep` level 2 (so the expansion bonus counts), ample cash and every input in stock, idles
+/// every other facility (level 0 makes the planned output zero), runs one turn and returns what the
+/// turn added to each cell's produced count.
+fn produce_alone(sim: &mut Simulation, lines: &Lines, keep: usize) -> Vec<i64> {
+    let world = &mut sim.context_mut().world;
+    let facilities = world.get_mut::<FacilityTable>();
+    for f in 0..facilities.count() {
+        facilities.level[f] = if f == keep { 2 } else { 0 };
+    }
+    if keep < facilities.count() {
+        facilities.cash[keep] = 1 << 40;
+        let stock = &mut world.get_mut::<MarketStore>().stock;
+        for k in lines.start[keep]..lines.start[keep + 1] {
+            if lines.is_input[k] != 0 {
+                stock[lines.cell[k] as usize] = 1 << 30;
+            }
+        }
+    }
+    let before = sim.world().get::<DemandForecast>().produced.clone();
+    sim.step().unwrap();
+    let after = &sim.world().get::<DemandForecast>().produced;
+    after.iter().zip(&before).map(|(a, b)| a - b).collect()
+}
+
+fn check_aggregate_output(mode: &str) {
+    let mut sim = lod_world(mode, false);
+    // The first step evaluates lod and folds; the facility and lines are chosen from its result.
+    sim.step().unwrap();
+    let lines = lines_now(&sim);
+    let f = plain_aggregate_facility(&sim, &lines).expect("a plain aggregate facility");
+    sim.context_mut().world.get_mut::<FacilityTable>().level[f] = 2;
+    let mut want = vec![0i64; sim.world().get::<DemandForecast>().produced.len()];
+    for (cell, q) in expected_aggregate_output(&sim, &lines, f) {
+        want[cell] += q;
+    }
+    assert!(want.iter().any(|&q| q > 0), "facility {f} makes nothing");
+    let got = produce_alone(&mut sim, &lines, f);
+    assert_eq!(got, want, "lod.mode {mode}, facility {f}");
+}
+
+#[test]
+fn aggregate_output_matches_the_csharp_expected_value_in_lod_mode_2() {
+    check_aggregate_output("2");
+}
+
+#[test]
+fn aggregate_output_matches_the_csharp_expected_value_in_lod_mode_0() {
+    check_aggregate_output("0");
+}
+
+#[test]
+fn pricing_consumes_the_aggregate_output() {
+    let run = |idle_all: bool| {
+        let mut sim = lod_world("2", true);
+        sim.step().unwrap();
+        let lines = lines_now(&sim);
+        let f = plain_aggregate_facility(&sim, &lines).expect("a plain aggregate facility");
+        let cell = lines.cell[first_output(&lines, f)] as usize;
+        let keep = if idle_all { usize::MAX } else { f };
+        let produced = produce_alone(&mut sim, &lines, keep);
+        let m = sim.world().get::<MarketStore>();
+        (
+            cell,
+            produced[cell],
+            m.stock[cell],
+            m.price[cell],
+            m.supply[cell],
+        )
+    };
+    let (cell, made, stock, price, supply) = run(false);
+    let (idle_cell, idle_made, idle_stock, idle_price, _) = run(true);
+    assert_eq!(cell, idle_cell);
+    assert!(made > 0 && idle_made == 0);
+    // Pricing settles the week's supply into stock and price; the aggregate output reached it.
+    assert_eq!(supply, 0, "pricing left the supply unconsumed");
+    assert!(
+        (stock, price) != (idle_stock, idle_price),
+        "pricing ignored {made} units of aggregate output"
     );
 }

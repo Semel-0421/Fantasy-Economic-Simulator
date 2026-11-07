@@ -1,6 +1,11 @@
 use fes_core::testing::fixtures_dir;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
+use fes_save::RawSection;
+use fes_sim::agents::lod_system::evaluate_lod;
+use fes_sim::agents::LodState;
+use fes_sim::economy::modifier_fold::rebuild_flows;
+use fes_sim::economy::MarketFlows;
 use fes_sim::replay::{ReplayReport, StepFile, StepResult};
 use fes_sim::{SimClock, SimContext, SimError, SimPhase, System};
 use std::path::PathBuf;
@@ -105,4 +110,105 @@ fn a_wrong_fake_system_is_reported_with_offset() {
         }
         other => panic!("expected a difference, got {other:?}"),
     }
+}
+
+/// A fold that leaves one multiplier off by one raw unit; correct on load.
+struct WrongFold;
+
+impl System for WrongFold {
+    fn id(&self) -> &'static str {
+        "economy.modifier_fold"
+    }
+    fn phase(&self) -> SimPhase {
+        SimPhase::Environment
+    }
+    fn order(&self) -> i32 {
+        fes_sim::sim_order::LATE
+    }
+    fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
+        rebuild_flows(ctx);
+        ctx.services.get_mut::<MarketFlows>().multipliers[3] ^= 1;
+        Ok(())
+    }
+    fn on_loaded(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
+        rebuild_flows(ctx);
+        Ok(())
+    }
+}
+
+/// A lod system that flips one node's detail; correct on load.
+struct WrongLod;
+
+impl System for WrongLod {
+    fn id(&self) -> &'static str {
+        "agents.lod"
+    }
+    fn phase(&self) -> SimPhase {
+        SimPhase::Lod
+    }
+    fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
+        evaluate_lod(ctx);
+        ctx.services.get_mut::<LodState>().detail[5] ^= 1;
+        Ok(())
+    }
+    fn on_loaded(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
+        evaluate_lod(ctx);
+        Ok(())
+    }
+}
+
+fn first_difference_with(system: Box<dyn System>, ported: &[&str]) -> Option<StepResult> {
+    let (db, map) = definitions();
+    let step = StepFile::read(&step_path(1)).unwrap();
+    let report =
+        fes_sim::replay::replay_turn_with(&step, &db, &map, ported, |b| b.replace_system(system))
+            .expect("replay");
+    report.first_difference().cloned()
+}
+
+#[test]
+fn a_wrong_service_is_reported_against_its_rebuild() {
+    let wrong = |label: &str, key: &str, offset: usize| StepResult::Different {
+        label: label.to_string(),
+        key: key.to_string(),
+        offset,
+    };
+    assert_eq!(
+        first_difference_with(Box::new(WrongFold), &["economy.modifier_fold"]),
+        Some(wrong(
+            "system:economy.modifier_fold",
+            "service:MarketFlows.multipliers",
+            3
+        ))
+    );
+    assert_eq!(
+        first_difference_with(Box::new(WrongLod), &["agents.lod"]),
+        Some(wrong("system:agents.lod", "service:LodState.detail", 5))
+    );
+}
+
+#[test]
+fn a_recorded_section_rust_lacks_is_reported() {
+    let (db, map) = definitions();
+    let mut step = StepFile::read(&step_path(1)).unwrap();
+    let record = step
+        .records
+        .iter_mut()
+        .find(|r| r.label.starts_with("dispatch:"))
+        .unwrap();
+    record.sections.push(RawSection {
+        key: "zz.only_in_the_record".to_string(),
+        version: 1,
+        bytes: vec![1, 2, 3],
+    });
+    let label = record.label.clone();
+    let report = fes_sim::replay::replay_turn(&step, &db, &map, &[]).expect("replay");
+    assert_eq!(
+        report.first_difference(),
+        Some(&StepResult::Different {
+            label,
+            key: "zz.only_in_the_record".to_string(),
+            offset: 0
+        })
+    );
 }

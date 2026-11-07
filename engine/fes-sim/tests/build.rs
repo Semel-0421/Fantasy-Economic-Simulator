@@ -188,7 +188,7 @@ fn load_then_save_is_identity() {
 }
 
 #[test]
-fn step_with_no_systems_advances_the_clock() {
+fn step_without_state_changing_systems_only_advances_the_clock() {
     let run = &runs()[0];
     // Production and pricing change state every turn; without them no ported system does on turn 0.
     let mut sim = SimulationBuilder::from_data(&overridden_source(&run.dir), run.seed)

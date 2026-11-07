@@ -129,13 +129,13 @@ pub struct Reprice {
 
 impl Reprice {
     /// Steps every cell of every market whose level is due, paying for the households' units.
-    pub fn run(&self, s: &Scratch, b: &mut Books) {
+    pub fn run(&self, s: &Scratch<'_>, b: &mut Books) {
         for market in 0..b.markets.market_count() {
             self.execute(s, market, b);
         }
     }
 
-    fn execute(&self, s: &Scratch, market: usize, b: &mut Books) {
+    fn execute(&self, s: &Scratch<'_>, market: usize, b: &mut Books) {
         let level = usize::from(s.level[market]);
         if self.due_level_mask & (1 << level) == 0 {
             return;
@@ -167,7 +167,7 @@ impl Reprice {
     #[allow(clippy::too_many_arguments)]
     fn step_cell(
         &self,
-        s: &Scratch,
+        s: &Scratch<'_>,
         market: usize,
         c: usize,
         level: usize,

@@ -10,6 +10,7 @@ use self::job::{JobParams, PlayerOutput, ProductionJob};
 use self::lines::{build_lines, Lines};
 use self::upkeep::{pass_on_dividends, pay_holders, pay_wages_away, snapshot_dividends, Upkeep};
 use super::cargo::{warehouse_holder, CargoCapacity};
+use super::development::SubsidyPolicy;
 use super::money_ledger::state_excess;
 use super::{
     AgentTable, BankState, BillRoom, BillTable, CargoTable, DemandForecast, DevelopmentState,
@@ -33,24 +34,37 @@ const SYSTEM_ID: &str = "agents.production";
 /// C# `DevelopmentState.RefreshSubsidyRates`: the rates follow the policies in force. Unsaved, so
 /// derived from the saved policies whenever production needs them.
 pub fn refresh_subsidy_rates(development: &mut DevelopmentState, goods: usize, rate_raw: i64) {
-    development.subsidy_rate.fill(0);
-    for p in &development.subsidies {
-        development.subsidy_rate[p.nation as usize * goods + p.good as usize] = rate_raw;
+    let DevelopmentState {
+        subsidies,
+        subsidy_rate,
+        ..
+    } = development;
+    fill_subsidy_rates(subsidy_rate, subsidies, goods, rate_raw);
+}
+
+/// The rates `refresh_subsidy_rates` writes, into `rate`.
+pub fn fill_subsidy_rates(rate: &mut [i64], subsidies: &[SubsidyPolicy], goods: usize, raw: i64) {
+    rate.fill(0);
+    for p in subsidies {
+        rate[p.nation as usize * goods + p.good as usize] = raw;
     }
 }
 
 /// C# `IncomeTaxState.EnsureRows`: companies founded since the last call start their books.
 fn ensure_rows(world: &mut WorldState) {
-    let cash = world.get::<FacilityTable>().cash.clone();
-    let merchants = world.get::<AgentTable>().cash.clone();
+    // Copy only the rows added since the last call.
+    let books = world.get::<IncomeTaxState>();
+    let (facility_from, merchant_from) = (books.facility_start.len(), books.merchant_start.len());
+    let cash = &world.get::<FacilityTable>().cash;
+    let facility_tail = cash[facility_from.min(cash.len())..].to_vec();
+    let merchants = &world.get::<AgentTable>().cash;
+    let merchant_tail = merchants[merchant_from.min(merchants.len())..].to_vec();
     let books = world.get_mut::<IncomeTaxState>();
-    for &c in &cash[books.facility_start.len().min(cash.len())..] {
-        books.facility_start.push(c);
-        books.facility_dividends.push(0);
-    }
-    for &c in &merchants[books.merchant_start.len().min(merchants.len())..] {
-        books.merchant_start.push(c);
-    }
+    books.facility_start.extend_from_slice(&facility_tail);
+    books
+        .facility_dividends
+        .resize(books.facility_dividends.len() + facility_tail.len(), 0);
+    books.merchant_start.extend_from_slice(&merchant_tail);
 }
 
 /// What each nation with a subsidy may pay this week (DEC-074); also sets `subsidy_left`.
@@ -200,9 +214,9 @@ fn store_player_output(world: &mut WorldState, db: &GameDatabase, output: &[Play
     for o in output {
         let holder = warehouse_holder(o.facility);
         let markets = world.get::<MarketStore>();
-        let (weight, size) = (markets.good_weight.clone(), markets.good_size.clone());
+        let (weight, size) = (&markets.good_weight, &markets.good_size);
         let g = o.good as usize;
-        let load = world.get::<CargoTable>().load_of(holder, &weight, &size);
+        let load = world.get::<CargoTable>().load_of(holder, weight, size);
         let stored = o
             .quantity
             .min(capacity.max_additional(load, weight[g], size[g]));
@@ -284,18 +298,17 @@ impl System for ProductionSystem {
 
         let budget = open_subsidies(ctx);
         let week = run_production(ctx, &float_reserve);
-        let spent = std::mem::take(&mut ctx.world.get_mut::<BillRoom>().bank_spent);
-        let left = ctx.world.get::<DevelopmentState>().subsidy_left.clone();
-        let bank = ctx.world.get_mut::<BankState>();
-        let mut spent_after = spent.clone();
+        let (bank, room) = ctx.world.get2_mut::<BankState, BillRoom>();
+        let spent = &mut room.bank_spent;
         for n in 0..bank.reserve.len().min(spent.len()) {
             bank.reserve[n] -= spent[n];
-            spent_after[n] = 0;
+            spent[n] = 0;
         }
+        let (bank, development) = ctx.world.get2_mut::<BankState, DevelopmentState>();
+        let left = &development.subsidy_left;
         for n in 0..budget.len() {
             bank.reserve[n] -= budget[n] - left[n];
         }
-        ctx.world.get_mut::<BillRoom>().bank_spent = spent_after;
 
         store_player_output(&mut ctx.world, &db, &week.player_output);
         let before = snapshot_dividends(&ctx.world);

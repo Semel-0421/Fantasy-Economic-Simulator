@@ -124,7 +124,7 @@ fn run(
 }
 
 /// Settles every node's households and derives the per-node weights and budgets of this turn.
-fn scratch(ctx: &SimContext, cash: &mut HouseholdCash) -> Scratch {
+fn scratch<'a>(ctx: &'a SimContext, cash: &mut HouseholdCash) -> Scratch<'a> {
     let db = &ctx.services.database;
     let config = &db.config;
     let nodes = ctx.services.get::<NodeTable>();
@@ -138,7 +138,7 @@ fn scratch(ctx: &SimContext, cash: &mut HouseholdCash) -> Scratch {
         specialty_anchor_mul_raw: config.specialty_price_multiplier.raw(),
         turn: ctx.turn(),
         need_memory_weeks: config.need_memory_weeks,
-        level: nodes.level.clone(),
+        level: &nodes.level,
         anchor_mul: vec![0; count],
         necessity_weight: vec![0; count],
         luxury_weight: vec![0; count],
@@ -150,7 +150,7 @@ fn scratch(ctx: &SimContext, cash: &mut HouseholdCash) -> Scratch {
             .map(|g| luxury_share(config, g).raw())
             .collect(),
         level_weight: config.level_demand_weight.iter().map(|w| w.raw()).collect(),
-        modifier_mul: flows.multipliers.clone(),
+        modifier_mul: &flows.multipliers,
     };
     for n in 0..count {
         let level = usize::from(nodes.level[n]);

@@ -15,19 +15,19 @@ The full-scale world and the turn budget come with Plan 4.
 
 ## Per-system timing (Plan 3, Task 8)
 
-Sample world (`Default_Seed1_ThirtyYears`, turn 52 replay, all ported systems), release build, median of 20 replays, measured by `cargo test -p fes-parity --release --test timing -- --ignored --nocapture` (`engine/fes-parity/tests/timing.rs`). Time covers the system run only, not the byte compare.
+Sample world (`Default_Seed1_ThirtyYears`, turn 52 replay, all ported systems), release build, median of 20 replays, measured by `cargo test -p fes-parity --release --test timing -- --ignored --nocapture` (`engine/fes-parity/tests/timing.rs`). Time covers the system run only, not the byte compare or the service checks. Re-measured after the Plan 3 final review fixes (split borrows instead of per-turn column clones).
 
 | System | Rust, sample world | C# web, full scale |
 | --- | --- | --- |
-| `economy.pricing` | 141.4 us | 0.39-0.49 s |
-| `agents.production` | 100.7 us | not given |
-| `agents.home_surplus` | 45.4 us | not given |
-| `agents.household_spending` | 5.5 us | not given |
-| `agents.households` | 7.5 us | not given |
+| `economy.pricing` | 141.6 us | 0.39-0.49 s |
+| `agents.production` | 96.7 us | not given |
+| `agents.home_surplus` | 45.7 us | not given |
+| `agents.household_spending` | 5.6 us | not given |
+| `agents.households` | 7.9 us | not given |
 | `economy.world_events` | 4.9 us | not given |
-| `economy.currency` | 2.2 us | not given |
-| `economy.modifier_fold` | 1.7 us | not given |
-| `agents.lod` | 0.6 us | not given |
+| `economy.currency` | 1.9 us | not given |
+| `economy.modifier_fold` | 1.4 us | not given |
+| `agents.lod` | 0.5 us | not given |
 | `core.commands` | 0.4 us | not given |
 | merchants (`agents.merchant_*`) | not ported yet | 0.44-0.72 s |
 

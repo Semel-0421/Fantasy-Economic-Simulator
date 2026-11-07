@@ -2,6 +2,7 @@
 //! (`steps/turn_<t>.bin.gz`) record by record, running ported Rust systems against the recorded
 //! state and applying the recorded changes for everything not yet ported.
 use crate::error::SimError;
+use crate::replay_services::{service_checks, ServiceTracker};
 use crate::simulation::Simulation;
 use crate::SimulationBuilder;
 use fes_core::io::DotNetReader;
@@ -103,7 +104,9 @@ pub enum StepResult {
     Applied { label: String },
     /// Rust ran and every section equals the recorded state.
     Equal { label: String },
-    /// Rust ran and `key` differs from the recorded state, first at byte `offset`.
+    /// Rust ran and `key` differs from the recorded state, first at byte `offset`. For a service
+    /// (`key` starting `service:`), the live service differs from its rebuild from the recorded state
+    /// at element `offset`; for a section only one side has, `offset` is 0.
     Different {
         label: String,
         key: String,
@@ -150,11 +153,12 @@ pub fn replay_turn_with(
     let mut expected: BTreeMap<String, RawSection> =
         sections.into_iter().map(|s| (s.key.clone(), s)).collect();
     let mut report = ReplayReport::default();
+    let mut services = ServiceTracker::new(service_checks());
     for record in &step.records {
         for s in &record.sections {
             expected.insert(s.key.clone(), s.clone());
         }
-        let (result, took) = replay_record(&mut sim, record, &expected, ported)?;
+        let (result, took) = replay_record(&mut sim, record, &expected, ported, &mut services)?;
         if let Some(t) = took {
             report.timings.push((record.label.clone(), t));
         }
@@ -176,7 +180,9 @@ fn replay_record(
     record: &StepRecord,
     expected: &BTreeMap<String, RawSection>,
     ported: &[&str],
+    services: &mut ServiceTracker,
 ) -> Result<(StepResult, Option<Duration>), SimError> {
+    let changed: Vec<&str> = record.sections.iter().map(|s| s.key.as_str()).collect();
     let label = record.label.clone();
     let mut took = None;
     let runs_rust = match label.split_once(':') {
@@ -201,19 +207,32 @@ fn replay_record(
         for s in &record.sections {
             sim.ctx.world.load_section(s)?;
         }
+        services.note(&label, &changed, false);
         return Ok((StepResult::Applied { label }, None));
     }
     let mut first = None;
     // Resync: the recorded state wins from here on.
-    for s in sim.ctx.world.sections() {
+    let actual = sim.ctx.world.sections();
+    for s in &actual {
         let Some(e) = expected.get(&s.key) else {
-            first = first.or(Some((s.key, 0)));
+            first = first.or(Some((s.key.clone(), 0)));
             continue;
         };
         if let Some(offset) = differ_at(&s.bytes, &e.bytes) {
             first = first.or(Some((s.key.clone(), offset)));
             sim.ctx.world.load_section(e)?;
         }
+    }
+    // A recorded section Rust does not have.
+    for key in expected.keys() {
+        if !actual.iter().any(|s| s.key == *key) {
+            first = first.or(Some((key.clone(), 0)));
+        }
+    }
+    // Services, compared with their rebuild from the (resynced) recorded state.
+    services.note(&label, &changed, true);
+    if let Some((service, index)) = services.first_difference(&sim.ctx) {
+        first = first.or(Some((service.to_string(), index)));
     }
     let result = match first {
         Some((key, offset)) => StepResult::Different { label, key, offset },

@@ -58,6 +58,8 @@ impl Module for AgentsModule {
         b.world.add(MerchantGenetics::new(continents))?;
         let nodes = b.services.get::<NodeTable>();
         seed_money(&mut b.world, nodes, &db.config);
-        b.add_system(Box::new(super::ProductionSystem))
+        b.add_system(Box::new(super::ProductionSystem))?;
+        b.add_system(Box::new(super::HouseholdSpendingSystem))?;
+        b.add_system(Box::new(super::HomeSurplusSystem))
     }
 }

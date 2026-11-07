@@ -28,6 +28,7 @@ pub mod player;
 pub mod policy;
 pub mod production;
 pub mod purses;
+pub mod purses_systems;
 pub mod securities;
 pub mod seeding;
 pub mod ship;
@@ -63,6 +64,7 @@ pub use player::PlayerState;
 pub use policy::PolicyState;
 pub use production::ProductionSystem;
 pub use purses::PurseState;
+pub use purses_systems::{HomeSurplusSystem, HouseholdSpendingSystem};
 pub use securities::{AssetMarkets, ShareTable, ShortLicences, ShortTable, VentureTable};
 pub use ship::PlayerShip;
 

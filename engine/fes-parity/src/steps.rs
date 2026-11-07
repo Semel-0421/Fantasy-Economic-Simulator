@@ -13,6 +13,8 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "economy.modifier_fold",
     "agents.production",
     "economy.pricing",
+    "agents.household_spending",
+    "agents.home_surplus",
 ];
 
 pub struct StepOptions {

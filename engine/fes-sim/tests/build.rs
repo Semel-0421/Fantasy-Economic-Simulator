@@ -190,7 +190,12 @@ fn load_then_save_is_identity() {
 #[test]
 fn step_with_no_systems_advances_the_clock() {
     let run = &runs()[0];
-    let mut sim = build(run);
+    // Production changes state every turn; without it no ported system does on turn 0.
+    let mut sim = SimulationBuilder::from_data(&overridden_source(&run.dir), run.seed)
+        .expect("builder")
+        .remove_system("agents.production")
+        .build()
+        .expect("build");
     let before = sim.world().sections();
     let report = sim.step().expect("step");
     assert_eq!(report.turn, 0);

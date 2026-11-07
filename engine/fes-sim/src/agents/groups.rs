@@ -224,3 +224,15 @@ impl GroupDirectory {
         g
     }
 }
+
+/// The node's private enterprise, founded when the node has none (C# `GroupDirectory.PrivateAt`
+/// on a freshly built directory: the last such row wins).
+pub fn private_enterprise_at(groups: &mut GroupTable, node: i32, config: &SimulationConfig) -> i32 {
+    if let Some(g) = (0..groups.count())
+        .rposition(|g| groups.kind[g] == KIND_PRIVATE_ENTERPRISE && groups.node[g] == node)
+    {
+        return g as i32;
+    }
+    let cash = config.group_start_cash[KIND_PRIVATE_ENTERPRISE as usize];
+    groups.add(KIND_PRIVATE_ENTERPRISE, node, -1, cash, false)
+}

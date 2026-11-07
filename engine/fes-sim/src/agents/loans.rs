@@ -67,3 +67,10 @@ impl Component for TraderLoans {
         read_items(r, &mut self.interest_bank)
     }
 }
+
+impl NpcLoanTable {
+    /// The row of `borrower`'s loan (C# `Find`: the index keeps the last row per borrower).
+    pub fn find(&self, borrower: i32) -> Option<usize> {
+        self.borrower.iter().rposition(|&b| b == borrower)
+    }
+}

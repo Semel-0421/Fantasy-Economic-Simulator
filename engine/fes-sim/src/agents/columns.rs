@@ -112,6 +112,12 @@ macro_rules! native_table {
             pub fn count(&self) -> usize {
                 [$(self.$field.len()),+][0]
             }
+
+            /// Moves the last row into `row` (C# `NativeTable.RemoveRowSwapBack`).
+            #[allow(dead_code)]
+            pub fn remove_row_swap_back(&mut self, row: usize) {
+                $( self.$field.swap_remove(row); )+
+            }
         }
 
         impl $crate::world::Component for $name {

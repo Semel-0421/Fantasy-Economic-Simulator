@@ -11,6 +11,7 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "agents.lod",
     "economy.world_events",
     "economy.modifier_fold",
+    "agents.production",
 ];
 
 pub struct StepOptions {

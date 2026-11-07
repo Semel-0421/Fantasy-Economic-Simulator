@@ -15,7 +15,7 @@ use crate::module::{Module, SimBuilder};
 use crate::world::NodeTable;
 use std::sync::Arc;
 
-/// Registers the agents tables. Requires the world and economy modules; registers no systems yet.
+/// Registers the agents tables. Requires the world and economy modules; registers the production system.
 pub struct AgentsModule;
 
 impl Module for AgentsModule {
@@ -58,6 +58,6 @@ impl Module for AgentsModule {
         b.world.add(MerchantGenetics::new(continents))?;
         let nodes = b.services.get::<NodeTable>();
         seed_money(&mut b.world, nodes, &db.config);
-        Ok(())
+        b.add_system(Box::new(super::ProductionSystem))
     }
 }

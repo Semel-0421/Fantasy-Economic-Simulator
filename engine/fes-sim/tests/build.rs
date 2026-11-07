@@ -212,6 +212,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("agents.merchant_vehicles")
         .remove_system("agents.orders")
         .remove_system("agents.demand_forecast")
+        .remove_system("agents.merchant_membership")
         .remove_system("agents.asset_markets")
         .remove_system("agents.finance")
         .remove_system("agents.shorts")

@@ -7,14 +7,18 @@ use common::build_sample;
 use fes_core::testing::fixtures_dir;
 use fes_core::Fx;
 use fes_core::QualityGrade;
+use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::demand_forecast::DemandForecastSystem;
 use fes_sim::agents::facilities::OWNER_NPC;
+use fes_sim::agents::groups::{city_of, KIND_COMPANY, KIND_GUILD};
+use fes_sim::agents::merchant_membership::MerchantMembershipSystem;
 use fes_sim::agents::merchant_vehicles::{CART, PACK};
 use fes_sim::agents::order_system::MerchantVehicleBought;
 use fes_sim::agents::order_system::QUARTER_WEEKS;
 use fes_sim::agents::production::lines::find_nearest_market;
+use fes_sim::agents::GroupTable;
 use fes_sim::agents::{AgentTable, OrderTable};
 use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
@@ -26,7 +30,11 @@ use fes_sim::{SimEvent, Simulation};
 use std::sync::Arc;
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
-const NEW: &[&str] = &["agents.orders", "agents.demand_forecast"];
+const NEW: &[&str] = &[
+    "agents.orders",
+    "agents.demand_forecast",
+    "agents.merchant_membership",
+];
 /// Earlier askers of this turn's bond offers (C# `BondOffers`) run in Rust too, so credit sees
 /// the offers they left (see `plan4-audit.md`).
 const OFFER_USERS: &[&str] = &[
@@ -327,4 +335,73 @@ fn plan_adds_open_orders_from_anywhere_in_the_nation() {
         .add(-1, order_node, cell as i32, 100_000, turn, 0);
     plan(&mut sim);
     assert_eq!(plan_of(&sim, "cartwright"), Fx::ONE_RAW);
+}
+
+// ---- merchant membership (InvestmentTests) ----
+
+#[test]
+fn association_helps_a_member_running_short() {
+    let mut sim = build_sample(&[]);
+    let world = &mut sim.context_mut().world;
+    let groups = world.get_mut::<GroupTable>();
+    let guild = (0..groups.count())
+        .find(|&g| groups.kind[g] == KIND_GUILD)
+        .unwrap();
+    groups.cash[guild] = 100_000;
+    let agents = world.get_mut::<AgentTable>();
+    let a = (0..agents.count())
+        .find(|&i| agents.owner[i] == OWNER_NPC)
+        .unwrap();
+    agents.association[a] = guild as i32;
+    agents.cash[a] = 0;
+    MerchantMembershipSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let world = &sim.context().world;
+    let given = 100_000 - world.get::<GroupTable>().cash[guild];
+    assert!(given > 0);
+    assert_eq!(world.get::<AgentTable>().cash[a], given, "no coins made");
+}
+
+#[test]
+fn every_group_joins_the_richest_open_guild_or_company_when_all_join() {
+    let mut sim = build_sample(&["merchants.join_permille,1000"]);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    {
+        let agents = sim.context_mut().world.get_mut::<AgentTable>();
+        agents.association.fill(-1);
+    }
+    MerchantMembershipSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let ctx = sim.context();
+    let nodes = ctx.services.get::<NodeTable>();
+    let agents = ctx.world.get::<AgentTable>();
+    let groups = ctx.world.get::<GroupTable>();
+    for a in 0..agents.count() {
+        if agents.owner[a] != OWNER_NPC {
+            continue;
+        }
+        let home = agents.home[a];
+        let city = city_of(nodes, home);
+        let (kind, at) = if city >= 0 {
+            (KIND_GUILD, city)
+        } else {
+            (KIND_COMPANY, nodes.ancestor_at(home, WorldLevel::Nation))
+        };
+        let open: Vec<usize> = (0..groups.count())
+            .filter(|&g| groups.kind[g] == kind && groups.node[g] == at && groups.is_player[g] == 0)
+            .collect();
+        let expected = open.iter().copied().fold(-1i32, |best, g| {
+            if best < 0 || groups.cash[g] > groups.cash[best as usize] {
+                g as i32
+            } else {
+                best
+            }
+        });
+        assert_eq!(agents.association[a], expected, "agent {a}");
+    }
 }

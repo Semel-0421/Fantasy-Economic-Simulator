@@ -87,6 +87,9 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::order_system::OrderSystem))?;
         b.add_system(Box::new(
             super::demand_forecast::DemandForecastSystem::default(),
+        ))?;
+        b.add_system(Box::new(
+            super::merchant_membership::MerchantMembershipSystem::default(),
         ))
     }
 }

@@ -44,6 +44,7 @@ pub mod roads;
 pub mod securities;
 pub mod seeding;
 pub mod ship;
+pub mod shorts;
 pub mod state_spending;
 pub mod travel;
 pub mod travel_costs;

@@ -205,6 +205,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("agents.ventures")
         .remove_system("agents.asset_markets")
         .remove_system("agents.finance")
+        .remove_system("agents.shorts")
         .build()
         .expect("build");
     let before = sim.world().sections();

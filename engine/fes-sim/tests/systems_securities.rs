@@ -17,15 +17,18 @@ use fes_sim::agents::finance::reserve_ratio;
 use fes_sim::agents::finance_system::{
     loan_rate, FinancialEventEnded, FinancialEventStarted, StatisticsPublished,
 };
-use fes_sim::agents::securities::{AssetMarkets, ShareTable, VentureTable};
+use fes_sim::agents::securities::{
+    AssetMarkets, ShareTable, ShortLicences, ShortTable, VentureTable,
+};
+use fes_sim::agents::shorts::{short_price, ShortCalled, ShortSystem, ShortsCovered};
 use fes_sim::agents::ventures::venture_fundamental;
 use fes_sim::agents::{
-    AgentTable, BankState, FacilityTable, FinanceState, GroupTable, LandState, MoneyTotals,
-    NpcLoanTable, PlayerState, PurseState,
+    AgentTable, BankState, FacilityTable, FinanceState, GroupTable, LandState, LoanTable,
+    MoneyTotals, NpcLoanTable, PlayerState, PurseState,
 };
 use fes_sim::economy::{HouseholdCash, HouseholdState};
 use fes_sim::world::{NodeBanks, NodeTable};
-use fes_sim::{SimEvent, Simulation};
+use fes_sim::{SimEvent, Simulation, System};
 use std::sync::Arc;
 
 const WEEKS_PER_YEAR: i32 = 52;
@@ -602,4 +605,142 @@ fn a_continental_burst_stops_credit_in_every_nation_of_the_continent() {
         }
     }
     assert!(on_continent > 0);
+}
+
+/// One turn of `system` alone; returns the events it published.
+fn run_alone(sim: &mut Simulation, system: &mut dyn System) -> Vec<Arc<dyn SimEvent>> {
+    let ctx = sim.context_mut();
+    let before = ctx.events.turn_log().len();
+    system.execute(ctx).expect("system");
+    ctx.dispatch_events().expect("events");
+    let events = ctx.events.turn_log()[before..].to_vec();
+    ctx.clock_mut().advance();
+    events
+}
+
+/// A group's facility in a nation, and that nation.
+fn group_facility(sim: &Simulation) -> (usize, usize) {
+    let facilities = sim.world().get::<FacilityTable>();
+    let f = (0..facilities.count())
+        .find(|&f| {
+            facilities.owner[f] == OWNER_NPC
+                && facilities.group[f] >= 0
+                && facilities.level[f] > 0
+                && nation_of(sim, facilities.node[f]) >= 0
+        })
+        .expect("a group facility");
+    (f, nation_of(sim, facilities.node[f]) as usize)
+}
+
+/// `count` shares of `f` sold short, as `SellShortCommand.Apply` leaves them, with `deposit` at
+/// the nation's bank.
+fn sell_short(sim: &mut Simulation, f: usize, nation: usize, count: i32, deposit: i64) {
+    let world = &mut sim.context_mut().world;
+    let holder = fes_sim::agents::asset_prices::households_holder(nation as i32);
+    world.get_mut::<ShareTable>().add(f as i32, holder, count);
+    world
+        .get_mut::<ShortTable>()
+        .add(false, f as i32, nation as i32, count);
+    let bank = world.get_mut::<BankState>();
+    bank.player_deposit[nation] = deposit;
+    bank.reserve[nation] += deposit;
+}
+
+#[test]
+fn with_no_shorts_the_calls_are_cleared() {
+    let mut sim = build_sample(&[]);
+    sim.context_mut()
+        .world
+        .get_mut::<ShortLicences>()
+        .called_turn
+        .fill(5);
+    run_alone(&mut sim, &mut ShortSystem);
+    let called = &sim.world().get::<ShortLicences>().called_turn;
+    assert!(called.iter().all(|&t| t == -1));
+}
+
+/// C# `ShortTests.TheLender_IsPaidAFee_EachWeek`, with the system alone: exactly a week's fee
+/// leaves the deposit, to the facility's group.
+#[test]
+fn the_lender_is_paid_a_fee_each_week() {
+    let mut sim = build_sample(&[]);
+    let (f, nation) = group_facility(&sim);
+    sell_short(&mut sim, f, nation, 10, 100_000);
+    let config = sim.context().services.database.config.clone();
+    let price = short_price(sim.world(), refs(&sim), false, f as i32);
+    let fee = config.short_fee.mul_int(10 * price) / 52;
+    assert!(fee > 0);
+    let group = sim.world().get::<FacilityTable>().group[f] as usize;
+    let cash = sim.world().get::<GroupTable>().cash[group];
+    let reserve = sim.world().get::<BankState>().reserve[nation];
+    run_alone(&mut sim, &mut ShortSystem);
+    let bank = sim.world().get::<BankState>();
+    assert_eq!(bank.player_deposit[nation], 100_000 - fee);
+    assert_eq!(bank.reserve[nation], reserve - fee);
+    assert_eq!(sim.world().get::<GroupTable>().cash[group], cash + fee);
+}
+
+/// C# `ShortTests.ARisingPrice_CallsForMargin_ThenTheBankBuysBack`, with the system alone.
+#[test]
+fn a_rising_price_calls_for_margin_then_the_bank_buys_back() {
+    let mut sim = build_sample(&[]);
+    let (f, nation) = group_facility(&sim);
+    sell_short(&mut sim, f, nation, 10, 1);
+    sim.context_mut()
+        .world
+        .get_mut::<PlayerState>()
+        .coins
+        .fill(0);
+    let weeks = sim.context().services.database.config.margin_call_weeks;
+    let holder = fes_sim::agents::asset_prices::households_holder(nation as i32);
+    let mut events = Vec::new();
+    for _ in 0..=weeks + 1 {
+        markets(&mut sim).premium[nation] = Fx::from_int(4).raw();
+        events.extend(run_alone(&mut sim, &mut ShortSystem));
+    }
+    assert_eq!(of::<ShortCalled>(&events).len(), 1);
+    let covered = of::<ShortsCovered>(&events);
+    assert_eq!(covered.len(), 1);
+    assert!(
+        covered[0].lent > 0,
+        "the deposit fell short, and the bank lent the rest"
+    );
+    assert_eq!(sim.world().get::<ShortTable>().count(), 0);
+    let loans = sim.world().get::<LoanTable>();
+    assert_eq!(loans.count(), 1);
+    assert_eq!(loans.balance[0], covered[0].lent);
+    let shares = sim.world().get::<ShareTable>();
+    assert_eq!(
+        shares.held(f as i32, holder),
+        0,
+        "the shares went back to the group"
+    );
+}
+
+/// Buying back several shorts at one bank removes their rows by swap-back, last row first.
+#[test]
+fn a_call_buys_back_every_short_at_the_bank_by_swap_back() {
+    let mut sim = build_sample(&[]);
+    let (f, nation) = group_facility(&sim);
+    let other = {
+        let facilities = sim.world().get::<FacilityTable>();
+        (0..facilities.count())
+            .find(|&g| {
+                g != f
+                    && facilities.owner[g] == OWNER_NPC
+                    && facilities.group[g] >= 0
+                    && nation_of(&sim, facilities.node[g]) == nation as i32
+            })
+            .expect("another facility in the nation")
+    };
+    sell_short(&mut sim, f, nation, 10, 1);
+    sell_short(&mut sim, other, nation, 7, 1);
+    let shorts = sim.world().get::<ShortTable>();
+    assert_eq!(shorts.asset, [f as i32, other as i32]);
+    let weeks = sim.context().services.database.config.margin_call_weeks;
+    for _ in 0..=weeks + 1 {
+        markets(&mut sim).premium[nation] = Fx::from_int(4).raw();
+        run_alone(&mut sim, &mut ShortSystem);
+    }
+    assert_eq!(sim.world().get::<ShortTable>().count(), 0);
 }

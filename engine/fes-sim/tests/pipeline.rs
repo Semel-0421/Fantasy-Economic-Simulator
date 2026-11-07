@@ -8,12 +8,10 @@ use fes_sim::{
     CommandSystem, Module, Services, SimBuilder, SimClock, SimContext, SimError, SimPhase, System,
     TierSchedule, TurnPipeline, WorldState,
 };
-use std::cell::RefCell;
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-type Log = Rc<RefCell<Vec<String>>>;
+type Log = Arc<Mutex<Vec<String>>>;
 
 fn new_ctx(seed: u64) -> SimContext {
     let dir = PathBuf::from(concat!(
@@ -48,7 +46,8 @@ impl System for Fake {
     }
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
         self.log
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .push(format!("{}@{}", self.id, ctx.turn()));
         Ok(())
     }
@@ -59,7 +58,7 @@ fn fake(id: &'static str, phase: SimPhase, order: i32, log: &Log) -> Box<dyn Sys
         id,
         phase,
         order,
-        log: Rc::clone(log),
+        log: Arc::clone(log),
     })
 }
 
@@ -82,7 +81,7 @@ impl System for Publisher {
         self.phase
     }
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
-        self.log.borrow_mut().push(format!("run:{}", self.id));
+        self.log.lock().unwrap().push(format!("run:{}", self.id));
         ctx.events.publish(Ping);
         Ok(())
     }
@@ -102,7 +101,7 @@ fn systems_run_in_phase_order_id_order() {
     assert_eq!(p.system_ids(), ["z", "late", "a", "b", "early", "c"]);
     let mut ctx = new_ctx(1);
     p.advance(&mut ctx).unwrap();
-    let ran: Vec<String> = log.borrow().clone();
+    let ran: Vec<String> = log.lock().unwrap().clone();
     assert_eq!(ran, ["z@0", "late@0", "a@0", "b@0", "early@0", "c@0"]);
 }
 
@@ -110,43 +109,112 @@ fn systems_run_in_phase_order_id_order() {
 fn events_dispatch_after_each_phase() {
     let log: Log = Log::default();
     let mut ctx = new_ctx(1);
-    let l = Rc::clone(&log);
-    ctx.events
-        .subscribe::<Ping>(move |_, _| l.borrow_mut().push("handler".into()));
+    let l = Arc::clone(&log);
+    ctx.events.subscribe::<Ping>(move |_, _| {
+        l.lock().unwrap().push("handler".into());
+        Ok(())
+    });
     let mut p = TurnPipeline::new(vec![
         Box::new(Publisher {
             id: "pub",
             phase: SimPhase::Lod,
-            log: Rc::clone(&log),
+            log: Arc::clone(&log),
         }),
         fake("after", SimPhase::Environment, 0, &log),
     ]);
     p.advance(&mut ctx).unwrap();
-    assert_eq!(*log.borrow(), ["run:pub", "handler", "after@0"]);
+    assert_eq!(*log.lock().unwrap(), ["run:pub", "handler", "after@0"]);
 }
 
 #[test]
 fn handler_publishing_during_dispatch_is_delivered_same_turn() {
     let log: Log = Log::default();
     let mut ctx = new_ctx(1);
-    let l = Rc::clone(&log);
-    ctx.events.subscribe::<Ping>(move |_, bus| {
-        l.borrow_mut().push("ping".into());
-        bus.publish(Pong);
+    let l = Arc::clone(&log);
+    ctx.events.subscribe::<Ping>(move |_, ctx| {
+        l.lock().unwrap().push("ping".into());
+        ctx.events.publish(Pong);
+        Ok(())
     });
-    let l = Rc::clone(&log);
-    ctx.events
-        .subscribe::<Pong>(move |_, _| l.borrow_mut().push("pong".into()));
+    let l = Arc::clone(&log);
+    ctx.events.subscribe::<Pong>(move |_, _| {
+        l.lock().unwrap().push("pong".into());
+        Ok(())
+    });
     // A handler may also subscribe another handler while dispatching; it sees later events.
-    let l = Rc::clone(&log);
-    ctx.events.subscribe::<Ping>(move |_, bus| {
-        let l2 = Rc::clone(&l);
-        bus.subscribe::<Pong>(move |_, _| l2.borrow_mut().push("late-pong".into()));
+    let l = Arc::clone(&log);
+    ctx.events.subscribe::<Ping>(move |_, ctx| {
+        let l2 = Arc::clone(&l);
+        ctx.events.subscribe::<Pong>(move |_, _| {
+            l2.lock().unwrap().push("late-pong".into());
+            Ok(())
+        });
+        Ok(())
     });
     ctx.events.publish(Ping);
-    ctx.events.dispatch().unwrap();
-    assert_eq!(*log.borrow(), ["ping", "pong", "late-pong"]);
+    ctx.dispatch_events().unwrap();
+    assert_eq!(*log.lock().unwrap(), ["ping", "pong", "late-pong"]);
     assert_eq!(ctx.events.turn_log().len(), 2);
+}
+
+#[test]
+fn handler_subscribed_for_same_type_during_dispatch_sees_current_event() {
+    // C#'s index loop reaches a handler appended to the list it is walking.
+    let log: Log = Log::default();
+    let mut ctx = new_ctx(1);
+    let l = Arc::clone(&log);
+    let mut once = true;
+    ctx.events.subscribe::<Ping>(move |_, ctx| {
+        l.lock().unwrap().push("first".into());
+        if std::mem::take(&mut once) {
+            let l2 = Arc::clone(&l);
+            ctx.events.subscribe::<Ping>(move |_, _| {
+                l2.lock().unwrap().push("added".into());
+                Ok(())
+            });
+        }
+        Ok(())
+    });
+    ctx.events.publish(Ping);
+    ctx.events.publish(Ping);
+    ctx.dispatch_events().unwrap();
+    assert_eq!(*log.lock().unwrap(), ["first", "added", "first", "added"]);
+}
+
+#[test]
+fn handler_mutates_world_state() {
+    let mut ctx = new_ctx(1);
+    ctx.events.subscribe::<Ping>(|_, ctx| {
+        ctx.clock_mut().turn += 5;
+        Ok(())
+    });
+    let before = ctx.world.hash();
+    ctx.events.publish(Ping);
+    ctx.dispatch_events().unwrap();
+    assert_eq!(ctx.turn(), 5);
+    assert_ne!(ctx.world.hash(), before);
+}
+
+#[test]
+fn cascade_limit_stops_endless_republishing() {
+    let mut ctx = new_ctx(1);
+    ctx.events.subscribe::<Ping>(|_, ctx| {
+        ctx.events.publish(Ping);
+        Ok(())
+    });
+    ctx.events.publish(Ping);
+    let err = ctx.dispatch_events().unwrap_err();
+    assert!(matches!(err, SimError::Invalid(s) if s.contains("cascade")));
+    // Pending events are dropped and handlers survive the failure.
+    ctx.events.publish(Pong);
+    ctx.dispatch_events().unwrap();
+}
+
+#[test]
+fn simulation_is_send() {
+    fn assert_send<T: Send>() {}
+    assert_send::<fes_sim::Simulation>();
+    assert_send::<fes_sim::TurnReport>();
 }
 
 #[test]
@@ -156,7 +224,7 @@ fn clock_advances_after_cleanup() {
     let mut ctx = new_ctx(1);
     p.advance(&mut ctx).unwrap();
     p.advance(&mut ctx).unwrap();
-    assert_eq!(*log.borrow(), ["c@0", "c@1"]);
+    assert_eq!(*log.lock().unwrap(), ["c@0", "c@1"]);
     assert_eq!(ctx.turn(), 2);
 }
 
@@ -164,34 +232,56 @@ fn clock_advances_after_cleanup() {
 struct Cmd(bool);
 
 impl Command for Cmd {
-    fn apply(&self, _ctx: &mut SimContext) -> CommandResult {
+    fn validate(&self, _ctx: &SimContext) -> CommandResult {
         if self.0 {
             CommandResult::Ok
         } else {
             CommandResult::Error("nope".into())
         }
     }
+
+    /// Changes the world, so a wrongly applied rejected command shows in the hash.
+    fn apply(&self, ctx: &mut SimContext) {
+        ctx.clock_mut().seed += 1;
+    }
+}
+
+#[test]
+fn rejected_command_leaves_world_unchanged() {
+    let mut ctx = new_ctx(1);
+    ctx.commands.enqueue(Cmd(false));
+    let before = ctx.world.hash();
+    // Run only the Commands system, so the clock does not advance.
+    CommandSystem.execute(&mut ctx).unwrap();
+    assert_eq!(ctx.world.hash(), before);
+    assert!(ctx.commands.applied_this_turn().is_empty());
+    ctx.commands.enqueue(Cmd(true));
+    CommandSystem.execute(&mut ctx).unwrap();
+    assert_ne!(ctx.world.hash(), before);
 }
 
 #[test]
 fn rejected_command_publishes_rejection() {
     let mut ctx = new_ctx(1);
     let seen: Log = Log::default();
-    let s = Rc::clone(&seen);
+    let s = Arc::clone(&seen);
     ctx.events.subscribe::<CommandRejected>(move |e, _| {
-        s.borrow_mut()
-            .push(format!("rejected:{}:{}", e.reason, e.turn))
+        s.lock()
+            .unwrap()
+            .push(format!("rejected:{}:{}", e.reason, e.turn));
+        Ok(())
     });
-    let s = Rc::clone(&seen);
+    let s = Arc::clone(&seen);
     ctx.events.subscribe::<CommandApplied>(move |e, _| {
-        s.borrow_mut().push(format!("applied:{}", e.turn))
+        s.lock().unwrap().push(format!("applied:{}", e.turn));
+        Ok(())
     });
     ctx.commands.enqueue(Cmd(false));
     ctx.commands.enqueue(Cmd(true));
     assert_eq!(ctx.commands.len(), 2);
     let mut p = TurnPipeline::new(vec![Box::new(CommandSystem)]);
     p.advance(&mut ctx).unwrap();
-    assert_eq!(*seen.borrow(), ["rejected:nope:0", "applied:0"]);
+    assert_eq!(*seen.lock().unwrap(), ["rejected:nope:0", "applied:0"]);
     assert_eq!(ctx.commands.len(), 0);
     assert_eq!(ctx.commands.applied_this_turn().len(), 1);
 }
@@ -338,4 +428,28 @@ fn csharp_system_list_sorts_to_fixture_order() {
             b
         );
     }
+}
+
+#[test]
+fn ordinal_cmp_uses_utf16_code_units() {
+    // U+FF61 sorts after U+10000 in UTF-16 (0xFF61 > 0xD800) but before it in UTF-8 bytes.
+    assert_eq!(
+        fes_sim::ordinal_cmp("\u{FF61}", "\u{10000}"),
+        std::cmp::Ordering::Greater
+    );
+    assert_eq!(fes_sim::ordinal_cmp("a.b", "a.c"), std::cmp::Ordering::Less);
+}
+
+#[test]
+fn config_tables_cover_every_index_seeding_uses() {
+    // Seeding indexes these with enum values; fixed array lengths make bad data unrepresentable.
+    let ctx = new_ctx(1);
+    let c = &ctx.services.database.config;
+    assert_eq!(c.producers_per_node.len(), WorldLevel::COUNT);
+    assert!(c
+        .producers_per_node
+        .iter()
+        .all(|r| r.len() == fes_core::IndustryTier::COUNT));
+    assert_eq!(c.facility_start_cash.len(), fes_core::IndustryTier::COUNT);
+    assert_eq!(c.group_start_cash.len(), 4);
 }

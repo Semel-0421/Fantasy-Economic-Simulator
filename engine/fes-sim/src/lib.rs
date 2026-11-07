@@ -24,9 +24,9 @@ pub use context::{Services, SimContext};
 pub use error::SimError;
 pub use events::{EventBus, SimEvent};
 pub use module::{module_order, Module, SimBuilder};
-pub use pipeline::{sim_order, SimPhase, System, TurnPipeline};
+pub use pipeline::{ordinal_cmp, sim_order, SimPhase, System, TurnPipeline};
 pub use schedule::TierSchedule;
-pub use simulation::{Simulation, TurnReport};
+pub use simulation::{EventRecord, Simulation, TurnReport};
 pub use world::{Component, WorldState};
 
 use fes_data::database::GameDatabase;

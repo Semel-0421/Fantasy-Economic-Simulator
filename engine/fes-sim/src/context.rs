@@ -17,7 +17,7 @@ use std::sync::Arc;
 pub struct Services {
     pub database: Arc<GameDatabase>,
     pub map: Arc<MapDef>,
-    extras: HashMap<TypeId, Box<dyn Any>>,
+    extras: HashMap<TypeId, Box<dyn Any + Send>>,
 }
 
 impl Services {
@@ -30,7 +30,7 @@ impl Services {
     }
 
     /// Registers a service; fails when one of this type already exists.
-    pub fn add<T: Any>(&mut self, service: T) -> Result<(), SimError> {
+    pub fn add<T: Any + Send>(&mut self, service: T) -> Result<(), SimError> {
         if self.extras.contains_key(&TypeId::of::<T>()) {
             return Err(SimError::DuplicateKey(std::any::type_name::<T>().into()));
         }

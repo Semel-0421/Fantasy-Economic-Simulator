@@ -18,7 +18,7 @@ pub use roads::RoadState;
 pub use routes::{build_routes, RouteTable};
 
 /// State that is saved, loaded and included in the determinism hash.
-pub trait Component: Any {
+pub trait Component: Any + Send {
     /// Stable save-section key, e.g. `"economy.markets"`. Never rename once shipped.
     fn key(&self) -> &'static str;
     /// Schema version of the section.

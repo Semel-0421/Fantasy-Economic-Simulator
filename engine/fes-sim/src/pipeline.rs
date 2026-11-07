@@ -24,7 +24,7 @@ pub mod sim_order {
 }
 
 /// A unit of simulation behavior, registered from a module.
-pub trait System {
+pub trait System: Send {
     /// Stable id, e.g. "economy.pricing"; also keys the system's RNG stream.
     fn id(&self) -> &'static str;
     fn phase(&self) -> SimPhase;
@@ -42,6 +42,12 @@ pub trait System {
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError>;
 }
 
+/// C# `string.CompareOrdinal`: compares UTF-16 code units, which differs from byte order for
+/// characters above U+FFFF versus U+E000..U+FFFF.
+pub fn ordinal_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    a.encode_utf16().cmp(b.encode_utf16())
+}
+
 pub struct TurnPipeline {
     systems: Vec<Box<dyn System>>,
 }
@@ -52,7 +58,7 @@ impl TurnPipeline {
         systems.sort_by(|a, b| {
             (a.phase(), a.order())
                 .cmp(&(b.phase(), b.order()))
-                .then_with(|| a.id().as_bytes().cmp(b.id().as_bytes()))
+                .then_with(|| ordinal_cmp(a.id(), b.id()))
         });
         Self { systems }
     }
@@ -87,7 +93,7 @@ impl TurnPipeline {
                 self.systems[i].execute(ctx)?;
                 i += 1;
             }
-            ctx.events.dispatch()?;
+            ctx.dispatch_events()?;
         }
         ctx.clock_mut().advance();
         Ok(())

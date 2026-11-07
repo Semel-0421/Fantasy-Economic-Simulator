@@ -11,10 +11,12 @@ pub enum CommandResult {
     Error(String),
 }
 
-/// A player action: the only way presentation code mutates simulation state. `apply` validates
-/// first and must not change anything when it returns `Error`.
-pub trait Command: Debug {
-    fn apply(&self, ctx: &mut SimContext) -> CommandResult;
+/// A player action: the only way presentation code mutates simulation state (C# `ICommand`).
+/// `validate` must not change anything; `apply` runs only after it returned `Ok`. Commands must
+/// not store simulation-derived state.
+pub trait Command: Debug + Send + Sync {
+    fn validate(&self, ctx: &SimContext) -> CommandResult;
+    fn apply(&self, ctx: &mut SimContext);
 }
 
 #[derive(Clone, Debug)]
@@ -78,7 +80,7 @@ impl CommandQueue {
     }
 }
 
-/// Built-in Commands-phase system that applies queued player commands.
+/// Built-in Commands-phase system that validates and applies queued player commands.
 pub struct CommandSystem;
 
 impl System for CommandSystem {
@@ -97,17 +99,18 @@ impl System for CommandSystem {
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
         for command in ctx.commands.drain() {
             let turn = ctx.turn();
-            match command.apply(ctx) {
-                CommandResult::Error(reason) => ctx.events.publish(CommandRejected {
+            if let CommandResult::Error(reason) = command.validate(ctx) {
+                ctx.events.publish(CommandRejected {
                     command,
                     reason,
                     turn,
-                }),
-                CommandResult::Ok => {
-                    ctx.commands.mark_applied(Arc::clone(&command));
-                    ctx.events.publish(CommandApplied { command, turn });
-                }
+                });
+                continue;
             }
+            command.apply(ctx);
+            let turn = ctx.turn();
+            ctx.commands.mark_applied(Arc::clone(&command));
+            ctx.events.publish(CommandApplied { command, turn });
         }
         Ok(())
     }

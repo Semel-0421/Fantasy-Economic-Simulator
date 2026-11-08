@@ -1,4 +1,5 @@
 //! Player commands (C# `Commands.cs`): validated and applied at the start of a turn, in order.
+use crate::agents::guidance::GuidanceSignal;
 use crate::context::SimContext;
 use crate::error::SimError;
 use crate::pipeline::{sim_order, SimPhase, System};
@@ -17,6 +18,12 @@ pub enum CommandResult {
 pub trait Command: Debug + Send + Sync {
     fn validate(&self, ctx: &SimContext) -> CommandResult;
     fn apply(&self, ctx: &mut SimContext);
+
+    /// C# `IGuidanceSource.GetGuidance`: the expansion direction this command signals once it
+    /// was applied this turn. Reads the world, never changes it; most commands signal none.
+    fn guidance(&self, _ctx: &SimContext) -> Option<GuidanceSignal> {
+        None
+    }
 }
 
 #[derive(Clone, Debug)]

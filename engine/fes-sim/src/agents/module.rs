@@ -100,6 +100,9 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::policy_system::PolicySystem))?;
         b.add_system(Box::new(
             super::merchant_generation::MerchantGenerationSystem::default(),
-        ))
+        ))?;
+        b.add_system(Box::new(super::guidance::GuidanceSystem))?;
+        b.add_system(Box::new(super::groups::GroupSystem))?;
+        b.add_system(Box::new(super::licenses::LicenseSystem))
     }
 }

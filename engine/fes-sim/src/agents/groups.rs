@@ -248,3 +248,48 @@ pub fn private_enterprise_at(groups: &mut GroupTable, node: i32, config: &Simula
     let cash = config.group_start_cash[KIND_PRIVATE_ENTERPRISE as usize];
     groups.add(KIND_PRIVATE_ENTERPRISE, node, -1, cash, false)
 }
+
+/// The player's lapsed guild membership was dropped (C# `GuildMembershipExpired`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GuildMembershipExpired {
+    pub guild: i32,
+    pub turn: i32,
+}
+
+/// `agents.groups` (C# `GroupSystem`): drops lapsed guild memberships at the end of the turn.
+/// The C# `OnLoaded` owner assignment only concerns loaded older saves.
+pub struct GroupSystem;
+
+impl crate::pipeline::System for GroupSystem {
+    fn id(&self) -> &'static str {
+        "agents.groups"
+    }
+
+    fn phase(&self) -> crate::pipeline::SimPhase {
+        crate::pipeline::SimPhase::Cleanup
+    }
+
+    fn order(&self) -> i32 {
+        crate::pipeline::sim_order::DEFAULT
+    }
+
+    fn execute(
+        &mut self,
+        ctx: &mut crate::context::SimContext,
+    ) -> Result<(), crate::error::SimError> {
+        let turn = ctx.turn();
+        let mut expired = Vec::new();
+        let memberships = ctx.world.get_mut::<GuildMembershipTable>();
+        for r in (0..memberships.count()).rev() {
+            if turn + 1 < memberships.expires_turn[r] {
+                continue;
+            }
+            expired.push(memberships.guild[r]);
+            memberships.remove_row_swap_back(r);
+        }
+        for guild in expired {
+            ctx.events.publish(GuildMembershipExpired { guild, turn });
+        }
+        Ok(())
+    }
+}

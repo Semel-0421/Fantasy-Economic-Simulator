@@ -44,6 +44,9 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "agents.trader_loans",
     "agents.policy",
     "agents.merchant_generation",
+    "agents.guidance",
+    "agents.groups",
+    "agents.licenses",
 ];
 
 pub struct StepOptions {

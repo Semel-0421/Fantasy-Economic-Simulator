@@ -1,8 +1,10 @@
-// Main menu: scenarios (placeholders until Plan 6), Free mode last, Continue, saves, Settings.
+// Main menu: the three scenarios, Free mode last, Continue, saves, Settings.
 import { BROKEN_MESSAGE, type Slot, type SlotInfo } from '../save/store';
+import { SCENARIOS } from '../data/scenarios';
 import { button, el } from './dom';
 
 export interface MenuActions {
+  scenario(n: number): void;
   freeMode(): void;
   continueLatest(slot: Slot): void;
   loadSlot(slot: Slot): void;
@@ -60,10 +62,10 @@ function saveRow(info: SlotInfo, actions: MenuActions): HTMLElement {
 }
 
 export function renderMenu(root: HTMLElement, saves: SlotInfo[], latest: SlotInfo | null, actions: MenuActions, notice = ''): void {
-  const scenarios = [1, 2, 3].map((n) => {
-    const b = el('button', { text: `Scenario ${n}`, type: 'button', className: 'scenario' });
-    b.disabled = true;
-    return el('li', {}, b, el('span', { className: 'soon', text: 'Coming soon' }));
+  const scenarios = SCENARIOS.map((s) => {
+    const b = button(`Scenario ${s.n}: ${s.title}`, () => actions.scenario(s.n), `scenario-${s.n}`);
+    b.classList.add('scenario');
+    return el('li', {}, b);
   });
   const cont = button('Continue', () => latest && actions.continueLatest(latest.slot), 'continue');
   cont.disabled = !latest;

@@ -43,6 +43,13 @@ function copyData() {
   for (const name of readdirSync(from)) {
     if (name.endsWith('.csv')) copyFileSync(join(from, name), join(to, name));
   }
+  // The scenarios run on the full-scale world (engine/fixtures/fullscale) as public/data/fullscale.
+  const fullscale = join(engine, 'fixtures', 'fullscale');
+  const fullscaleTo = join(to, 'fullscale');
+  mkdirSync(fullscaleTo, { recursive: true });
+  for (const name of readdirSync(fullscale)) {
+    if (name.endsWith('.csv')) copyFileSync(join(fullscale, name), join(fullscaleTo, name));
+  }
   // Scenario files (data/scenarios/*.ron, format in its README) ship as public/data/scenarios.
   const scenarios = join(repo, 'data', 'scenarios');
   const scenariosTo = join(to, 'scenarios');

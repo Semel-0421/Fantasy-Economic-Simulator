@@ -36,12 +36,11 @@ async function startFree(page: Page): Promise<void> {
 }
 
 describe('web flow', () => {
-  it('menu lists scenarios as coming soon, Free mode last, Continue disabled without saves', async () => {
+  it('menu lists the three scenarios, Free mode last, Continue disabled without saves', async () => {
     const { page, errors } = await fresh();
     await page.waitForSelector('#free-mode');
     expect(await page.locator('.scenario').count()).toBe(3);
-    expect(await page.locator('.scenario:disabled').count()).toBe(3);
-    expect(await page.locator('.soon').allTextContents()).toEqual(['Coming soon', 'Coming soon', 'Coming soon']);
+    expect(await page.locator('.scenario:disabled').count()).toBe(0);
     expect(await page.locator('#continue').isDisabled()).toBe(true);
     const order = await page.locator('main.menu > *').evaluateAll((n) => n.map((x) => x.id || x.className));
     expect(order.indexOf('scenarios')).toBeLessThan(order.indexOf('free-mode'));

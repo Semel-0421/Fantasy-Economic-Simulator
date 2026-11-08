@@ -99,3 +99,12 @@ button.link { min-height: 36px; padding: 0.15rem 0.3rem; border: none; backgroun
 .failure { margin: 0 0 0.5rem; padding: 0.6rem 0.8rem; border: 2px solid var(--danger); color: var(--danger); background: var(--paper); font-weight: bold; }
 .failure[hidden] { display: none; }
 .update-prompt { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 10; padding: 0.6rem 0.8rem; border: 2px solid var(--ink); background: var(--paper); display: flex; gap: 0.6rem; align-items: center; justify-content: center; }
+
+.backdrop { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(43, 33, 24, 0.55); }
+.dialog { max-width: 32rem; width: 100%; max-height: 90vh; overflow: auto; padding: 1rem 1.25rem; border: 3px double var(--ink); background: var(--paper); }
+.dialog p { margin: 0.5rem 0; }
+.scenario-card .done { opacity: 0.7; }
+.scenario-card .contract { flex-wrap: wrap; align-items: center; }
+.statement tr.total { font-weight: bold; border-top: 2px solid var(--ink); }
+.statement tr.cost td { color: var(--danger); }
+.score { font-size: 1.25rem; color: var(--gold); }

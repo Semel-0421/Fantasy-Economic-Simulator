@@ -6,6 +6,8 @@ import type { PlayerCommand, ViewName } from './types';
 export type RequestBody =
   | { op: 'start'; files: GameFiles; seed: bigint }
   | { op: 'load'; files: GameFiles; bytes: Uint8Array }
+  | { op: 'scenario'; files: GameFiles; text: string }
+  | { op: 'accept'; contract: string }
   | { op: 'next' }
   | { op: 'queue'; command: PlayerCommand }
   | { op: 'preview'; command: PlayerCommand }

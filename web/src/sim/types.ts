@@ -198,6 +198,8 @@ export const viewSchemas = {
       weeks: num,
     }),
   ),
+  /** The running scenario's title, opening text and length in weeks (null in free mode). */
+  scenario: opt(obj({ id: str, title: str, intro: str, weeks: num })),
   objectives: arr(obj({ id: str, text: str, done: bool, done_week: num })),
   scenario_contracts: arr(
     obj({

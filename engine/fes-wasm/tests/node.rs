@@ -67,3 +67,21 @@ fn views_and_bad_commands_are_plain_values() {
     assert!(sim.view("nope", JsValue::NULL).is_err());
     assert!(sim.queue(JsValue::from_str("not a command")).is_err());
 }
+
+#[wasm_bindgen_test]
+fn scenario_view_exposes_title_intro_and_weeks() {
+    let text = include_str!("../../../data/scenarios/s1_first_venture.ron");
+    let sim = WasmSim::new_scenario(files(), text).expect("scenario");
+    let info = sim.view("scenario", JsValue::NULL).expect("scenario view");
+    let get = |k: &str| js_sys::Reflect::get(&info, &k.into()).expect(k);
+    assert_eq!(get("title").as_string().as_deref(), Some("First Venture"));
+    assert!(get("intro")
+        .as_string()
+        .is_some_and(|s| s.contains("500 coins")));
+    assert_eq!(get("weeks").as_f64(), Some(20.0));
+    let free = WasmSim::new(files(), 1).expect("build");
+    assert!(free
+        .view("scenario", JsValue::NULL)
+        .expect("free")
+        .is_null());
+}

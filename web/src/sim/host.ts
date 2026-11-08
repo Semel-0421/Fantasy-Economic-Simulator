@@ -31,6 +31,11 @@ export function createHost(Sim: typeof WasmSim): Host {
         return replace(new Sim(request.files, request.seed));
       case 'load':
         return replace(Sim.load(request.files, request.bytes));
+      case 'scenario':
+        return replace(Sim.new_scenario(request.files, request.text));
+      case 'accept':
+        world().accept_contract(request.contract);
+        return null;
       case 'next':
         return world().step();
       case 'queue':

@@ -15,6 +15,13 @@ function files(): GameFiles {
   return Object.fromEntries(names.map((n) => [`${n}.csv`, readFileSync(new URL(`${n}.csv`, dataDir), 'utf8')]));
 }
 
+const fullscale = new URL('engine/fixtures/fullscale/', root);
+function fullscaleFiles(): GameFiles {
+  const names = ['config', 'events', 'facilities', 'goods', 'map_nodes', 'map_routes', 'market_profiles', 'recipes'];
+  return Object.fromEntries(names.map((n) => [`${n}.csv`, readFileSync(new URL(`${n}.csv`, fullscale), 'utf8')]));
+}
+const scenarioText = (file: string): string => readFileSync(new URL(`data/scenarios/${file}`, root), 'utf8');
+
 const open: SimBridge[] = [];
 
 /** A bridge wired to a host over a MessageChannel: the same messages a Worker carries. */
@@ -22,12 +29,18 @@ async function connect(seed: number, load?: Uint8Array): Promise<SimBridge> {
   const { port1, port2 } = new MessageChannel();
   await init({ module_or_path: wasmBytes });
   const host = createHost(WasmSim);
-  port2.on('message', (request) => {
+  port2.on("message", (request) => {
     void host.handle(request).then(({ response, transfer }) => port2.postMessage(response, transfer as never));
   });
   const bridge = new SimBridge(port1 as never);
   open.push(bridge);
   return load ? bridge.loadWorld(files(), load) : bridge.startWorld(files(), seed);
+}
+
+/** A bridge running a scenario file on the full-scale world. */
+async function connectScenario(file: string): Promise<SimBridge> {
+  const bridge = await connect(1);
+  return bridge.startScenario(fullscaleFiles(), scenarioText(file));
 }
 
 afterEach(() => {
@@ -72,6 +85,27 @@ describe('SimBridge', () => {
     await bridge.queue('BuyPlot');
     const report = await bridge.next();
     expect(report.events.some((e) => typeof e === 'object' && ('CommandApplied' in e || 'CommandRejected' in e))).toBe(true);
+  });
+
+  it('runs a scenario: intro, objectives, the offered contract accepted, results', async () => {
+    const bridge = await connectScenario('s1_first_venture.ron');
+    const info = await bridge.view('scenario');
+    expect(info?.title).toBe('First Venture');
+    expect(info?.intro).toContain('500 coins');
+    expect(info?.weeks).toBe(20);
+    expect((await bridge.view('objectives')).map((o) => o.id)).toEqual(['first_sale', 'contract', 'triple']);
+    expect((await bridge.view('results'))?.start_coins).toBe(500);
+    await expect(bridge.acceptContract('tools')).rejects.toThrow(/No open contract/);
+    for (let i = 0; i < 3; i++) await bridge.next(); // the offer comes by its fallback week
+    expect((await bridge.view('scenario_contracts')).map((c) => c.id)).toEqual(['tools']);
+    await bridge.acceptContract('tools');
+    expect((await bridge.view('scenario_contracts'))[0]?.accepted).toBe(true);
+  });
+
+  it('has no scenario view in free mode', async () => {
+    const bridge = await connect(1);
+    expect(await bridge.view('scenario')).toBeNull();
+    expect(await bridge.view('results')).toBeNull();
   });
 
   it('rejects with the engine message for unknown views and keeps working', async () => {

@@ -22,6 +22,17 @@ extern "C" {
 #[wasm_bindgen]
 pub struct WasmSim {
     sim: Simulation,
+    /// The scenario's title, intro and length (`None` in free mode).
+    scenario: Option<ScenarioInfo>,
+}
+
+/// What the page shows about a running scenario (the `scenario` view).
+#[derive(Serialize)]
+struct ScenarioInfo {
+    id: String,
+    title: String,
+    intro: String,
+    weeks: i32,
 }
 
 #[derive(Serialize)]
@@ -88,19 +99,31 @@ impl WasmSim {
             .with_default_modules()
             .and_then(SimulationBuilder::build)
             .map_err(err)?;
-        Ok(WasmSim { sim })
+        Ok(WasmSim {
+            sim,
+            scenario: None,
+        })
     }
 
     /// Builds a scenario's world from the data files and the scenario file's text (RON).
     pub fn new_scenario(files: JsValue, scenario_text: &str) -> Result<WasmSim, JsError> {
         let (db, map) = definitions(files)?;
         let def = ScenarioDef::parse(scenario_text).map_err(|e| JsError::new(&e))?;
+        let info = ScenarioInfo {
+            id: def.id.clone(),
+            title: def.title.clone(),
+            intro: def.intro.clone(),
+            weeks: def.weeks,
+        };
         let sim = SimulationBuilder::new(db, map, def.seed)
             .with_default_modules()
             .map(|b| b.scenario(def))
             .and_then(SimulationBuilder::build)
             .map_err(err)?;
-        Ok(WasmSim { sim })
+        Ok(WasmSim {
+            sim,
+            scenario: Some(info),
+        })
     }
 
     /// Accepts a contract the scenario offered.
@@ -112,7 +135,10 @@ impl WasmSim {
     pub fn load(files: JsValue, bytes: &[u8]) -> Result<WasmSim, JsError> {
         let (db, map) = definitions(files)?;
         let sim = Simulation::load(db, map, bytes).map_err(err)?;
-        Ok(WasmSim { sim })
+        Ok(WasmSim {
+            sim,
+            scenario: None,
+        })
     }
 
     /// Runs one turn; returns `{turn, events}`.
@@ -156,7 +182,7 @@ impl WasmSim {
 
     /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map,
     /// goods, or in a scenario results (the scenario statement; null in free mode), objectives and
-    /// scenario_contracts.
+    /// scenario_contracts, and scenario (`{id, title, intro, weeks}`; null in free mode).
     pub fn view(&self, name: &str, arg: JsValue) -> Result<JsValue, JsError> {
         let ctx = self.sim.context();
         match name {
@@ -172,6 +198,7 @@ impl WasmSim {
             "results" => to_js(&self.sim.statement()),
             "objectives" => to_js(&self.sim.objectives()),
             "scenario_contracts" => to_js(&self.sim.scenario_contracts()),
+            "scenario" => to_js(&self.scenario),
             _ => Err(JsError::new(&format!("Unknown view '{name}'."))),
         }
     }

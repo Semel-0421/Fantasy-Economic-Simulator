@@ -1,5 +1,6 @@
 // The page's handle on the simulation Worker: every method is one typed message and a promise.
 import { defaultDataUrl, loadGameFiles, type GameFiles } from '../data/files';
+import { loadScenarioText, scenarioDataUrl } from '../data/scenarios';
 import type { Request, RequestBody, Response } from './protocol';
 import type { CommandResult, PlayerCommand, TurnReport, ViewName, Views } from './types';
 
@@ -68,6 +69,13 @@ export class SimBridge {
     return bridge.loadWorld(files ?? (await loadGameFiles(defaultDataUrl())), bytes);
   }
 
+  /** Starts a Worker and scenario `n` on the full-scale world (scenarios never save). */
+  static async scenario(n: number): Promise<SimBridge> {
+    const [files, text] = await Promise.all([loadGameFiles(scenarioDataUrl(), []), loadScenarioText(n)]);
+    const bridge = new SimBridge(SimBridge.spawn());
+    return bridge.startScenario(files, text);
+  }
+
   private static spawn(): Port {
     return new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }) as unknown as Port;
   }
@@ -80,6 +88,16 @@ export class SimBridge {
   async loadWorld(files: GameFiles, bytes: Uint8Array): Promise<this> {
     await this.call({ op: 'load', files, bytes }, [bytes.buffer]);
     return this;
+  }
+
+  async startScenario(files: GameFiles, text: string): Promise<this> {
+    await this.call({ op: 'scenario', files, text });
+    return this;
+  }
+
+  /** Accepts a contract the scenario offered (takes effect at once, not next week). */
+  async acceptContract(id: string): Promise<void> {
+    await this.call({ op: 'accept', contract: id });
   }
 
   next(): Promise<TurnReport> {

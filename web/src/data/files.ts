@@ -15,8 +15,8 @@ export const OPTIONAL_FILES = ['specialties.csv'] as const;
 
 export type GameFiles = Record<string, string>;
 
-/** Fetches the data files under `baseUrl` (a folder URL ending in `/`). */
-export async function loadGameFiles(baseUrl: string): Promise<GameFiles> {
+/** Fetches the data files under `baseUrl` (a folder URL ending in `/`); `optional` may be absent. */
+export async function loadGameFiles(baseUrl: string, optional: readonly string[] = OPTIONAL_FILES): Promise<GameFiles> {
   const files: GameFiles = {};
   const get = async (name: string, optional: boolean): Promise<void> => {
     const res = await fetch(new URL(name, baseUrl));
@@ -26,7 +26,7 @@ export async function loadGameFiles(baseUrl: string): Promise<GameFiles> {
   };
   await Promise.all([
     ...REQUIRED_FILES.map((n) => get(n, false)),
-    ...OPTIONAL_FILES.map((n) => get(n, true)),
+    ...optional.map((n) => get(n, true)),
   ]);
   return files;
 }

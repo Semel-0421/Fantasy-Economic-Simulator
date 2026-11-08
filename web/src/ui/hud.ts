@@ -18,6 +18,8 @@ export interface Hud {
   mapTools: HTMLElement;
   /** Beside the map, above the log: market, cargo and purse. */
   side: HTMLElement;
+  /** The coins number (the growth presentation counts it up). */
+  coins: HTMLElement;
 }
 
 export interface HudActions {
@@ -77,6 +79,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
     mapHost,
     mapTools,
     side,
+    coins,
     setState(turn, coinList, local) {
       const d = dateOf(turn);
       date.textContent = `Year ${d.year}, Week ${d.week}`;

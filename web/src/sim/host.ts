@@ -41,8 +41,12 @@ export function createHost(Sim: typeof WasmSim): Host {
       case 'queue':
         world().queue(request.command);
         return null;
-      case 'preview':
-        return world().preview(request.command);
+      case 'preview': {
+        // On the position after this week's queued orders (a licence queued before a sale counts),
+        // so the preview equals what the week applies (spec 5.2a).
+        const { error } = world().preview_queued(request.command) as { error: string | null };
+        return error === null ? { result: 'Ok' } : { result: 'Error', message: error };
+      }
       case 'view':
         return world().view(request.name, request.arg);
       case 'save':

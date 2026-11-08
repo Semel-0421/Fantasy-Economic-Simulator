@@ -2,6 +2,7 @@
 // destination, and the selected town. Drag pans, the wheel and a two-finger pinch zoom, a tap selects
 // the nearest town. All input is DOM pointer events on the canvas; the Pixi scene only draws.
 import { Application, Container, Graphics, Text } from 'pixi.js';
+import { caravanLayer, type Caravan } from './caravans';
 import { fitCamera, panBy, toWorld, zoomAt, type Camera } from './camera';
 import { LEVEL, isTown, layoutMap, pickTown, routePairs, type Layout, type MapData } from './layout';
 
@@ -16,6 +17,10 @@ const TAP_SLOP = 8;
 export interface MapScreen {
   setPlayer(node: number, destination: number): void;
   select(node: number): void;
+  /** The merchants on the road (caravans view); they rest near the town they left. */
+  setCaravans(list: Caravan[]): void;
+  /** While a week computes (true) the caravans move toward their destinations. */
+  moveCaravans(on: boolean): void;
   /** A town's position in CSS pixels relative to the map element (for tests and tooltips). */
   screenOf(node: number): { x: number; y: number } | null;
   destroy(): void;
@@ -74,7 +79,9 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
 
   const scene: Scene = { world: new Container(), marks: new Graphics(), labels: [] };
   scene.labels = drawBase(map, layout, scene.world);
-  scene.world.addChild(scene.marks);
+  const reduced = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const caravans = caravanLayer(layout.points, reduced);
+  scene.world.addChild(caravans.graphics, scene.marks);
   app.stage.addChild(scene.world);
 
   let base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
@@ -181,11 +188,18 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
       state.selected = node;
       drawMarks();
     },
+    setCaravans(list) {
+      caravans.set(list);
+    },
+    moveCaravans(on) {
+      caravans.move(on);
+    },
     screenOf(node) {
       const p = layout.points.get(node);
       return p ? { x: p.x * cam.scale + cam.x, y: p.y * cam.scale + cam.y } : null;
     },
     destroy() {
+      caravans.destroy();
       resize.disconnect();
       app.destroy(true, { children: true });
     },

@@ -2,6 +2,7 @@
 import './ui/styles.css';
 import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';
+import type { PlayerCommand } from './sim/types';
 import { renderHud, type Hud } from './ui/hud';
 import { renderMenu } from './ui/menu';
 import { describeEvent, playTurn } from './ui/turn';
@@ -17,6 +18,8 @@ import { dialogs, type Dialogs } from './ui/dialog';
 import { scenarioDialogs, scenarioEnd, scenarioPanel, type ScenarioPanel } from './ui/scenario';
 import { renderResults } from './ui/results';
 import { nextScenario } from './data/scenarios';
+import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
+import { gainsOf, presentGrowth } from './ui/growth';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
@@ -33,6 +36,10 @@ interface Screens {
   market: MarketPanel;
   cargo: ReturnType<typeof cargoPanel>;
   purse: ReturnType<typeof pursePanel>;
+  exchange: ExchangePanel;
+  bonds: BondsPanel;
+  licences: LicencePanel;
+  goodName(good: number): string;
   map: MapData;
   /** Set in a scenario: its number, title, panel and news dialogs. */
   scenario?: { n: number; title: string; panel: ScenarioPanel; dialogs: Dialogs };
@@ -109,15 +116,21 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     ordered: (text) => hud.addMessage(text),
   });
   hud.mapTools.append(travel.node);
+  const orders = {
+    preview: (c: PlayerCommand) => game.preview(c),
+    queue: (c: PlayerCommand) => game.queue(c),
+    ordered: (text: string) => hud.addMessage(text),
+  };
+  const townOf = (n: number): string => map.nodes[n]?.name ?? `Place ${n}`;
   const screens: Screens = {
     hud,
     travel,
     map,
-    market: marketPanel(goodName, {
-      preview: (c) => game.preview(c),
-      queue: (c) => game.queue(c),
-      ordered: (text) => hud.addMessage(text),
-    }),
+    goodName,
+    market: marketPanel(goodName, orders),
+    exchange: exchangePanel(townOf, orders),
+    bonds: bondsPanel(orders),
+    licences: licencePanel(goods, goodName, orders),
     cargo: cargoPanel(goodName),
     purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
   };
@@ -126,7 +139,14 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     screens.scenario = { n: scenarioNumber, title: info.title, panel, dialogs: dialogs(document.body, () => app.querySelector('.game')) };
     hud.side.append(panel.node);
   }
-  hud.side.append(screens.market.node, screens.cargo.node, screens.purse.node);
+  hud.side.append(
+    screens.market.node,
+    screens.cargo.node,
+    screens.purse.node,
+    screens.exchange.node,
+    screens.bonds.node,
+    screens.licences.node,
+  );
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
     // The browser tests find towns on the canvas through this handle (development builds only).
@@ -169,12 +189,23 @@ async function showResults(game: SimBridge, s: Screens): Promise<void> {
 }
 
 async function refresh(game: SimBridge, s: Screens): Promise<void> {
-  const [turn, purse, cargo] = await Promise.all([game.turn(), game.view('purse'), game.view('cargo')]);
+  const [turn, purse, cargo, exchange, licences, caravans] = await Promise.all([
+    game.turn(),
+    game.view('purse'),
+    game.view('cargo'),
+    game.view('exchange'),
+    game.view('licences'),
+    game.view('caravans'),
+  ]);
   const market = await game.view('market', purse.node);
   s.hud.setState(turn, purse.coins, purse.local_continent);
   s.market.update(s.map.nodes[purse.node]?.name ?? '', market.quotes, new Map(cargo.cart));
   s.cargo.update(cargo);
   s.purse.update(purse);
+  s.exchange.update(exchange);
+  s.bonds.update(purse);
+  s.licences.update(licences);
+  mapScreen?.setCaravans(caravans);
   s.travel.setPlayer(purse.node, purse.travel_destination, purse.arrival_turn);
   if (s.scenario) {
     const [results, objectives, contracts] = await Promise.all([game.view('results'), game.view('objectives'), game.view('scenario_contracts')]);
@@ -186,21 +217,32 @@ async function refresh(game: SimBridge, s: Screens): Promise<void> {
 async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
   const hud = s.hud;
   hud.setBusy(true);
+  mapScreen?.moveCaravans(true);
   try {
+    const before = localCoins(await game.view('purse'));
     const { report, saveError } = await playTurn({ bridge: game, saves, mode: s.scenario ? 'scenario' : 'free' });
     hud.addTurn(report.turn, report.events.map(describeEvent));
     for (const reason of rejectionsIn(report)) hud.addMessage(`Order refused: ${reason}`);
     if (saveError) hud.addMessage(`Autosave failed: ${saveError}`);
     await refresh(game, s);
+    mapScreen?.moveCaravans(false);
+    const gains = gainsOf(report, s.goodName);
+    const after = localCoins(await game.view('purse'));
+    if (gains.length > 0 && after > before) {
+      await presentGrowth({ coins: hud.coins, game: app.querySelector('.game') }, before, after, gains);
+    }
     hud.setBusy(false);
     await showDialogs(s, scenarioDialogs(report));
     if (s.scenario && scenarioEnd(report)) await showResults(game, s);
   } catch (e) {
     hud.addMessage(`The turn failed: ${message(e)}`);
   } finally {
+    mapScreen?.moveCaravans(false);
     if (bridge === game) hud.setBusy(false);
   }
 }
+
+const localCoins = (p: { coins: number[]; local_continent: number }): number => p.coins[p.local_continent] ?? 0;
 
 async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
   try {

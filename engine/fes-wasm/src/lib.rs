@@ -180,7 +180,8 @@ impl WasmSim {
         to_js(&self.sim.preview_queued(boxed.as_ref()))
     }
 
-    /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map,
+    /// A named view: purse, cargo, contracts, shares, licences, exchange (shares listed where the
+    /// player stands), caravans (merchants on the road), statement, market (arg = node), map,
     /// goods, or in a scenario results (the scenario statement; null in free mode), objectives and
     /// scenario_contracts, and scenario (`{id, title, intro, weeks}`; null in free mode).
     pub fn view(&self, name: &str, arg: JsValue) -> Result<JsValue, JsError> {
@@ -191,6 +192,8 @@ impl WasmSim {
             "contracts" => to_js(&views::contracts(ctx)),
             "shares" => to_js(&views::shares(ctx)),
             "licences" => to_js(&views::licences(ctx)),
+            "exchange" => to_js(&views::exchange(ctx)),
+            "caravans" => to_js(&views::caravans(ctx)),
             "statement" => to_js(&views::statement(ctx)),
             "market" => self.market(arg),
             "map" => to_js(&views::map(ctx)),

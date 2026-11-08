@@ -166,6 +166,10 @@ export const viewSchemas = {
   ),
   shares: obj({ shares: arr(holding), ventures: arr(holding), shorts: arr(tup(holding, num)) }),
   licences: arr(obj({ base_good: num, nation: num, expires_turn: num })),
+  /** Shares the bank the player stands in sells (empty on the road); price in coins per share. */
+  exchange: arr(obj({ facility: num, name: str, node: num, price: num, held: num, room: num })),
+  /** Merchant groups on the road: the node they left, where they arrive and when. */
+  caravans: arr(obj({ from: num, to: num, arrival_turn: num })),
   statement: obj({
     turn: num,
     published_year: num,

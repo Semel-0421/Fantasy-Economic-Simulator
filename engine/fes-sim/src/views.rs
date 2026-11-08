@@ -5,12 +5,13 @@ use crate::agents::banks::{BankState, LoanTable};
 use crate::agents::cargo::{warehouse_holder, CargoTable, PLAYER_CART};
 use crate::agents::contracts::ContractTable;
 use crate::agents::credit::BondTable;
-use crate::agents::facilities::{FacilityTable, OWNER_PLAYER};
+use crate::agents::facilities::{FacilityTable, OWNER_NPC, OWNER_PLAYER};
 use crate::agents::finance::FinanceState;
 use crate::agents::licenses::LicenseTable;
 use crate::agents::player::PlayerState;
 use crate::agents::securities::{ShareTable, ShortTable, VentureTable};
 use crate::agents::ship::PlayerShip;
+use crate::agents::AgentTable;
 use crate::commands::bonds::BOND_PLAYER_HOLDER;
 use crate::context::SimContext;
 use crate::world::{NodeBanks, NodeTable};
@@ -352,4 +353,76 @@ pub fn goods(ctx: &SimContext) -> Vec<GoodView> {
 /// What the traders at a market pay the player per unit at this posted price (C# trader offer).
 pub fn sell_offer(ctx: &SimContext, price: i32) -> i32 {
     crate::agents::bank_seizure::trader_offer(ctx.services.database.config.trader_spread, price)
+}
+
+/// One facility whose shares the bank the player stands in sells (C# `Exchange.Check` passes).
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ListingView {
+    pub facility: i32,
+    pub name: String,
+    pub node: i32,
+    /// Coins per share at today's price.
+    pub price: i64,
+    pub held: i32,
+    /// Shares still for sale before the group would lose control.
+    pub room: i32,
+}
+
+/// The shares listed where the player stands: none on the road or away from a bank branch.
+pub fn exchange(ctx: &SimContext) -> Vec<ListingView> {
+    let p = ctx.world.get::<PlayerState>();
+    let nodes = ctx.services.get::<NodeTable>();
+    let banks = ctx.services.get::<NodeBanks>();
+    let here = banks.branch_nation(nodes, p.node);
+    if p.is_travelling() || here < 0 {
+        return Vec::new();
+    }
+    let r = Refs {
+        db: &ctx.services.database,
+        nodes,
+        banks,
+    };
+    let t = ctx.world.get::<FacilityTable>();
+    let shares = ctx.world.get::<ShareTable>();
+    let max = r.db.config.facility_max_listed_shares;
+    (0..t.count())
+        .filter(|&f| {
+            t.owner[f] == OWNER_NPC
+                && t.group[f] >= 0
+                && t.level[f] > 0
+                && !r.db.facilities[t.def_index[f] as usize].state_owned
+                && banks.nation_of(nodes, t.node[f]) == here
+        })
+        .map(|f| ListingView {
+            facility: f as i32,
+            name: r.db.facilities[t.def_index[f] as usize].key.clone(),
+            node: t.node[f],
+            price: share_price(&ctx.world, r, f),
+            held: shares.held(f as i32, PLAYER_HOLDER),
+            room: (max - shares.outside(f as i32)).max(0),
+        })
+        .collect()
+}
+
+/// A merchant group on the road: from the node it left, to where it arrives, and when.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CaravanView {
+    pub from: i32,
+    pub to: i32,
+    pub arrival_turn: i32,
+}
+
+/// Every merchant group travelling now, in agent order (the map animates them).
+pub fn caravans(ctx: &SimContext) -> Vec<CaravanView> {
+    let a = ctx.world.get::<AgentTable>();
+    (0..a.count())
+        .filter(|&i| a.destination[i] >= 0)
+        .map(|i| CaravanView {
+            from: a.node[i],
+            to: a.destination[i],
+            arrival_turn: a.arrival_turn[i],
+        })
+        .collect()
 }

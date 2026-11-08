@@ -1,0 +1,754 @@
+[
+  {
+    "facility": 0,
+    "name": "copper_smelter",
+    "node": 8,
+    "price": 181,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 1,
+    "name": "copper_smelter",
+    "node": 8,
+    "price": 181,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 2,
+    "name": "mill",
+    "node": 8,
+    "price": 201,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 3,
+    "name": "pickler",
+    "node": 8,
+    "price": 100,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 4,
+    "name": "copper_smelter",
+    "node": 8,
+    "price": 181,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 5,
+    "name": "bean_dryer",
+    "node": 8,
+    "price": 127,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 6,
+    "name": "coppersmith",
+    "node": 8,
+    "price": 82,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 7,
+    "name": "coppersmith",
+    "node": 8,
+    "price": 82,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 8,
+    "name": "coppersmith",
+    "node": 8,
+    "price": 82,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 9,
+    "name": "bakery",
+    "node": 8,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 10,
+    "name": "coppersmith",
+    "node": 8,
+    "price": 82,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 11,
+    "name": "bakery",
+    "node": 8,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 12,
+    "name": "bakery",
+    "node": 8,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 13,
+    "name": "coppersmith",
+    "node": 8,
+    "price": 82,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 14,
+    "name": "pickler",
+    "node": 9,
+    "price": 100,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 15,
+    "name": "spinnery",
+    "node": 9,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 16,
+    "name": "iron_smelter",
+    "node": 9,
+    "price": 99,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 17,
+    "name": "pickler",
+    "node": 9,
+    "price": 100,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 18,
+    "name": "spinnery",
+    "node": 9,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 19,
+    "name": "iron_smelter",
+    "node": 9,
+    "price": 99,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 20,
+    "name": "tailor",
+    "node": 9,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 21,
+    "name": "wagonworks",
+    "node": 8,
+    "price": 714,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 22,
+    "name": "cartwright",
+    "node": 8,
+    "price": 205,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 23,
+    "name": "cartwright",
+    "node": 8,
+    "price": 205,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 24,
+    "name": "smithy",
+    "node": 8,
+    "price": 59,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 25,
+    "name": "wagonworks",
+    "node": 8,
+    "price": 714,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 26,
+    "name": "cartwright",
+    "node": 8,
+    "price": 205,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 27,
+    "name": "cartwright",
+    "node": 8,
+    "price": 205,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 28,
+    "name": "mill",
+    "node": 10,
+    "price": 201,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 29,
+    "name": "malthouse",
+    "node": 10,
+    "price": 160,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 30,
+    "name": "pickler",
+    "node": 10,
+    "price": 100,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 31,
+    "name": "bean_dryer",
+    "node": 10,
+    "price": 127,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 32,
+    "name": "malthouse",
+    "node": 10,
+    "price": 160,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 33,
+    "name": "spinnery",
+    "node": 10,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 34,
+    "name": "bakery",
+    "node": 10,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 35,
+    "name": "tailor",
+    "node": 10,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 36,
+    "name": "tailor",
+    "node": 10,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 37,
+    "name": "brewery",
+    "node": 10,
+    "price": 101,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 38,
+    "name": "brewery",
+    "node": 10,
+    "price": 101,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 39,
+    "name": "tailor",
+    "node": 10,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 40,
+    "name": "bakery",
+    "node": 10,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 41,
+    "name": "bakery",
+    "node": 10,
+    "price": 144,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 42,
+    "name": "spinnery",
+    "node": 11,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 43,
+    "name": "iron_smelter",
+    "node": 11,
+    "price": 99,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 44,
+    "name": "iron_smelter",
+    "node": 11,
+    "price": 99,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 45,
+    "name": "spinnery",
+    "node": 11,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 46,
+    "name": "spinnery",
+    "node": 11,
+    "price": 227,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 47,
+    "name": "iron_smelter",
+    "node": 11,
+    "price": 99,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 48,
+    "name": "smithy",
+    "node": 10,
+    "price": 132,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 49,
+    "name": "tailor",
+    "node": 11,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 50,
+    "name": "wagonworks",
+    "node": 10,
+    "price": 714,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 51,
+    "name": "tailor",
+    "node": 11,
+    "price": 135,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 52,
+    "name": "smithy",
+    "node": 10,
+    "price": 132,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 53,
+    "name": "smithy",
+    "node": 10,
+    "price": 132,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 54,
+    "name": "cartwright",
+    "node": 10,
+    "price": 205,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 55,
+    "name": "wagonworks",
+    "node": 10,
+    "price": 714,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 112,
+    "name": "bean_farm",
+    "node": 16,
+    "price": 235,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 114,
+    "name": "dairy",
+    "node": 16,
+    "price": 378,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 115,
+    "name": "dairy",
+    "node": 16,
+    "price": 379,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 116,
+    "name": "fishery",
+    "node": 17,
+    "price": 348,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 118,
+    "name": "fishery",
+    "node": 17,
+    "price": 348,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 120,
+    "name": "vegetable_farm",
+    "node": 18,
+    "price": 261,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 121,
+    "name": "dairy",
+    "node": 18,
+    "price": 396,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 122,
+    "name": "wheat_farm",
+    "node": 18,
+    "price": 417,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 124,
+    "name": "bean_farm",
+    "node": 19,
+    "price": 211,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 125,
+    "name": "wheat_farm",
+    "node": 19,
+    "price": 395,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 126,
+    "name": "vegetable_farm",
+    "node": 19,
+    "price": 233,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 128,
+    "name": "sheep_pasture",
+    "node": 20,
+    "price": 174,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 130,
+    "name": "fishery",
+    "node": 20,
+    "price": 325,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 131,
+    "name": "fishery",
+    "node": 20,
+    "price": 324,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 132,
+    "name": "barley_farm",
+    "node": 21,
+    "price": 127,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 133,
+    "name": "fishery",
+    "node": 21,
+    "price": 365,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 134,
+    "name": "sheep_pasture",
+    "node": 21,
+    "price": 268,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 135,
+    "name": "dairy",
+    "node": 21,
+    "price": 372,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 136,
+    "name": "dairy",
+    "node": 22,
+    "price": 372,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 137,
+    "name": "wheat_farm",
+    "node": 22,
+    "price": 396,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 138,
+    "name": "bean_farm",
+    "node": 22,
+    "price": 214,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 139,
+    "name": "barley_farm",
+    "node": 22,
+    "price": 61,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 140,
+    "name": "wheat_farm",
+    "node": 23,
+    "price": 552,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 141,
+    "name": "dairy",
+    "node": 23,
+    "price": 372,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 143,
+    "name": "vegetable_farm",
+    "node": 23,
+    "price": 236,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 145,
+    "name": "dairy",
+    "node": 24,
+    "price": 349,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 146,
+    "name": "dairy",
+    "node": 24,
+    "price": 349,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 147,
+    "name": "sheep_pasture",
+    "node": 24,
+    "price": 174,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 148,
+    "name": "fishery",
+    "node": 25,
+    "price": 365,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 149,
+    "name": "sheep_pasture",
+    "node": 25,
+    "price": 268,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 150,
+    "name": "dairy",
+    "node": 25,
+    "price": 367,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 151,
+    "name": "sheep_pasture",
+    "node": 25,
+    "price": 268,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 192,
+    "name": "spice_grove",
+    "node": 18,
+    "price": 680,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 193,
+    "name": "spice_grove",
+    "node": 21,
+    "price": 660,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 194,
+    "name": "spice_grove",
+    "node": 24,
+    "price": 660,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 195,
+    "name": "silk_farm",
+    "node": 19,
+    "price": 613,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 196,
+    "name": "silk_farm",
+    "node": 22,
+    "price": 636,
+    "held": 0,
+    "room": 49
+  },
+  {
+    "facility": 197,
+    "name": "silk_farm",
+    "node": 25,
+    "price": 636,
+    "held": 0,
+    "room": 49
+  }
+]

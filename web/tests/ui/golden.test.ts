@@ -1,11 +1,11 @@
 // Scenario golden paths in the browser (Playwright + installed Edge; BROWSER_CHANNEL overrides) on the
-// full-scale world. Orders go through the development handle `__fesGame` (the engine tests play the
-// same orders); Next week, the news dialogs, Accept and the results screen are driven through the UI.
+// full-scale world. Every order is placed by clicking the real panels (market, travel, exchange, bonds,
+// licences), as a player would; Next week, the news dialogs, Accept and the results screen too. The
+// development handle `__fesGame` is only read, to find ids and check positions.
 // Each run must end with the net profit the engine's golden test records (Plan 6 Tasks 4-6).
 import { chromium, type Browser, type Page } from 'playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { PlayerCommand } from '../../src/sim/types';
 
 let server: ViteDevServer;
 let browser: Browser;
@@ -23,10 +23,7 @@ afterAll(async () => {
   await server?.close();
 });
 
-type Game = {
-  queue(c: PlayerCommand): Promise<void>;
-  view(name: string, arg?: number): Promise<unknown>;
-};
+type Game = { view(name: string, arg?: number): Promise<unknown> };
 type Purse = { node: number; local_continent: number; coins: number[]; travel_destination: number };
 
 class Player {
@@ -60,8 +57,61 @@ class Player {
     return this.goods.get(`${key}@mid`) ?? -1;
   }
 
-  async order(c: PlayerCommand): Promise<void> {
-    await this.page.evaluate((cmd) => (window as unknown as { __fesGame: Game }).__fesGame.queue(cmd), c);
+  /** Clicks `ask`, expects the preview's Confirm (or fails with the refusal), confirms, waits for the log. */
+  private async place(ask: string, prefix: string, confirm = `#${prefix}-confirm`): Promise<void> {
+    const before = await this.page.locator('#log li.message').count();
+    await this.page.click(ask);
+    const error = `#${prefix}-error`;
+    await this.page.waitForSelector(`${confirm}:visible, ${error}:visible`);
+    if (await this.page.locator(`${error}:visible`).count()) throw new Error(`refused: ${await this.page.textContent(error)}`);
+    await this.page.click(confirm);
+    await this.page.waitForFunction(
+      (n) => document.querySelectorAll('#log li.message').length > n,
+      before,
+    );
+  }
+
+  /** Market panel: choose the good, the quantity, Buy or Sell, Confirm. */
+  async trade(side: 'buy' | 'sell', good: number, quantity: number): Promise<void> {
+    await this.page.click(`#market-table tr[data-good="${good}"] button`);
+    await this.page.fill('#qty', String(quantity));
+    await this.place(`#${side}`, 'trade', '#confirm');
+  }
+
+  /** Exchange panel: choose the company, the count, Buy or Sell, Confirm. */
+  async shares(side: 'buy' | 'sell', facility: number, count: number): Promise<void> {
+    await this.page.click(`#share-${facility}`);
+    await this.page.fill('#share-count', String(count));
+    await this.place(`#share-${side}`, 'share');
+  }
+
+  /** Bonds panel: all coins, in whole hundreds. */
+  async bondsWithAllCoins(): Promise<number> {
+    await this.page.click('#bond-all');
+    const amount = Number(await this.page.inputValue('#bond-amount'));
+    await this.place('#bond-buy', 'bond');
+    return amount;
+  }
+
+  /** Licences panel: the international trade licence, or a licence to sell `good`. */
+  async licence(good?: number): Promise<void> {
+    if (good === undefined) return this.place('#licence-trade', 'licence');
+    await this.page.selectOption('#licence-good', String(good));
+    await this.place('#licence-buy', 'licence');
+  }
+
+  /** Travel panel: the route button, guards and insurance, Travel (no Confirm: it queues at once). */
+  async travel(key: string, protectedTrip: boolean): Promise<void> {
+    await this.page.click(`#routes button[data-node="${this.node(key)}"]`);
+    await this.page.setChecked('#guards', protectedTrip);
+    await this.page.setChecked('#insurance', protectedTrip);
+    const before = await this.page.locator('#log li.message').count();
+    await this.page.click('#travel');
+    await this.page.waitForFunction(
+      (n) => document.querySelectorAll('#log li.message').length > n || !document.getElementById('travel-error')?.hidden,
+      before,
+    );
+    if (await this.page.locator('#travel-error:visible').count()) throw new Error(`refused: ${await this.page.textContent('#travel-error')}`);
   }
 
   async view<T>(name: string): Promise<T> {
@@ -116,7 +166,7 @@ class Player {
   }
 
   async go(key: string, protectedTrip: boolean): Promise<void> {
-    await this.order({ Travel: { destination: this.node(key), guards: protectedTrip, insurance: protectedTrip } });
+    await this.travel(key, protectedTrip);
     await this.week();
     while ((await this.view<Purse>('purse')).travel_destination >= 0) await this.week();
   }
@@ -170,14 +220,14 @@ describe('scenario golden paths', () => {
     expect(await p.page.locator('#save').count()).toBe(0); // scenarios never save
     const grain = p.good('g1_0');
     const tools = p.good('g6_0');
-    await p.order({ BuyGoods: { good: grain, quantity: 30, pay_from_deposit: false } });
+    await p.trade('buy', grain, 30);
     await p.go('k0n0r0c0', false);
-    await p.order({ SellGoods: { good: grain, quantity: 30 } });
+    await p.trade('sell', grain, 30);
     await p.week();
     expect(p.news.some((n) => n.includes('18 crates of tools'))).toBe(true);
     await p.page.click('#accept-tools');
     await p.page.waitForFunction(() => document.querySelector('#scenario-contracts')?.textContent?.includes('Accepted'));
-    await p.order({ BuyGoods: { good: tools, quantity: 18, pay_from_deposit: false } });
+    await p.trade('buy', tools, 18);
     await p.go('k0n0r0', false);
     await p.go('k0n0r0c1', true);
     await p.week();
@@ -195,12 +245,13 @@ describe('scenario golden paths', () => {
   it('scenario 2: shares before the orders, sold on the rumour, then bonds', async () => {
     const { p, errors } = await player();
     await p.open(2);
-    await p.order({ BuyShare: { facility: 130, count: 49 } });
+    await p.shares('buy', 130, 49);
     await p.until(7);
     expect(p.news.some((n) => n.includes('490 coins'))).toBe(true); // the dividend, paid on screen
-    await p.order({ SellShare: { facility: 130, count: 49 } });
+    await p.shares('sell', 130, 49);
     await p.until(9);
-    await p.order({ BuyBond: { issuer: -1, amount: Math.floor((await p.coins()) / 100) * 100 } });
+    const coins = await p.coins();
+    expect(await p.bondsWithAllCoins()).toBe(Math.floor(coins / 100) * 100);
     expect(await p.finish()).toBe('Net profit 3,657 coins in 22 weeks');
     expect(await p.page.textContent('#statement')).toContain('Shares and bonds held');
     expect(await savesWritten(p.page)).toBe(0);
@@ -211,13 +262,13 @@ describe('scenario golden paths', () => {
     const { p, errors } = await player();
     await p.open(3);
     const g = p.good('g19_0');
-    await p.order({ BuyTradeLicense: { kind: -1 } });
-    await p.order({ BuyGoods: { good: g, quantity: 60, pay_from_deposit: false } });
+    await p.licence();
+    await p.trade('buy', g, 60);
     await p.week();
     for (const to of ['k0n0', 'k0', 'k0n1']) await p.go(to, true);
-    await p.order({ BuyLicense: { good: g } });
+    await p.licence(g);
     for (let left = await p.held(g); left > 0; left = await p.held(g)) {
-      await p.order({ SellGoods: { good: g, quantity: left } });
+      await p.trade('sell', g, left);
       await p.week();
     }
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);

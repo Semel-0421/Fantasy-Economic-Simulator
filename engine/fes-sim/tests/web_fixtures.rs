@@ -504,6 +504,7 @@ fn write_web_fixtures() {
     write("contracts.json", &views::contracts(ctx));
     write("shares.json", &views::shares(ctx));
     write("licences.json", &views::licences(ctx));
+    write("caravans.json", &views::caravans(ctx));
     write("statement.json", &views::statement(ctx));
     write("map.json", &views::map(ctx));
     write("goods.json", &views::goods(ctx));
@@ -517,7 +518,24 @@ fn write_web_fixtures() {
         })
         .collect();
     write("market.json", &serde_json::json!({ "quotes": quotes }));
+    write_exchange(&mut sim);
     write_scenario_views();
+}
+
+/// The exchange view at the first bank branch that lists shares, so the sample has rows.
+fn write_exchange(sim: &mut fes_sim::Simulation) {
+    use fes_sim::agents::player::PlayerState;
+    use fes_sim::world::NodeTable;
+    let count = sim.context().services.get::<NodeTable>().count() as i32;
+    for node in 0..count {
+        sim.context_mut().world.get_mut::<PlayerState>().node = node;
+        let list = views::exchange(sim.context());
+        if !list.is_empty() {
+            write("exchange.json", &list);
+            return;
+        }
+    }
+    panic!("no bank lists shares");
 }
 
 /// The scenario views (results statement, objectives, scenario contracts) of a running scenario.

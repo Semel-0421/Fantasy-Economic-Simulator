@@ -1,0 +1,642 @@
+[
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 8,
+    "to": 16,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 9,
+    "to": 19,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 10,
+    "to": 21,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 11,
+    "to": 24,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 12,
+    "to": 26,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 13,
+    "to": 28,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 14,
+    "to": 31,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 15,
+    "to": 34,
+    "arrival_turn": 1
+  },
+  {
+    "from": 16,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 16,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 17,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 17,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 18,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 18,
+    "to": 8,
+    "arrival_turn": 1
+  },
+  {
+    "from": 19,
+    "to": 9,
+    "arrival_turn": 1
+  },
+  {
+    "from": 19,
+    "to": 9,
+    "arrival_turn": 1
+  },
+  {
+    "from": 20,
+    "to": 9,
+    "arrival_turn": 1
+  },
+  {
+    "from": 20,
+    "to": 9,
+    "arrival_turn": 1
+  },
+  {
+    "from": 21,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 21,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 22,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 22,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 23,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 23,
+    "to": 10,
+    "arrival_turn": 1
+  },
+  {
+    "from": 24,
+    "to": 11,
+    "arrival_turn": 1
+  },
+  {
+    "from": 24,
+    "to": 11,
+    "arrival_turn": 1
+  },
+  {
+    "from": 25,
+    "to": 11,
+    "arrival_turn": 1
+  },
+  {
+    "from": 25,
+    "to": 11,
+    "arrival_turn": 1
+  },
+  {
+    "from": 26,
+    "to": 12,
+    "arrival_turn": 1
+  },
+  {
+    "from": 26,
+    "to": 12,
+    "arrival_turn": 1
+  },
+  {
+    "from": 27,
+    "to": 12,
+    "arrival_turn": 1
+  },
+  {
+    "from": 27,
+    "to": 12,
+    "arrival_turn": 1
+  },
+  {
+    "from": 28,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 28,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 29,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 29,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 30,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 30,
+    "to": 13,
+    "arrival_turn": 1
+  },
+  {
+    "from": 31,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 31,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 32,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 32,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 33,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 33,
+    "to": 14,
+    "arrival_turn": 1
+  },
+  {
+    "from": 34,
+    "to": 15,
+    "arrival_turn": 1
+  },
+  {
+    "from": 34,
+    "to": 15,
+    "arrival_turn": 1
+  },
+  {
+    "from": 35,
+    "to": 15,
+    "arrival_turn": 1
+  },
+  {
+    "from": 35,
+    "to": 15,
+    "arrival_turn": 1
+  }
+]

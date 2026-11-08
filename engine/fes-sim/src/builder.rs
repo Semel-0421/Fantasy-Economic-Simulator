@@ -109,6 +109,7 @@ impl SimulationBuilder {
         if def.protected_opening {
             rules.opening = crate::scenario::Opening::Waiting;
         }
+        rules.licences_anywhere = def.licences_anywhere;
         self.scenario = Some(rules);
         self.scenario_def = Some(def);
         self

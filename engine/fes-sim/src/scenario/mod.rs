@@ -6,7 +6,7 @@ pub mod rules;
 pub mod script;
 pub mod statement;
 
-pub use defs::{Effect, EventDef, Goal, ObjectiveDef, ScenarioDef, Trigger};
+pub use defs::{Effect, EventDef, Goal, LicensedGood, ObjectiveDef, ScenarioDef, Trigger};
 pub use objectives::{ObjectiveView, Objectives};
 pub use rules::{Opening, ScenarioRules};
 pub use script::{ScenarioContract, Script};
@@ -14,9 +14,10 @@ pub use statement::{StatementCosts, StatementLedger, StatementView};
 
 use crate::agents::money_ledger::pay_households;
 use crate::agents::player::PlayerState;
+use crate::agents::policy::PolicyState;
 use crate::context::SimContext;
 use crate::event_record::SimEventRecord;
-use crate::world::NodeTable;
+use crate::world::{NodeBanks, NodeTable};
 
 /// The scenario state a running simulation keeps beside the world (never saved: scenarios do not
 /// save, spec 9.2).
@@ -37,6 +38,7 @@ impl ScenarioRun {
     pub fn start(ctx: &mut SimContext, def: Option<&ScenarioDef>) -> Result<Self, String> {
         if let Some(def) = def {
             place_player(ctx, def)?;
+            license_goods(ctx, &def.licensed)?;
         }
         let ledger = StatementLedger::start(ctx);
         let home = ledger.home();
@@ -97,5 +99,24 @@ fn place_player(ctx: &mut SimContext, def: &ScenarioDef) -> Result<(), String> {
     p.node = at;
     p.coins[local] = def.start_coins;
     pay_households(&mut ctx.world, nodes, at, -def.start_coins);
+    Ok(())
+}
+
+/// Marks the scenario's special goods as licensed in their nations (the nation's policy list).
+fn license_goods(ctx: &mut SimContext, list: &[LicensedGood]) -> Result<(), String> {
+    for item in list {
+        let keys = script::Keys(ctx);
+        let good = keys.good(&item.good)?;
+        let node = keys.node(&item.nation)?;
+        let nodes = ctx.services.get::<NodeTable>();
+        let nation = ctx.services.get::<NodeBanks>().nation_of(nodes, node);
+        if nation < 0 {
+            return Err(format!("'{}' is in no nation.", item.nation));
+        }
+        let base = (good / fes_core::QualityGrade::COUNT as i32) as usize;
+        let policy = ctx.world.get_mut::<PolicyState>();
+        let row = nation as usize * policy.base_good_count + base;
+        policy.licensed[row] = 1;
+    }
     Ok(())
 }

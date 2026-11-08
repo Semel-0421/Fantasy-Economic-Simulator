@@ -115,7 +115,10 @@ impl Command for BuyLicense {
             return fail("No nation issues licenses here.");
         }
         let n = nodes(ctx);
-        if n.absorbed() && !n.is_seat(p.node) {
+        if n.absorbed()
+            && !n.is_seat(p.node)
+            && !crate::scenario::rules::licences_anywhere(&ctx.services)
+        {
             return fail("Licenses are issued at the core towns.");
         }
         if !needs_license(
@@ -206,7 +209,10 @@ impl Command for BuyTradeLicense {
         if player_nation_node(ctx) < 0 {
             return fail("No nation issues licenses here.");
         }
-        if n.absorbed() && !n.is_seat(p.node) {
+        if n.absorbed()
+            && !n.is_seat(p.node)
+            && !crate::scenario::rules::licences_anywhere(&ctx.services)
+        {
             return fail("Licenses are issued at the core towns.");
         }
         if local_coins(ctx) >= self.price(ctx) {

@@ -2,6 +2,7 @@
 use super::defs::{Goal, ObjectiveDef};
 use super::script::{Keys, Script};
 use crate::agents::cargo::{CargoTable, PLAYER_CART};
+use crate::agents::player::PlayerState;
 use crate::context::SimContext;
 use crate::event_record::SimEventRecord;
 
@@ -76,5 +77,11 @@ fn holds(ctx: &SimContext, script: &Script, goal: &Goal, net_profit: i64) -> boo
         Goal::Holds { good, quantity } => Keys(ctx)
             .good(good)
             .is_ok_and(|g| ctx.world.get::<CargoTable>().quantity_of(PLAYER_CART, g) >= *quantity),
+        Goal::BackAt { node, after } => {
+            let p = ctx.world.get::<PlayerState>();
+            script.fired(after)
+                && !p.is_travelling()
+                && Keys(ctx).node(node).is_ok_and(|n| n == p.node)
+        }
     }
 }

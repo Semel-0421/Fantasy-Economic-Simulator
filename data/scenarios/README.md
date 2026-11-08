@@ -92,6 +92,7 @@ what the effect paid the player (a dividend, a contract reward), counted as reve
 | `NetProfit(coins)` | the statement's net profit reaches it |
 | `ContractDone("id")` | the contract was delivered |
 | `Holds(good, quantity)` | the cart holds that many |
+| `BackAt(node, after)` | the player stands at `node` after the event `after` has fired (a return trip) |
 
 Checked at the end of each week; once done an objective stays done (`ObjectiveDone` event).
 
@@ -101,6 +102,9 @@ Checked at the end of each week; once done an objective stays done (`ObjectiveDo
 money at week 0 (the full-scale world starts empty). `protected_opening` (spec 5.3): the first
 purchase is noted (good and unit price); the first sale of that good is paid at least 1.5 times that
 price, wherever it is sold. The opening ends with the player's first sale of anything.
+`licensed: [(good: "g19_0", nation: "k0n1")]` makes those base goods need that nation's licence to be
+sold there from the start (the shipped data licenses none). `licences_anywhere: true` sells goods and
+trade licences at every town of a nation, not only at its core towns.
 
 A scenario world has no random world events, financial events or route encounters (spec 5.2): only the
 script happens. Free mode never reads these files, so its results stay equal to the C# reference.

@@ -24,8 +24,23 @@ pub struct ScenarioDef {
     /// Weeks the world runs before the player arrives, so markets hold stock at week 0.
     #[cfg_attr(feature = "serde", serde(default))]
     pub warmup_weeks: i32,
+    /// Licences are sold at every town of a nation, not only at its core towns.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub licences_anywhere: bool,
+    /// Goods that need the nation's licence to be sold there, from the start (special goods,
+    /// spec 5.5; the shipped data lists none).
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub licensed: Vec<LicensedGood>,
     pub objectives: Vec<ObjectiveDef>,
     pub events: Vec<EventDef>,
+}
+
+/// A base good (key) whose sale in a nation (node key) needs that nation's licence.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct LicensedGood {
+    pub good: String,
+    pub nation: String,
 }
 
 /// A target shown to the player; done once its goal holds at the end of a week.
@@ -46,6 +61,8 @@ pub enum Goal {
     ContractDone(String),
     /// The cart holds at least `quantity` of the good.
     Holds { good: String, quantity: i32 },
+    /// The player stands at `node` after the scripted event `after` has fired (a return trip).
+    BackAt { node: String, after: String },
 }
 
 /// A scripted event: fires once, when its trigger holds or at its fallback week, whichever is first.

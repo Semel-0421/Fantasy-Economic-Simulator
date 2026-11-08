@@ -16,6 +16,8 @@ pub struct ScenarioRules {
     /// The protected opening (spec 5.3): the first goods bought sell for 1.5 times what was paid,
     /// until the first sale.
     pub opening: Opening,
+    /// Licences are sold at every town of a nation, not only at its core towns.
+    pub licences_anywhere: bool,
 }
 
 /// The protected opening's progress.
@@ -39,6 +41,7 @@ impl ScenarioRules {
             encounters_off: true,
             pending_raids: Vec::new(),
             opening: Opening::Off,
+            licences_anywhere: false,
         }
     }
 }
@@ -86,4 +89,11 @@ pub fn encounters_off(services: &Services) -> bool {
     services
         .try_get::<ScenarioRules>()
         .is_some_and(|r| r.active && r.encounters_off)
+}
+
+/// True when a scenario sells licences at every town of a nation.
+pub fn licences_anywhere(services: &Services) -> bool {
+    services
+        .try_get::<ScenarioRules>()
+        .is_some_and(|r| r.active && r.licences_anywhere)
 }

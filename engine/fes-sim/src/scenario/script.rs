@@ -170,6 +170,14 @@ impl Script {
         }
     }
 
+    /// True once the event with this id has fired.
+    pub fn fired(&self, id: &str) -> bool {
+        self.events
+            .iter()
+            .zip(&self.fired)
+            .any(|(e, &f)| f && e.id == id)
+    }
+
     pub fn delivered(&self, id: &str) -> bool {
         self.contracts.iter().any(|c| c.id == id && c.delivered)
     }

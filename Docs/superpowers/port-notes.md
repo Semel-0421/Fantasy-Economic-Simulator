@@ -94,3 +94,85 @@ The browser runs after step 4 were taken while another agent was building the we
 ### JavaScript number safety (Plan 5 final review)
 
 The web app reads every number from the engine as a JavaScript `number`, exact only up to 2^53. `engine/fes-sim/tests/js_safe_integers.rs` plays `Default_Seed1_ThirtyYears` (1,560 turns) and, after every turn, serializes the events, the player's coin balances and every view (purse, cargo, contracts, shares, licences, statement, and the quotes of the player's market) and asserts the largest absolute integer stays below 2^53. Largest value seen over the whole run: 14,592,496 (far below 2^53 = 9,007,199,254,740,992). The full-scale fixtures were not played for this; the sample data is what the web app ships.
+
+
+## Plan 7A Task 1: engine memory and copies (2026-11-09)
+
+Measured before changing the engine, on `rust-port` at `1e03f2e`. The full-scale
+`preview_fullscale` test now prints requested live/peak heap bytes and elapsed time
+for scenario build, first and queued previews, hashing, save and load, and asserts
+that first-preview retained bytes are at most 20,000,000. Its pre-change failure
+was 49,285,064 bytes. The fixed pre-change world hash is
+`1121562210749400463`; repeated previews and a save/load round trip must retain it.
+
+### Measurements
+
+Native command: `cargo test -p fes-sim --release --all-features --test preview_fullscale -- --nocapture --test-threads=1`.
+These are requested allocation bytes in the test binary, not RSS. The counting
+allocator delegates allocation/free to `System` but uses allocate-copy-free
+reallocation, so transient peaks and timings are instrumentation measurements;
+use the Edge result for production wasm memory. Timings vary with machine load.
+
+| Operation | Before bytes | After bytes | Meaning |
+| --- | ---: | ---: | --- |
+| Scenario build | 107,672,646 | 107,672,646 | Retained heap; unchanged construction |
+| First preview | 49,285,064 | 14,398,384 | Retained heap, including scratch; 70.8% reduction |
+| First preview | 51,562,653 | 16,675,973 | Peak extra heap |
+| World hash | 151,622,866 | 100,663,640 | Peak extra heap; 33.6% reduction |
+| Load | 189,273,761 | 106,275,166 | Peak extra heap; 43.8% reduction |
+| Save | 350,213,056 | 350,213,056 | Peak extra heap; intentionally unchanged |
+
+Final instrumented native timings (before from `red-memory.log`, after from
+`native-final.log`, one run each): first preview 13.2504 -> 4.812 ms; queued preview
+8.7773 -> 3.3986 ms; hash 190.0371 -> 140.102 ms; load 164.6588 -> 64.5706 ms.
+The earlier baseline was slower (29.5758/19.0725 ms for previews); these timings
+show machine-load variation and are not a statistical performance claim.
+
+Installed Edge 157.0.4341.42, `npm run wasm` then `node run-bench.mjs`, no other task
+build during the final bench: peak wasm linear memory **294,846,464 -> 243,269,632
+bytes** (17.5% reduction). Quiet before/after average **367.783 -> 359.817 ms**,
+worst **755.9 -> 779.6 ms**, both worst turns 52. The small worst-time increase
+is within the observed run variation; no turn-system work was changed. Final
+average <700 ms, worst <1000 ms and stored ceiling 3000 ms all pass. Both hashes
+after turn 11 equal `348782575289596057`. Initial before run overlapped native
+compilation (average415.967 ms, worst1022.7 ms); that run is retained in the local
+report and is not claimed as a performance-gate pass.
+
+
+### Copy audit and changes
+
+- `SimulationBuilder::build`, world/economy/agent registration: definitions are
+  already shared through `Arc<GameDatabase>` and `Arc<MapDef>`. World vectors are
+  built and moved into components. Static route/layout columns and small command
+  result copies are necessary separate data, not cloned whole worlds. No change.
+- `preview_queued`: copy only `MarketStore.stock/supply/demand` and
+  `HouseholdCash.cash/saved_year` for recognized player commands. The audit includes
+  indirect money-ledger and bond-desk calls: securities purchases also write
+  `saved_year`. Other small sections and touched services are still restored.
+  Existing `PlayerCommand::from_command` recognition covers both the probe and
+  every queued command. Unknown custom commands retain the prior market/household
+  restoration coverage through temporary serialized sections; their extra data
+  is not retained in scratch. The forecast is excluded as before. New command
+  write paths must update the copied columns and restoration tests together.
+- `WorldState::hash`: sort components by UTF-16 key and hash the same key, version
+  and bytes, serializing one section into a reused buffer. This removes the
+  simultaneous full-world section copy without changing every component writer.
+  The largest section still needs a buffer; this is not a zero-allocation hash.
+- `Simulation::load/load_with`: `read_save_borrowed` validates the same container
+  and borrows section payloads directly from the input. Component readers still
+  populate their owned vectors. The owned `read_save` API remains compatible for
+  tools/tests. Borrowed/owned parsing errors and input aliasing are tested.
+- Wasm `load`: calls the same improved `Simulation::load`; the wasm-bindgen
+  JS-to-wasm input copy remains necessary at the boundary. The worker receives
+  the input as a transferred buffer. `host.replace` keeps the previous simulation
+  until the replacement succeeds, preserving failure safety; it does not clone
+  that simulation. No wrapper or host changes were justified.
+- `save` still collects sections then writes the output buffer, as permitted by
+  the task. `sections()` remains available to parity/replay diagnostics and tests;
+  production build/load/preview/hash paths no longer make a full-world snapshot.
+
+The Edge bench now records `peakWasmBytes` from exported wasm linear memory.
+Linear memory cannot shrink, so its size after turns 0-53 is the high-water mark,
+including allocator slack and the hash after turn 11. The turn workload and
+stored `ceiling.json` are unchanged. This bench does not issue previews or loads;
+those paths are covered by the native full-scale measurement above.

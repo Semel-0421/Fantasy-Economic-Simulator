@@ -9,6 +9,7 @@ function format(r: BenchResult): string {
   const s = (ms: number): string => `${(ms / 1000).toFixed(3)} s`;
   return [
     `build world: ${s(r.buildMs)}`,
+    `peak wasm linear memory: ${r.peakWasmBytes} bytes`,
     `turns 0-53: average ${s(r.averageMs)}, worst ${s(r.worstMs)} (turn ${r.worstTurn})`,
     `turn 52 (new year): ${s(r.turnsMs[52])}`,
     `world hash after turn 11: ${r.hashAfter11} (C# ${r.expectedHash11}) ${r.hashMatches ? 'MATCH' : 'MISMATCH'}`,

@@ -19,11 +19,14 @@ pub struct SaveHeader {
 
 /// One persistent component's serialized bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RawSection {
+pub struct RawSection<B = Vec<u8>> {
     pub key: String,
     pub version: i32,
-    pub bytes: Vec<u8>,
+    pub bytes: B,
 }
+
+/// A section whose payload refers directly to the input save buffer.
+pub type BorrowedSection<'a> = RawSection<&'a [u8]>;
 
 /// Failure while reading a save.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,6 +90,24 @@ fn len_i32(len: usize, what: &str) -> i32 {
 
 /// Parses a save; any malformed input is an error.
 pub fn read_save(data: &[u8]) -> Result<(SaveHeader, Vec<RawSection>), SaveError> {
+    let (header, sections) = read_save_borrowed(data)?;
+    Ok((
+        header,
+        sections
+            .into_iter()
+            .map(|s| RawSection {
+                key: s.key,
+                version: s.version,
+                bytes: s.bytes.to_vec(),
+            })
+            .collect(),
+    ))
+}
+
+/// Parses and validates the container without copying its section payloads.
+pub fn read_save_borrowed(
+    data: &[u8],
+) -> Result<(SaveHeader, Vec<BorrowedSection<'_>>), SaveError> {
     let mut r = DotNetReader::new(data);
     if r.read_u32()? != MAGIC {
         return Err(SaveError::BadMagic);
@@ -112,14 +133,14 @@ pub fn read_save(data: &[u8]) -> Result<(SaveHeader, Vec<RawSection>), SaveError
     Ok((header, sections))
 }
 
-fn read_section(r: &mut DotNetReader<'_>) -> Result<RawSection, SaveError> {
+fn read_section<'a>(r: &mut DotNetReader<'a>) -> Result<BorrowedSection<'a>, SaveError> {
     let key = r.read_string()?;
     let version = r.read_i32()?;
     let len = r.read_i32()?;
     if len < 0 {
         return Err(SaveError::NegativeCount(len));
     }
-    let bytes = r.read_bytes(len as usize)?.to_vec();
+    let bytes = r.read_bytes(len as usize)?;
     Ok(RawSection {
         key,
         version,

@@ -3,6 +3,8 @@ import init, { WasmSim } from './pkg/fes_wasm.js';
 
 export interface BenchResult {
   buildMs: number;
+  /** Wasm linear memory high-water mark, including allocator slack (it cannot shrink). */
+  peakWasmBytes: number;
   turnsMs: number[];
   averageMs: number;
   worstMs: number;
@@ -40,7 +42,7 @@ async function text(name: string): Promise<string> {
 }
 
 async function run(): Promise<BenchResult> {
-  await init();
+  const wasm = await init();
   const files: Record<string, string> = {};
   for (const name of FILES) files[name] = await text(name);
   const turnsJson = JSON.parse(await text('turns.json')) as {
@@ -68,6 +70,7 @@ async function run(): Promise<BenchResult> {
   const expectedHash11 = turnsJson.turns[11].world_hash;
   return {
     buildMs,
+    peakWasmBytes: wasm.memory.buffer.byteLength,
     turnsMs,
     averageMs: turnsMs.reduce((a, b) => a + b, 0) / TURNS,
     worstMs,

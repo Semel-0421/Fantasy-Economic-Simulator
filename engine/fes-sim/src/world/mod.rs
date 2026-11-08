@@ -6,8 +6,8 @@ pub mod routes;
 
 use crate::error::SimError;
 use crate::module::{Module, SimBuilder};
-use fes_core::io::{DotNetReader, DotNetWriter, IoError};
-use fes_save::{world_hash, RawSection};
+use fes_core::io::{DotNetReader, DotNetWriter, FnvSink, IoError};
+use fes_save::RawSection;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -149,14 +149,17 @@ impl WorldState {
     }
 
     /// Reads every component from its section. An unknown or missing key is an error.
-    pub fn load_sections(&mut self, sections: &[RawSection]) -> Result<(), SimError> {
+    pub fn load_sections<B: AsRef<[u8]>>(
+        &mut self,
+        sections: &[RawSection<B>],
+    ) -> Result<(), SimError> {
         let mut seen = vec![false; self.components.len()];
         for s in sections {
             let index = *self
                 .by_key
                 .get(s.key.as_str())
                 .ok_or_else(|| SimError::UnknownSection(s.key.clone()))?;
-            let mut r = DotNetReader::new(&s.bytes);
+            let mut r = DotNetReader::new(s.bytes.as_ref());
             self.components[index].read(&mut r, s.version)?;
             seen[index] = true;
         }
@@ -170,7 +173,21 @@ impl WorldState {
 
     /// FNV-1a over every section; equals C# `WorldState.ComputeHash`.
     pub fn hash(&self) -> u64 {
-        world_hash(&self.sections())
+        let mut sorted: Vec<_> = self.components.iter().collect();
+        sorted.sort_by(|a, b| a.key().encode_utf16().cmp(b.key().encode_utf16()));
+        let mut hash = DotNetWriter::new(FnvSink::new());
+        let mut bytes = Vec::new();
+        for c in sorted {
+            bytes.clear();
+            let mut section = DotNetWriter::new(bytes);
+            c.write(&mut section);
+            bytes = section.into_inner();
+            // FnvSink cannot fail. Reuse one section buffer instead of retaining the whole world.
+            let _ = hash.write_string(c.key());
+            let _ = hash.write_i32(c.version());
+            let _ = hash.write_bytes(&bytes);
+        }
+        hash.into_inner().hash()
     }
 }
 

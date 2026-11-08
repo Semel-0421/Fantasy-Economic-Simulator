@@ -9,7 +9,7 @@ use crate::scenario::{ObjectiveView, ScenarioContract, ScenarioRun, StatementVie
 use crate::world::WorldState;
 use fes_data::database::GameDatabase;
 use fes_data::MapDef;
-use fes_save::{read_save, write_save, SaveHeader, FORMAT_VERSION};
+use fes_save::{read_save_borrowed, write_save, SaveHeader, FORMAT_VERSION};
 
 /// What one turn did, as plain data: the turn that ran and every event delivered during it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -112,7 +112,7 @@ impl Simulation {
         bytes: &[u8],
         configure: impl FnOnce(SimulationBuilder) -> SimulationBuilder,
     ) -> Result<Simulation, SimError> {
-        let (header, sections) = read_save(bytes)?;
+        let (header, sections) = read_save_borrowed(bytes)?;
         let builder = SimulationBuilder::new(db, map, header.seed).with_default_modules()?;
         let mut sim = configure(builder).build()?;
         if header.data_hash != sim.data_hash {

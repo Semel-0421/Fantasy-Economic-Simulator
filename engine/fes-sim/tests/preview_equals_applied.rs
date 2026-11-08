@@ -295,3 +295,29 @@ fn a_preview_leaves_the_run_unchanged() {
     };
     assert_eq!(run(true), run(false));
 }
+
+#[derive(Debug)]
+struct CustomCommand;
+
+impl fes_sim::commands::Command for CustomCommand {
+    fn validate(&self, _: &SimContext) -> fes_sim::commands::CommandResult {
+        fes_sim::commands::CommandResult::Ok
+    }
+
+    fn apply(&self, ctx: &mut SimContext) {
+        ctx.world.get_mut::<fes_sim::economy::MarketStore>().price[0] += 1;
+        ctx.world.get_mut::<fes_sim::economy::HouseholdCash>().spent[0] += 1;
+    }
+}
+
+#[test]
+fn custom_commands_restore_columns_not_written_by_player_commands() {
+    let mut sim = build(VILLAGE);
+    let hash = sim.world_hash();
+    sim.preview_queued(&CustomCommand);
+    assert_eq!(sim.world_hash(), hash, "custom probe leaked state");
+    sim.queue(Box::new(CustomCommand));
+    let probe = P::BankTransfer { amount: 1 }.into_command();
+    sim.preview_queued(probe.as_ref());
+    assert_eq!(sim.world_hash(), hash, "queued custom command leaked state");
+}

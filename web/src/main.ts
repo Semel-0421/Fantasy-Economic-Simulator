@@ -30,6 +30,25 @@ let saves: SaveStore | null = null;
 let bridge: SimBridge | null = null;
 let mapScreen: MapScreen | null = null;
 
+function showFullscaleBench(): void {
+  const out = Object.assign(document.createElement('pre'), { id: 'bench-result', textContent: 'Running full-scale benchmark...' });
+  app.replaceChildren(out);
+  void SimBridge.fullscaleBench().then(
+    (result) => {
+      out.textContent = [
+        `average ms: ${result.averageMs.toFixed(3)}`,
+        `worst ms: ${result.worstMs.toFixed(3)} (turn ${result.worstTurn})`,
+        `hash after turn 11: ${result.hashAfter11}`,
+        `C# hash match: ${result.hashMatches ? 'yes' : 'no'} (expected ${result.expectedHash11})`,
+        `browser user agent: ${navigator.userAgent}`,
+      ].join('\n');
+    },
+    (error: unknown) => {
+      out.textContent = `Benchmark failed: ${message(error)}`;
+    },
+  );
+}
+
 /** The screens of one running game that refresh from views. */
 interface Screens {
   hud: Hud;
@@ -269,9 +288,13 @@ async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
   }
 }
 
-showMenu().catch((e: unknown) => {
-  app.textContent = `Could not start: ${message(e)}`;
-});
+if (new URLSearchParams(location.search).get('bench') === 'fullscale') {
+  showFullscaleBench();
+} else {
+  showMenu().catch((e: unknown) => {
+    app.textContent = `Could not start: ${message(e)}`;
+  });
 
-// Offline after one visit, and a reload prompt when a new build is waiting (production only).
-registerServiceWorker();
+  // Offline after one visit, and a reload prompt when a new build is waiting (production only).
+  registerServiceWorker();
+}

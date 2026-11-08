@@ -1,6 +1,7 @@
 // The Worker's logic without the Worker: turns one Request into one Response against a WasmSim.
 // worker.ts connects it to postMessage; the tests connect it to a MessageChannel.
 import type { WasmSim } from './pkg/fes_wasm.js';
+import { runFullscaleBench } from './fullscale_bench';
 import type { Request, Response } from './protocol';
 
 export interface HostResult {
@@ -55,6 +56,14 @@ export function createHost(Sim: typeof WasmSim): Host {
         return world().turn();
       case 'hash':
         return world().world_hash();
+      case 'bench': {
+        const bench = new Sim(request.files, 1n);
+        try {
+          return runFullscaleBench(bench, request.expectedHash11);
+        } finally {
+          bench.free();
+        }
+      }
     }
   }
 

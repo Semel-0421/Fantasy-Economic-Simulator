@@ -48,7 +48,7 @@ function copyData() {
   const fullscaleTo = join(to, 'fullscale');
   mkdirSync(fullscaleTo, { recursive: true });
   for (const name of readdirSync(fullscale)) {
-    if (name.endsWith('.csv')) copyFileSync(join(fullscale, name), join(fullscaleTo, name));
+    if (name.endsWith('.csv') || name === 'turns.json') copyFileSync(join(fullscale, name), join(fullscaleTo, name));
   }
   // Scenario files (data/scenarios/*.ron, format in its README) ship as public/data/scenarios.
   const scenarios = join(repo, 'data', 'scenarios');

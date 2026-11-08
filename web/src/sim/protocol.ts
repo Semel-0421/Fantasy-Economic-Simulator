@@ -2,6 +2,7 @@
 // Worker answers it with a Response of the same id, so calls can be awaited like functions.
 import type { GameFiles } from '../data/files';
 import type { PlayerCommand, ViewName } from './types';
+import type { FullscaleBenchResult } from './fullscale_bench';
 
 export type RequestBody =
   | { op: 'start'; files: GameFiles; seed: bigint }
@@ -14,7 +15,10 @@ export type RequestBody =
   | { op: 'view'; name: ViewName; arg?: number }
   | { op: 'save' }
   | { op: 'turn' }
-  | { op: 'hash' };
+  | { op: 'hash' }
+  | { op: 'bench'; files: GameFiles; expectedHash11: string };
+
+export type { FullscaleBenchResult };
 
 export type Request = { id: number } & RequestBody;
 

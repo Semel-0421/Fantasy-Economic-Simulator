@@ -1,17 +1,11 @@
 // Worker side: loads the wasm and the full-scale CSVs, builds the world and plays turns 0-53.
 import init, { WasmSim } from './pkg/fes_wasm.js';
+import { runFullscaleBench, type FullscaleBenchResult } from '../src/sim/fullscale_bench';
 
-export interface BenchResult {
+export interface BenchResult extends FullscaleBenchResult {
   buildMs: number;
   /** Wasm linear memory high-water mark, including allocator slack (it cannot shrink). */
   peakWasmBytes: number;
-  turnsMs: number[];
-  averageMs: number;
-  worstMs: number;
-  worstTurn: number;
-  hashAfter11: string;
-  expectedHash11: string;
-  hashMatches: boolean;
   /** Per-system ms for the worst turn, when the wasm was built with PROFILE=1. */
   worstTurnSystems?: [string, number][];
 }
@@ -31,8 +25,6 @@ const FILES = [
   'market_profiles.csv',
   'recipes.csv',
 ];
-const TURNS = 54;
-
 const post = (m: BenchMessage): void => postMessage(m);
 
 async function text(name: string): Promise<string> {
@@ -51,34 +43,27 @@ async function run(): Promise<BenchResult> {
   const t0 = performance.now();
   const sim = new WasmSim(files, 1n);
   const buildMs = performance.now() - t0;
-  const turnsMs: number[] = [];
-  let hashAfter11 = '';
   const profiled = 'step_profiled' in sim;
   const systems: [string, number][][] = [];
-  for (let turn = 0; turn < TURNS; turn++) {
-    const start = performance.now();
-    if (profiled) {
-      const times = (sim as unknown as { step_profiled(): [string, number][] }).step_profiled();
-      systems.push(times.filter(([, ms]) => ms >= 1).sort((a, b) => b[1] - a[1]));
-    } else sim.step();
-    const ms = performance.now() - start;
-    turnsMs.push(ms);
-    if (sim.turn() === 11) hashAfter11 = sim.world_hash();
-    post({ kind: 'progress', turn, ms });
-  }
-  const worstMs = Math.max(...turnsMs);
   const expectedHash11 = turnsJson.turns[11].world_hash;
+  const result = runFullscaleBench(
+    sim,
+    expectedHash11,
+    () => {
+      if (profiled) {
+        const times = (sim as unknown as { step_profiled(): [string, number][] }).step_profiled();
+        systems.push(times.filter(([, ms]) => ms >= 1).sort((a, b) => b[1] - a[1]));
+      } else {
+        sim.step();
+      }
+    },
+    (turn, ms) => post({ kind: 'progress', turn, ms }),
+  );
   return {
     buildMs,
     peakWasmBytes: wasm.memory.buffer.byteLength,
-    turnsMs,
-    averageMs: turnsMs.reduce((a, b) => a + b, 0) / TURNS,
-    worstMs,
-    worstTurn: turnsMs.indexOf(worstMs),
-    hashAfter11,
-    expectedHash11,
-    hashMatches: hashAfter11 === expectedHash11,
-    worstTurnSystems: profiled ? systems[turnsMs.indexOf(worstMs)] : undefined,
+    ...result,
+    worstTurnSystems: profiled ? systems[result.worstTurn] : undefined,
   };
 }
 

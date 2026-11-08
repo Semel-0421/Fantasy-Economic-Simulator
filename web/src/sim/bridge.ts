@@ -1,7 +1,7 @@
 // The page's handle on the simulation Worker: every method is one typed message and a promise.
 import { defaultDataUrl, loadGameFiles, type GameFiles } from '../data/files';
 import { loadScenarioText, scenarioDataUrl } from '../data/scenarios';
-import type { Request, RequestBody, Response } from './protocol';
+import type { FullscaleBenchResult, Request, RequestBody, Response } from './protocol';
 import type { CommandResult, PlayerCommand, TurnReport, ViewName, Views } from './types';
 
 /** What a Worker and a MessagePort have in common. */
@@ -74,6 +74,25 @@ export class SimBridge {
     const [files, text] = await Promise.all([loadGameFiles(scenarioDataUrl(), []), loadScenarioText(n)]);
     const bridge = new SimBridge(SimBridge.spawn());
     return bridge.startScenario(files, text);
+  }
+
+  /** Runs the full-scale free-mode benchmark in a dedicated simulation Worker. */
+  static async fullscaleBench(): Promise<FullscaleBenchResult> {
+    const base = scenarioDataUrl();
+    const [files, turnsResponse] = await Promise.all([
+      loadGameFiles(base, []),
+      fetch(new URL('turns.json', base)),
+    ]);
+    if (!turnsResponse.ok) throw new Error(`Could not load turns.json: HTTP ${turnsResponse.status}`);
+    const turns = (await turnsResponse.json()) as { turns: { world_hash: string }[] };
+    const expectedHash11 = turns.turns[11]?.world_hash;
+    if (!expectedHash11) throw new Error('turns.json has no turn 11 hash.');
+    const bridge = new SimBridge(SimBridge.spawn());
+    try {
+      return await bridge.call<FullscaleBenchResult>({ op: 'bench', files, expectedHash11 });
+    } finally {
+      bridge.dispose();
+    }
   }
 
   private static spawn(): Port {

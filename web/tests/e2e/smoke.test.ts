@@ -35,6 +35,20 @@ async function startFree(page: Page): Promise<void> {
 }
 
 describe('production smoke', () => {
+  it('runs the full-scale Worker benchmark from the built app', async () => {
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await context.newPage();
+    await page.goto(`${url}?bench=fullscale`);
+    await page.waitForFunction(() => document.getElementById('bench-result')?.textContent?.includes('C# hash match: yes'), null, { timeout: 180000 });
+    const result = (await page.textContent('#bench-result')) ?? '';
+    expect(result).toMatch(/average ms: \d+\.\d+/);
+    expect(result).toMatch(/worst ms: \d+\.\d+ \(turn \d+\)/);
+    expect(result).toContain('hash after turn 11:');
+    expect(result).toContain('C# hash match: yes');
+    expect(result).toContain('browser user agent:');
+    await context.close();
+  }, 180000);
+
   it('menu, Free mode, buy, next week, save, reload, continue', async () => {
     const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, serviceWorkers: 'block' });
     const page = await context.newPage();

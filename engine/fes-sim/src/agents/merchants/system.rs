@@ -16,6 +16,7 @@ use crate::agents::{
     PolicyState, PurseState,
 };
 use crate::context::SimContext;
+use crate::economy::pricing::demand::CurveMemo;
 use crate::economy::{CurrencyState, MarketStore};
 use crate::error::SimError;
 use crate::pipeline::{sim_order, SimPhase, System};
@@ -32,6 +33,8 @@ pub struct MerchantSystem {
     scratch: Scratch,
     pool: Pool,
     caches: Caches,
+    /// The household necessity curve per cell, kept across turns (`refresh_needs`).
+    curve: CurveMemo,
 }
 
 /// Per-turn derived inputs, and the insurer cache C# keys on the group count.
@@ -123,7 +126,7 @@ impl MerchantSystem {
         self.caches.prepare_routes(ctx);
         self.caches.prepare_coins(ctx);
         self.prepare_scratch(ctx);
-        refresh_needs(ctx, &mut self.scratch.household_need);
+        refresh_needs(ctx, &mut self.scratch.household_need, &mut self.curve);
         self.caches.refresh_insurers(ctx);
         let mut state = JobState::take_from(&mut ctx.world);
         let rules = job_rules(ctx);

@@ -2,14 +2,14 @@
 //! week at the price that nothing at hand covers (their stores, the stock, this week's supply).
 //! Arriving merchants sell into it first. A pure function of saved state, refreshed every turn.
 use crate::context::SimContext;
-use crate::economy::pricing::demand::{cell_base, weekly, DemandParams};
+use crate::economy::pricing::demand::{cell_base, weekly_memo, CurveMemo, DemandParams};
 use crate::economy::pricing::luxury_share;
 use crate::economy::{CurrencyState, HouseholdCash, HouseholdState, MarketStore};
 use crate::world::NodeTable;
 use fes_core::Fx;
 
 /// Fills `units` (one entry per market cell).
-pub fn refresh_needs(ctx: &SimContext, units: &mut Vec<i64>) {
+pub fn refresh_needs(ctx: &SimContext, units: &mut Vec<i64>, memo: &mut CurveMemo) {
     let db = &ctx.services.database;
     let config = &db.config;
     let markets = ctx.world.get::<MarketStore>();
@@ -18,6 +18,7 @@ pub fn refresh_needs(ctx: &SimContext, units: &mut Vec<i64>) {
     let home_grown = &ctx.world.get::<HouseholdCash>().home_grown;
     let currency = ctx.world.get::<CurrencyState>();
     let demand = DemandParams::from_config(config);
+    memo.prepare(&demand);
     units.clear();
     units.resize(markets.cell_count(), 0);
     for n in 0..markets.market_count() {
@@ -45,8 +46,9 @@ pub fn refresh_needs(ctx: &SimContext, units: &mut Vec<i64>) {
                 Fx::ONE_RAW,
                 index,
             );
-            let wished = weekly(
+            let wished = weekly_memo(
                 &demand,
+                memo,
                 base,
                 markets.price[c],
                 anchor,

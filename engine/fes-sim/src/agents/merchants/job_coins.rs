@@ -9,6 +9,11 @@ pub struct GroupReach {
     pub licensed: bool,
     pub anchor: i32,
     pub in_range: bool,
+    /// The group's own part of `may_go`, fixed for a search: large and bold enough to cross to
+    /// another continent, and its two trade licences (each a hash of the seed and the group).
+    pub may_cross: bool,
+    pub intercontinental: bool,
+    pub international: bool,
 }
 
 /// C# `BillHolders.Bank`.
@@ -74,32 +79,24 @@ impl DetailedJob<'_> {
         local
     }
 
+    /// The group's part of `may_go`, worked out once per search (C# evaluates it per route).
+    pub(super) fn may_cross(&self, a: usize) -> bool {
+        let range = self.g.traits.range_level[usize::from(self.g.trait_id[a])];
+        self.r.cross_level >= 0
+            && i32::from(self.g.scale[a]) <= self.r.cross_level
+            && (range <= WorldLevel::Nation as i32 || self.p.node_port[u(self.g.home[a])] != 0)
+    }
+
     /// Within its range at home, anywhere once abroad, and between continents only if large and
     /// bold enough (DEC-066, DEC-096).
     pub(super) fn may_go(&self, a: usize, at: i32, to: i32, reach: &GroupReach) -> bool {
         let c = self.p.continent;
         let home = self.g.home[a];
         if c[u(to)] != c[u(at)] {
-            let range = self.g.traits.range_level[usize::from(self.g.trait_id[a])];
-            return self.r.cross_level >= 0
-                && i32::from(self.g.scale[a]) <= self.r.cross_level
-                && (range <= WorldLevel::Nation as i32 || self.p.node_port[u(home)] != 0)
-                && (c[u(to)] == c[u(home)]
-                    || self.holds_trade_license(
-                        a,
-                        self.r.intercontinental_stream,
-                        self.r.intercontinental_permille,
-                    ));
+            return reach.may_cross && (c[u(to)] == c[u(home)] || reach.intercontinental);
         }
         let row = self.p.license_row;
-        if row[u(to)] != row[u(at)]
-            && row[u(to)] != row[u(home)]
-            && !self.holds_trade_license(
-                a,
-                self.r.international_stream,
-                self.r.international_permille,
-            )
-        {
+        if row[u(to)] != row[u(at)] && row[u(to)] != row[u(home)] && !reach.international {
             return false;
         }
         !reach.in_range || self.abroad(a, at) || self.within(to, reach.anchor)

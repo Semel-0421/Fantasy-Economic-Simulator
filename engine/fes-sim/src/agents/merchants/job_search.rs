@@ -51,6 +51,17 @@ impl DetailedJob<'_> {
             licensed: self.holds_licenses(a),
             anchor,
             in_range: self.within(node, anchor),
+            may_cross: self.may_cross(a),
+            intercontinental: self.holds_trade_license(
+                a,
+                self.r.intercontinental_stream,
+                self.r.intercontinental_permille,
+            ),
+            international: self.holds_trade_license(
+                a,
+                self.r.international_stream,
+                self.r.international_permille,
+            ),
         }
     }
 

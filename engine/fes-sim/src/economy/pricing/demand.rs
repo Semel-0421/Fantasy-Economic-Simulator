@@ -69,9 +69,103 @@ pub fn cell_base(
     (weekly, anchor)
 }
 
+/// The necessity curve at a price ratio: the mean over the quintiles (one log, five powers).
+pub fn necessity_factor(p: &DemandParams, ratio: i64) -> i64 {
+    let choke = p.necessity_choke_raw;
+    let log = log_of_ratio(ratio, choke);
+    let sum: i64 = p
+        .quintile_raw
+        .iter()
+        .map(|&e| constant_elasticity(e, ratio, log, p.max_cheap_raw, choke))
+        .sum();
+    sum / QUINTILES as i64
+}
+
+/// Necessity factors already worked out, by price ratio (a direct-mapped table: a slot holds the
+/// last ratio that fell in it). The factor depends on the ratio and the parameters only, so a
+/// ratio read back gives the same result as working it out; prices sit near their anchors, so
+/// most ratios repeat across cells and turns.
+#[derive(Default)]
+pub struct CurveMemo {
+    params: Option<[i64; QUINTILES + 2]>,
+    ratio: Vec<i64>,
+    factor: Vec<i64>,
+}
+
+const MEMO_BITS: u32 = 16;
+
+impl CurveMemo {
+    /// Makes the table, and forgets it if the parameters changed.
+    pub fn prepare(&mut self, p: &DemandParams) {
+        let mut key = [p.necessity_choke_raw, p.max_cheap_raw, 0, 0, 0, 0, 0];
+        key[2..].copy_from_slice(&p.quintile_raw);
+        if self.params != Some(key) {
+            self.params = Some(key);
+            self.ratio = vec![i64::MIN; 1 << MEMO_BITS];
+            self.factor = vec![0; 1 << MEMO_BITS];
+        }
+    }
+
+    fn factor(&mut self, p: &DemandParams, ratio: i64) -> i64 {
+        let slot = (ratio as u64 & ((1 << MEMO_BITS) - 1)) as usize;
+        if self.ratio[slot] != ratio {
+            self.ratio[slot] = ratio;
+            self.factor[slot] = necessity_factor(p, ratio);
+        }
+        self.factor[slot]
+    }
+}
+
 /// C# `HouseholdDemand.Weekly`.
 pub fn weekly(
     p: &DemandParams,
+    weekly_at_anchor: i64,
+    price: i32,
+    anchor: i64,
+    luxury_share: i64,
+    necessity_weight: i64,
+    luxury_weight: i64,
+) -> WeeklyWish {
+    weekly_on(
+        p,
+        None,
+        weekly_at_anchor,
+        price,
+        anchor,
+        luxury_share,
+        necessity_weight,
+        luxury_weight,
+    )
+}
+
+/// `weekly` reading the necessity factor through the memo (`prepare` it first).
+#[allow(clippy::too_many_arguments)]
+pub fn weekly_memo(
+    p: &DemandParams,
+    memo: &mut CurveMemo,
+    weekly_at_anchor: i64,
+    price: i32,
+    anchor: i64,
+    luxury_share: i64,
+    necessity_weight: i64,
+    luxury_weight: i64,
+) -> WeeklyWish {
+    weekly_on(
+        p,
+        Some(memo),
+        weekly_at_anchor,
+        price,
+        anchor,
+        luxury_share,
+        necessity_weight,
+        luxury_weight,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn weekly_on(
+    p: &DemandParams,
+    memo: Option<&mut CurveMemo>,
     weekly_at_anchor: i64,
     price: i32,
     anchor: i64,
@@ -88,14 +182,10 @@ pub fn weekly(
     let necessity_share = Fx::ONE_RAW - luxury_share;
     let mut necessity = 0;
     if necessity_share > 0 {
-        let choke = p.necessity_choke_raw;
-        let log = log_of_ratio(ratio, choke);
-        let sum: i64 = p
-            .quintile_raw
-            .iter()
-            .map(|&e| constant_elasticity(e, ratio, log, p.max_cheap_raw, choke))
-            .sum();
-        necessity = sum / QUINTILES as i64;
+        necessity = match memo {
+            Some(memo) => memo.factor(p, ratio),
+            None => necessity_factor(p, ratio),
+        };
     }
     let luxury = if luxury_share > 0 {
         factor(p.luxury_elasticity_raw, excess, p.max_cheap_raw)
@@ -319,6 +409,26 @@ mod tests {
         }
         for v in 1..300_000i64 {
             assert_eq!(log2(v), log2_reference(v), "log2({v})");
+        }
+    }
+
+    #[test]
+    fn curve_memo_reads_back_what_the_curve_gives() {
+        let p = DemandParams {
+            luxury_elasticity_raw: Fx::ONE_RAW,
+            max_cheap_raw: 3 * Fx::ONE_RAW,
+            necessity_choke_raw: 4 * Fx::ONE_RAW,
+            quintile_raw: [90_000, 80_000, 65_536, 50_000, 30_000],
+        };
+        let mut memo = CurveMemo::default();
+        memo.prepare(&p);
+        // Ratios that share a slot (1 << 16 apart) and repeats, in both orders.
+        let ratios = [0, 1, 65_536, 131_072, 65_537, 131_073, 300_000, 1 << 20];
+        for round in 0..3 {
+            for &r in ratios.iter().chain(ratios.iter().rev()) {
+                let r = r + round;
+                assert_eq!(memo.factor(&p, r), necessity_factor(&p, r), "ratio {r}");
+            }
         }
     }
 }

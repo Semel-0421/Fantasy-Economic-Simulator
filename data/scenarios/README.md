@@ -18,10 +18,13 @@ not know fails the scenario's build.
 (
     id: "s1_first_venture",
     title: "First Venture",
+    intro: "Shown when the scenario opens.",   // optional
     seed: 11,                  // fixed seed: every player sees the same world
     start_node: "aur_n1_r1_c1_v1",
     start_coins: 500,          // in the start node's coin
     weeks: 20,                 // ScenarioEnded fires at the end of this week
+    warmup_weeks: 4,           // optional: the world runs this long before the player arrives
+    protected_opening: true,   // optional: the first goods bought sell for >= 1.5x the price paid
     objectives: [
         (id: "deliver", text: "Deliver the grain order.", goal: ContractDone("grain")),
         (id: "profit", text: "Make 1,000 coins of profit.", goal: NetProfit(1000)),
@@ -88,6 +91,11 @@ what the effect paid the player (a dividend, a contract reward), counted as reve
 Checked at the end of each week; once done an objective stays done (`ObjectiveDone` event).
 
 ## Scenario rules
+
+`warmup_weeks` runs the world before the player is placed, so markets hold stock and traders hold
+money at week 0 (the full-scale world starts empty). `protected_opening` (spec 5.3): the first
+purchase is noted (good and unit price); the first sale of that good is paid at least 1.5 times that
+price, wherever it is sold. The opening ends with the player's first sale of anything.
 
 A scenario world has no random world events, financial events or route encounters (spec 5.2): only the
 script happens. Free mode never reads these files, so its results stay equal to the C# reference.

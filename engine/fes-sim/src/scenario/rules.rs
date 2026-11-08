@@ -13,6 +13,21 @@ pub struct ScenarioRules {
     pub encounters_off: bool,
     /// Scripted raids waiting for the player's next trip on a route: (route, cargo loss permille).
     pub pending_raids: Vec<(i32, i32)>,
+    /// The protected opening (spec 5.3): the first goods bought sell for 1.5 times what was paid,
+    /// until the first sale.
+    pub opening: Opening,
+}
+
+/// The protected opening's progress.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Opening {
+    /// No protected opening in this scenario, or it ended with the first sale.
+    #[default]
+    Off,
+    /// Waiting for the player's first purchase.
+    Waiting,
+    /// The first purchase: this good, at this price a unit.
+    Bought { good: i32, price: i32 },
 }
 
 impl ScenarioRules {
@@ -23,6 +38,38 @@ impl ScenarioRules {
             random_events_off: true,
             encounters_off: true,
             pending_raids: Vec::new(),
+            opening: Opening::Off,
+        }
+    }
+}
+
+/// The player bought `good` at `price` a unit: the first purchase of a protected opening is noted.
+pub fn note_purchase(services: &mut Services, good: i32, price: i32) {
+    if let Some(r) = services.try_get_mut::<ScenarioRules>() {
+        if r.active && r.opening == Opening::Waiting {
+            r.opening = Opening::Bought { good, price };
+        }
+    }
+}
+
+/// The trader's offer for `good` during a protected opening: 1.5 times the price paid for the
+/// first goods bought, when that is more than `offer`. Otherwise `offer`.
+pub fn opening_offer(services: &Services, good: i32, offer: i32) -> i32 {
+    match services.try_get::<ScenarioRules>() {
+        Some(ScenarioRules {
+            active: true,
+            opening: Opening::Bought { good: g, price },
+            ..
+        }) if *g == good => offer.max(price.saturating_mul(3) / 2),
+        _ => offer,
+    }
+}
+
+/// The player sold something: the protected opening ends.
+pub fn note_sale(services: &mut Services) {
+    if let Some(r) = services.try_get_mut::<ScenarioRules>() {
+        if matches!(r.opening, Opening::Bought { .. }) {
+            r.opening = Opening::Off;
         }
     }
 }

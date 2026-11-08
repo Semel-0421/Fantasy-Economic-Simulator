@@ -1,0 +1,44 @@
+// Scenario 1 (spec 5.3): trading basics. Played and tuned in engine/fes-sim/tests/scenario_s1.rs.
+(
+    id: "s1_first_venture",
+    title: "First Venture",
+    intro: "You arrive in the village k0n0r0c0v1 with 500 coins and an empty cart. The village sells grain (g1_0) cheaply. Buy a cartload, take it to the town k0n0r0c0 a week away and sell it there: for this first venture traders anywhere pay at least 1.5 times what you paid, whatever the market says. The offer ends with your first sale.",
+    seed: 11,
+    start_node: "k0n0r0c0v1",
+    start_coins: 500,
+    weeks: 20,
+    warmup_weeks: 4,
+    protected_opening: true,
+    objectives: [
+        (id: "first_sale", text: "Sell your first cartload at a profit.", goal: NetProfit(1)),
+        (id: "contract", text: "Deliver the tool order to the town k0n0r0c1.", goal: ContractDone("tools")),
+        (id: "triple", text: "Finish with three times your starting coins (1,000 coins of profit).", goal: NetProfit(1000)),
+    ],
+    events: [
+        (
+            id: "offer",
+            trigger: PlayerAt("k0n0r0c0"),
+            fallback_week: 3,
+            effects: [
+                OfferContract(id: "tools", good: "g6_0", quantity: 18, node: "k0n0r0c1",
+                    reward: 1200, deadline_week: 12,
+                    text: "A workshop in the town k0n0r0c1 needs 18 crates of tools (g6_0) by week 12 and pays 1,200 coins on delivery. Tools are sold here in k0n0r0c0. The road runs through the regional market k0n0r0: two weeks there, two more on to k0n0r0c1."),
+            ],
+        ),
+        (
+            id: "warning",
+            trigger: Holds(good: "g6_0", quantity: 1),
+            fallback_week: 6,
+            effects: [
+                Dialog("Word in the market: robbers wait on the road from the regional market k0n0r0 to k0n0r0c1. Guards cut the chance of an attack by 70%; insurance refunds 80% of cargo lost. Both are offered when you set off."),
+                Raid(from: "k0n0r0", to: "k0n0r0c1", loss_permille: 500),
+            ],
+        ),
+        (
+            id: "delivered",
+            trigger: ContractDone("tools"),
+            fallback_week: 30,
+            effects: [Dialog("The workshop pays you. The rest of the season is yours: keep trading between the towns.")],
+        ),
+    ],
+)

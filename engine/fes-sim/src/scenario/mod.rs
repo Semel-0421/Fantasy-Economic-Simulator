@@ -8,7 +8,7 @@ pub mod statement;
 
 pub use defs::{Effect, EventDef, Goal, ObjectiveDef, ScenarioDef, Trigger};
 pub use objectives::{ObjectiveView, Objectives};
-pub use rules::ScenarioRules;
+pub use rules::{Opening, ScenarioRules};
 pub use script::{ScenarioContract, Script};
 pub use statement::{StatementCosts, StatementLedger, StatementView};
 

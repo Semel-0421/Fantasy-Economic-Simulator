@@ -7,6 +7,9 @@
 pub struct ScenarioDef {
     pub id: String,
     pub title: String,
+    /// Shown when the scenario opens, before the first week.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub intro: String,
     pub seed: u64,
     /// Node key where the player starts.
     pub start_node: String,
@@ -14,6 +17,13 @@ pub struct ScenarioDef {
     pub start_coins: i64,
     /// The scenario ends after this many weeks.
     pub weeks: i32,
+    /// The first goods bought sell for 1.5 times the price paid, anywhere, until the first sale
+    /// (spec 5.3).
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub protected_opening: bool,
+    /// Weeks the world runs before the player arrives, so markets hold stock at week 0.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub warmup_weeks: i32,
     pub objectives: Vec<ObjectiveDef>,
     pub events: Vec<EventDef>,
 }
@@ -122,6 +132,9 @@ pub enum Effect {
 impl ScenarioDef {
     /// Checks what a world is not needed for: every trigger but `Week` has a fallback week.
     pub fn validate(&self) -> Result<(), String> {
+        if self.warmup_weeks < 0 {
+            return Err(format!("Scenario '{}' needs warmup_weeks >= 0.", self.id));
+        }
         if self.weeks <= 0 {
             return Err(format!("Scenario '{}' needs weeks > 0.", self.id));
         }

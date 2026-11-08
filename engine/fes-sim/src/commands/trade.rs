@@ -160,6 +160,9 @@ impl Command for BuyGoods {
             .get_mut::<CargoTable>()
             .change(PLAYER_CART, self.good, filled);
         market_buy(ctx.world.get_mut::<MarketStore>(), cell, filled);
+        if filled > 0 {
+            crate::scenario::rules::note_purchase(&mut ctx.services, self.good, price);
+        }
         let turn = ctx.turn();
         ctx.events.publish(GoodsTraded {
             market: node,
@@ -196,11 +199,12 @@ pub struct SellGoods {
 }
 
 impl SellGoods {
-    fn offer(ctx: &SimContext, cell: usize) -> i32 {
-        trader_offer(
+    fn offer(&self, ctx: &SimContext, cell: usize) -> i32 {
+        let offer = trader_offer(
             ctx.services.database.config.trader_spread,
             ctx.world.get::<MarketStore>().price[cell],
-        )
+        );
+        crate::scenario::rules::opening_offer(&ctx.services, self.good, offer)
     }
 
     fn fill(&self, ctx: &SimContext, cell: usize) -> i32 {
@@ -211,7 +215,7 @@ impl SellGoods {
         ctx.world.get::<PurseState>().sellable(
             player(ctx).node,
             self.quantity.min(held),
-            i64::from(Self::offer(ctx, cell)),
+            i64::from(self.offer(ctx, cell)),
         )
     }
 }
@@ -246,7 +250,10 @@ impl Command for SellGoods {
         };
         let filled = self.fill(ctx, cell);
         let node = player(ctx).node;
-        let price = Self::offer(ctx, cell);
+        let price = self.offer(ctx, cell);
+        if filled > 0 {
+            crate::scenario::rules::note_sale(&mut ctx.services);
+        }
         let paid = i64::from(filled) * i64::from(price);
         change_local_coins(ctx, paid);
         ctx.world.get_mut::<PurseState>().change_float(node, -paid);

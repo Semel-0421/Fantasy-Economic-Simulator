@@ -105,7 +105,11 @@ impl SimulationBuilder {
     /// script and objectives, and the scenario rules (no random events or encounters).
     pub fn scenario(mut self, def: ScenarioDef) -> Self {
         self.seed = def.seed;
-        self.scenario = Some(ScenarioRules::scenario());
+        let mut rules = ScenarioRules::scenario();
+        if def.protected_opening {
+            rules.opening = crate::scenario::Opening::Waiting;
+        }
+        self.scenario = Some(rules);
         self.scenario_def = Some(def);
         self
     }
@@ -138,6 +142,10 @@ impl SimulationBuilder {
         let hash = data_hash(&self.database, &self.map);
         let mut sim = Simulation::new(ctx, pipeline, hash);
         if scenario {
+            let warmup = self.scenario_def.as_ref().map_or(0, |d| d.warmup_weeks);
+            for _ in 0..warmup {
+                sim.pipeline.advance(&mut sim.ctx)?;
+            }
             let run = ScenarioRun::start(&mut sim.ctx, self.scenario_def.as_ref())
                 .map_err(SimError::Invalid)?;
             sim.scenario = Some(run);

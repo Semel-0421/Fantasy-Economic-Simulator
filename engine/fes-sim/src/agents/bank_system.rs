@@ -30,6 +30,7 @@ const MODE_MANUAL: u8 = 0;
 
 /// The player's loan with a bank was paid off (C# `LoanRepaid`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LoanRepaid {
     pub nation_node: i32,
     pub turn: i32,
@@ -37,6 +38,7 @@ pub struct LoanRepaid {
 
 /// DEC-130: the debt rose above the call share of the collateral (C# `MarginCalled`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MarginCalled {
     pub nation_node: i32,
     /// What is over the loan-to-value, in the lending bank's coin.
@@ -46,6 +48,7 @@ pub struct MarginCalled {
 
 /// C# `CollateralKind`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum CollateralKind {
     Deposit = 0,
@@ -60,6 +63,7 @@ pub enum CollateralKind {
 /// Collateral the bank took for an overdue loan (C# `CollateralSeized`); `value` is in the lending
 /// bank's coin, `facility` is -1 when none.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CollateralSeized {
     pub nation_node: i32,
     pub kind: CollateralKind,
@@ -70,6 +74,7 @@ pub struct CollateralSeized {
 
 /// C# `AuctionClosed`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AuctionClosed {
     pub facility: i32,
     pub won_by_player: bool,

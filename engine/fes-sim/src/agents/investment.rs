@@ -35,6 +35,7 @@ const INPUT_WEEKS_AT_HAND: i64 = 4;
 
 /// A facility grew a level (C# `FacilityExpanded`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FacilityExpanded {
     pub facility: i32,
     pub level: i32,
@@ -42,6 +43,7 @@ pub struct FacilityExpanded {
 
 /// A group founded a facility (C# `FacilityFounded`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FacilityFounded {
     pub facility: i32,
     pub group: i32,
@@ -49,6 +51,7 @@ pub struct FacilityFounded {
 
 /// A facility changed its use (C# `FacilityRepurposed`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FacilityRepurposed {
     pub facility: i32,
     pub def_index: i32,

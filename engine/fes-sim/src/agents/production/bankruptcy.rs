@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 /// A facility ran out of cash and got a new operator (C# `FacilityBankrupt`; no subscriber).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FacilityBankrupt {
     pub facility: i32,
     pub was_player_owned: bool,
@@ -23,6 +24,7 @@ pub struct FacilityBankrupt {
 
 /// The claim on a lost warehouse ran out (C# `LostWarehouseCleared`; no subscriber).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LostWarehouseCleared {
     pub facility: i32,
     pub turn: i32,
@@ -30,6 +32,7 @@ pub struct LostWarehouseCleared {
 
 /// An NPC loan failed and the bank seized the facility (C# `NpcLoanDefaulted`, facility case).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NpcLoanDefaulted {
     pub facility: i32,
     /// -1: a facility, not a merchant group.

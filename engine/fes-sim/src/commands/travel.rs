@@ -30,6 +30,7 @@ pub const LOSS_CARGO: u8 = 2;
 
 /// What a trip costs now (C# `TripQuote`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TripQuote {
     pub route: i32,
     /// Route fee in the departure coin.
@@ -76,6 +77,7 @@ pub struct TripOptions {
 
 /// The trip started (C# `TripStarted`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TripStarted {
     pub destination: i32,
     pub arrival_turn: i32,
@@ -85,6 +87,7 @@ pub struct TripStarted {
 
 /// An encounter took cash or cargo, insurance paid some back (C# `TripEncounter`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TripEncounter {
     pub destination: i32,
     pub loss: u8,

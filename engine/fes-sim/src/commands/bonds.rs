@@ -19,6 +19,7 @@ pub const BOND_PLAYER_HOLDER: i32 = i32::MIN;
 
 /// The player bought (positive) or sold (negative) bonds of an issuer (C# `BondTraded`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BondTraded {
     pub issuer: i32,
     pub face: i64,

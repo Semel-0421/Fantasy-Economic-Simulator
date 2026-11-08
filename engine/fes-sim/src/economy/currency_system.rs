@@ -40,6 +40,7 @@ impl CurrencyModel for GoldStandardCurrencyModel {
 
 /// Published once per continent when it mints.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CurrencyMinted {
     pub continent: i32,
     pub year: i32,

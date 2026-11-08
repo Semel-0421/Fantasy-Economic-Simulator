@@ -131,6 +131,7 @@ pub fn collect_tax(
 /// A lord failed to pay the protection owed, so the vassal withholds aid for a year (C#
 /// `NobleContractBroken`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct NobleContractBroken {
     pub vassal: i32,
     pub lord: i32,

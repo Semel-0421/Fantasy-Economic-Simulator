@@ -24,6 +24,7 @@ use fes_data::database::GameDatabase;
 
 /// The player bought or renewed a license (C# `LicenseBought`); `nation` is the nation node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LicenseBought {
     pub base_good: i32,
     pub nation: i32,
@@ -300,6 +301,7 @@ impl Command for SellShip {
 
 /// The player lobbied a policy (C# `Lobbied`); `nation` is the nation node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Lobbied {
     pub nation: i32,
     pub policy: u8,

@@ -11,7 +11,7 @@ use fes_sim::commands::bank::{BankTransfer, Exchange, RepayLoan, TakeLoan};
 use fes_sim::commands::trade::BuyGoods;
 use fes_sim::economy::{CurrencyState, MarketStore};
 use fes_sim::world::{NodeBanks, NodeTable};
-use fes_sim::{Command, Simulation, SimulationBuilder, TurnReport};
+use fes_sim::{Command, SimEventRecord, Simulation, SimulationBuilder, TurnReport};
 
 const CITY: &str = "aur_n1_r1_c1";
 const VILLAGE: &str = "aur_n1_r1_c1_v1";
@@ -69,26 +69,12 @@ fn reserve_of(sim: &Simulation, nation: usize) -> i64 {
     sim.world().get::<BankState>().reserve[nation]
 }
 
-fn named(report: &TurnReport, name: &str) -> Vec<String> {
-    report
-        .events
-        .iter()
-        .filter(|e| e.type_name.ends_with(name))
-        .map(|e| e.debug.clone())
-        .collect()
+fn named(report: &TurnReport, name: &str) -> usize {
+    report.events.iter().filter(|e| e.name() == name).count()
 }
 
 fn rejected(report: &TurnReport) -> usize {
-    named(report, "CommandRejected").len()
-}
-
-/// The integer after `name: ` in an event's debug text.
-fn field(debug: &str, name: &str) -> i64 {
-    let rest = debug.split(&format!("{name}: ")).nth(1).expect(name);
-    let end = rest
-        .find(|c: char| !(c.is_ascii_digit() || c == '-'))
-        .unwrap_or(rest.len());
-    rest[..end].parse().expect(name)
+    named(report, "CommandRejected")
 }
 
 fn turn(sim: &mut Simulation, cmds: Vec<Box<dyn Command>>) -> TurnReport {
@@ -168,11 +154,18 @@ fn purchases_at_a_branch_can_be_paid_from_the_deposit() {
             pay_from_deposit: true,
         })],
     );
-    let trades = named(&report, "GoodsTraded");
+    let trades: Vec<_> = report
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            SimEventRecord::GoodsTraded(t) => Some(*t),
+            _ => None,
+        })
+        .collect();
     assert_eq!(1, trades.len());
-    assert_eq!(2, field(&trades[0], "filled"));
+    assert_eq!(2, trades[0].filled);
     assert_eq!(0, local_coins(&sim));
-    let left = deposit - 2 * field(&trades[0], "price");
+    let left = deposit - 2 * i64::from(trades[0].price);
     let rate = sim
         .context()
         .services
@@ -207,9 +200,16 @@ fn exchange_happens_at_the_international_bank_with_a_fee() {
         }) as Box<dyn Command>
     };
     let report = turn(&mut sim, vec![exchange(1_000)]);
-    let done = named(&report, "CoinsExchanged");
+    let done: Vec<_> = report
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            SimEventRecord::CoinsExchanged(c) => Some(*c),
+            _ => None,
+        })
+        .collect();
     assert_eq!(1, done.len());
-    assert_eq!(gross - fee, field(&done[0], "received"));
+    assert_eq!(gross - fee, done[0].received);
     let player = sim.world().get::<PlayerState>();
     assert_eq!(9_000, player.coins[home]);
     assert_eq!(gross - fee, player.coins[away]);
@@ -264,10 +264,17 @@ fn loans_are_limited_by_collateral_and_the_reserve() {
         ],
     );
     assert_eq!(2, rejected(&report));
-    let taken = named(&report, "LoanTaken");
+    let taken: Vec<_> = report
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            SimEventRecord::LoanTaken(l) => Some(*l),
+            _ => None,
+        })
+        .collect();
     assert_eq!(1, taken.len());
-    let weekly = field(&taken[0], "weekly_payment");
-    assert_eq!(2_000 + 200, field(&taken[0], "balance")); // 10% a year over a 52-week term
+    let weekly = taken[0].weekly_payment;
+    assert_eq!(2_000 + 200, taken[0].balance); // 10% a year over a 52-week term
     assert_eq!((2_200 + 51) / 52, weekly);
     // The first instalment is collected in the same turn, from the coins just borrowed.
     assert_eq!(2_000 - weekly, local_coins(&sim));
@@ -285,7 +292,7 @@ fn repay_and_run_dry(sim: &mut Simulation, nation: usize, balance: i64) {
     let continent = continent_of(sim, node(sim, CITY));
     sim.context_mut().world.get_mut::<PlayerState>().coins[continent] = 10_000;
     let report = turn(sim, vec![Box::new(RepayLoan { amount: balance })]);
-    assert_eq!(1, named(&report, "LoanRepaid").len());
+    assert_eq!(1, named(&report, "LoanRepaid"));
     sim.context_mut().world.get_mut::<BankState>().reserve[nation] = 10;
     let report = turn(sim, vec![Box::new(TakeLoan { amount: 100 })]);
     assert_eq!(1, rejected(&report), "the bank's reserve is too small");
@@ -316,7 +323,7 @@ fn a_facility_held_for_auction_cannot_go_bankrupt() {
     a.player_bid.push(0);
     a.for_player_loan.push(0);
     let report = sim.step().expect("step");
-    assert!(named(&report, "FacilityBankrupt").is_empty());
+    assert!(named(&report, "FacilityBankrupt") == 0);
     let t = sim.world().get::<FacilityTable>();
     assert_eq!(OWNER_BANK, t.owner[f]);
     assert_eq!(0, t.negative_cash_weeks[f]);

@@ -22,6 +22,7 @@ pub const ORDER: i32 = sim_order::LATE + 15;
 
 /// The year's income tax was collected (C# `IncomeTaxCollected`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct IncomeTaxCollected {
     /// The year taxed.
     pub year: i32,
@@ -31,6 +32,7 @@ pub struct IncomeTaxCollected {
 
 /// A facility closed after years of losses (C# `FacilityClosed`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FacilityClosed {
     pub facility: i32,
     pub turn: i32,

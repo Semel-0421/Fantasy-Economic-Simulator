@@ -21,6 +21,7 @@ pub const ORDER: i32 = sim_order::LATE + 17;
 
 /// A nation enacted emancipation (C# `EmancipationEnacted`); `nation` is its node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct EmancipationEnacted {
     pub nation: i32,
     pub year: i32,
@@ -28,6 +29,7 @@ pub struct EmancipationEnacted {
 
 /// People moved from a village to a town (C# `PeopleMigrated`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PeopleMigrated {
     pub from: i32,
     pub to: i32,

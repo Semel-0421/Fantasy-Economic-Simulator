@@ -26,6 +26,7 @@ pub const ORDER: i32 = sim_order::LATE + 10;
 
 /// A financial event started in a nation (C# `FinancialEventStarted`); `nation` is its node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FinancialEventStarted {
     pub nation: i32,
     pub kind: u8,
@@ -34,6 +35,7 @@ pub struct FinancialEventStarted {
 
 /// A financial event ended (C# `FinancialEventEnded`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FinancialEventEnded {
     pub nation: i32,
     pub kind: u8,
@@ -42,6 +44,7 @@ pub struct FinancialEventEnded {
 
 /// The year's statistics were published (C# `StatisticsPublished`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatisticsPublished {
     pub year: i32,
 }

@@ -41,6 +41,7 @@ pub fn bill_facility(facility: i32) -> i32 {
 
 /// A company too long behind on its bonds defaulted (C# `BondDefaulted`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BondDefaulted {
     pub group: i32,
     pub turn: i32,

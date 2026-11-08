@@ -28,6 +28,7 @@ pub const ORDER: i32 = sim_order::LATE + 18;
 
 /// A state project was finished (C# `StateProjectFinished`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StateProjectFinished {
     pub kind: u8,
     pub node: i32,

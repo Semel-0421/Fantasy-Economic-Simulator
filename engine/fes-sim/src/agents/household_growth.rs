@@ -11,6 +11,7 @@ use fes_data::SimulationConfig;
 
 /// Published after the yearly update; `year` is the year whose conditions set the change.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HouseholdsUpdated {
     pub year: i32,
 }

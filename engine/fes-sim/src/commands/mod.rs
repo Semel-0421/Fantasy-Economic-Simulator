@@ -26,7 +26,7 @@ pub enum CommandResult {
 /// A player action: the only way presentation code mutates simulation state (C# `ICommand`).
 /// `validate` must not change anything; `apply` runs only after it returned `Ok`. Commands must
 /// not store simulation-derived state.
-pub trait Command: Debug + Send + Sync {
+pub trait Command: std::any::Any + Debug + Send + Sync {
     fn validate(&self, ctx: &SimContext) -> CommandResult;
     fn apply(&self, ctx: &mut SimContext);
 

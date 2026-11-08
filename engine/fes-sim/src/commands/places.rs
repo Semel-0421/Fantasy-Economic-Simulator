@@ -19,6 +19,7 @@ use fes_core::RouteTerrain;
 
 /// The player joined or renewed a guild (C# `GuildJoined`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GuildJoined {
     pub guild: i32,
     pub expires_turn: i32,

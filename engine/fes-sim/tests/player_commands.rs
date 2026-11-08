@@ -563,14 +563,27 @@ fn bought_facility_and_founded_company_guide_expansion() {
     let rejected = report
         .events
         .iter()
-        .filter(|e| e.type_name.ends_with("CommandRejected"))
+        .filter(|e| e.name() == "CommandRejected")
         .count();
     let applied = report
         .events
         .iter()
-        .filter(|e| e.type_name.ends_with("CommandApplied"))
+        .filter(|e| e.name() == "CommandApplied")
         .count();
     assert_eq!((1, 2), (rejected, applied));
+    let rejected_command = report.events.iter().find_map(|e| match e {
+        fes_sim::SimEventRecord::CommandRejected { command, .. } => command.clone(),
+        _ => None,
+    });
+    assert_eq!(
+        Some(PlayerCommand::BuyFacility {
+            facility: f as i32,
+            price: 0,
+            axis: GuidanceAxis::Industry as u8,
+        }),
+        rejected_command,
+        "the record carries the command as plain data"
+    );
     let t = sim.world().get::<FacilityTable>();
     assert_eq!(OWNER_PLAYER, t.owner[f]);
     let company = t.group[f];

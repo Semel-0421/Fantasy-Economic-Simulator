@@ -11,6 +11,7 @@ const SYSTEM_ID: &str = "economy.world_events";
 
 /// Published when a world event starts on a node (C# `WorldEventStarted`; no subscriber).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WorldEventStarted {
     /// Index of the event definition in `GameDatabase::events`.
     pub definition: i32,

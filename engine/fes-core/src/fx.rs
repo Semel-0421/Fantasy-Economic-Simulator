@@ -3,6 +3,11 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 /// Q47.16 fixed-point number holding its raw `i64`.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
 pub struct Fx(i64);
 
 const HALF_RAW: i64 = Fx::ONE_RAW / 2;

@@ -46,6 +46,7 @@ impl LicenseTable {
 
 /// A license lapsed and was dropped (C# `LicenseExpired`); `nation` is the nation's node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LicenseExpired {
     pub base_good: i32,
     pub nation: i32,

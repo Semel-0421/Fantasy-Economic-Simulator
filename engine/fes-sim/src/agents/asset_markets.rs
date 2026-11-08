@@ -39,6 +39,7 @@ pub const BUST: u8 = 2;
 
 /// C# `AssetMarketKind`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AssetMarketKind {
     Stock = 0,
     Property = 1,
@@ -47,6 +48,7 @@ pub enum AssetMarketKind {
 
 /// A market's price rose past the heated line (C# `MarketHeated`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MarketHeated {
     pub kind: AssetMarketKind,
     pub node: i32,
@@ -56,6 +58,7 @@ pub struct MarketHeated {
 
 /// A market burst on its published indicators (C# `MarketBurst`); `premium` is before the fall.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MarketBurst {
     pub kind: AssetMarketKind,
     pub node: i32,

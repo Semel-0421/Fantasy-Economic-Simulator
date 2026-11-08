@@ -21,6 +21,7 @@ pub const QUARTER_WEEKS: i32 = 13;
 
 /// A merchant group collected a better vehicle (C# `MerchantVehicleBought`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MerchantVehicleBought {
     pub agent: i32,
     pub vehicle: u8,

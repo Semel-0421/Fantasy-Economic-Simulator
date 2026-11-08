@@ -14,7 +14,9 @@ use fes_sim::agents::merchants::flow_job::FlowJob;
 use fes_sim::agents::merchants::traits::{
     trait_of, AGGRESSIVE, CAUTIOUS, EXPEDITION, LOCAL, PEDDLER,
 };
+use fes_sim::agents::merchants::MerchantBankrupt;
 use fes_sim::agents::merchants::{capital_start, TRAIT_NEUTRAL};
+use fes_sim::agents::travel::PlayerArrived;
 use fes_sim::agents::{
     AgentTable, BankState, CargoTable, GroupTable, LodState, MerchantSystem, MerchantTraitTable,
     MerchantTripStats, NodeMemory, PlayerState, PurseState,
@@ -22,7 +24,7 @@ use fes_sim::agents::{
 use fes_sim::economy::{HouseholdCash, MarketStore};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
 use fes_sim::world::NodeTable;
-use fes_sim::{Simulation, System};
+use fes_sim::{SimEventRecord, Simulation, System};
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
 const PORTED: [&str; 9] = [
@@ -75,9 +77,8 @@ fn detailed(sim: &Simulation, node: i32) -> bool {
     sim.context().services.get::<LodState>().detail[node as usize] == SimDetail::Detailed as u8
 }
 
-fn step(sim: &mut Simulation) -> Vec<String> {
-    let report = sim.step().expect("step");
-    report.events.into_iter().map(|e| e.debug).collect()
+fn step(sim: &mut Simulation) -> Vec<SimEventRecord> {
+    sim.step().expect("step").events
 }
 
 fn load_of(sim: &Simulation, a: usize) -> Vec<(i32, i32)> {
@@ -97,14 +98,19 @@ fn player_arrives_on_the_arrival_turn() {
     player.arrival_turn = 1;
     assert!(step(&mut sim)
         .iter()
-        .all(|e| !e.starts_with("PlayerArrived")));
+        .all(|e| !matches!(e, SimEventRecord::PlayerArrived(_))));
     assert!(sim.world().get::<PlayerState>().is_travelling());
     let events = step(&mut sim);
     let player = sim.world().get::<PlayerState>();
     assert_eq!(player.node, destination);
     assert!(!player.is_travelling());
     assert_eq!(player.arrival_turn, -1);
-    assert!(events.contains(&format!("PlayerArrived {{ node: {destination}, turn: 1 }}")));
+    assert!(
+        events.contains(&SimEventRecord::PlayerArrived(PlayerArrived {
+            node: destination,
+            turn: 1
+        }))
+    );
 }
 
 #[test]
@@ -190,10 +196,11 @@ fn merchant_below_zero_cash_is_replaced_at_home() {
         .merchant_bankrupt_weeks;
     let mut bankrupt = 0;
     for _ in 0..weeks {
-        let prefix = format!("MerchantBankrupt {{ merchant: {a},");
         bankrupt += step(&mut sim)
             .iter()
-            .filter(|e| e.starts_with(&prefix))
+            .filter(|e| {
+                matches!(e, SimEventRecord::MerchantBankrupt(MerchantBankrupt { merchant, .. }) if *merchant as usize == a)
+            })
             .count();
     }
     assert_eq!(bankrupt, 1);

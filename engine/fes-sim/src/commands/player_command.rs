@@ -19,6 +19,7 @@ use super::Command;
 /// fields (`GuidanceAxis`, `ControlMode`, `PolicyKind`, `AssetMarketKind`, `TradeLicenseKind`) are
 /// their raw values so an unknown one reaches validation, as in C#.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PlayerCommand {
     BankTransfer {
         amount: i64,
@@ -293,5 +294,111 @@ impl PlayerCommand {
             P::SellVentureShare { venture, count } => Box::new(SellVentureShare { venture, count }),
             _ => unreachable!("handled by into_command"),
         }
+    }
+}
+
+/// Turns a queued command back into its plain-data form, for the turn report.
+macro_rules! from_command {
+    ($fn_name:ident, $($name:ident { $($field:ident),* },)*) => {
+        fn $fn_name(any: &dyn std::any::Any) -> Option<PlayerCommand> {
+            $(if let Some(_c) = any.downcast_ref::<$name>() {
+                return Some(PlayerCommand::$name { $($field: _c.$field.clone()),* });
+            })*
+            None
+        }
+    };
+}
+
+from_command! {
+    first_half,
+    BankTransfer { amount },
+    Exchange {
+                from_continent,
+                to_continent,
+                amount
+            },
+    TakeLoan { amount },
+    RepayLoan { amount },
+    Bid { facility, amount },
+    BuyBond { issuer, amount },
+    SellBond { issuer, amount },
+    MoveFacilityCash { facility, amount },
+    SetFacilityControl { facility, mode },
+    BuyFacility {
+                facility,
+                price,
+                axis
+            },
+    FoundCompany {
+                headquarters,
+                focus,
+                cost
+            },
+    ExpandFacility { facility },
+    RepurposeFacility { facility, def_key },
+    JoinGuild { guild },
+    MoveGuildHallCargo {
+                guild,
+                good,
+                quantity,
+                to_hall
+            },
+    BuyPlot {},
+    SellPlot {},
+}
+
+from_command! {
+    second_half,
+    BuyLicense { good },
+    BuyTradeLicense { kind },
+    BuyShip {},
+    SellShip {},
+    Lobby {
+                nation,
+                policy,
+                direction,
+                amount,
+                base_good
+            },
+    BuildRoad { destination },
+    BuyShare { facility, count },
+    SellShare { facility, count },
+    BuyShortLicence { kind },
+    SellShort {
+                venture,
+                asset,
+                count
+            },
+    CoverShort {
+                venture,
+                asset,
+                count
+            },
+    BuyGoods {
+                good,
+                quantity,
+                pay_from_deposit
+            },
+    SellGoods { good, quantity },
+    MoveCargo {
+                facility,
+                good,
+                quantity,
+                to_warehouse
+            },
+    Travel {
+                destination,
+                guards,
+                insurance
+            },
+    BuyVentureShare { venture, count },
+    SellVentureShare { venture, count },
+}
+
+impl PlayerCommand {
+    /// The plain-data form of a command object; `None` for a command type it does not list.
+    pub fn from_command(cmd: &dyn Command) -> Option<Self> {
+        let any: &dyn std::any::Any = cmd;
+        first_half(any).or_else(|| second_half(any))
     }
 }

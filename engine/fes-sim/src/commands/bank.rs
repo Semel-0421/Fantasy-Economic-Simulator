@@ -16,6 +16,7 @@ use fes_core::Fx;
 
 /// The player borrowed from a bank (C# `LoanTaken`); `nation_node` is the lender's nation node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LoanTaken {
     pub nation_node: i32,
     pub amount: i64,
@@ -25,6 +26,7 @@ pub struct LoanTaken {
 
 /// Coins changed at an international bank (C# `CoinsExchanged`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CoinsExchanged {
     pub from_continent: i32,
     pub to_continent: i32,

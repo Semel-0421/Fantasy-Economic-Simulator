@@ -27,6 +27,7 @@ pub const ORDER: i32 = sim_order::LATE + 19;
 
 /// A nation enacted a subsidy (C# `SubsidyEnacted`); `nation` is its node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SubsidyEnacted {
     pub nation: i32,
     pub good: i32,

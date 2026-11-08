@@ -16,6 +16,7 @@ pub const ORDER: i32 = sim_order::LATE;
 
 /// A road under construction was finished (C# `RoadBuilt`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RoadBuilt {
     pub from: i32,
     pub to: i32,
@@ -24,6 +25,7 @@ pub struct RoadBuilt {
 
 /// A road decayed to nothing because nobody paid its upkeep (C# `RoadLost`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RoadLost {
     pub from: i32,
     pub to: i32,

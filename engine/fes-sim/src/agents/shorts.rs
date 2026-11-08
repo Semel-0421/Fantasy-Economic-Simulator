@@ -19,6 +19,7 @@ pub const ORDER: i32 = sim_order::LATE + 11;
 
 /// The bank called for margin on the player's short sales (C# `ShortCalled`); `nation` is its node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ShortCalled {
     pub nation: i32,
     /// What the deposit lacks to the call line, in the bank's coin.
@@ -29,6 +30,7 @@ pub struct ShortCalled {
 /// The bank bought back the player's short sales after a call (C# `ShortsCovered`); `lent` of the
 /// cost became a loan.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ShortsCovered {
     pub nation: i32,
     pub cost: i64,

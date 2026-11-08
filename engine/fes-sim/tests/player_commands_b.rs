@@ -438,22 +438,14 @@ fn a_rising_price_calls_for_margin_then_the_bank_buys_back() {
             fes_core::Fx::from_int(4).raw();
         let report = sim.step().expect("step");
         called += count_of(&report, "ShortCalled");
-        covered.extend(
-            report
-                .events
-                .iter()
-                .filter(|e| e.type_name.ends_with("ShortsCovered"))
-                .map(|e| e.debug.clone()),
-        );
+        covered.extend(report.events.iter().filter_map(|e| match e {
+            fes_sim::SimEventRecord::ShortsCovered(c) => Some(*c),
+            _ => None,
+        }));
     }
     assert_eq!(1, called);
     assert_eq!(1, covered.len());
-    let lent: i64 = covered[0]
-        .split("lent: ")
-        .nth(1)
-        .and_then(|t| t.split(|c: char| !c.is_ascii_digit()).next())
-        .and_then(|t| t.parse().ok())
-        .expect("lent");
+    let lent = covered[0].lent;
     assert!(
         lent > 0,
         "the deposit fell short, and the bank lent the rest"
@@ -569,16 +561,12 @@ fn rejected(report: &fes_sim::TurnReport) -> usize {
     report
         .events
         .iter()
-        .filter(|e| e.type_name.ends_with("CommandRejected"))
+        .filter(|e| e.name() == "CommandRejected")
         .count()
 }
 
 fn count_of(report: &fes_sim::TurnReport, name: &str) -> usize {
-    report
-        .events
-        .iter()
-        .filter(|e| e.type_name.ends_with(name))
-        .count()
+    report.events.iter().filter(|e| e.name() == name).count()
 }
 
 #[test]

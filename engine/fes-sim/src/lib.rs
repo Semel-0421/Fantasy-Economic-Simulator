@@ -6,6 +6,7 @@ pub mod commands;
 pub mod context;
 pub mod economy;
 pub mod error;
+pub mod event_record;
 pub mod events;
 #[cfg(feature = "testing")]
 pub mod full_run;
@@ -30,11 +31,12 @@ pub use commands::{
 };
 pub use context::{Services, SimContext};
 pub use error::SimError;
+pub use event_record::SimEventRecord;
 pub use events::{EventBus, SimEvent};
 pub use module::{module_order, Module, SimBuilder};
 pub use pipeline::{ordinal_cmp, sim_order, SimPhase, System, TurnPipeline};
 pub use schedule::TierSchedule;
-pub use simulation::{EventRecord, Simulation, TurnReport};
+pub use simulation::{Simulation, TurnReport};
 pub use world::{Component, WorldState};
 
 use fes_data::database::GameDatabase;

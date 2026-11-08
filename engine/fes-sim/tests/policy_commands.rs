@@ -66,11 +66,7 @@ fn turn(sim: &mut Simulation, cmds: Vec<Box<dyn Command>>) -> TurnReport {
 }
 
 fn count(report: &TurnReport, name: &str) -> usize {
-    report
-        .events
-        .iter()
-        .filter(|e| e.type_name.ends_with(name))
-        .count()
+    report.events.iter().filter(|e| e.name() == name).count()
 }
 
 fn lobby(nation: i32, policy: u8, direction: i32, amount: i64, base_good: i32) -> Box<dyn Command> {

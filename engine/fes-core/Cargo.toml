@@ -6,8 +6,10 @@ publish.workspace = true
 
 [features]
 testing = ["dep:serde_json"]
+serde = ["dep:serde"]
 
 [dependencies]
+serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]

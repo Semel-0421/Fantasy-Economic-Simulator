@@ -7,6 +7,7 @@ use crate::pipeline::{sim_order, SimPhase, System};
 
 /// The player reached the destination of a trip (C# `PlayerArrived`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PlayerArrived {
     pub node: i32,
     pub turn: i32,

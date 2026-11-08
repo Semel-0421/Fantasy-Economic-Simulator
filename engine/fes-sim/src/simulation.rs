@@ -3,35 +3,18 @@ use crate::builder::SimulationBuilder;
 use crate::commands::Command;
 use crate::context::SimContext;
 use crate::error::SimError;
-use crate::events::SimEvent;
+use crate::event_record::SimEventRecord;
 use crate::pipeline::TurnPipeline;
 use crate::world::WorldState;
 use fes_data::database::GameDatabase;
 use fes_data::MapDef;
 use fes_save::{read_save, write_save, SaveHeader, FORMAT_VERSION};
 
-/// One delivered event as plain data. Placeholder: the event's type name and its `Debug` text,
-/// until systems define real view events.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EventRecord {
-    pub type_name: String,
-    pub debug: String,
-}
-
-impl EventRecord {
-    pub fn of(e: &dyn SimEvent) -> Self {
-        Self {
-            type_name: e.type_name().to_string(),
-            debug: format!("{e:?}"),
-        }
-    }
-}
-
 /// What one turn did, as plain data: the turn that ran and every event delivered during it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TurnReport {
     pub turn: i32,
-    pub events: Vec<EventRecord>,
+    pub events: Vec<SimEventRecord>,
 }
 
 pub struct Simulation {
@@ -60,7 +43,7 @@ impl Simulation {
                 .events
                 .turn_log()
                 .iter()
-                .map(|e| EventRecord::of(e.as_ref()))
+                .map(|e| SimEventRecord::of(e.as_ref()))
                 .collect(),
         })
     }

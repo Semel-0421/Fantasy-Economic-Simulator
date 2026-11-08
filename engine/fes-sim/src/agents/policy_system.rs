@@ -34,6 +34,7 @@ pub const POLICY_MINTING: u8 = 3;
 
 /// One nation's yearly review (C# `PolicyReviewed`); `nation` is the nation's node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PolicyReviewed {
     pub nation: i32,
     pub year: i32,
@@ -46,6 +47,7 @@ pub struct PolicyReviewed {
 
 /// A continent's minting step moved (C# `MintingPolicyChanged`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MintingPolicyChanged {
     pub continent: i32,
     pub step: i32,

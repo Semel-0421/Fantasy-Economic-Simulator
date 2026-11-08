@@ -251,6 +251,7 @@ pub fn private_enterprise_at(groups: &mut GroupTable, node: i32, config: &Simula
 
 /// The player's lapsed guild membership was dropped (C# `GuildMembershipExpired`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GuildMembershipExpired {
     pub guild: i32,
     pub turn: i32,

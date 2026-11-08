@@ -29,6 +29,7 @@ const WEEKS_PER_YEAR: i32 = 52;
 
 /// A supply contract was signed (C# `SupplyContractSigned`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SupplyContractSigned {
     pub seller: i32,
     pub buyer: i32,
@@ -38,6 +39,7 @@ pub struct SupplyContractSigned {
 
 /// A buyer could not pay and broke a contract (C# `SupplyContractBroken`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SupplyContractBroken {
     pub seller: i32,
     pub buyer: i32,

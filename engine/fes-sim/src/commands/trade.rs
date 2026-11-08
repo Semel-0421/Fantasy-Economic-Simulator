@@ -17,6 +17,7 @@ use fes_core::WorldLevel;
 
 /// A buy or sell the player made (C# `GoodsTraded`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GoodsTraded {
     pub market: i32,
     pub good: i32,
@@ -29,6 +30,7 @@ pub struct GoodsTraded {
 
 /// Goods moved between the cart and a facility's warehouse (C# `CargoMoved`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CargoMoved {
     pub facility: i32,
     pub good: i32,

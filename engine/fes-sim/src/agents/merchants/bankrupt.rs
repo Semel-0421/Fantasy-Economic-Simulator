@@ -20,6 +20,7 @@ const BILL_HOLDER_HOUSEHOLDS: i32 = -2;
 
 /// A merchant group went bankrupt and was replaced (C# `MerchantBankrupt`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MerchantBankrupt {
     pub merchant: i32,
     pub turn: i32,

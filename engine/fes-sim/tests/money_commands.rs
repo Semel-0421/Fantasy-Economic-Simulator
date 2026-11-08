@@ -91,8 +91,10 @@ fn rejections(report: &TurnReport) -> Vec<String> {
     report
         .events
         .iter()
-        .filter(|e| e.type_name.ends_with("CommandRejected"))
-        .map(|e| e.debug.clone())
+        .filter_map(|e| match e {
+            fes_sim::SimEventRecord::CommandRejected { reason, .. } => Some(reason.clone()),
+            _ => None,
+        })
         .collect()
 }
 

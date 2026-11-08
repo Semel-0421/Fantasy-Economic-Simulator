@@ -1,0 +1,29 @@
+{
+  "turn": 1,
+  "published_year": -1,
+  "nation_total": [
+    0,
+    0
+  ],
+  "reserve_ratio": [
+    0,
+    0
+  ],
+  "loan_rate": [
+    0,
+    0
+  ],
+  "continent_total": [
+    0,
+    0
+  ],
+  "price_index": [
+    65536,
+    65536
+  ],
+  "inflation": [
+    0,
+    0
+  ],
+  "records": []
+}

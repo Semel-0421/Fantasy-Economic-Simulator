@@ -1,0 +1,389 @@
+[
+  {
+    "AuctionClosed": {
+      "facility": 1,
+      "won_by_player": true,
+      "price": 900,
+      "turn": 4
+    }
+  },
+  {
+    "BondDefaulted": {
+      "group": 2,
+      "turn": 5
+    }
+  },
+  {
+    "BondTraded": {
+      "issuer": 1,
+      "face": 300
+    }
+  },
+  {
+    "CargoMoved": {
+      "facility": 3,
+      "good": 2,
+      "to_warehouse": true,
+      "requested": 5,
+      "moved": 4
+    }
+  },
+  {
+    "CoinsExchanged": {
+      "from_continent": 0,
+      "to_continent": 1,
+      "paid": 500,
+      "received": 480,
+      "fee": 20
+    }
+  },
+  {
+    "CollateralSeized": {
+      "nation_node": 2,
+      "kind": "Land",
+      "facility": 3,
+      "value": 700,
+      "turn": 6
+    }
+  },
+  {
+    "CurrencyMinted": {
+      "continent": 1,
+      "year": 2
+    }
+  },
+  {
+    "EmancipationEnacted": {
+      "nation": 1,
+      "year": 3
+    }
+  },
+  {
+    "FacilityBankrupt": {
+      "facility": 3,
+      "was_player_owned": true,
+      "warehouse_claim_until": -1,
+      "turn": 7
+    }
+  },
+  {
+    "FacilityClosed": {
+      "facility": 3,
+      "turn": 7
+    }
+  },
+  {
+    "FacilityExpanded": {
+      "facility": 3,
+      "level": 2
+    }
+  },
+  {
+    "FacilityFounded": {
+      "facility": 8,
+      "group": 1
+    }
+  },
+  {
+    "FacilityRepurposed": {
+      "facility": 3,
+      "def_index": 4
+    }
+  },
+  {
+    "FinancialEventEnded": {
+      "nation": 1,
+      "kind": 2,
+      "turn": 9
+    }
+  },
+  {
+    "FinancialEventStarted": {
+      "nation": 1,
+      "kind": 2,
+      "turn": 8
+    }
+  },
+  {
+    "GoodsTraded": {
+      "market": 1,
+      "good": 2,
+      "bought": true,
+      "requested": 7,
+      "filled": 7,
+      "price": 33,
+      "turn": 3
+    }
+  },
+  {
+    "GuildJoined": {
+      "guild": 1,
+      "expires_turn": 60,
+      "fee": 200
+    }
+  },
+  {
+    "GuildMembershipExpired": {
+      "guild": 1,
+      "turn": 60
+    }
+  },
+  {
+    "HouseholdsUpdated": {
+      "year": 1
+    }
+  },
+  {
+    "IncomeTaxCollected": {
+      "year": 1,
+      "households": 1000,
+      "companies": 500
+    }
+  },
+  {
+    "LicenseBought": {
+      "base_good": 3,
+      "nation": 0,
+      "expires_turn": 80,
+      "price": 400
+    }
+  },
+  {
+    "LicenseExpired": {
+      "base_good": 3,
+      "nation": 0,
+      "turn": 80
+    }
+  },
+  {
+    "LoanRepaid": {
+      "nation_node": 2,
+      "turn": 12
+    }
+  },
+  {
+    "LoanTaken": {
+      "nation_node": 2,
+      "amount": 1000,
+      "balance": 1100,
+      "weekly_payment": 50
+    }
+  },
+  {
+    "Lobbied": {
+      "nation": 0,
+      "policy": 1,
+      "base_good": 2,
+      "direction": -1,
+      "amount": 250
+    }
+  },
+  {
+    "LostWarehouseCleared": {
+      "facility": 3,
+      "turn": 20
+    }
+  },
+  {
+    "MarginCalled": {
+      "nation_node": 2,
+      "shortfall": 90,
+      "sale_turn": 14
+    }
+  },
+  {
+    "MarketBurst": {
+      "kind": "Property",
+      "node": 1,
+      "premium": 65536,
+      "turn": 15
+    }
+  },
+  {
+    "MarketHeated": {
+      "kind": "Venture",
+      "node": 1,
+      "premium": 32768,
+      "turn": 15
+    }
+  },
+  {
+    "MerchantBankrupt": {
+      "merchant": 4,
+      "turn": 16
+    }
+  },
+  {
+    "MerchantVehicleBought": {
+      "agent": 4,
+      "vehicle": 1
+    }
+  },
+  {
+    "MintingPolicyChanged": {
+      "continent": 1,
+      "step": -1
+    }
+  },
+  {
+    "NobleContractBroken": {
+      "vassal": 1,
+      "lord": 2,
+      "turn": 17
+    }
+  },
+  {
+    "NpcLoanDefaulted": {
+      "facility": 3,
+      "merchant": -1,
+      "nation_node": 2,
+      "turn": 18
+    }
+  },
+  {
+    "PeopleMigrated": {
+      "from": 1,
+      "to": 2,
+      "people": 120
+    }
+  },
+  {
+    "PlayerArrived": {
+      "node": 4,
+      "turn": 9
+    }
+  },
+  {
+    "PolicyReviewed": {
+      "nation": 1,
+      "year": 2,
+      "toll_step": 1,
+      "license_price_step": -1,
+      "license_added": 2,
+      "license_removed": -1,
+      "influence": 40
+    }
+  },
+  {
+    "RoadBuilt": {
+      "from": 1,
+      "to": 2,
+      "turn": 19
+    }
+  },
+  {
+    "RoadLost": {
+      "from": 1,
+      "to": 2,
+      "turn": 21
+    }
+  },
+  {
+    "ShortCalled": {
+      "nation": 1,
+      "shortfall": 70,
+      "cover_turn": 22
+    }
+  },
+  {
+    "ShortsCovered": {
+      "nation": 1,
+      "cost": 80,
+      "lent": 10,
+      "turn": 23
+    }
+  },
+  {
+    "StateProjectFinished": {
+      "kind": 1,
+      "node": 2,
+      "turn": 24
+    }
+  },
+  {
+    "StatisticsPublished": {
+      "year": 2
+    }
+  },
+  {
+    "SubsidyEnacted": {
+      "nation": 1,
+      "good": 2,
+      "turn": 25
+    }
+  },
+  {
+    "SupplyContractBroken": {
+      "seller": 1,
+      "buyer": 2
+    }
+  },
+  {
+    "SupplyContractSigned": {
+      "seller": 1,
+      "buyer": 2,
+      "quantity": 5,
+      "unit_price": 44
+    }
+  },
+  {
+    "TripEncounter": {
+      "destination": 3,
+      "loss": 1,
+      "loss_value": 60,
+      "refund": 10,
+      "turn": 26
+    }
+  },
+  {
+    "TripStarted": {
+      "destination": 3,
+      "arrival_turn": 28,
+      "paid": {
+        "route": 1,
+        "fee": 10,
+        "fee_continent": 0,
+        "toll": 5,
+        "toll_continent": 1,
+        "cargo_units": 4,
+        "passage": 3,
+        "guards": 2,
+        "insurance": 1,
+        "cargo_value": 90,
+        "encounter_chance": 6554
+      },
+      "turn": 26
+    }
+  },
+  {
+    "WorldEventStarted": {
+      "definition": 1,
+      "node": 2,
+      "turn": 27
+    }
+  },
+  {
+    "CommandApplied": {
+      "command": "BuyShip",
+      "turn": 3
+    }
+  },
+  {
+    "CommandApplied": {
+      "command": null,
+      "turn": 3
+    }
+  },
+  {
+    "CommandRejected": {
+      "command": "BuyShip",
+      "reason": "no money",
+      "turn": 3
+    }
+  },
+  {
+    "Other": {
+      "type_name": "TestEvent"
+    }
+  }
+]

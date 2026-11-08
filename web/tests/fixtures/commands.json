@@ -1,0 +1,191 @@
+[
+  {
+    "BankTransfer": {
+      "amount": 100
+    }
+  },
+  {
+    "Exchange": {
+      "from_continent": 0,
+      "to_continent": 1,
+      "amount": 500
+    }
+  },
+  {
+    "TakeLoan": {
+      "amount": 1000
+    }
+  },
+  {
+    "RepayLoan": {
+      "amount": 400
+    }
+  },
+  {
+    "Bid": {
+      "facility": 2,
+      "amount": 900
+    }
+  },
+  {
+    "BuyBond": {
+      "issuer": 1,
+      "amount": 300
+    }
+  },
+  {
+    "SellBond": {
+      "issuer": 1,
+      "amount": 300
+    }
+  },
+  {
+    "MoveFacilityCash": {
+      "facility": 3,
+      "amount": -50
+    }
+  },
+  {
+    "SetFacilityControl": {
+      "facility": 3,
+      "mode": 1
+    }
+  },
+  {
+    "BuyFacility": {
+      "facility": 4,
+      "price": 1200,
+      "axis": 2
+    }
+  },
+  {
+    "FoundCompany": {
+      "headquarters": 5,
+      "focus": 1,
+      "cost": 2000
+    }
+  },
+  {
+    "ExpandFacility": {
+      "facility": 3
+    }
+  },
+  {
+    "RepurposeFacility": {
+      "facility": 3,
+      "def_key": "mill"
+    }
+  },
+  {
+    "JoinGuild": {
+      "guild": 1
+    }
+  },
+  {
+    "MoveGuildHallCargo": {
+      "guild": 1,
+      "good": 2,
+      "quantity": 5,
+      "to_hall": true
+    }
+  },
+  "BuyPlot",
+  "SellPlot",
+  {
+    "BuyLicense": {
+      "good": 3
+    }
+  },
+  {
+    "BuyTradeLicense": {
+      "kind": 1
+    }
+  },
+  "BuyShip",
+  "SellShip",
+  {
+    "Lobby": {
+      "nation": 0,
+      "policy": 1,
+      "direction": -1,
+      "amount": 250,
+      "base_good": 2
+    }
+  },
+  {
+    "BuildRoad": {
+      "destination": 4
+    }
+  },
+  {
+    "BuyShare": {
+      "facility": 3,
+      "count": 10
+    }
+  },
+  {
+    "SellShare": {
+      "facility": 3,
+      "count": 10
+    }
+  },
+  {
+    "BuyShortLicence": {
+      "kind": 1
+    }
+  },
+  {
+    "SellShort": {
+      "venture": false,
+      "asset": 3,
+      "count": 2
+    }
+  },
+  {
+    "CoverShort": {
+      "venture": true,
+      "asset": 1,
+      "count": 2
+    }
+  },
+  {
+    "BuyGoods": {
+      "good": 2,
+      "quantity": 7,
+      "pay_from_deposit": true
+    }
+  },
+  {
+    "SellGoods": {
+      "good": 2,
+      "quantity": 7
+    }
+  },
+  {
+    "MoveCargo": {
+      "facility": 3,
+      "good": 2,
+      "quantity": 4,
+      "to_warehouse": false
+    }
+  },
+  {
+    "Travel": {
+      "destination": 6,
+      "guards": true,
+      "insurance": false
+    }
+  },
+  {
+    "BuyVentureShare": {
+      "venture": 1,
+      "count": 3
+    }
+  },
+  {
+    "SellVentureShare": {
+      "venture": 1,
+      "count": 3
+    }
+  }
+]

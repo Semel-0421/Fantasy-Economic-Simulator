@@ -1,0 +1,184 @@
+{
+  "quotes": [
+    {
+      "good": 0,
+      "price": 327680,
+      "stock": 0
+    },
+    {
+      "good": 1,
+      "price": 524288,
+      "stock": 0
+    },
+    {
+      "good": 4,
+      "price": 262144,
+      "stock": 0
+    },
+    {
+      "good": 5,
+      "price": 393216,
+      "stock": 0
+    },
+    {
+      "good": 8,
+      "price": 786432,
+      "stock": 0
+    },
+    {
+      "good": 9,
+      "price": 1114112,
+      "stock": 27
+    },
+    {
+      "good": 12,
+      "price": 589824,
+      "stock": 47
+    },
+    {
+      "good": 13,
+      "price": 1179648,
+      "stock": 0
+    },
+    {
+      "good": 16,
+      "price": 589824,
+      "stock": 0
+    },
+    {
+      "good": 17,
+      "price": 983040,
+      "stock": 0
+    },
+    {
+      "good": 20,
+      "price": 983040,
+      "stock": 0
+    },
+    {
+      "good": 21,
+      "price": 1638400,
+      "stock": 0
+    },
+    {
+      "good": 28,
+      "price": 720896,
+      "stock": 0
+    },
+    {
+      "good": 29,
+      "price": 1048576,
+      "stock": 0
+    },
+    {
+      "good": 72,
+      "price": 393216,
+      "stock": 0
+    },
+    {
+      "good": 73,
+      "price": 524288,
+      "stock": 0
+    },
+    {
+      "good": 76,
+      "price": 262144,
+      "stock": 0
+    },
+    {
+      "good": 77,
+      "price": 458752,
+      "stock": 0
+    },
+    {
+      "good": 80,
+      "price": 196608,
+      "stock": 0
+    },
+    {
+      "good": 81,
+      "price": 393216,
+      "stock": 0
+    },
+    {
+      "good": 84,
+      "price": 851968,
+      "stock": 0
+    },
+    {
+      "good": 85,
+      "price": 1376256,
+      "stock": 0
+    },
+    {
+      "good": 88,
+      "price": 655360,
+      "stock": 2
+    },
+    {
+      "good": 89,
+      "price": 851968,
+      "stock": 8
+    },
+    {
+      "good": 92,
+      "price": 1835008,
+      "stock": 0
+    },
+    {
+      "good": 93,
+      "price": 3014656,
+      "stock": 0
+    },
+    {
+      "good": 96,
+      "price": 4063232,
+      "stock": 0
+    },
+    {
+      "good": 97,
+      "price": 6750208,
+      "stock": 0
+    },
+    {
+      "good": 100,
+      "price": 2228224,
+      "stock": 0
+    },
+    {
+      "good": 101,
+      "price": 3735552,
+      "stock": 0
+    },
+    {
+      "good": 104,
+      "price": 2686976,
+      "stock": 0
+    },
+    {
+      "good": 105,
+      "price": 4521984,
+      "stock": 0
+    },
+    {
+      "good": 108,
+      "price": 655360,
+      "stock": 0
+    },
+    {
+      "good": 109,
+      "price": 1048576,
+      "stock": 0
+    },
+    {
+      "good": 112,
+      "price": 589824,
+      "stock": 0
+    },
+    {
+      "good": 113,
+      "price": 983040,
+      "stock": 0
+    }
+  ]
+}

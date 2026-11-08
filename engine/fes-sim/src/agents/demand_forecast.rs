@@ -114,10 +114,13 @@ impl System for DemandForecastSystem {
         self.measure_markets(world, db, nodes);
         self.list_makers(world, db, nodes);
         self.industry.fill(0);
+        let markets = world.get::<MarketStore>();
         let run = Run {
             db,
-            world,
             good_count: db.good_count(),
+            cell_good: &markets.cell_good,
+            stock: &markets.stock,
+            forecast: &world.get::<DemandForecast>().forecast,
         };
         self.measure_needs(&run);
         for pass in 0..CHAIN_PASSES {
@@ -134,15 +137,18 @@ impl System for DemandForecastSystem {
     }
 }
 
+/// What the passes read, looked up once per run rather than per cell.
 struct Run<'a> {
     db: &'a GameDatabase,
-    world: &'a WorldState,
     good_count: usize,
+    cell_good: &'a [i32],
+    stock: &'a [i32],
+    forecast: &'a [i64],
 }
 
 impl Run<'_> {
     fn good_of(&self, c: usize) -> usize {
-        self.world.get::<MarketStore>().cell_good[c] as usize
+        self.cell_good[c] as usize
     }
 }
 
@@ -189,7 +195,6 @@ impl DemandForecastSystem {
         let markets = world.get::<MarketStore>();
         let population = world.get::<HouseholdState>();
         let currency = world.get::<CurrencyState>();
-        let mut rows: Vec<(usize, i64, i64)> = Vec::with_capacity(markets.cell_count());
         for n in 0..nodes.count() {
             let level = usize::from(nodes.level[n]);
             let start = markets.market_cell_start[n] as usize;
@@ -200,16 +205,20 @@ impl DemandForecastSystem {
             for c in start..end {
                 let good = &db.goods[markets.cell_good[c] as usize];
                 let at = at_anchor(&demand, config, level, good, index, necessity, luxury);
-                rows.push((c, i64::from(markets.stock[c]), at));
+                self.households[c] = at * i64::from(QUARTER_WEEKS);
             }
         }
+        // `need` is scratch here (measure_needs rewrites every cell): the stock, so the forecast
+        // state can be written without holding the market store.
+        for (need, &stock) in self.need.iter_mut().zip(&markets.stock) {
+            *need = i64::from(stock);
+        }
         let state = world.get_mut::<DemandForecast>();
-        for (c, stock, at) in rows {
+        for (c, &stock) in self.need.iter().enumerate() {
             let left = (state.stock_at_start[c] + state.produced[c] - stock).max(0);
             state.stock_at_start[c] = stock;
             state.produced[c] = 0;
             state.forecast[c] = (state.forecast[c] + left) / 2;
-            self.households[c] = at * i64::from(QUARTER_WEEKS);
         }
         let orders = world.get::<OrderTable>();
         for r in 0..orders.count() {
@@ -387,9 +396,8 @@ impl DemandForecastSystem {
     fn wanted(&self, run: &Run, c: usize, industry: i64) -> i64 {
         let config = &run.db.config;
         let households = config.forecast_household_weight;
-        let state = run.world.get::<DemandForecast>();
         let forecast = households.mul_int(self.households[c] + industry)
-            + (Fx::ONE - households).mul_int(state.forecast[c]);
+            + (Fx::ONE - households).mul_int(run.forecast[c]);
         let cover = if run.db.goods[run.good_of(c)].traits.made_to_order {
             0
         } else {
@@ -400,7 +408,7 @@ impl DemandForecastSystem {
 
     fn tally(&mut self, run: &Run, c: usize, wanted: i64, sign: i64) {
         let k = self.cell_purse[c] * run.good_count + run.good_of(c);
-        let stock = i64::from(run.world.get::<MarketStore>().stock[c]);
+        let stock = i64::from(run.stock[c]);
         let need = (wanted - stock).max(0);
         self.need[c] = need;
         self.surplus[k] += sign * (stock - wanted).max(0);

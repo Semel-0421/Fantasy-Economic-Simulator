@@ -21,6 +21,7 @@ Three AI agents work on this project, each in one role. Orca (`orca` CLI) starts
 
 - **Everything delivered to the user is in Korean.** Code, commits and agent-to-agent files are in English.
 - Codex uses gpt-6.1-sol where possible and gpt-6-astra only for deep reasoning; model and reasoning effort may be changed per task without asking the user.
+- Token efficiency for every agent, Claude included: the cheapest model and lowest effort that do the task well; raise only when needed.
 - Only the user approves pushes, account work and scope expansion.
 - Never stage `Packages/`, `ProjectSettings/`, `.serena/`, build output, files over 5 MB, secrets; never `git add -A`.
 - Free mode must equal the C# reference (parity as in `.github/workflows/engine.yml`).

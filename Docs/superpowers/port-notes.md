@@ -65,3 +65,17 @@ The same full-scale world (seed 1, turns 0 to 53) as `fes-wasm` in a dedicated W
 Wasm file (`fes_wasm_bg.wasm`): 1,541,568 bytes after `wasm-bindgen`, 1,247,819 bytes (1.19 MiB) after `wasm-opt -O3`. Other turns over 0.7 s: 13 (0.83 s), 26 (0.79 s), 39 (0.85 s), the quarter turns where `agents.demand_forecast` runs.
 
 Against the budget (spec 7.3: average under 0.7 s, worst under 1 s): the average passes, the worst turn (52) misses by about 0.15 s. Wasm runs at about 1.16x native on average and 1.45x on turn 52. Task 2's speed-ups (merchants, pricing, demand forecast above) target exactly that turn. Not yet measured inside an itch.io embed.
+
+## Speed-ups to the gate (Plan 5, Task 2)
+
+Profiled per system in the browser: `PROFILE=1 npm run wasm` builds `WasmSim::step_profiled` (feature `profile` of `fes-wasm`, `Simulation::step_clocked` with `performance.now`), and the bench then lists the worst turn's systems. Same world and browser as above (Edge 157, Worker, single thread, turns 0 to 53). Native: `cargo test -p fes-parity --release --test timing full_scale -- --ignored --nocapture`. After every step `fes-parity --runs` (all four runs, every comparison and the final hash) and `--steps` were equal, and the full-scale hashes after turns 1 to 11 matched C#.
+
+Turn 52 in wasm before any change: `agents.demand_forecast` 348 ms, `agents.merchants` 254 ms, `economy.pricing` 170 ms, `agents.contracts` 99 ms, `agents.policy` 90 ms, `agents.credit` 41 ms. The forecast walks 1,195,000 market cells; its cost was mostly the component lookups (`WorldState::get`, a hash map by type) made three times per cell, and a 1.2-million-row buffer allocated each quarter.
+
+| Step | Native avg / worst (turn 52) | Native forecast / merchants / pricing max | Wasm avg / worst (turn 52) | Wasm turn 52: forecast / merchants / pricing |
+| --- | --- | --- | --- | --- |
+| Before (Task 1) | 0.440-0.473 s / 0.732-0.778 s | 256 / 346 / 179 ms | 0.55-0.56 s / 1.11-1.16 s | 348 / 254 / 170 ms |
+| 1. `demand_forecast`: components looked up once per run (slices in `Run`), no per-quarter row buffer (the `need` column holds the stock meanwhile) | 0.433 s / 0.622 s | 134 / 333 / 171 ms | 0.542 s / 0.935 s | 162 / 256 / 170 ms |
+| 2. `log2`: top bit from `leading_zeros`, stop squaring once the value is exactly 1.0 (it squares to itself; unit test against the first port over a sweep of inputs) | 0.420 s / 0.589 s | 123 / 340 / 168 ms | 0.490-0.494 s / 0.871-0.879 s (four runs) | 137 / 229 / 148 ms |
+
+Result: in the browser bench the average is 0.49 s (gate 0.6 s) and the worst turn 0.87-0.88 s (gate 0.9 s), still turn 52. The margin on the worst turn is small (about 25 ms). Not applied, next candidates in order of expected gain on turn 52: the per-node merchant route cache with upper-bound pruning (merchants 229 ms), a per-cell `(price, anchor)` memo of the pricing curve (148 ms), the forecast's `measure_needs` over every cell (about 100 ms native), and the new-year systems `agents.contracts` (99 ms) and `agents.policy` (95 ms), which were not profiled further.

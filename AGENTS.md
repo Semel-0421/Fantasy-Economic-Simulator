@@ -1,34 +1,27 @@
 # Agent roles
 
 Three AI agents work on this project, each in one role. Orca (`orca` CLI) starts and connects them.
+**The full shared rules are in `Docs/superpowers/agent-rules.md` (Korean: `agent-rules.ko.md`). Every agent reads and follows them.**
 
 | Role | Agent | Does | Does not |
 |---|---|---|---|
-| Planner | Claude Code | Writes and reviews plans and specs (`Docs/superpowers/plans`, `specs`); checks each finished plan against its spec; decides what runs next | Implement plan tasks |
-| Builder | Codex | Executes plan tasks: code, tests, gates, one commit per task on the working branch | Change a plan's scope; push |
-| Gatekeeper | GitHub Copilot CLI | Checks the branch before every commit batch and before every push (checklist below); reports pass or a list of blockers | Write features; push |
+| Planner | Claude Code | Writes and reviews plans and specs; checks finished work against them; settles design, determinism and parity questions; hands out tasks with model and effort | Implement plan tasks unless the user asks |
+| Builder | Codex | Executes plan tasks: code, tests, gates, one commit per task, a report per task | Change a plan's scope; push |
+| Gatekeeper | GitHub Copilot CLI | Fast check before each commit batch; full gate before each push; reports pass or numbered blockers | Edit code; push |
 
 ## Flow
 
-1. Claude writes the plan (English, plus a Korean `.ko.md` copy for the user) and briefs Codex with one task or a task batch.
-2. Codex implements, runs the gates, commits locally, and writes a report to `.superpowers/sdd/<plan>/task-N-report.md`.
-3. Claude reads the report and checks it against the plan. Gaps go back to Codex.
-4. Before a push, Copilot runs the pre-push checklist and writes `.superpowers/sdd/<plan>/gate-report.md`.
-5. Only on Copilot's pass and the user's yes does anyone push. The user's approval is required for every push.
+1. Claude writes the plan (with a Korean `.ko.md` copy for the user) and briefs Codex, choosing model and effort for the task.
+2. Codex implements, runs the gates, commits locally, and writes `.superpowers/sdd/<plan>/task-N-report.md`.
+3. Claude checks the report against the plan; gaps go back to Codex.
+4. Before a push, Copilot runs the full gate and writes `.superpowers/sdd/<plan>/gate-report.md`.
+5. A push happens only after Copilot's pass **and** the user's yes.
 
-## Pre-push checklist (Copilot)
+## Key rules (see the full file)
 
-- `git status`: nothing under `Packages/` or `ProjectSettings/` staged or committed (Unity update files); no secrets, keys, or `.env` files.
-- Each commit message ends with the agent's co-author line; files were staged by path.
-- Rust (in `engine/`): `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-features`.
-- Parity (free mode must equal the C# reference), as in `.github/workflows/engine.yml`: `cargo run -p fes-parity -- --fixtures fixtures`, the same with `--steps`, and `cargo run --release -p fes-parity -- --fixtures fixtures --runs` all equal.
-- Web (in `web/`): `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
-- Large files (> 5 MB) or build output (`engine/target`, `web/dist`, `node_modules`) not committed.
-
-## Rules for every agent
-
-- Talk to the user in Korean; code, commits and docs in English. Plans for the user's review get a `.ko.md` copy.
-- No in-game AI or network calls. Never handle API keys or account secrets; the user creates them.
-- Never stage `Packages/` or `ProjectSettings/`; never `git add -A`.
-- Ask the user before every push and anything that needs their accounts.
-- Work on branch `rust-port` unless told otherwise. The C# Unity project is frozen as the reference.
+- **Everything delivered to the user is in Korean.** Code, commits and agent-to-agent files are in English.
+- Codex and Copilot use their newest models; model and reasoning effort may be changed per task without asking the user.
+- Only the user approves pushes, account work and scope expansion.
+- Never stage `Packages/`, `ProjectSettings/`, `.serena/`, build output, files over 5 MB, secrets; never `git add -A`.
+- Free mode must equal the C# reference (parity as in `.github/workflows/engine.yml`).
+- No in-game AI or network calls; no agent handles API keys or account secrets.

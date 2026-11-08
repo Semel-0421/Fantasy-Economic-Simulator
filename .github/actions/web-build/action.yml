@@ -34,7 +34,7 @@ runs:
       shell: bash
       working-directory: web
       run: npx playwright install --with-deps chromium
-    - name: Lint, typecheck, test
+    - name: Lint and typecheck
       shell: bash
       working-directory: web
       env:
@@ -42,7 +42,18 @@ runs:
       run: |
         npm run lint
         npm run typecheck
-        npm test
+    - name: Test except scenario golden paths
+      shell: bash
+      working-directory: web
+      env:
+        BROWSER_CHANNEL: chromium
+      run: npm test -- --exclude tests/ui/golden.test.ts
+    - name: Scenario golden paths
+      shell: bash
+      working-directory: web
+      env:
+        BROWSER_CHANNEL: chromium
+      run: npx vitest run tests/ui/golden.test.ts --no-file-parallelism
     - name: Build
       shell: bash
       working-directory: web

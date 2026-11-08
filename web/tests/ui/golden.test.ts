@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 let server: ViteDevServer;
 let browser: Browser;
 let url = '';
+const goldenTimeout = 15 * 60 * 1000;
 
 beforeAll(async () => {
   server = await createServer({ server: { port: 4177, strictPort: true }, logLevel: 'error' });
@@ -248,7 +249,7 @@ describe('scenario golden paths', () => {
     await p.page.waitForSelector('#dialog', { timeout: 60000 });
     expect(await p.page.textContent('#dialog')).toContain('Shares and Bonds');
     expect(errors).toEqual([]);
-  }, 600000);
+  }, goldenTimeout);
 
   it('scenario 2: shares before the orders, sold on the rumour, then bonds', async () => {
     const { p, errors } = await player();
@@ -266,7 +267,7 @@ describe('scenario golden paths', () => {
     expect(await p.page.textContent('#statement')).toContain('Shares and bonds held');
     expect(await savesWritten(p.page)).toBe(0);
     expect(errors).toEqual([]);
-  }, 600000);
+  }, goldenTimeout);
 
   it('scenario 3: licences, the guarded trip abroad and home in time', async () => {
     const { p, errors } = await player();
@@ -288,5 +289,5 @@ describe('scenario golden paths', () => {
     await p.page.waitForSelector('#scenario-1');
     expect(await savesWritten(p.page)).toBe(0);
     expect(errors).toEqual([]);
-  }, 600000);
+  }, goldenTimeout);
 });

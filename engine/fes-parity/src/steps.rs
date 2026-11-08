@@ -42,6 +42,7 @@ pub const PORTED_SYSTEMS: &[&str] = &[
     "agents.strategic_subsidy",
     "agents.credit",
     "agents.trader_loans",
+    "agents.policy",
 ];
 
 pub struct StepOptions {

@@ -96,6 +96,7 @@ impl Module for AgentsModule {
             super::strategic_subsidy::StrategicSubsidySystem::default(),
         ))?;
         b.add_system(Box::new(super::credit_system::CreditSystem::default()))?;
-        b.add_system(Box::new(super::trader_loans::TraderLoanSystem))
+        b.add_system(Box::new(super::trader_loans::TraderLoanSystem))?;
+        b.add_system(Box::new(super::policy_system::PolicySystem))
     }
 }

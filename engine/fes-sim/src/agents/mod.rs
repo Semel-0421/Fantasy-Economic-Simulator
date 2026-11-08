@@ -47,6 +47,7 @@ pub mod orders;
 pub mod places;
 pub mod player;
 pub mod policy;
+pub mod policy_system;
 pub mod production;
 pub mod purses;
 pub mod purses_systems;

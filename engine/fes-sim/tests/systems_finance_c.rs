@@ -19,6 +19,10 @@ use fes_sim::agents::merchant_membership::MerchantMembershipSystem;
 use fes_sim::agents::merchant_vehicles::{CART, PACK};
 use fes_sim::agents::order_system::MerchantVehicleBought;
 use fes_sim::agents::order_system::QUARTER_WEEKS;
+use fes_sim::agents::policy::LobbyEntry;
+use fes_sim::agents::policy_system::{
+    scale as policy_scale, PolicyReviewed, POLICY_LICENSED_GOODS, POLICY_TOLLS,
+};
 use fes_sim::agents::production::lines::find_nearest_market;
 use fes_sim::agents::strategic_subsidy::StrategicSubsidySystem;
 use fes_sim::agents::{AgentTable, OrderTable};
@@ -27,7 +31,7 @@ use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
-use fes_sim::world::NodeTable;
+use fes_sim::world::{NodeTable, NodeTolls};
 use fes_sim::System;
 use fes_sim::{SimEvent, Simulation};
 use std::sync::Arc;
@@ -579,4 +583,137 @@ fn the_weeks_bond_offers_are_forgotten_after_credit() {
         step(&mut sim);
         assert_eq!(sim.context().services.get::<BondOffers>().turn, -1);
     }
+}
+
+// ---- policy (PolicyTests) ----
+
+const CITY: &str = "aur_n1_r1_c1";
+/// C# `PolicyTests.Build` replaces the whole config with these rows; here they are set over the
+/// shipped config.
+const POLICY_CONFIG: &[&str] = &[
+    "finance.event_chance_permille,0",
+    "market.credit_share_permille,0",
+    "market.momentum_permille,0",
+];
+
+fn to_first_review(sim: &mut Simulation) -> Vec<Arc<dyn SimEvent>> {
+    let mut last = Vec::new();
+    while sim.context().turn() <= WEEKS_PER_YEAR {
+        last = step(sim);
+    }
+    last
+}
+
+fn nation_of_city(sim: &Simulation) -> (i32, i32, usize) {
+    let nodes = sim.context().services.get::<NodeTable>();
+    let banks = sim.context().services.get::<fes_sim::world::NodeBanks>();
+    let city = nodes.try_find(CITY).unwrap().0;
+    let nation_node = nodes.ancestor_at(city, WorldLevel::Nation);
+    (
+        city,
+        nation_node,
+        banks.nation_index(nodes, nation_node) as usize,
+    )
+}
+
+#[test]
+fn review_runs_yearly_and_sets_toll_rates_in_the_nation() {
+    let mut sim = build_sample(POLICY_CONFIG);
+    let (city, nation_node, nation) = nation_of_city(&sim);
+    let base = sim.context().services.get::<NodeTolls>().tariff[city as usize];
+    let events = to_first_review(&mut sim);
+    let reviews = of::<PolicyReviewed>(&events);
+    let banks = sim.context().services.get::<fes_sim::world::NodeBanks>();
+    let nodes = sim.context().services.get::<NodeTable>();
+    assert_eq!(reviews.len() as i32, banks.nation_count(nodes));
+    let review = reviews.iter().find(|r| r.nation == nation_node).unwrap();
+    assert_eq!(review.year, 0);
+    let policy = sim.context().world.get::<PolicyState>();
+    assert_eq!(review.toll_step, policy.toll_step[nation]);
+    let config = &sim.context().services.database.config;
+    assert_eq!(
+        sim.context().services.get::<NodeTolls>().tariff[city as usize],
+        policy_scale(config, review.toll_step).mul_int(base)
+    );
+    assert!(policy.last_influence[nation] > 0);
+    let toll = review.toll_step;
+    for _ in 0..10 {
+        assert!(of::<PolicyReviewed>(&step(&mut sim)).is_empty());
+    }
+    assert_eq!(
+        sim.context().world.get::<PolicyState>().toll_step[nation],
+        toll
+    );
+}
+
+#[test]
+fn heavy_lobbying_tips_the_review() {
+    let mut calm = build_sample(POLICY_CONFIG);
+    let mut lobbied = build_sample(POLICY_CONFIG);
+    let (_, _, nation) = nation_of_city(&lobbied);
+    let wheat = lobbied
+        .context()
+        .services
+        .database
+        .try_get_good("wheat", QualityGrade::Mid)
+        .unwrap();
+    step(&mut calm);
+    step(&mut lobbied);
+    // As `LobbyCommand.Apply` leaves them (commands are Task 8).
+    let lobbying = &mut lobbied
+        .context_mut()
+        .world
+        .get_mut::<PolicyState>()
+        .lobbying;
+    for (policy, base_good) in [
+        (POLICY_TOLLS, -1),
+        (POLICY_LICENSED_GOODS, wheat.base_index()),
+    ] {
+        lobbying.push(LobbyEntry {
+            group: 0,
+            nation: nation as i32,
+            policy,
+            base_good,
+            direction: 1,
+            amount: 10_000_000,
+        });
+    }
+    to_first_review(&mut calm);
+    to_first_review(&mut lobbied);
+    let p = lobbied.context().world.get::<PolicyState>();
+    assert_eq!(p.toll_step[nation], 1);
+    assert!(calm.context().world.get::<PolicyState>().toll_step[nation] < 1);
+    assert_eq!(
+        p.licensed[nation * p.base_good_count + wheat.base_index() as usize],
+        1
+    );
+    assert!(p.lobbying.is_empty(), "spent for the year");
+}
+
+#[test]
+fn minting_policy_sets_the_continents_rate() {
+    let mut sim = build_sample(POLICY_CONFIG);
+    to_first_review(&mut sim);
+    let config = &sim.context().services.database.config;
+    let policy = sim.context().world.get::<PolicyState>();
+    let currency = sim.context().world.get::<fes_sim::economy::CurrencyState>();
+    for c in 0..policy.continent_count {
+        assert_eq!(
+            currency.mint_rate_multiplier[c],
+            policy_scale(config, policy.mint_step[c])
+        );
+    }
+    assert!(policy.mint_step[0] >= 0);
+}
+
+#[test]
+fn status_quo_bias_stops_policies_short_of_the_limit() {
+    let mut sim = build_sample(POLICY_CONFIG);
+    for _ in 0..6 * WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    let max = sim.context().services.database.config.policy_max_steps;
+    let p = sim.context().world.get::<PolicyState>();
+    assert!(p.toll_step.iter().all(|s| s.abs() < max));
+    assert!(p.license_price_step.iter().all(|s| s.abs() < max));
 }

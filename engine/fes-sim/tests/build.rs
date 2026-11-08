@@ -217,6 +217,7 @@ fn step_without_state_changing_systems_only_advances_the_clock() {
         .remove_system("agents.strategic_subsidy")
         .remove_system("agents.credit")
         .remove_system("agents.trader_loans")
+        .remove_system("agents.policy")
         .remove_system("agents.asset_markets")
         .remove_system("agents.finance")
         .remove_system("agents.shorts")

@@ -10,6 +10,7 @@ pub mod banks;
 pub mod bond_desk;
 pub mod cargo;
 pub mod columns;
+pub mod contract_system;
 pub mod contracts;
 pub mod credit;
 pub mod defense;

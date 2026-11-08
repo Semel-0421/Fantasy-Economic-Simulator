@@ -3,13 +3,15 @@
 //! `TraderLoanTests`, `PolicyTests`, `MerchantTests` generations).
 mod common;
 
-use common::build_sample;
+use common::{build, build_sample, sample_config};
 use fes_core::testing::fixtures_dir;
 use fes_core::Fx;
 use fes_core::QualityGrade;
 use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
+use fes_sim::agents::bank_seizure::trader_offer;
+use fes_sim::agents::contract_system::{ContractRoute, ContractSystem};
 use fes_sim::agents::demand_forecast::DemandForecastSystem;
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::groups::{city_of, KIND_COMPANY, KIND_GUILD};
@@ -18,8 +20,8 @@ use fes_sim::agents::merchant_vehicles::{CART, PACK};
 use fes_sim::agents::order_system::MerchantVehicleBought;
 use fes_sim::agents::order_system::QUARTER_WEEKS;
 use fes_sim::agents::production::lines::find_nearest_market;
-use fes_sim::agents::GroupTable;
 use fes_sim::agents::{AgentTable, OrderTable};
+use fes_sim::agents::{ContractTable, GroupTable, PolicyState};
 use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
@@ -404,4 +406,138 @@ fn every_group_joins_the_richest_open_guild_or_company_when_all_join() {
         });
         assert_eq!(agents.association[a], expected, "agent {a}");
     }
+}
+
+// ---- contracts (ContractRuleTests, InvestmentTests) ----
+
+fn signed_year(lines: &[&str]) -> Simulation {
+    let mut sim = build(&sample_config(lines), 1);
+    for _ in 0..WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    // In the Rust sample run of seed 1 the groups owning facilities at the buying markets hold
+    // no cash by the first new year, so they are given some to sign with.
+    for c in &mut sim.context_mut().world.get_mut::<GroupTable>().cash {
+        *c += 1_000_000;
+    }
+    step(&mut sim);
+    assert!(sim.context().world.get::<ContractTable>().count() > 0);
+    sim
+}
+
+#[test]
+fn a_contract_runs_for_the_weeks_its_deposit_pays_for() {
+    let sim = signed_year(&[]);
+    let c = sim.context().world.get::<ContractTable>();
+    let share = sim
+        .context()
+        .services
+        .database
+        .config
+        .contract_deposit_share;
+    let signed = sim.context().turn() - 1;
+    for r in 0..c.count() {
+        let weekly = i64::from(c.quantity[r]) * c.unit_price[r];
+        let weeks = i64::from(c.end_turn[r] - signed - 1);
+        assert_eq!(c.prepaid[r], share.mul_int(weekly * weeks), "row {r}");
+    }
+}
+
+#[test]
+fn an_unlicensed_merchant_signs_for_no_licensed_good() {
+    let mut sim = build(&sample_config(&["license.merchant_share_permille,0"]), 1);
+    for _ in 0..WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    for c in &mut sim.context_mut().world.get_mut::<GroupTable>().cash {
+        *c += 1_000_000;
+    }
+    sim.context_mut()
+        .world
+        .get_mut::<PolicyState>()
+        .licensed
+        .fill(1);
+    step(&mut sim);
+    let c = sim.context().world.get::<ContractTable>();
+    for r in 0..c.count() {
+        assert!(c.seller[r] >= 0 && c.buyer[r] >= 0, "row {r}");
+    }
+}
+
+#[test]
+fn contract_deposit_is_drawn_down_and_the_rest_returns_at_the_end() {
+    let mut sim = build_sample(&[]);
+    let db = sim.context().services.database.clone();
+    let wheat = db.try_get_good("wheat", QualityGrade::Mid).unwrap().0;
+    let nodes = sim.context().services.get::<NodeTable>();
+    let from = (0..nodes.count())
+        .find(|&n| nodes.level_of(n as i32) == WorldLevel::Village)
+        .unwrap();
+    let to = nodes.parent[from];
+    let world = &mut sim.context_mut().world;
+    let markets = world.get_mut::<MarketStore>();
+    let cell = markets.try_find_cell(from, wheat).unwrap();
+    let to_cell = markets.try_find_cell(to as usize, wheat).unwrap();
+    markets.stock[cell] = 0;
+    let groups = world.get_mut::<GroupTable>();
+    groups.cash[0] = 5000;
+    let buyer = groups.cash[1];
+    let route = ContractRoute {
+        from_cell: cell as i32,
+        to_cell: to_cell as i32,
+        from_node: from as i32,
+        to_node: to,
+    };
+    world
+        .get_mut::<ContractTable>()
+        .add(0, 1, route, 1, 10, 0, 500);
+    step(&mut sim);
+    assert_eq!(sim.context().world.get::<ContractTable>().count(), 0);
+    assert!(sim.context().world.get::<GroupTable>().cash[1] >= buyer + 500 - 1000);
+}
+
+#[test]
+fn contract_delivers_at_its_price() {
+    let mut sim = build_sample(&[]);
+    let db = sim.context().services.database.clone();
+    let wheat = db.try_get_good("wheat", QualityGrade::Mid).unwrap().0;
+    let nodes = sim.context().services.get::<NodeTable>();
+    let from = (0..nodes.count())
+        .find(|&n| nodes.level_of(n as i32) == WorldLevel::Village)
+        .unwrap();
+    let to = nodes.parent[from];
+    let world = &mut sim.context_mut().world;
+    let markets = world.get_mut::<MarketStore>();
+    let cell = markets.try_find_cell(from, wheat).unwrap();
+    let to_cell = markets.try_find_cell(to as usize, wheat).unwrap();
+    markets.stock[cell] = 1000;
+    let (buy, sell_list) = (i64::from(markets.price[cell]), markets.price[to_cell]);
+    let unit = buy + 1;
+    world.get_mut::<PurseState>().float.fill(1_000_000_000);
+    let groups = world.get_mut::<GroupTable>();
+    groups.cash[0] = 1_000_000;
+    groups.cash[1] = 1_000_000;
+    let route = ContractRoute {
+        from_cell: cell as i32,
+        to_cell: to_cell as i32,
+        from_node: from as i32,
+        to_node: to,
+    };
+    world
+        .get_mut::<ContractTable>()
+        .add(0, 1, route, 10, unit, 100, 0);
+    ContractSystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let sell = i64::from(trader_offer(db.config.trader_spread, sell_list));
+    let world = &sim.context().world;
+    assert_eq!(world.get::<MarketStore>().stock[cell], 990);
+    assert_eq!(
+        world.get::<GroupTable>().cash[0],
+        1_000_000 + 10 * (unit - buy)
+    );
+    assert_eq!(
+        world.get::<GroupTable>().cash[1],
+        1_000_000 + 10 * (sell - unit)
+    );
 }

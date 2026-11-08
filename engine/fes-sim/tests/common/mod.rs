@@ -69,3 +69,19 @@ pub fn build(source: &dyn DataSource, seed: u64) -> Simulation {
 pub fn build_sample(lines: &[&str]) -> Simulation {
     build(&sample_config(lines), 42)
 }
+
+/// C# `MoneyLedger.ContinentMoney(sim.World, continent)`.
+pub fn continent_money(sim: &Simulation, continent: usize) -> i64 {
+    fes_sim::agents::seeding::continent_money(
+        sim.world(),
+        sim.context().services.get::<fes_sim::world::NodeTable>(),
+        continent,
+    )
+}
+
+/// The continent count of the built world.
+pub fn continent_count(sim: &Simulation) -> usize {
+    sim.world()
+        .get::<fes_sim::economy::CurrencyState>()
+        .continent_count()
+}

@@ -61,3 +61,30 @@ pub fn seed_money(world: &mut WorldState, nodes: &NodeTable, config: &Simulation
     *world.get_mut::<BankState>() = bank;
     *world.get_mut::<HouseholdCash>() = households;
 }
+
+/// C# `MoneyLedger.ContinentMoney`: every coin of a continent, wherever it is, debts counted as
+/// they stand (the coin-conservation total).
+pub fn continent_money(world: &WorldState, nodes: &NodeTable, continent: usize) -> i64 {
+    let other = other_money(world, nodes);
+    let bank = world.get::<BankState>();
+    let purses = world.get::<PurseState>();
+    let households = world.get::<HouseholdCash>();
+    let tag = continent as i32;
+    let mut money = other[continent] + bank.international_reserve[continent];
+    for n in 0..purses.nation_count {
+        if purses.continent_of(n) == tag {
+            money += bank.reserve[n];
+        }
+    }
+    for p in 0..purses.count() {
+        if purses.continent_of(p) == tag {
+            money += purses.float[p];
+        }
+    }
+    for node in 0..nodes.count() {
+        if nodes.continent[node] as usize == continent {
+            money += households.cash[node] + households.spent[node];
+        }
+    }
+    money
+}

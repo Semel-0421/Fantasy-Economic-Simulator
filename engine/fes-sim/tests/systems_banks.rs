@@ -4,23 +4,24 @@
 //! turn per run.
 mod common;
 
-use common::build_sample;
-use fes_core::{Fx, QualityGrade};
+use common::{build_sample, continent_count, continent_money};
+use fes_core::QualityGrade;
 use fes_sim::agents::asset_prices::{land_price, share_price, Refs, PLAYER_HOLDER};
 use fes_sim::agents::balance_sheet::{collateral_value, convert, credit_limit, debt};
 use fes_sim::agents::bank_npc::merchant_borrower;
 use fes_sim::agents::bank_system::{
-    interest, AuctionClosed, BankSystem, CollateralKind, CollateralSeized, LoanRepaid, MarginCalled,
+    AuctionClosed, BankSystem, CollateralKind, CollateralSeized, LoanRepaid, MarginCalled,
 };
 use fes_sim::agents::cargo::merchant_holder;
 use fes_sim::agents::facilities::{OWNER_BANK, OWNER_NPC, OWNER_PLAYER};
 use fes_sim::agents::{
-    AgentTable, AuctionTable, BankState, CargoTable, FacilityTable, FinanceState, GroupTable,
-    IncomeTaxState, LandState, LoanTable, NpcLoanTable, PlayerState, ShareTable,
+    AgentTable, AuctionTable, BankState, CargoTable, FacilityTable, GroupTable, IncomeTaxState,
+    LandState, LoanTable, NpcLoanTable, PlayerState, ShareTable,
 };
+use fes_sim::commands::bank::{RepayLoan, TakeLoan};
 use fes_sim::economy::CurrencyState;
 use fes_sim::world::{NodeBanks, NodeTable};
-use fes_sim::{SimEvent, Simulation, System};
+use fes_sim::{Command, CommandResult, SimEvent, Simulation, System};
 use std::sync::Arc;
 
 const CITY: &str = "aur_n1_r1_c1";
@@ -93,26 +94,11 @@ fn own_city_facility(sim: &mut Simulation) -> usize {
     f
 }
 
-/// C# `TakeLoanCommand.Apply` at the player's branch.
+/// C# `Borrow`: a `TakeLoan` at the player's branch.
 fn borrow(sim: &mut Simulation, amount: i64) {
-    let r = refs(sim);
-    let at = sim.world().get::<PlayerState>().node;
-    let nation = r.banks.branch_nation(r.nodes, at);
-    assert!(nation >= 0, "at a branch");
-    let term = r.db.config.loan_term_weeks;
-    let rate = Fx::from_raw(sim.world().get::<FinanceState>().loan_rate[nation as usize]);
-    let balance = amount + interest(rate, amount, term);
-    let weekly = (balance + i64::from(term) - 1) / i64::from(term);
-    let continent = continent_of(sim, at) as usize;
-    let world = &mut sim.context_mut().world;
-    world.get_mut::<BankState>().reserve[nation as usize] -= amount;
-    world.get_mut::<PlayerState>().coins[continent] += amount;
-    let loans = world.get_mut::<LoanTable>();
-    loans.nation.push(nation);
-    loans.balance.push(balance);
-    loans.weekly_payment.push(weekly);
-    loans.due.push(0);
-    loans.overdue_weeks.push(0);
+    let cmd = TakeLoan { amount };
+    assert_eq!(CommandResult::Ok, cmd.validate(sim.context()));
+    cmd.apply(sim.context_mut());
 }
 
 fn add_auction(
@@ -675,22 +661,33 @@ fn margin_sales_keep_the_coins() {
     with_land_loan(&mut sim, n, 1);
     cheapen_land(&mut sim, n, 650);
     let weeks = sim.context().services.database.config.margin_call_weeks;
-    let total = |sim: &Simulation| {
-        let bank = sim.world().get::<BankState>();
-        let player = sim.world().get::<PlayerState>();
-        bank.reserve.iter().sum::<i64>()
-            + bank.international_reserve.iter().sum::<i64>()
-            + player.coins.iter().sum::<i64>()
-            + sim
-                .world()
-                .get::<fes_sim::economy::HouseholdCash>()
-                .cash
-                .iter()
-                .sum::<i64>()
-    };
-    let start = total(&sim);
     for t in 0..=weeks + 1 {
         run(&mut sim);
-        assert_eq!(start, total(&sim), "turn {t}");
+        for k in 0..continent_count(&sim) {
+            let supply = sim.world().get::<CurrencyState>().coin_supply[k];
+            assert_eq!(supply, continent_money(&sim, k), "turn {t}");
+        }
     }
+}
+
+#[test]
+fn paying_down_lifts_the_call() {
+    let mut sim = build_sample(&[]);
+    let n = city_branch(&sim);
+    with_land_loan(&mut sim, n, 1);
+    cheapen_land(&mut sim, n, 650);
+    assert_eq!(1, of::<MarginCalled>(&run(&mut sim)).len());
+    let balance = sim.world().get::<LoanTable>().balance[0];
+    let continent = continent_of(&sim, n as i32) as usize;
+    sim.context_mut().world.get_mut::<PlayerState>().coins[continent] += balance;
+    let repay = RepayLoan {
+        amount: balance / 2,
+    };
+    assert_eq!(CommandResult::Ok, repay.validate(sim.context()));
+    repay.apply(sim.context_mut());
+    let weeks = sim.context().services.database.config.margin_call_weeks;
+    for _ in 0..weeks + 2 {
+        run(&mut sim);
+    }
+    assert_eq!(PLOTS, sim.world().get::<LandState>().player_plots[n]);
 }

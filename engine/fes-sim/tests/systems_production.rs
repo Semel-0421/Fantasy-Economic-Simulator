@@ -161,8 +161,12 @@ fn npc_output_is_sold_at_the_current_price() {
 
 #[test]
 fn facility_below_zero_cash_goes_bankrupt_after_the_grace_weeks() {
-    // Without NPC loans, which would cover the shortfall.
-    let mut sim = sim_with(&[("bank.npc_max_reserve_share_permille", "0")]);
+    // Without NPC loans or credit top-ups, which would cover the shortfall (the C# test runs on
+    // the default config, where `credit.working_weeks` is 0).
+    let mut sim = sim_with(&[
+        ("bank.npc_max_reserve_share_permille", "0"),
+        ("credit.working_weeks", "0"),
+    ]);
     let bakeries = facilities_of(&sim, IndustryTier::Tertiary);
     for &f in &bakeries {
         sim.context_mut().world.get_mut::<FacilityTable>().cash[f] = 0;

@@ -94,6 +94,7 @@ impl Module for AgentsModule {
         b.add_system(Box::new(super::contract_system::ContractSystem::default()))?;
         b.add_system(Box::new(
             super::strategic_subsidy::StrategicSubsidySystem::default(),
-        ))
+        ))?;
+        b.add_system(Box::new(super::credit_system::CreditSystem::default()))
     }
 }

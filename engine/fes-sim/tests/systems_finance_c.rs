@@ -22,7 +22,7 @@ use fes_sim::agents::order_system::QUARTER_WEEKS;
 use fes_sim::agents::production::lines::find_nearest_market;
 use fes_sim::agents::strategic_subsidy::StrategicSubsidySystem;
 use fes_sim::agents::{AgentTable, OrderTable};
-use fes_sim::agents::{BankState, ContractTable, GroupTable, PolicyState};
+use fes_sim::agents::{BankState, BondOffers, ContractTable, GroupTable, PolicyState};
 use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
@@ -568,4 +568,15 @@ fn strategic_subsidy_moves_reserve_to_groups_without_making_coins() {
         world.get::<BankState>().reserve.iter().sum::<i64>(),
         before_reserve - paid
     );
+}
+
+// ---- credit (CreditTests, BillMarketTests, ClassesCoverAndBondsTests) ----
+
+#[test]
+fn the_weeks_bond_offers_are_forgotten_after_credit() {
+    let mut sim = build_sample(&[]);
+    for _ in 0..3 {
+        step(&mut sim);
+        assert_eq!(sim.context().services.get::<BondOffers>().turn, -1);
+    }
 }

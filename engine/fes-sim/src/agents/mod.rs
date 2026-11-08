@@ -13,6 +13,7 @@ pub mod columns;
 pub mod contract_system;
 pub mod contracts;
 pub mod credit;
+pub mod credit_system;
 pub mod defense;
 pub mod demand_forecast;
 pub mod development;

@@ -17,6 +17,7 @@ use crate::world::{NodeBanks, NodeTable};
 
 /// One loan of the player (C# `LoanTable` row).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LoanView {
     pub nation: i32,
     pub balance: i64,
@@ -27,6 +28,7 @@ pub struct LoanView {
 
 /// Coins, deposits, loans and bonds of the player.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PurseView {
     pub node: i32,
     pub local_continent: i32,
@@ -43,6 +45,7 @@ pub struct PurseView {
 
 /// Goods in the cart and in the warehouses of the player's facilities.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CargoView {
     /// (good, quantity) in the cart.
     pub cart: Vec<(i32, i32)>,
@@ -54,6 +57,7 @@ pub struct CargoView {
 
 /// One supply contract (C# `ContractTable` row).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ContractView {
     pub seller: i32,
     pub buyer: i32,
@@ -68,6 +72,7 @@ pub struct ContractView {
 
 /// One holding of facility or venture shares, or one short position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HoldingView {
     pub venture: bool,
     pub asset: i32,
@@ -77,6 +82,7 @@ pub struct HoldingView {
 
 /// The player's securities.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SharesView {
     pub shares: Vec<HoldingView>,
     pub ventures: Vec<HoldingView>,
@@ -86,6 +92,7 @@ pub struct SharesView {
 
 /// One license (C# `LicenseInfo`); a negative `base_good` is a trade licence kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LicenceView {
     pub base_good: i32,
     pub nation: i32,
@@ -94,6 +101,7 @@ pub struct LicenceView {
 
 /// One nation's or continent's published yearly figures, for the results screen.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatementView {
     pub turn: i32,
     pub published_year: i32,

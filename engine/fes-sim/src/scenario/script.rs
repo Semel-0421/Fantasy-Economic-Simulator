@@ -21,6 +21,7 @@ use crate::event_record::SimEventRecord;
 use crate::world::{NodeBanks, NodeTable, RouteTable};
 use fes_core::{Fx, QualityGrade};
 use fes_data::defs::ModifierTarget;
+use std::collections::BTreeMap;
 
 /// Node and good keys of a scenario file, looked up in a built world.
 pub struct Keys<'a>(pub &'a SimContext);
@@ -118,6 +119,8 @@ pub struct ScenarioContract {
 pub struct Script {
     events: Vec<EventDef>,
     fired: Vec<bool>,
+    /// Actual payments, kept separately from each contract's promise for dialog substitution.
+    paid: BTreeMap<String, i64>,
     pub contracts: Vec<ScenarioContract>,
     /// The start currency (rewards are paid in it).
     pub home: usize,
@@ -126,6 +129,7 @@ pub struct Script {
 impl Script {
     /// Checks every key of the scenario against the world.
     pub fn new(def: &ScenarioDef, ctx: &SimContext, home: usize) -> Result<Self, String> {
+        super::contract_text::validate(def)?;
         let keys = Keys(ctx);
         for e in def.events.iter().flat_map(|e| &e.effects) {
             keys.check_effect(e)?;
@@ -133,6 +137,7 @@ impl Script {
         Ok(Self {
             events: def.events.clone(),
             fired: vec![false; def.events.len()],
+            paid: BTreeMap::new(),
             contracts: Vec::new(),
             home,
         })
@@ -147,8 +152,12 @@ impl Script {
             }
             self.fired[i] = true;
             let id = self.events[i].id.clone();
+            let contract = match &self.events[i].trigger {
+                Trigger::ContractDone(id) => Some(id.clone()),
+                _ => None,
+            };
             for effect in self.events[i].effects.clone() {
-                self.apply(ctx, &id, &effect, out);
+                self.apply(ctx, &id, &effect, contract.as_deref(), out);
             }
         }
     }
@@ -224,6 +233,7 @@ impl Script {
                 .change(PLAYER_CART, c.good, -c.quantity);
             let (paid, continent) = pay_reward(ctx, c.node, c.reward);
             c.delivered = true;
+            self.paid.insert(c.id.clone(), paid);
             out.push(SimEventRecord::ScenarioDialog {
                 event: c.id.clone(),
                 text: String::new(),
@@ -234,13 +244,32 @@ impl Script {
         }
     }
 
-    fn apply(&mut self, ctx: &mut SimContext, id: &str, e: &Effect, out: &mut Vec<SimEventRecord>) {
+    fn dialog(&self, text: &str, contract: Option<&str>) -> String {
+        if !text.contains('{') {
+            return text.to_owned();
+        }
+        let id = contract.expect("contract dialog context was validated");
+        let definition = self
+            .events
+            .iter()
+            .flat_map(|e| &e.effects)
+            .find(|e| matches!(e, Effect::OfferContract { id: found, .. } if found == id))
+            .expect("contract definition was validated");
+        super::contract_text::render(text, definition, self.paid.get(id).copied().unwrap_or(0))
+    }
+
+    fn apply(
+        &mut self,
+        ctx: &mut SimContext,
+        id: &str,
+        e: &Effect,
+        contract: Option<&str>,
+        out: &mut Vec<SimEventRecord>,
+    ) {
         let (text, coins, continent) = match e {
-            Effect::Dialog(text) | Effect::BondIssue { text, .. } => (text.clone(), 0, -1),
-            Effect::OfferContract { text, .. } => {
-                self.offer(ctx, e);
-                (text.clone(), 0, -1)
-            }
+            Effect::Dialog(text) => (self.dialog(text, contract), 0, -1),
+            Effect::BondIssue { text, .. } => (text.clone(), 0, -1),
+            Effect::OfferContract { .. } => (self.offer(ctx, e), 0, -1),
             Effect::Raid {
                 from,
                 to,
@@ -307,7 +336,7 @@ impl Script {
         });
     }
 
-    fn offer(&mut self, ctx: &SimContext, e: &Effect) {
+    fn offer(&mut self, ctx: &SimContext, e: &Effect) -> String {
         let Effect::OfferContract {
             id,
             good,
@@ -318,12 +347,13 @@ impl Script {
             text,
         } = e
         else {
-            return;
+            return String::new();
         };
         let keys = Keys(ctx);
         let (Ok(good), Ok(node)) = (keys.good(good), keys.node(node)) else {
-            return;
+            return text.clone();
         };
+        let text = super::contract_text::render(text, e, 0);
         self.contracts.push(ScenarioContract {
             id: id.clone(),
             good,
@@ -336,6 +366,7 @@ impl Script {
             delivered: false,
             expired: false,
         });
+        text
     }
 }
 

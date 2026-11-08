@@ -78,9 +78,9 @@ fn golden_path_reaches_three_times_the_starting_coins() {
     assert!(
         ev.iter().any(|e| matches!(e,
             E::ScenarioDialog { event, text, .. }
-            if event == "delivered" && text.contains("Promised reward: 1,500 coins.")
+            if event == "delivered" && text == "Delivery complete. Promised 1500 coins; you received 1500 coins."
         )),
-        "delivery dialog must state the promise separately from payment"
+        "delivery dialog must fill both promise and actual payment"
     );
     assert!(
         ev.iter().any(|e| matches!(e,

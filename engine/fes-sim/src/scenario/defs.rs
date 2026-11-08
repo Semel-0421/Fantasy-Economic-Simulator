@@ -175,7 +175,7 @@ impl ScenarioDef {
                 return Err(format!("Event '{}' needs a fallback_week.", e.id));
             }
         }
-        Ok(())
+        super::contract_text::validate(self)
     }
 
     /// Parses a scenario data file (RON; an `Option` field takes a bare value).

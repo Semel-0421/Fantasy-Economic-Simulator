@@ -230,7 +230,7 @@ describe('scenario golden paths', () => {
     await p.week();
     const deadline = (await p.page.textContent('#deadline')) ?? '';
     expect(deadline.startsWith(`${await p.page.textContent('#date')} of 20`)).toBe(true);
-    expect(p.news.some((n) => n.includes('18 crates of tools'))).toBe(true);
+    expect(p.news.some((n) => n.includes('Deliver 18 crates of g6_0 to k0n0r0c1 by week 12.'))).toBe(true);
     await p.page.click('#accept-tools');
     await p.page.waitForFunction(() => document.querySelector('#scenario-contracts')?.textContent?.includes('Accepted'));
     await p.trade('buy', tools, 18);
@@ -238,7 +238,7 @@ describe('scenario golden paths', () => {
     await p.go('k0n0r0c1', true);
     await p.week();
     expect(await p.page.textContent('#objectives')).toContain('[x] Deliver the tool order');
-    expect(p.news.some((n) => n.includes('Delivery complete. Promised reward: 1,500 coins.'))).toBe(true);
+    expect(p.news.some((n) => n.includes('Delivery complete. Promised 1500 coins; you received 1500 coins.'))).toBe(true);
     expect(p.news.some((n) => n.includes('You receive 1,500 coins.'))).toBe(true);
     expect(await p.finish(1000)).toBe('Net profit 1,359 coins in 20 weeks');
     expect(await p.page.textContent('#statement')).toContain('Licences, interest and other');

@@ -22,7 +22,7 @@
             effects: [
                 OfferContract(id: "tools", good: "g6_0", quantity: 18, node: "k0n0r0c1",
                     reward: 1500, deadline_week: 12,
-                    text: "Deliver 18 crates of tools (g6_0) to k0n0r0c1 by week 12. Promised reward: 1,500 coins. Buy the tools in k0n0r0c0, then travel through k0n0r0: two weeks to the regional market and two more to the destination."),
+                    text: "Deliver {qty} crates of {good} to {dest} by week {deadline}. Promised reward: {reward} coins. Buy the goods in k0n0r0c0, then travel through k0n0r0 to reach the destination."),
             ],
         ),
         (
@@ -38,7 +38,7 @@
             id: "delivered",
             trigger: ContractDone("tools"),
             fallback_week: 30,
-            effects: [Dialog("Delivery complete. Promised reward: 1,500 coins. The separate payment notice shows the amount received. Keep trading until the season ends.")],
+            effects: [Dialog("Delivery complete. Promised {reward} coins; you received {paid} coins.")],
         ),
     ],
 )

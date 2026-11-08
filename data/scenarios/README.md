@@ -35,7 +35,7 @@ not know fails the scenario's build.
             trigger: Week(2),
             effects: [OfferContract(id: "grain", good: "wheat", quantity: 20,
                 node: "aur_n1_r1_c1", reward: 1500, deadline_week: 12,
-                text: "The mill in the city needs twenty sacks of wheat.")],
+                text: "Deliver {qty} sacks of {good} to {dest} by week {deadline}. Promised {reward} coins.")],
         ),
         (id: "warn", trigger: PlayerAt("aur_n1_r1_c1"), fallback_week: 8,
             effects: [Dialog("Robbers were seen on the city road.")]),
@@ -104,6 +104,53 @@ units sold in the same sale fetch the market's offer.
 | `BackAt(node, after)` | the player stands at `node` after the event `after` has fired (a return trip) |
 
 Checked at the end of each week; once done an objective stays done (`ObjectiveDone` event).
+
+## Contract dialog placeholders
+
+Contract numbers belong in `OfferContract` fields, not duplicated in dialog strings.
+Substitution is deterministic and uses plain decimal integers without grouping separators.
+
+| Placeholder | Value |
+| --- | --- |
+| `{reward}` | The contract's promised `reward`, unchanged by a short payment |
+| `{paid}` | The amount actually paid by delivery, including a partial payment or zero |
+| `{good}` | The contract's base good key, e.g. `wheat` or `g6_0` |
+| `{qty}` | The contract's `quantity` |
+| `{dest}` | The destination node key from the contract's `node` |
+| `{deadline}` | The scenario-relative, 1-based `deadline_week` |
+
+`OfferContract.text` supports all of these except `{paid}`: no delivery has happened
+at the time of an offer. Both the offer event and the offered-contract view receive
+the filled text. For example:
+
+```ron
+OfferContract(id: "grain", good: "wheat", quantity: 10, node: "aur_n1_r1_c2",
+    reward: 1200, deadline_week: 12,
+    text: "Deliver {qty} crates of {good} to {dest} by week {deadline}. Promised {reward} coins.")
+```
+
+A `Dialog` effect in an event triggered by `ContractDone("grain")` supports all six
+placeholders, bound to that exact contract id. Its referenced contract must have
+exactly one `OfferContract` definition in the scenario. Multiple contracts retain
+their own actual payments; rendering a dialog does not pay money again.
+
+```ron
+(id: "delivered", trigger: ContractDone("grain"), fallback_week: 30,
+    effects: [Dialog("Delivery complete. Promised {reward} coins; you received {paid} coins.")])
+```
+
+The normal delivery runs before `ContractDone` events, so `{paid}` is the return
+value of the actual clamped payment, not the promise. If the event fires early via
+its existing fallback, values still come from the contract definition and `{paid}`
+is zero until delivery. Choose a fallback outside the playable weeks for a message
+that should only celebrate delivery, as S1 does. Fallback/expiry rules are unchanged.
+
+Unknown names, empty/nested/unmatched braces, `{paid}` in an offer, or contract
+placeholders in other effect text fail scenario validation. This is not a general
+template language: no brace escapes, formatting options or recursive expansion.
+Intro/title/objective strings are not substituted. Inserted good/node keys are
+copied literally. The existing separate payment event and UI receipt remain intact;
+the delivery dialog now also states both amounts, including a zero payment.
 
 ## Scenario rules
 

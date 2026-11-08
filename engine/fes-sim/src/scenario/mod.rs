@@ -1,5 +1,6 @@
 //! Teaching scenarios (spec 5): the scenario switch, the results statement, scripted events and
 //! objectives. Nothing here runs in free mode.
+mod contract_text;
 pub mod defs;
 pub mod objectives;
 pub mod rules;

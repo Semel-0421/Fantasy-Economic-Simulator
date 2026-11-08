@@ -51,3 +51,17 @@ The native worst turn is over 0.5 s (0.778 s), so the top three systems on that 
 3. `agents.demand_forecast` (0.26 s on quarter turns). `plan_makers` runs `CHAIN_PASSES` full passes over all makers and `measure_needs` walks every cell. Run the passes only over makers whose inputs changed (a maker's plan depends on its fed cells), and reuse the `rows` and `lines` buffers between quarters rather than rebuilding them with `size`. Spreading this one system over several turns is not an option (it would change results), but its cost can be hidden by computing it on a worker thread while the Markets phase runs, as it only writes `DemandForecast`.
 
 Not measured here: native multi-thread, and the C# per-system split at full scale (the web baseline has only the whole-turn figures and the pricing and merchants ranges above).
+
+## Browser timing (Plan 5, Task 1)
+
+The same full-scale world (seed 1, turns 0 to 53) as `fes-wasm` in a dedicated Web Worker, single thread, on the development desktop. Build: `opt-level=3`, LTO, `codegen-units=1`, no debug assertions, `wasm-bindgen` 0.2.100 (`--target web`), `wasm-opt -O3` (binaryen 123). Browser: the installed Microsoft Edge 157 (Chromium 157.0.4341.42), headed, driven by Playwright 1.53 (`web/bench`: `npm install`, `npm run wasm`, `npm run bench`). Playwright's bundled Chromium 138 does not start on this machine (Windows side-by-side configuration error), so Edge stands in for Chrome; both are the same Chromium/V8 engine. The world hash after turn 11 equals the C# `turns.json` (348782575289596057) in every run.
+
+| | Rust native, release | Rust wasm (Edge 157, Worker) | C# web (Chrome, single thread) |
+| --- | --- | --- | --- |
+| Average turn | 0.473 s | 0.55 s (0.548 / 0.560 / 0.549 over three runs) | 1.03 s |
+| Worst turn | 0.778 s (turn 52) | 1.11-1.16 s (turn 52, the new-year turn, every run) | 1.64 s |
+| Build the turn-0 world | | 0.16-0.19 s | |
+
+Wasm file (`fes_wasm_bg.wasm`): 1,541,568 bytes after `wasm-bindgen`, 1,247,819 bytes (1.19 MiB) after `wasm-opt -O3`. Other turns over 0.7 s: 13 (0.83 s), 26 (0.79 s), 39 (0.85 s), the quarter turns where `agents.demand_forecast` runs.
+
+Against the budget (spec 7.3: average under 0.7 s, worst under 1 s): the average passes, the worst turn (52) misses by about 0.15 s. Wasm runs at about 1.16x native on average and 1.45x on turn 52. Task 2's speed-ups (merchants, pricing, demand forecast above) target exactly that turn. Not yet measured inside an itch.io embed.

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["fes-core", "fes-save", "fes-data", "fes-parity", "fes-sim"]
+members = ["fes-core", "fes-save", "fes-data", "fes-parity", "fes-sim", "fes-wasm"]
 
 [workspace.package]
 edition = "2021"
@@ -15,3 +15,9 @@ serde = { version = "1", features = ["derive"] }
 cognitive_complexity = "deny"
 too_many_lines = "deny"
 excessive_nesting = "deny"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug-assertions = false

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateOf, describeEvent, playTurn } from '../../src/ui/turn';
+import { calendarDate, dateOf, describeEvent, playTurn, scenarioDate } from '../../src/ui/turn';
 import type { TurnReport } from '../../src/sim/types';
 
 const report: TurnReport = { turn: 3, events: [] };
@@ -10,6 +10,13 @@ describe('turn flow', () => {
     expect(dateOf(0)).toEqual({ year: 1, week: 1 });
     expect(dateOf(51)).toEqual({ year: 1, week: 52 });
     expect(dateOf(52)).toEqual({ year: 2, week: 1 });
+  });
+
+  it('labels a turn by the calendar, or by the scenario week counted from its start', () => {
+    expect(calendarDate(4)).toBe('Year 1, Week 5');
+    const week = scenarioDate(4);
+    expect(week(4)).toBe('Week 1');
+    expect(week(23)).toBe('Week 20');
   });
 
   it('describes unit and struct events', () => {

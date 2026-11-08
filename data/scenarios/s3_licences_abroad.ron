@@ -20,7 +20,7 @@
     ],
     events: [
         (id: "shortage", trigger: Week(1), effects: [
-            PriceShock(node: "k0n1", good: "g19_0", percent: 800, weeks: 20, text: "Shortage in k0n1: its markets will pay far more for g19_0 in the coming weeks. Its traders' purses are thin, though: they buy about 40 a week."),
+            PriceShock(node: "k0n1", good: "g19_0", percent: 1000, weeks: 20, text: "Shortage in k0n1: its markets will pay far more for g19_0 in the coming weeks. Its traders' purses are thin, though: they buy about 40 a week."),
         ]),
         (id: "road_warning", trigger: PlayerAt("k0"), fallback_week: 12, effects: [
             Dialog("At the hub k0: robbers watch the road into k0n1. Guards cut the chance of an attack by 70%; insurance refunds 80% of cargo lost."),

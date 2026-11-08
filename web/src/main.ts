@@ -5,7 +5,7 @@ import { SimBridge } from './sim/bridge';
 import type { PlayerCommand } from './sim/types';
 import { renderHud, type Hud } from './ui/hud';
 import { renderMenu } from './ui/menu';
-import { describeEvent, playTurn } from './ui/turn';
+import { calendarDate, describeEvent, playTurn, scenarioDate } from './ui/turn';
 import { createMap, type MapScreen } from './map/map';
 import type { MapData } from './map/layout';
 import { rejectionsIn } from './ui/errors';
@@ -97,11 +97,18 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   }
   const game = bridge;
   const info = scenarioNumber === undefined ? null : await game.view('scenario');
-  const hud = renderHud(app, info ? 'scenario' : 'free', {
-    nextWeek: () => void nextWeek(game, screens),
-    save: (slot) => void saveNow(game, hud, slot),
-    menu: () => void showMenu(),
-  });
+  // A scenario shows its own week everywhere (header, log, arrivals), as its panel does.
+  const dateLabel = info ? scenarioDate(await game.turn()) : calendarDate;
+  const hud = renderHud(
+    app,
+    info ? 'scenario' : 'free',
+    {
+      nextWeek: () => void nextWeek(game, screens),
+      save: (slot) => void saveNow(game, hud, slot),
+      menu: () => void showMenu(),
+    },
+    dateLabel,
+  );
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
   const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
@@ -114,6 +121,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     queue: (c) => game.queue(c),
     select,
     ordered: (text) => hud.addMessage(text),
+    dateLabel,
   });
   hud.mapTools.append(travel.node);
   const orders = {

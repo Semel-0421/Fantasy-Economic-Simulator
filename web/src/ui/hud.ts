@@ -2,7 +2,7 @@
 import { SLOTS, type SaveMode, type Slot } from '../save/store';
 import { button, el } from './dom';
 import { slotName } from './menu';
-import { dateOf, type LogLine } from './turn';
+import { calendarDate, type DateLabel, type LogLine } from './turn';
 
 export interface Hud {
   setState(turn: number, coins: number[], localContinent: number): void;
@@ -30,7 +30,7 @@ export interface HudActions {
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
-export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions): Hud {
+export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions, dateLabel: DateLabel = calendarDate): Hud {
   const coins = el('strong', { id: 'coins', text: '-' });
   const date = el('span', { id: 'date', text: '-' });
   const caption = el('span', { id: 'next-label', text: 'Next week' });
@@ -81,8 +81,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
     side,
     coins,
     setState(turn, coinList, local) {
-      const d = dateOf(turn);
-      date.textContent = `Year ${d.year}, Week ${d.week}`;
+      date.textContent = dateLabel(turn);
       coins.textContent = fmt(coinList[local] ?? coinList[0] ?? 0);
       coins.title = coinList.map((c, i) => `Continent ${i}: ${fmt(c)}`).join('\n');
     },
@@ -103,9 +102,8 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
       timer = window.setInterval(tick, 250);
     },
     addTurn(turn, lines) {
-      const d = dateOf(turn);
       const items = lines.slice(0, 200).map((l) => el('li', { text: l.detail ? `${l.title}: ${l.detail}` : l.title }));
-      const head = el('strong', { text: `Year ${d.year}, Week ${d.week} - ${lines.length} events` });
+      const head = el('strong', { text: `${dateLabel(turn)} - ${lines.length} events` });
       log.prepend(el('li', { className: 'turn' }, head, el('ul', {}, ...items)));
     },
     fail(text) {

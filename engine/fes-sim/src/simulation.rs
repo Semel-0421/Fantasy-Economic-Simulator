@@ -23,6 +23,8 @@ pub struct Simulation {
     pub(crate) pipeline: TurnPipeline,
     data_hash: u64,
     pub(crate) scenario: Option<ScenarioRun>,
+    /// Reused buffers for `preview_queued`; not simulation state.
+    pub(crate) preview_scratch: crate::preview::Scratch,
 }
 
 impl Simulation {
@@ -32,6 +34,7 @@ impl Simulation {
             pipeline,
             data_hash,
             scenario: None,
+            preview_scratch: Default::default(),
         }
     }
 

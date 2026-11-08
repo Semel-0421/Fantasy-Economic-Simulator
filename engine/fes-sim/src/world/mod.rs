@@ -120,6 +120,23 @@ impl WorldState {
         out
     }
 
+    /// The sections of every component whose key is not in `skip`, in registration order.
+    pub fn sections_except(&self, skip: &[&str]) -> Vec<RawSection> {
+        self.components
+            .iter()
+            .filter(|c| !skip.contains(&c.key()))
+            .map(|c| {
+                let mut w = DotNetWriter::new(Vec::new());
+                c.write(&mut w);
+                RawSection {
+                    key: c.key().to_string(),
+                    version: c.version(),
+                    bytes: w.into_inner(),
+                }
+            })
+            .collect()
+    }
+
     /// Reads one section into its existing component. An unknown key is an error.
     pub fn load_section(&mut self, s: &RawSection) -> Result<(), SimError> {
         let index = *self

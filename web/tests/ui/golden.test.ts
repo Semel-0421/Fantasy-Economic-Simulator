@@ -217,6 +217,7 @@ describe('scenario golden paths', () => {
     const { p, errors } = await player();
     expect(await p.open(1)).toContain('500 coins');
     expect(await p.page.textContent('#deadline')).toBe('Week 1 of 20 - 20 weeks left');
+    expect(await p.page.textContent('#date')).toBe('Week 1'); // the header counts scenario weeks too
     expect(await p.page.locator('#save').count()).toBe(0); // scenarios never save
     const grain = p.good('g1_0');
     const tools = p.good('g6_0');
@@ -224,6 +225,8 @@ describe('scenario golden paths', () => {
     await p.go('k0n0r0c0', false);
     await p.trade('sell', grain, 30);
     await p.week();
+    const deadline = (await p.page.textContent('#deadline')) ?? '';
+    expect(deadline.startsWith(`${await p.page.textContent('#date')} of 20`)).toBe(true);
     expect(p.news.some((n) => n.includes('18 crates of tools'))).toBe(true);
     await p.page.click('#accept-tools');
     await p.page.waitForFunction(() => document.querySelector('#scenario-contracts')?.textContent?.includes('Accepted'));
@@ -232,7 +235,7 @@ describe('scenario golden paths', () => {
     await p.go('k0n0r0c1', true);
     await p.week();
     expect(await p.page.textContent('#objectives')).toContain('[x] Deliver the tool order');
-    expect(await p.finish()).toBe('Net profit 1,059 coins in 20 weeks');
+    expect(await p.finish()).toBe('Net profit 1,359 coins in 20 weeks');
     expect(await p.page.textContent('#statement')).toContain('Licences, interest and other');
     expect(await p.page.locator('#results button').allTextContents()).toEqual(['Next scenario', 'Main menu']);
     expect(await savesWritten(p.page)).toBe(0);
@@ -272,7 +275,7 @@ describe('scenario golden paths', () => {
       await p.week();
     }
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);
-    expect(await p.finish()).toBe('Net profit 1,235 coins in 24 weeks');
+    expect(await p.finish()).toBe('Net profit 2,653 coins in 24 weeks');
     expect(await p.page.locator('#next-scenario').count()).toBe(0); // the last scenario
     await p.page.click('#results-menu');
     await p.page.waitForSelector('#scenario-1');

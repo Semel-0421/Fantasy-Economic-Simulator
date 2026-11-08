@@ -21,8 +21,8 @@
             fallback_week: 3,
             effects: [
                 OfferContract(id: "tools", good: "g6_0", quantity: 18, node: "k0n0r0c1",
-                    reward: 1200, deadline_week: 12,
-                    text: "A workshop in the town k0n0r0c1 needs 18 crates of tools (g6_0) by week 12 and pays 1,200 coins on delivery. Tools are sold here in k0n0r0c0. The road runs through the regional market k0n0r0: two weeks there, two more on to k0n0r0c1."),
+                    reward: 1500, deadline_week: 12,
+                    text: "A workshop in the town k0n0r0c1 needs 18 crates of tools (g6_0) by week 12 and pays 1,500 coins on delivery. Tools are sold here in k0n0r0c0. The road runs through the regional market k0n0r0: two weeks there, two more on to k0n0r0c1."),
             ],
         ),
         (

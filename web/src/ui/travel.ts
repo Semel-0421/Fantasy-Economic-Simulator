@@ -5,13 +5,15 @@ import { destinations, LEVEL, TERRAIN_NAMES, type MapData } from '../map/layout'
 import type { CommandResult, PlayerCommand } from '../sim/types';
 import { button, el } from './dom';
 import { errorBox, rejection } from './errors';
-import { dateOf } from './turn';
+import { calendarDate, type DateLabel } from './turn';
 
 export interface TravelActions {
   preview(command: PlayerCommand): Promise<CommandResult>;
   queue(command: PlayerCommand): Promise<void>;
   select(node: number): void;
   ordered(text: string): void;
+  /** Names the arrival turn; the calendar unless set (a scenario counts its own weeks). */
+  dateLabel?: DateLabel;
 }
 
 export interface TravelPanel {
@@ -99,8 +101,7 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
     setPlayer(at, destination, arrival) {
       player = at;
       if (destination >= 0) {
-        const d = dateOf(arrival);
-        where.textContent = `Travelling from ${nameOf(at)} to ${nameOf(destination)}; arriving Year ${d.year}, Week ${d.week}.`;
+        where.textContent = `Travelling from ${nameOf(at)} to ${nameOf(destination)}; arriving ${(actions.dateLabel ?? calendarDate)(arrival)}.`;
       } else where.textContent = `You are in ${nameOf(at)}.`;
       listRoutes();
       describeSelected();

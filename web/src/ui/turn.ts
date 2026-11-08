@@ -10,6 +10,20 @@ export function dateOf(turn: number): { year: number; week: number } {
   return { year: Math.floor(turn / WEEKS_PER_YEAR) + 1, week: (turn % WEEKS_PER_YEAR) + 1 };
 }
 
+/** How the game names a turn: the calendar in free mode, the scenario week in a scenario. */
+export type DateLabel = (turn: number) => string;
+
+export const calendarDate: DateLabel = (turn) => {
+  const d = dateOf(turn);
+  return `Year ${d.year}, Week ${d.week}`;
+};
+
+/** Scenario weeks count from the turn the scenario starts on (after its warm-up): that turn is Week 1. */
+export const scenarioDate =
+  (startTurn: number): DateLabel =>
+  (turn) =>
+    `Week ${turn - startTurn + 1}`;
+
 export interface LogLine {
   title: string;
   detail: string;

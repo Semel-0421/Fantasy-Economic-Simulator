@@ -20,8 +20,9 @@ use fes_sim::agents::merchant_vehicles::{CART, PACK};
 use fes_sim::agents::order_system::MerchantVehicleBought;
 use fes_sim::agents::order_system::QUARTER_WEEKS;
 use fes_sim::agents::production::lines::find_nearest_market;
+use fes_sim::agents::strategic_subsidy::StrategicSubsidySystem;
 use fes_sim::agents::{AgentTable, OrderTable};
-use fes_sim::agents::{ContractTable, GroupTable, PolicyState};
+use fes_sim::agents::{BankState, ContractTable, GroupTable, PolicyState};
 use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
@@ -539,5 +540,32 @@ fn contract_delivers_at_its_price() {
     assert_eq!(
         world.get::<GroupTable>().cash[1],
         1_000_000 + 10 * (sell - unit)
+    );
+}
+
+// ---- strategic subsidy (C# StrategicSubsidySystem) ----
+
+#[test]
+fn strategic_subsidy_moves_reserve_to_groups_without_making_coins() {
+    let mut sim = build_sample(&["state.strategic_subsidy_permille,500"]);
+    step(&mut sim);
+    while !sim.context().clock().is_new_year() {
+        step(&mut sim);
+    }
+    let world = &mut sim.context_mut().world;
+    for r in &mut world.get_mut::<BankState>().reserve {
+        *r += 10_000_000;
+    }
+    let before_groups: i64 = world.get::<GroupTable>().cash.iter().sum();
+    let before_reserve: i64 = world.get::<BankState>().reserve.iter().sum();
+    StrategicSubsidySystem::default()
+        .execute(sim.context_mut())
+        .unwrap();
+    let world = &sim.context().world;
+    let paid = world.get::<GroupTable>().cash.iter().sum::<i64>() - before_groups;
+    assert!(paid > 0);
+    assert_eq!(
+        world.get::<BankState>().reserve.iter().sum::<i64>(),
+        before_reserve - paid
     );
 }

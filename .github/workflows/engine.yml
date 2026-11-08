@@ -1,5 +1,11 @@
 name: engine
-on: [push, pull_request]
+on:
+  push:
+    # rust-port runs the engine job through web.yml, tags through release.yml.
+    branches-ignore: [rust-port]
+    tags-ignore: ['**']
+  pull_request:
+  workflow_call:
 jobs:
   engine:
     runs-on: ubuntu-latest

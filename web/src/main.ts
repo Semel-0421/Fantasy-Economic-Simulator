@@ -162,3 +162,10 @@ async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
 showMenu().catch((e: unknown) => {
   app.textContent = `Could not start: ${message(e)}`;
 });
+
+// Offline after one visit: the service worker precaches the whole build (production only).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker not registered', e));
+  });
+}

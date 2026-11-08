@@ -1,0 +1,49 @@
+name: web-build
+description: Install the wasm toolchain and Node packages, then lint, typecheck, test and build web/.
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.99.1
+        targets: wasm32-unknown-unknown
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: engine
+    - name: Cache wasm-bindgen-cli
+      id: bindgen
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/wasm-bindgen
+        key: wasm-bindgen-cli-0.2.100-${{ runner.os }}
+    - name: Install wasm-bindgen-cli 0.2.100
+      if: steps.bindgen.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: web/package-lock.json
+    # binaryen (wasm-opt 123) comes from the pinned npm devDependency; scripts/prepare.mjs runs it.
+    - name: npm ci
+      shell: bash
+      working-directory: web
+      run: npm ci
+    - name: Install the Playwright browser
+      shell: bash
+      working-directory: web
+      run: npx playwright install --with-deps chromium
+    - name: Lint, typecheck, test
+      shell: bash
+      working-directory: web
+      env:
+        BROWSER_CHANNEL: chromium
+      run: |
+        npm run lint
+        npm run typecheck
+        npm test
+    - name: Build
+      shell: bash
+      working-directory: web
+      run: npm run build

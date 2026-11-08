@@ -1,0 +1,80 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  engine:
+    uses: ./.github/workflows/engine.yml
+
+  bench:
+    needs: engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+      - uses: actions/cache@v4
+        id: bindgen
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-0.2.100-${{ runner.os }}
+      - if: steps.bindgen.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: web/bench
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Bench regression check (headless Chromium, stored ceiling)
+        working-directory: web/bench
+        env:
+          HEADLESS: '1'
+          BROWSER_CHANNEL: chromium
+        run: |
+          npm run wasm
+          node run-bench.mjs
+
+  build:
+    needs: [engine, bench]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+      ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/web-build
+      - name: Zip the build
+        run: |
+          cd web/dist
+          zip -r "../../fantasy-economic-simulator-web-${GITHUB_REF_NAME}.zip" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: fantasy-economic-simulator-web-*.zip
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: fantasy-economic-simulator-web-*.zip
+      # Skipped (not failed) until the user adds the BUTLER_API_KEY secret and the ITCH_TARGET variable
+      # (user/game). Always the development channel; the judged page is updated by hand.
+      - name: Install butler
+        if: env.BUTLER_API_KEY != '' && env.ITCH_TARGET != ''
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -o butler.zip -d butler-bin
+          chmod +x butler-bin/butler
+      - name: Push to itch.io (development channel)
+        if: env.BUTLER_API_KEY != '' && env.ITCH_TARGET != ''
+        run: ./butler-bin/butler push web/dist "${ITCH_TARGET}:development" --userversion "${GITHUB_REF_NAME}"

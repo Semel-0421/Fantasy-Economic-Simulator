@@ -4,15 +4,21 @@
 use super::defs::{Effect, EventDef, ScenarioDef, Trigger};
 use super::rules::ScenarioRules;
 use crate::agents::asset_prices::PLAYER_HOLDER;
+use crate::agents::banks::BankState;
 use crate::agents::cargo::{CargoTable, PLAYER_CART};
+use crate::agents::credit::BondTable;
+use crate::agents::credit_system::BOND_PLAYER_HOLDER;
 use crate::agents::facilities::FacilityTable;
+use crate::agents::groups::GroupTable;
 use crate::agents::licenses::LicenseTable;
+use crate::agents::money_ledger::pay_households;
 use crate::agents::player::PlayerState;
 use crate::agents::securities::ShareTable;
+use crate::commands::bonds::bond_held;
 use crate::context::SimContext;
 use crate::economy::modifiers::{MarketModifier, MarketModifierTable};
 use crate::event_record::SimEventRecord;
-use crate::world::{NodeTable, RouteTable};
+use crate::world::{NodeBanks, NodeTable, RouteTable};
 use fes_core::{Fx, QualityGrade};
 use fes_data::defs::ModifierTarget;
 
@@ -54,17 +60,33 @@ impl Keys<'_> {
             .ok_or_else(|| format!("Unknown facility {f}."))
     }
 
+    /// A bond-desk issuer: `!nation` for a nation, else a company group.
+    fn issuer(&self, issuer: i32) -> Result<i32, String> {
+        let known = if issuer < 0 {
+            let nodes = self.0.services.get::<NodeTable>();
+            !issuer < self.0.services.get::<NodeBanks>().nation_count(nodes)
+        } else {
+            (issuer as usize) < self.0.world.get::<GroupTable>().count()
+        };
+        known
+            .then_some(issuer)
+            .ok_or_else(|| format!("Unknown bond issuer {issuer}."))
+    }
+
     /// Checks every key and number an effect names.
     pub fn check_effect(&self, e: &Effect) -> Result<(), String> {
         match e {
             Effect::OfferContract { good, node, .. } => self.good(good).and(self.node(node)),
             Effect::Raid { from, to, .. } => self.route(from, to),
             Effect::PriceShock { node, good, .. } => self.good(good).and(self.node(node)),
-            Effect::CompanyNews { facility, .. } | Effect::Dividend { facility, .. } => {
-                self.facility(*facility)
-            }
+            Effect::CompanyNews { facility, .. }
+            | Effect::CompanyOrders { facility, .. }
+            | Effect::Dividend { facility, .. } => self.facility(*facility),
             Effect::LicenceOffer { good, nation, .. } => self.good(good).and(self.node(nation)),
-            Effect::Dialog(_) | Effect::BondIssue { .. } => Ok(0),
+            Effect::BondIssue { issuer, .. } | Effect::Coupon { issuer, .. } => {
+                self.issuer(*issuer)
+            }
+            Effect::Dialog(_) => Ok(0),
         }
         .map(|_| ())
     }
@@ -229,12 +251,36 @@ impl Script {
                 *cash = *cash * i64::from(*percent) / 100;
                 (text.clone(), 0, -1)
             }
+            Effect::CompanyOrders {
+                facility,
+                coins,
+                text,
+            } => {
+                let f = *facility as usize;
+                let node = ctx.world.get::<FacilityTable>().node[f];
+                pay_households(
+                    &mut ctx.world,
+                    ctx.services.get::<NodeTable>(),
+                    node,
+                    -coins,
+                );
+                ctx.world.get_mut::<FacilityTable>().cash[f] += coins;
+                (text.clone(), 0, -1)
+            }
             Effect::Dividend {
                 facility,
                 per_share,
                 text,
             } => {
                 let (paid, c) = dividend(ctx, *facility, *per_share);
+                (text.clone(), paid, c)
+            }
+            Effect::Coupon {
+                issuer,
+                percent,
+                text,
+            } => {
+                let (paid, c) = coupon(ctx, *issuer, *percent);
                 (text.clone(), paid, c)
             }
             Effect::LicenceOffer { good, nation, text } => {
@@ -321,15 +367,51 @@ fn price_shock(ctx: &mut SimContext, e: &Effect) {
         });
 }
 
-/// Pays the player's shares from the company's cash, in its node's currency.
+/// Pays the player's shares from the company: the facility's cash first, then its group's.
 fn dividend(ctx: &mut SimContext, facility: i32, per_share: i64) -> (i64, i32) {
     let held = i64::from(ctx.world.get::<ShareTable>().held(facility, PLAYER_HOLDER));
     let f = facility as usize;
     let node = ctx.world.get::<FacilityTable>().node[f];
+    let group = ctx.world.get::<FacilityTable>().group[f];
     let continent = ctx.services.get::<NodeTable>().continent[node as usize];
+    let due = held * per_share;
     let facilities = ctx.world.get_mut::<FacilityTable>();
-    let paid = (held * per_share).min(facilities.cash[f].max(0));
-    facilities.cash[f] -= paid;
+    let from_facility = due.min(facilities.cash[f].max(0));
+    facilities.cash[f] -= from_facility;
+    let mut paid = from_facility;
+    if group >= 0 {
+        let cash = &mut ctx.world.get_mut::<GroupTable>().cash[group as usize];
+        let from_group = (due - paid).min((*cash).max(0));
+        *cash -= from_group;
+        paid += from_group;
+    }
+    ctx.world.get_mut::<PlayerState>().coins[continent as usize] += paid;
+    (paid, continent)
+}
+
+/// Pays the player `percent`% of the face it holds of the issuer's bonds, from the issuer.
+fn coupon(ctx: &mut SimContext, issuer: i32, percent: i32) -> (i64, i32) {
+    let face = bond_held(ctx.world.get::<BondTable>(), issuer, BOND_PLAYER_HOLDER);
+    let nodes = ctx.services.get::<NodeTable>();
+    let banks = ctx.services.get::<NodeBanks>();
+    let node = if issuer < 0 {
+        banks.nation_node(nodes, !issuer)
+    } else {
+        ctx.world.get::<GroupTable>().node[issuer as usize]
+    };
+    let continent = nodes.continent[node as usize];
+    let due = face * i64::from(percent) / 100;
+    let paid = if issuer < 0 {
+        let bank = ctx.world.get_mut::<BankState>();
+        let paid = due.min(bank.spendable(!issuer as usize));
+        bank.reserve[!issuer as usize] -= paid;
+        paid
+    } else {
+        let cash = &mut ctx.world.get_mut::<GroupTable>().cash[issuer as usize];
+        let paid = due.min((*cash).max(0));
+        *cash -= paid;
+        paid
+    };
     ctx.world.get_mut::<PlayerState>().coins[continent as usize] += paid;
     (paid, continent)
 }

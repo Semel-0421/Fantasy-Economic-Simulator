@@ -10,5 +10,6 @@
   "net_profit": 0,
   "start_coins": 500,
   "end_coins": 500,
+  "holdings": 0,
   "weeks": 1
 }

@@ -2,11 +2,19 @@
 //! profit, read from the events the player's commands publish each week.
 //!
 //! Every amount is in the coin of the continent the player started on, converted at the rates of
-//! the week it happened. Net profit is the change of the player's money (coins on every continent
-//! plus bank deposits); costs the events do not name land in `other`, so revenue minus the costs
-//! always ties to net profit.
+//! the week it happened. Net profit is the change of the player's wealth: money (coins on every
+//! continent plus bank deposits) and holdings (shares at the exchange's price, bonds at face);
+//! costs the events do not name land in `other`, so revenue minus the costs always ties to net
+//! profit. Buying a share moves money into holdings and so changes nothing; its price moving does,
+//! and lands in `other` (negative when the holdings gained).
+use crate::agents::asset_prices::{share_price, Refs, PLAYER_HOLDER};
 use crate::agents::banks::BankState;
+use crate::agents::credit::BondTable;
+use crate::agents::credit_system::BOND_PLAYER_HOLDER;
+use crate::agents::facilities::FacilityTable;
+use crate::agents::groups::GroupTable;
 use crate::agents::player::PlayerState;
+use crate::agents::securities::ShareTable;
 use crate::context::SimContext;
 use crate::economy::CurrencyState;
 use crate::event_record::SimEventRecord;
@@ -42,10 +50,14 @@ pub struct StatementView {
     /// Goods sold, plus contract rewards and dividends the script paid.
     pub revenue: i64,
     pub costs: StatementCosts,
-    /// `end_coins - start_coins`, the scenario's score.
+    /// `end_coins + holdings - start_coins`, the scenario's score.
     pub net_profit: i64,
+    /// Wealth at the start (the player starts with no holdings).
     pub start_coins: i64,
+    /// Money now: coins and deposits.
     pub end_coins: i64,
+    /// Shares at the exchange's price and bonds at face, now.
+    pub holdings: i64,
     /// Weeks played.
     pub weeks: i32,
 }
@@ -71,7 +83,7 @@ impl StatementLedger {
         let home = ctx.services.get::<NodeTable>().continent[p.node as usize] as usize;
         Self {
             home,
-            start_coins: money(ctx, home),
+            start_coins: money(ctx, home) + holdings(ctx, home),
             start_turn: ctx.turn(),
             trip_continent: home,
             ..Self::default()
@@ -129,7 +141,8 @@ impl StatementLedger {
     /// The statement as of now.
     pub fn view(&self, ctx: &SimContext) -> StatementView {
         let end_coins = money(ctx, self.home);
-        let net_profit = end_coins - self.start_coins;
+        let holdings = holdings(ctx, self.home);
+        let net_profit = end_coins + holdings - self.start_coins;
         let mut costs = StatementCosts {
             purchases: self.purchases,
             travel: self.travel,
@@ -144,6 +157,7 @@ impl StatementLedger {
             net_profit,
             start_coins: self.start_coins,
             end_coins,
+            holdings,
             weeks: ctx.turn() - self.start_turn,
         }
     }
@@ -174,4 +188,44 @@ pub fn money(ctx: &SimContext, home: usize) -> i64 {
         })
         .sum();
     coins + deposits
+}
+
+/// The player's shares at the exchange's price and bonds at face, in the `home` continent's coin.
+pub fn holdings(ctx: &SimContext, home: usize) -> i64 {
+    let currency = ctx.world.get::<CurrencyState>();
+    let nodes = ctx.services.get::<NodeTable>();
+    let banks = ctx.services.get::<NodeBanks>();
+    let refs = Refs {
+        db: &ctx.services.database,
+        nodes,
+        banks,
+    };
+    let facilities = ctx.world.get::<FacilityTable>();
+    let shares = ctx.world.get::<ShareTable>();
+    let mut total = 0;
+    for r in 0..shares.count() {
+        if shares.holder[r] != PLAYER_HOLDER || shares.count[r] <= 0 {
+            continue;
+        }
+        let f = shares.facility[r] as usize;
+        let value = i64::from(shares.count[r]) * share_price(&ctx.world, refs, f);
+        let continent = nodes.continent[facilities.node[f] as usize] as usize;
+        total += currency.convert(value, continent, home);
+    }
+    let bonds = ctx.world.get::<BondTable>();
+    let groups = ctx.world.get::<GroupTable>();
+    for r in 0..bonds.count() {
+        if bonds.holder[r] != BOND_PLAYER_HOLDER {
+            continue;
+        }
+        let issuer = bonds.issuer[r];
+        let node = if issuer < 0 {
+            banks.nation_node(nodes, !issuer)
+        } else {
+            groups.node[issuer as usize]
+        };
+        let continent = nodes.continent[node as usize] as usize;
+        total += currency.convert(bonds.face[r], continent, home);
+    }
+    total
 }

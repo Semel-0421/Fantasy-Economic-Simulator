@@ -146,12 +146,16 @@ pub fn statement(sim: &Simulation) -> StatementView {
     sim.statement().expect("scenario statement")
 }
 
-/// The statement adds up: revenue - costs = net profit = end - start coins.
+/// The statement adds up: revenue - costs = net profit = end coins + holdings - start coins.
 pub fn assert_honest(s: &StatementView) {
     let c = &s.costs;
     let costs = c.purchases + c.travel + c.protection + c.losses + c.other;
     assert_eq!(s.revenue - costs, s.net_profit, "{s:?}");
-    assert_eq!(s.end_coins - s.start_coins, s.net_profit, "{s:?}");
+    assert_eq!(
+        s.end_coins + s.holdings - s.start_coins,
+        s.net_profit,
+        "{s:?}"
+    );
 }
 
 pub fn ended(events: &[E]) -> Option<(i64, i32)> {

@@ -113,7 +113,15 @@ pub enum Effect {
         percent: i32,
         text: String,
     },
-    /// The company pays `per_share` coins on each share the player holds, from its cash.
+    /// The company wins `coins` of orders: its cash rises by that much, paid by the households of
+    /// its node (its share price follows its value).
+    CompanyOrders {
+        facility: i32,
+        coins: i64,
+        text: String,
+    },
+    /// The company pays `per_share` coins on each share the player holds, from the facility's
+    /// cash, then its group's.
     Dividend {
         facility: i32,
         per_share: i64,
@@ -121,6 +129,13 @@ pub enum Effect {
     },
     /// Announces bonds of an issuer (the bond desk's issuer number) for the player to buy.
     BondIssue { issuer: i32, text: String },
+    /// Pays a coupon of `percent`% of the face of the issuer's bonds the player holds, from the
+    /// issuer (a nation's bank reserve, or a company group's cash), in the issuer's coin.
+    Coupon {
+        issuer: i32,
+        percent: i32,
+        text: String,
+    },
     /// Grants the licence for `good` in the nation `nation` (node key) for a year.
     LicenceOffer {
         good: String,

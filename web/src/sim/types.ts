@@ -193,6 +193,8 @@ export const viewSchemas = {
       net_profit: num,
       start_coins: num,
       end_coins: num,
+      /** Shares at the exchange's price and bonds at face; net_profit = end_coins + holdings - start_coins. */
+      holdings: num,
       weeks: num,
     }),
   ),

@@ -73,9 +73,14 @@ elsewhere still sees the event.
 | `Raid(from, to, loss_permille)` | the player's next trip on that route meets robbers: without guards they take `loss_permille` of every good in the cart (an encounter, so insurance refunds as usual); guards beat them off (an encounter that took nothing). No message: the trip's `TripEncounter` shows it |
 | `PriceShock(node, good, percent, weeks, text)` | a market modifier on value for the good's category under the node, as a world event makes |
 | `CompanyNews(facility, percent, text)` | the company's cash becomes `percent`% of what it was; its share price follows its value |
-| `Dividend(facility, per_share, text)` | pays `per_share` coins per share the player holds, from the company's cash, in its node's coin |
+| `CompanyOrders(facility, coins, text)` | the company wins orders: `coins` move from its node's households into its cash; its share price follows its value |
+| `Dividend(facility, per_share, text)` | pays `per_share` coins per share the player holds, from the facility's cash then its group's, in its node's coin |
 | `BondIssue(issuer, text)` | announces bonds of the issuer (bond-desk issuer number) for the player to buy with `BuyBond` |
+| `Coupon(issuer, percent, text)` | pays `percent`% of the face the player holds of the issuer's bonds, from the nation's spendable reserve or the company group's cash, in the issuer's coin |
 | `LicenceOffer(good, nation, text)` | grants the good's licence in that nation (node key) for a year |
+
+Issuers are bond-desk numbers: `-1 - n` (written `-1`, `-2`, ...) for the nation with index `n`, otherwise
+a company group; an unknown issuer fails the build.
 
 Every effect with text publishes a `ScenarioDialog { event, text, coins, continent, turn }`; `coins` is
 what the effect paid the player (a dividend, a contract reward), counted as revenue on the statement.

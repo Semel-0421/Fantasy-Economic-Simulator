@@ -340,3 +340,28 @@ fn the_readme_example_parses_and_builds() {
         .build()
         .expect("build");
 }
+
+#[test]
+fn company_orders_and_a_coupon_move_money_without_making_any() {
+    let events = r#"(id: "orders", trigger: Week(1), effects: [CompanyOrders(facility: 1, coins: 4000, text: "orders")]),
+        (id: "coupon", trigger: Week(1), effects: [Coupon(issuer: -1, percent: 8, text: "coupon")])"#;
+    let mut sim = build(&scenario("", events));
+    let cash = sim.world().get::<FacilityTable>().cash[1];
+    let week1 = step(&mut sim);
+    assert_eq!(dialog_ids(&week1), vec!["orders", "coupon"]);
+    assert!(sim.world().get::<FacilityTable>().cash[1] >= cash + 4000 - 1000);
+    assert!(week1
+        .iter()
+        .any(|e| matches!(e, E::ScenarioDialog { event, coins: 0, .. } if event == "coupon")));
+    common::assert_conserved(&sim, "orders and coupon");
+    let unknown = scenario(
+        "",
+        r#"(id: "c", trigger: Week(1), effects: [Coupon(issuer: -99, percent: 8, text: "")])"#,
+    );
+    let source = FileDataSource::new(data_dir());
+    let built = SimulationBuilder::from_data(&source, 1)
+        .expect("builder")
+        .scenario(ScenarioDef::parse(&unknown).expect("parse"))
+        .build();
+    assert!(built.is_err(), "unknown issuer");
+}

@@ -1,0 +1,76 @@
+/* Plain parchment-and-ink look; Plan 7 replaces it with the art pass. */
+:root {
+  --paper: #f3e9d2;
+  --paper-dark: #e4d4ae;
+  --ink: #2b2118;
+  --gold: #8a5a12;
+  --sea: #2f5d62;
+  --danger: #8c2f1f;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.4 Georgia, 'Times New Roman', serif;
+}
+h1, h2 { font-weight: normal; margin: 0 0 0.5rem; }
+h1 { font-size: 1.9rem; letter-spacing: 0.02em; }
+h2 { font-size: 1.15rem; margin-top: 1.25rem; }
+button {
+  font: inherit;
+  min-height: 44px;
+  padding: 0.4rem 1rem;
+  color: var(--ink);
+  background: var(--paper-dark);
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  cursor: pointer;
+}
+button.primary { background: var(--gold); color: #fff8e6; }
+button:disabled { opacity: 0.55; cursor: default; }
+:focus-visible { outline: 3px solid var(--sea); outline-offset: 2px; }
+.loading { padding: 2rem 1rem; text-align: center; }
+
+.menu { max-width: 28rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.tagline { margin: 0 0 0.5rem; font-style: italic; }
+.notice { margin: 0; padding: 0.5rem 0.75rem; border: 2px solid var(--danger); color: var(--danger); background: #fff3ee; }
+ul { list-style: none; margin: 0; padding: 0; }
+.scenarios li, .save { display: flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0; }
+.scenarios button { flex: 1; text-align: left; }
+.soon, .save-meta, .note { font-size: 0.9rem; opacity: 0.75; }
+.save { border-bottom: 1px dotted var(--ink); }
+.save-name { flex: 1; }
+.save-error { color: var(--danger); font-size: 0.9rem; }
+.settings { margin-top: 1rem; }
+.settings summary { cursor: pointer; min-height: 32px; }
+
+.game { display: flex; flex-direction: column; min-height: 100vh; }
+.hud {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.5rem;
+  padding: 0.5rem; background: var(--paper-dark); border-bottom: 3px double var(--ink);
+}
+.panel { display: flex; flex-direction: column; justify-content: center; padding: 0.15rem 0.75rem; border: 1px solid var(--ink); background: var(--paper); min-width: 7rem; }
+.label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+#coins { color: var(--gold); font-size: 1.25rem; }
+#next { position: relative; overflow: hidden; flex: 1 1 12rem; background: var(--sea); color: #fff; }
+#next .bar { display: none; position: absolute; left: 0; bottom: 0; height: 4px; width: 40%; background: #ffd479; }
+#next.busy .bar { display: block; animation: slide 1.1s linear infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { #next.busy .bar { animation: none; width: 100%; } }
+.tools { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
+.tools select { min-height: 44px; font: inherit; }
+
+.play { display: grid; gap: 0.75rem; padding: 0.75rem; flex: 1; grid-template-columns: 1fr; }
+.map {
+  min-height: 14rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+  border: 2px dashed var(--ink); background: repeating-linear-gradient(45deg, var(--paper), var(--paper) 12px, var(--paper-dark) 12px, var(--paper-dark) 24px);
+  touch-action: manipulation;
+}
+.logbox { min-width: 0; }
+.log { max-height: 24rem; overflow: auto; margin: 0; padding: 0; list-style: none; border: 1px solid var(--ink); background: var(--paper); }
+.log > li { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--paper-dark); }
+.log ul { font-size: 0.85rem; max-height: 10rem; overflow: auto; margin-top: 0.25rem; }
+.log .message { color: var(--danger); }
+@media (min-width: 760px) { .play { grid-template-columns: 2fr 1fr; } .map { min-height: 24rem; } }

@@ -1,0 +1,21 @@
+// Small DOM helpers shared by the menu and the HUD.
+export function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  props: Partial<{ id: string; className: string; text: string; type: string; title: string }> = {},
+  ...children: (Node | string)[]
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  if (props.id) node.id = props.id;
+  if (props.className) node.className = props.className;
+  if (props.text !== undefined) node.textContent = props.text;
+  if (props.type) node.setAttribute('type', props.type);
+  if (props.title) node.title = props.title;
+  node.append(...children);
+  return node;
+}
+
+export const button = (text: string, onClick: () => void, id?: string): HTMLButtonElement => {
+  const b = el('button', { text, type: 'button', id });
+  b.addEventListener('click', onClick);
+  return b;
+};

@@ -1,37 +1,103 @@
-// Scaffold page: starts the simulation Worker and plays turns, to prove the whole path works.
+// Entry point: main menu, then a free-mode game on the simulation Worker.
+import './ui/styles.css';
+import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';
+import { renderHud, type Hud } from './ui/hud';
+import { renderMenu } from './ui/menu';
+import { describeEvent, playTurn } from './ui/turn';
 
-const $ = (id: string): HTMLElement => {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`Missing #${id}`);
-  return el;
-};
+const root = document.getElementById('app');
+if (!root) throw new Error('Missing #app');
+const app: HTMLElement = root;
 
-async function main(): Promise<void> {
-  const bridge = await SimBridge.start(1);
-  const next = $('next') as HTMLButtonElement;
-  const refresh = async (events: number | null): Promise<void> => {
-    $('turn').textContent = String(await bridge.turn());
-    $('hash').textContent = await bridge.worldHash();
-    $('events').textContent = events === null ? '-' : String(events);
-  };
-  await refresh(null);
-  $('status').textContent = 'Ready.';
-  next.disabled = false;
-  next.addEventListener('click', () => {
-    next.disabled = true;
-    bridge
-      .next()
-      .then((report) => refresh(report.events.length))
-      .catch((e: unknown) => {
-        $('status').textContent = `Error: ${e instanceof Error ? e.message : String(e)}`;
-      })
-      .finally(() => {
-        next.disabled = false;
-      });
-  });
+let saves: SaveStore | null = null;
+let bridge: SimBridge | null = null;
+
+const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+async function openSaves(): Promise<void> {
+  try {
+    saves ??= await SaveStore.open();
+  } catch {
+    saves = null;
+  }
 }
 
-main().catch((e: unknown) => {
-  $('status').textContent = `Could not start: ${e instanceof Error ? e.message : String(e)}`;
+async function showMenu(notice = ''): Promise<void> {
+  bridge?.dispose();
+  bridge = null;
+  await openSaves();
+  const list = saves ? await saves.list().catch(() => []) : [];
+  const latest = saves ? await saves.latest().catch(() => null) : null;
+  const unavailable = saves ? '' : 'Saving is unavailable in this browser.';
+  renderMenu(
+    app,
+    list,
+    latest,
+    {
+      freeMode: () => void begin(SimBridge.start(Math.floor(Math.random() * 0x7fffffff))),
+      continueLatest: (slot) => void resume(slot),
+      loadSlot: (slot) => void resume(slot),
+    },
+    notice || unavailable,
+  );
+}
+
+async function resume(slot: Slot): Promise<void> {
+  try {
+    const bytes = await (saves as SaveStore).read(slot);
+    await begin(SimBridge.load(bytes));
+  } catch {
+    await showMenu(BROKEN_MESSAGE);
+  }
+}
+
+async function begin(starting: Promise<SimBridge>): Promise<void> {
+  app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: 'Loading the simulation...' }));
+  try {
+    bridge = await starting;
+  } catch (e) {
+    await showMenu(`Could not start: ${message(e)}`);
+    return;
+  }
+  const game = bridge;
+  const hud = renderHud(app, 'free', {
+    nextWeek: () => void nextWeek(game, hud),
+    save: (slot) => void saveNow(game, hud, slot),
+    menu: () => void showMenu(),
+  });
+  await refresh(game, hud);
+}
+
+async function refresh(game: SimBridge, hud: Hud): Promise<void> {
+  const [turn, purse] = await Promise.all([game.turn(), game.view('purse')]);
+  hud.setState(turn, purse.coins, purse.local_continent);
+}
+
+async function nextWeek(game: SimBridge, hud: Hud): Promise<void> {
+  hud.setBusy(true);
+  try {
+    const { report, saveError } = await playTurn({ bridge: game, saves, mode: 'free' });
+    hud.addTurn(report.turn, report.events.map(describeEvent));
+    if (saveError) hud.addMessage(`Autosave failed: ${saveError}`);
+    await refresh(game, hud);
+  } catch (e) {
+    hud.addMessage(`The turn failed: ${message(e)}`);
+  } finally {
+    hud.setBusy(false);
+  }
+}
+
+async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
+  try {
+    if (!saves) throw new Error('Saving is unavailable in this browser.');
+    await saves.write(slot, 'free', await game.save(), await game.turn());
+    hud.addMessage(`Saved to ${slot.replace('manual', 'slot ')}.`);
+  } catch (e) {
+    hud.addMessage(`Save failed: ${message(e)}`);
+  }
+}
+
+showMenu().catch((e: unknown) => {
+  app.textContent = `Could not start: ${message(e)}`;
 });

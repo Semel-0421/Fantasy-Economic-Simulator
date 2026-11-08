@@ -12,12 +12,12 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(url);
-  await page.waitForFunction(() => document.getElementById('status')?.textContent === 'Ready.', null, { timeout: 60000 });
+  await page.click('#free-mode');
+  await page.waitForFunction(() => document.getElementById('coins')?.textContent !== '-', null, { timeout: 60000 });
   await page.click('#next');
-  await page.waitForFunction(() => document.getElementById('turn')?.textContent === '1', null, { timeout: 60000 });
-  const hash = await page.textContent('#hash');
-  console.log(JSON.stringify({ url, turn: await page.textContent('#turn'), hash, errors }));
-  failed = errors.length > 0 || !/^\d+$/.test(hash ?? '');
+  await page.waitForFunction(() => document.getElementById('date')?.textContent === 'Year 1, Week 2', null, { timeout: 60000 });
+  console.log(JSON.stringify({ url, date: await page.textContent('#date'), errors }));
+  failed = errors.length > 0;
 } finally {
   await browser.close();
   await server.close();

@@ -5,40 +5,46 @@
 (
     id: "s2_shares_and_bonds",
     title: "Shares and Bonds",
-    intro: "You sit at the bank of the town k0n0r0c0 with 10,000 coins and no cargo. Here you can buy shares of the nation's companies and its bonds. A share is worth the company's value: its works, two years of its earnings and its cash, over 100 shares; you may own up to 49 of a company. Your score is your wealth at the end: coins, deposits, shares at their price and bonds at face.",
+    intro: "Start at the bank in k0n0r0c0 with 10,000 coins. Buy company shares or national bonds. Share prices reflect buildings, cash and two years of earnings, divided among 100 shares. You may hold up to 49 shares per company. Your final wealth includes coins, deposits, shares at market price and bonds at face value.",
     seed: 22,
     start_node: "k0n0r0c0",
     start_coins: 10000,
     weeks: 22,
     warmup_weeks: 4,
     objectives: [
-        (id: "first_thousand", text: "Make 1,000 coins of profit.", goal: NetProfit(1000)),
-        (id: "investor", text: "Make 2,500 coins of profit.", goal: NetProfit(2500)),
+        (id: "first_thousand", text: "Earn 1,000 coins of net profit.", goal: NetProfit(1000)),
+        (id: "investor", text: "Earn 2,500 coins of net profit.", goal: NetProfit(2500)),
     ],
     events: [
         (id: "listing", trigger: Week(1), effects: [
-            Dialog("Listed at the bank: the tool workshop of k0n0r1c4 (facility 130) sells shares at about 85 coins. Its traders say a large order may be coming."),
+            Dialog("The tool workshop in k0n0r1c4 (facility 130) offers shares for about 85 coins each. A large order may be coming. Buy shares now, or keep your cash."),
         ]),
         (id: "orders", trigger: Week(3), effects: [
-            CompanyOrders(facility: 130, coins: 6000, text: "The workshop of k0n0r1c4 has won 6,000 coins of orders. Its cash, and with it its share price, jumps."),
+            CompanyOrders(facility: 130, coins: 6000, text: "The k0n0r1c4 workshop has won 6,000 coins of orders. Its cash and share price rise."),
         ]),
         (id: "dividend", trigger: Week(5), effects: [
-            Dividend(facility: 130, per_share: 10, text: "The workshop pays a dividend of 10 coins a share."),
+            Dividend(facility: 130, per_share: 10, text: "The workshop pays 10 coins for each share you hold."),
         ]),
         (id: "rumour", trigger: Week(7), effects: [
-            Dialog("Rumour at the bank: the workshop of k0n0r1c4 has lost a ship of its tools. If it is true, its cash is gone. Shareholders who sell this week still get today's price."),
+            Dialog("The workshop may have lost a ship carrying its tools. If true, it could lose most of its cash. Sell your shares this week at the current price, or risk holding them."),
         ]),
         (id: "losses", trigger: Week(8), effects: [
-            CompanyNews(facility: 130, percent: 5, text: "Confirmed: the workshop of k0n0r1c4 lost 95% of its cash. Its shares fall back to the value of its works."),
+            CompanyNews(facility: 130, percent: 5, text: "The workshop has lost 95% of its cash. Its shares now mainly reflect the value of its buildings."),
         ]),
         (id: "bonds", trigger: Week(9), effects: [
-            BondIssue(issuer: -1, text: "The nation k0n0 sells bonds at its bank: 4% a year, paid weekly into your deposit, and a special 8% coupon in week 17 for holders. Bonds count at face."),
+            BondIssue(issuer: -1, text: "Buy k0n0 bonds at the bank: 4% annual interest paid weekly into your deposit, plus a special 8% coupon in week 17. Your final wealth counts bonds at face value."),
+        ]),
+        (id: "review_bonds", trigger: Week(12), effects: [
+            Dialog("Review your bonds before the week 17 coupon. Keep them for the payment, or sell some if you need cash. Only bonds you still hold earn the coupon."),
+        ]),
+        (id: "coupon_choice", trigger: Week(15), effects: [
+            Dialog("Two weeks until the special 8% coupon. Buy more bonds, keep your cash, or sell. Check how much you can invest before placing an order."),
         ]),
         (id: "coupon", trigger: Week(17), effects: [
-            Coupon(issuer: -1, percent: 8, text: "The nation k0n0 pays its special 8% coupon."),
+            Coupon(issuer: -1, percent: 8, text: "k0n0 pays the special 8% coupon on the bonds you still hold."),
         ]),
         (id: "closing", trigger: Week(20), effects: [
-            Dialog("Two weeks remain. Your score counts shares at their price and bonds at face, so you need not sell."),
+            Dialog("Two weeks remain. Keep your investments or sell for cash. Your final wealth counts shares at market price and bonds at face value."),
         ]),
     ],
 )

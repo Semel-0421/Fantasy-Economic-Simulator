@@ -171,9 +171,12 @@ class Player {
     while ((await this.view<Purse>('purse')).travel_destination >= 0) await this.week();
   }
 
-  async finish(): Promise<string> {
+  async finish(target: number): Promise<string> {
     while (await this.week());
-    return (await this.page.textContent('#score')) ?? '';
+    const score = (await this.page.textContent('#score')) ?? '';
+    const profit = Number(/Net profit ([\d,]+)/.exec(score)?.[1]?.replaceAll(',', ''));
+    expect(profit).toBeGreaterThanOrEqual(target * 1.3);
+    return score;
   }
 }
 
@@ -235,7 +238,9 @@ describe('scenario golden paths', () => {
     await p.go('k0n0r0c1', true);
     await p.week();
     expect(await p.page.textContent('#objectives')).toContain('[x] Deliver the tool order');
-    expect(await p.finish()).toBe('Net profit 1,359 coins in 20 weeks');
+    expect(p.news.some((n) => n.includes('Delivery complete. Promised reward: 1,500 coins.'))).toBe(true);
+    expect(p.news.some((n) => n.includes('You receive 1,500 coins.'))).toBe(true);
+    expect(await p.finish(1000)).toBe('Net profit 1,359 coins in 20 weeks');
     expect(await p.page.textContent('#statement')).toContain('Licences, interest and other');
     expect(await p.page.locator('#results button').allTextContents()).toEqual(['Next scenario', 'Main menu']);
     expect(await savesWritten(p.page)).toBe(0);
@@ -255,7 +260,9 @@ describe('scenario golden paths', () => {
     await p.until(9);
     const coins = await p.coins();
     expect(await p.bondsWithAllCoins()).toBe(Math.floor(coins / 100) * 100);
-    expect(await p.finish()).toBe('Net profit 3,657 coins in 22 weeks');
+    expect(await p.finish(2500)).toBe('Net profit 3,657 coins in 22 weeks');
+    expect(p.news.some((n) => n.includes('Review your bonds before the week 17 coupon.'))).toBe(true);
+    expect(p.news.some((n) => n.includes('Two weeks until the special 8% coupon.'))).toBe(true);
     expect(await p.page.textContent('#statement')).toContain('Shares and bonds held');
     expect(await savesWritten(p.page)).toBe(0);
     expect(errors).toEqual([]);
@@ -275,7 +282,7 @@ describe('scenario golden paths', () => {
       await p.week();
     }
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);
-    expect(await p.finish()).toBe('Net profit 2,263 coins in 24 weeks');
+    expect(await p.finish(1000)).toBe('Net profit 2,263 coins in 24 weeks');
     expect(await p.page.locator('#next-scenario').count()).toBe(0); // the last scenario
     await p.page.click('#results-menu');
     await p.page.waitForSelector('#scenario-1');

@@ -82,9 +82,27 @@ fn golden_path_profits_from_the_orders_the_dividend_and_the_coupon() {
         "coupon {coupon}"
     );
     assert_eq!(s.weeks, 22);
-    assert!(s.net_profit >= 2500, "{s:?}");
+    assert!(s.net_profit >= 3250, "golden must clear 1.3x target: {s:?}");
     assert_eq!(ended(&ev), Some((s.net_profit, 2)));
     println!("s2 golden: {s:?}");
+}
+
+#[test]
+fn scheduled_decisions_are_never_more_than_three_weeks_apart() {
+    use fes_sim::scenario::Trigger;
+    let def = def("s2_shares_and_bonds");
+    let mut weeks = vec![0, def.weeks];
+    for event in &def.events {
+        let week = match event.trigger {
+            Trigger::Week(w) => w,
+            _ => event.fallback_week.expect("every event needs a deadline"),
+        };
+        weeks.push(week);
+    }
+    weeks.sort();
+    for pair in weeks.windows(2) {
+        assert!(pair[1] - pair[0] <= 3, "quiet gap: {pair:?}");
+    }
 }
 
 #[test]
@@ -113,4 +131,7 @@ fn ignoring_everything_ends_with_an_honest_statement() {
     assert_eq!(ended(&ev), Some((0, 0)));
     assert_eq!(paid(&ev, "dividend"), 0, "no shares, no dividend");
     assert_eq!(paid(&ev, "coupon"), 0, "no bonds, no coupon");
+    for id in ["review_bonds", "coupon_choice"] {
+        assert!(dialogs(&ev).iter().any(|d| d.0 == id), "missing {id}");
+    }
 }

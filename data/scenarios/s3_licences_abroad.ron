@@ -5,7 +5,7 @@
 (
     id: "s3_licences_abroad",
     title: "Licences and Trade Abroad",
-    intro: "You are a merchant of the regional market k0n0r0 with 30,000 coins. The neighbouring nation k0n1 is short of g19_0, a special good your region makes: there it sells only under k0n1's licence. Carrying any cargo out of your nation k0n0 needs its international trade licence (300 coins), sold here. Buy, travel k0n0 - k0 - k0n1, buy the k0n1 licence there, sell, and be home again by week 24.",
+    intro: "Start in k0n0r0 with 30,000 coins. Buy g19_0 here and sell it in k0n1, where supplies are short. First buy the international trade licence here for 300 coins. Travel through k0n0 and k0 to k0n1, then buy its licence for g19_0 before selling. Return to k0n0r0 by week 24.",
     seed: 33,
     start_node: "k0n0r0",
     start_coins: 30000,
@@ -14,20 +14,20 @@
     licences_anywhere: true,
     licensed: [(good: "g19_0", nation: "k0n1")],
     objectives: [
-        (id: "sold_abroad", text: "Sell g19_0 in the nation k0n1.", goal: NetProfit(1)),
-        (id: "profit", text: "Make 1,000 coins of profit after licence costs.", goal: NetProfit(1000)),
-        (id: "home", text: "Be back at k0n0r0 by week 24.", goal: BackAt(node: "k0n0r0", after: "abroad")),
+        (id: "sold_abroad", text: "Earn your first coin of net profit.", goal: NetProfit(1)),
+        (id: "profit", text: "Earn 1,000 coins of net profit after licence costs.", goal: NetProfit(1000)),
+        (id: "home", text: "Return to k0n0r0 by week 24.", goal: BackAt(node: "k0n0r0", after: "abroad")),
     ],
     events: [
         (id: "shortage", trigger: Week(1), effects: [
-            PriceShock(node: "k0n1", good: "g19_0", percent: 1000, weeks: 20, text: "Shortage in k0n1: its markets will pay far more for g19_0 in the coming weeks. Its traders' purses are thin, though: they buy about 40 a week."),
+            PriceShock(node: "k0n1", good: "g19_0", percent: 1000, weeks: 20, text: "k0n1 is short of g19_0 and will pay much more for it over the next few weeks. Traders have limited cash: expect to sell about 40 units a week."),
         ]),
         (id: "road_warning", trigger: PlayerAt("k0"), fallback_week: 12, effects: [
-            Dialog("At the hub k0: robbers watch the road into k0n1. Guards cut the chance of an attack by 70%; insurance refunds 80% of cargo lost."),
+            Dialog("Robbers are watching the road from k0 to k0n1. Guards reduce the attack chance by 70%. Insurance refunds 80% of lost cargo value."),
             Raid(from: "k0", to: "k0n1", loss_permille: 500),
         ]),
         (id: "abroad", trigger: PlayerAt("k0n1"), fallback_week: 99, effects: [
-            Dialog("Welcome to k0n1. Buy its licence for g19_0 at the market before you sell; without it, traders may not buy."),
+            Dialog("Buy the k0n1 licence for g19_0 before selling. Traders cannot buy this good from you without it."),
         ]),
     ],
 )

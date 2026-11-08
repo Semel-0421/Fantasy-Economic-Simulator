@@ -75,13 +75,26 @@ fn golden_path_reaches_three_times_the_starting_coins() {
     );
     ev.extend(week(&mut sim));
     assert!(sim.scenario_contracts()[0].delivered);
+    assert!(
+        ev.iter().any(|e| matches!(e,
+            E::ScenarioDialog { event, text, .. }
+            if event == "delivered" && text.contains("Promised reward: 1,500 coins.")
+        )),
+        "delivery dialog must state the promise separately from payment"
+    );
+    assert!(
+        ev.iter().any(|e| matches!(e,
+            E::ScenarioDialog { event, coins: 1500, .. } if event == "tools"
+        )),
+        "the separate delivery payment keeps the actual amount"
+    );
     let weeks_to_goal = statement(&sim).weeks;
     assert!(coins(&sim) >= 3 * 500, "coins {}", coins(&sim));
     ev.extend(finish(&mut sim));
     let s = statement(&sim);
     assert_honest(&s);
     assert_eq!(s.weeks, 20);
-    assert!(s.net_profit >= 1000, "{s:?}");
+    assert!(s.net_profit >= 1300, "golden must clear 1.3x target: {s:?}");
     assert_eq!(ended(&ev), Some((s.net_profit, 3)));
     assert!(s.costs.protection > 0 && s.costs.losses == 0, "{s:?}");
     println!("s1 golden: goal reached in week {weeks_to_goal}, {s:?}");

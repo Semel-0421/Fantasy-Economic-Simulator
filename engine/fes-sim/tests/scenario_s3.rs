@@ -74,7 +74,7 @@ fn golden_path_sells_abroad_under_licence_and_returns_in_time() {
     ev.extend(finish(&mut sim));
     let s = statement(&sim);
     assert_honest(&s);
-    assert!(s.net_profit >= 1000, "{s:?}");
+    assert!(s.net_profit >= 1300, "golden must clear 1.3x target: {s:?}");
     assert!(s.costs.other >= 300 + 2000, "licences are costs: {s:?}");
     assert_eq!(ended(&ev), Some((s.net_profit, 3)));
     println!("s3 golden: home in week {home_week}, {s:?}");

@@ -85,3 +85,27 @@ pub fn continent_count(sim: &Simulation) -> usize {
         .get::<fes_sim::economy::CurrencyState>()
         .continent_count()
 }
+
+/// Every continent's money equals its coin supply (the C# keep-the-coins asserts).
+pub fn assert_conserved(sim: &Simulation, what: &str) {
+    let supply = sim
+        .world()
+        .get::<fes_sim::economy::CurrencyState>()
+        .coin_supply
+        .clone();
+    for (c, expected) in supply.iter().enumerate() {
+        assert_eq!(*expected, continent_money(sim, c), "{what}, continent {c}");
+    }
+}
+
+/// Saves and loads the simulation; the loaded one has the same world hash.
+pub fn assert_saved_and_loaded(sim: &Simulation) {
+    let services = &sim.context().services;
+    let loaded = Simulation::load(
+        (*services.database).clone(),
+        (*services.map).clone(),
+        &sim.save(),
+    )
+    .expect("load");
+    assert_eq!(sim.world_hash(), loaded.world_hash());
+}

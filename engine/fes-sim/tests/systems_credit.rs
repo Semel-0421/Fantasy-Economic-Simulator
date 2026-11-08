@@ -1,8 +1,7 @@
-//! `agents.credit` C# unit tests ported (`CreditTests`, `BillMarketTests`). Coin-conservation
-//! asserts are not ported (no Rust `ContinentMoney`).
+//! `agents.credit` C# unit tests ported (`CreditTests`, `BillMarketTests`), coin conservation included.
 mod common;
 
-use common::{build, sample_config};
+use common::{build, continent_count, continent_money, sample_config};
 use fes_core::{Fx, WorldLevel};
 use fes_sim::agents::credit_system::{
     bill_price, bill_room, CreditSystem, BILL_BANK, BILL_HOUSEHOLDS,
@@ -504,4 +503,51 @@ fn bank_lends_its_excess_and_is_paid_back() {
     let lower = sim.context().world.get::<BankState>().reserve[0];
     run_loans(&mut sim);
     assert!(sim.context().world.get::<BankState>().reserve[0] > lower);
+}
+
+/// Each continent's money less its coin supply.
+fn surplus(sim: &Simulation) -> Vec<i64> {
+    let supply = &sim
+        .context()
+        .world
+        .get::<fes_sim::economy::CurrencyState>()
+        .coin_supply;
+    (0..continent_count(sim))
+        .map(|c| continent_money(sim, c) - supply[c])
+        .collect()
+}
+
+#[test]
+fn selling_a_bill_keeps_the_coins() {
+    let (mut sim, _, row) = scene(-100);
+    let before = surplus(&sim);
+    sim.step().unwrap();
+    assert!(held_by(&sim, row, BILL_HOUSEHOLDS) > 0);
+    assert_eq!(before, surplus(&sim));
+}
+
+#[test]
+fn credit_conserves_coins() {
+    let mut sim = build_with(&[
+        "credit.bill_cap_weeks,8",
+        "credit.bill_producers,1",
+        "credit.state_debt_permille,300",
+        "credit.working_weeks,4",
+        "credit.company_debt_permille,500",
+        "merchants.return_home,1",
+        "markets.trader_float_permille,100",
+        "lod.mode,1",
+    ]);
+    for t in 0..3 * 52 {
+        sim.step().unwrap();
+        for c in 0..continent_count(&sim) {
+            let supply = sim
+                .context()
+                .world
+                .get::<fes_sim::economy::CurrencyState>()
+                .coin_supply[c];
+            assert_eq!(supply, continent_money(&sim, c), "turn {t}");
+        }
+    }
+    assert!(sim.context().services.get::<CreditStats>().bills_issued > 0);
 }

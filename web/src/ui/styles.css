@@ -9,6 +9,7 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--paper);
@@ -78,6 +79,15 @@ h3 { font-size: 1rem; font-weight: normal; margin: 0.75rem 0 0.35rem; }
 .check input { width: 1.2rem; height: 1.2rem; }
 .routes { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .routes button { min-height: 40px; padding: 0.3rem 0.6rem; }
+.scroll { overflow-x: auto; max-height: 20rem; overflow-y: auto; }
+.grid { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.grid th, .grid td { padding: 0.15rem 0.35rem; text-align: right; border-bottom: 1px solid var(--paper-dark); }
+.grid th:first-child, .grid td:first-child { text-align: left; }
+.grid tr.chosen { background: #f7d98f; }
+button.link { min-height: 36px; padding: 0.15rem 0.3rem; border: none; background: none; text-decoration: underline; text-align: left; }
+.trade { margin-top: 0.5rem; }
+#qty { width: 5.5rem; min-height: 44px; font: inherit; padding: 0 0.4rem; }
+.rows li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.15rem 0; border-bottom: 1px dotted var(--paper-dark); }
 .error { margin: 0.4rem 0; padding: 0.4rem 0.6rem; border: 2px solid var(--danger); color: var(--danger); background: #fff3ee; }
 .logbox { min-width: 0; }
 .log { max-height: 24rem; overflow: auto; margin: 0; padding: 0; list-style: none; border: 1px solid var(--ink); background: var(--paper); }

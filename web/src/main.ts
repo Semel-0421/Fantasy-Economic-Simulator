@@ -9,6 +9,9 @@ import { createMap, type MapScreen } from './map/map';
 import type { MapData } from './map/layout';
 import { rejectionsIn } from './ui/errors';
 import { travelPanel, type TravelPanel } from './ui/travel';
+import { goodLabel, marketPanel, type MarketPanel } from './ui/market';
+import { cargoPanel } from './ui/cargo';
+import { pursePanel } from './ui/purse';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
@@ -22,6 +25,10 @@ let mapScreen: MapScreen | null = null;
 interface Screens {
   hud: Hud;
   travel: TravelPanel;
+  market: MarketPanel;
+  cargo: ReturnType<typeof cargoPanel>;
+  purse: ReturnType<typeof pursePanel>;
+  map: MapData;
 }
 
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -79,7 +86,8 @@ async function begin(starting: Promise<SimBridge>): Promise<void> {
     save: (slot) => void saveNow(game, hud, slot),
     menu: () => void showMenu(),
   });
-  const map: MapData = await game.view('map');
+  const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
+  const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
   const select = (node: number): void => {
     mapScreen?.select(node);
     travel.select(node);
@@ -91,7 +99,19 @@ async function begin(starting: Promise<SimBridge>): Promise<void> {
     ordered: (text) => hud.addMessage(text),
   });
   hud.mapTools.append(travel.node);
-  const screens: Screens = { hud, travel };
+  const screens: Screens = {
+    hud,
+    travel,
+    map,
+    market: marketPanel(goodName, {
+      preview: (c) => game.preview(c),
+      queue: (c) => game.queue(c),
+      ordered: (text) => hud.addMessage(text),
+    }),
+    cargo: cargoPanel(goodName),
+    purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
+  };
+  hud.side.append(screens.market.node, screens.cargo.node, screens.purse.node);
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
     // The browser tests find towns on the canvas through this handle (development builds only).
@@ -103,8 +123,12 @@ async function begin(starting: Promise<SimBridge>): Promise<void> {
 }
 
 async function refresh(game: SimBridge, s: Screens): Promise<void> {
-  const [turn, purse] = await Promise.all([game.turn(), game.view('purse')]);
+  const [turn, purse, cargo] = await Promise.all([game.turn(), game.view('purse'), game.view('cargo')]);
+  const market = await game.view('market', purse.node);
   s.hud.setState(turn, purse.coins, purse.local_continent);
+  s.market.update(s.map.nodes[purse.node]?.name ?? '', market.quotes, new Map(cargo.cart));
+  s.cargo.update(cargo);
+  s.purse.update(purse);
   s.travel.setPlayer(purse.node, purse.travel_destination, purse.arrival_turn);
   mapScreen?.setPlayer(purse.node, purse.travel_destination);
 }

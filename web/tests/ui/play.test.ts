@@ -33,6 +33,11 @@ async function game(width = 1200): Promise<{ page: Page; errors: string[] }> {
   return { page, errors };
 }
 
+async function nextWeek(page: Page, date: string): Promise<void> {
+  await page.click('#next');
+  await page.waitForFunction((d) => document.getElementById('date')?.textContent === d, date, { timeout: 60000 });
+}
+
 const screenOf = (page: Page, node: number): Promise<Pt> =>
   page.evaluate((n) => (window as unknown as { __fesMap: { screenOf(n: number): Pt } }).__fesMap.screenOf(n), node);
 
@@ -71,3 +76,46 @@ describe('map', () => {
     expect(errors).toEqual([]);
   }, 120000);
 });
+
+describe('trading screens', () => {
+  it('previews, refuses with the simulation message, orders and refreshes after the turn', async () => {
+    const { page, errors } = await game();
+    await page.waitForSelector('#market-table tbody tr');
+    expect(await page.textContent('#market-title')).toMatch(/^Market - /);
+    const first = page.locator('#market-table tbody tr').first();
+    await first.locator('button').click();
+    expect(await page.textContent('#trade-good')).toBe(await first.locator('button').textContent());
+    await page.click('#sell');
+    await page.waitForFunction(() => !document.getElementById('trade-error')!.hidden);
+    expect(await page.textContent('#trade-error')).toBe('The cart holds none of this good.');
+    expect(await page.isHidden('#trade-confirm')).toBe(true);
+
+    // Markets open empty; after one week there is stock to buy.
+    await nextWeek(page, 'Year 1, Week 2');
+    const row = page.locator('#market-table tbody tr').filter({ has: page.locator('td:nth-child(4):not(:text-is("0")):not(:text-is("1"))') }).first();
+    const good = await row.getAttribute('data-good');
+    const name = await row.locator('button').textContent();
+    await row.locator('button').click();
+    await page.fill('#qty', '2');
+    await page.click('#buy');
+    await page.waitForFunction(() => !document.getElementById('trade-confirm')!.hidden);
+    expect(await page.isHidden('#trade-error')).toBe(true);
+    expect(await page.textContent('#trade-preview')).toMatch(/^Buy 2 .* at \d+ each: \d+ coins\.$/);
+    await page.click('#confirm');
+    await page.waitForFunction(() => document.querySelector('#log .message')?.textContent?.startsWith('Order for this week'));
+    const coinsBefore = await page.textContent('#coins');
+
+    await nextWeek(page, 'Year 1, Week 3');
+    await page.waitForFunction((g) => document.querySelector(`#market-table tr[data-good="${g}"] td:last-child`)?.textContent === '2', good);
+    expect(await page.textContent('#cart')).toContain(name!);
+    expect(await page.textContent('#coins')).not.toBe(coinsBefore);
+    expect(errors).toEqual([]);
+  }, 120000);
+
+  it('fits 360 px with the map and panels and no sideways scroll', async () => {
+    const { page } = await game(360);
+    await page.waitForSelector('#market-table tbody tr');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= 360)).toBe(true);
+  }, 120000);
+});
+

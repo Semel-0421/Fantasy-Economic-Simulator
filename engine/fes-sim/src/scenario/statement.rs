@@ -39,7 +39,7 @@ impl StatementCosts {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatementView {
-    /// Goods sold.
+    /// Goods sold, plus contract rewards and dividends the script paid.
     pub revenue: i64,
     pub costs: StatementCosts,
     /// `end_coins - start_coins`, the scenario's score.
@@ -78,6 +78,11 @@ impl StatementLedger {
         }
     }
 
+    /// The continent whose coin the statement counts in.
+    pub fn home(&self) -> usize {
+        self.home
+    }
+
     /// Adds one week's events.
     pub fn record(&mut self, ctx: &SimContext, events: &[SimEventRecord]) {
         for e in events {
@@ -111,6 +116,11 @@ impl StatementLedger {
             }
             SimEventRecord::TripEncounter(x) => {
                 self.losses += to_home(x.loss_value - x.refund, self.trip_continent);
+            }
+            SimEventRecord::ScenarioDialog {
+                coins, continent, ..
+            } if *coins != 0 => {
+                self.revenue += to_home(*coins, *continent as usize);
             }
             _ => {}
         }

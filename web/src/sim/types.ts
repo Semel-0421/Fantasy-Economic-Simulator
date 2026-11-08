@@ -123,6 +123,10 @@ export const simEventSchema = tag({
   CommandApplied: obj({ command: opt(playerCommandSchema), turn: num }),
   CommandRejected: obj({ command: opt(playerCommandSchema), reason: str, turn: num }),
   Other: obj({ type_name: str }),
+  /** A scripted scenario event (or a delivered scenario contract, `event` = contract id). */
+  ScenarioDialog: obj({ event: str, text: str, coins: num, continent: num, turn: num }),
+  ObjectiveDone: obj({ objective: str, turn: num }),
+  ScenarioEnded: obj({ net_profit: num, objectives_done: num, turn: num }),
 });
 export type SimEventRecord = Infer<typeof simEventSchema>;
 
@@ -181,6 +185,32 @@ export const viewSchemas = {
     routes: arr(obj({ from: num, to: num, turns: num, terrain: num })),
   }),
   goods: arr(obj({ id: num, key: str, base_price: num })),
+  /** The scenario results statement (null in free mode); coins of the start continent. */
+  results: opt(
+    obj({
+      revenue: num,
+      costs: obj({ purchases: num, travel: num, protection: num, losses: num, other: num }),
+      net_profit: num,
+      start_coins: num,
+      end_coins: num,
+      weeks: num,
+    }),
+  ),
+  objectives: arr(obj({ id: str, text: str, done: bool, done_week: num })),
+  scenario_contracts: arr(
+    obj({
+      id: str,
+      good: num,
+      quantity: num,
+      node: num,
+      reward: num,
+      deadline_week: num,
+      text: str,
+      accepted: bool,
+      delivered: bool,
+      expired: bool,
+    }),
+  ),
 } as const;
 
 export type ViewName = keyof typeof viewSchemas;

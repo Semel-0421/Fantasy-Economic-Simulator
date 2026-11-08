@@ -5,7 +5,7 @@ use crate::context::SimContext;
 use crate::error::SimError;
 use crate::event_record::SimEventRecord;
 use crate::pipeline::TurnPipeline;
-use crate::scenario::{ScenarioRun, StatementView};
+use crate::scenario::{ObjectiveView, ScenarioContract, ScenarioRun, StatementView};
 use crate::world::WorldState;
 use fes_data::database::GameDatabase;
 use fes_data::MapDef;
@@ -38,8 +38,11 @@ impl Simulation {
     /// Runs one turn.
     pub fn step(&mut self) -> Result<TurnReport, SimError> {
         let turn = self.turn();
+        if self.scenario.as_ref().is_some_and(|s| s.ended) {
+            return Err(SimError::Invalid("The scenario has ended.".into()));
+        }
         self.pipeline.advance(&mut self.ctx)?;
-        let events: Vec<SimEventRecord> = self
+        let mut events: Vec<SimEventRecord> = self
             .ctx
             .events
             .turn_log()
@@ -47,7 +50,7 @@ impl Simulation {
             .map(|e| SimEventRecord::of(e.as_ref()))
             .collect();
         if let Some(run) = self.scenario.as_mut() {
-            run.after_turn(&mut self.ctx, &events);
+            run.after_turn(&mut self.ctx, &mut events);
         }
         Ok(TurnReport { turn, events })
     }
@@ -128,6 +131,34 @@ impl Simulation {
     /// The scenario's results statement so far (`None` in free mode).
     pub fn statement(&self) -> Option<StatementView> {
         self.scenario.as_ref().map(|s| s.ledger.view(&self.ctx))
+    }
+
+    /// The scenario's objectives (empty in free mode).
+    pub fn objectives(&self) -> Vec<ObjectiveView> {
+        self.scenario
+            .as_ref()
+            .map_or_else(Vec::new, |s| s.objectives.views())
+    }
+
+    /// The contracts the scenario script offered (empty in free mode).
+    pub fn scenario_contracts(&self) -> Vec<ScenarioContract> {
+        self.scenario
+            .as_ref()
+            .map_or_else(Vec::new, |s| s.script.contracts.clone())
+    }
+
+    /// Accepts a contract the scenario script offered.
+    pub fn accept_contract(&mut self, id: &str) -> Result<(), SimError> {
+        let run = self
+            .scenario
+            .as_mut()
+            .ok_or_else(|| SimError::Invalid("Not a scenario.".into()))?;
+        run.script.accept(id).map_err(SimError::Invalid)
+    }
+
+    /// True once the scenario's last week has run.
+    pub fn scenario_ended(&self) -> bool {
+        self.scenario.as_ref().is_some_and(|s| s.ended)
     }
 
     pub fn world_hash(&self) -> u64 {

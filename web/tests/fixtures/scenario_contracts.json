@@ -1,0 +1,14 @@
+[
+  {
+    "id": "c",
+    "good": 1,
+    "quantity": 2,
+    "node": 8,
+    "reward": 90,
+    "deadline_week": 3,
+    "text": "Bring",
+    "accepted": false,
+    "delivered": false,
+    "expired": false
+  }
+]

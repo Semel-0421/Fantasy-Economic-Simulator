@@ -385,5 +385,27 @@
     "Other": {
       "type_name": "TestEvent"
     }
+  },
+  {
+    "ScenarioDialog": {
+      "event": "offer",
+      "text": "Bring grain",
+      "coins": 900,
+      "continent": 0,
+      "turn": 4
+    }
+  },
+  {
+    "ObjectiveDone": {
+      "objective": "deliver",
+      "turn": 5
+    }
+  },
+  {
+    "ScenarioEnded": {
+      "net_profit": -120,
+      "objectives_done": 1,
+      "turn": 20
+    }
   }
 ]

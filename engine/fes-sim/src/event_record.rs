@@ -20,6 +20,24 @@ macro_rules! event_records {
                 reason: String,
                 turn: i32,
             },
+            /// A scripted scenario event fired (or a scenario contract was delivered, `event` then
+            /// being the contract id): its text from the scenario file, and the coins it paid the
+            /// player (`continent` is their currency, -1 when none).
+            ScenarioDialog {
+                event: String,
+                text: String,
+                coins: i64,
+                continent: i32,
+                turn: i32,
+            },
+            /// A scenario objective was reached.
+            ObjectiveDone { objective: String, turn: i32 },
+            /// The scenario's last week ended; the results screen follows.
+            ScenarioEnded {
+                net_profit: i64,
+                objectives_done: i32,
+                turn: i32,
+            },
             /// An event type this enum does not list (test events): its Rust type name.
             Other { type_name: String },
         }
@@ -54,6 +72,9 @@ macro_rules! event_records {
                     $(Self::$variant(_) => stringify!($variant),)*
                     Self::CommandApplied { .. } => "CommandApplied",
                     Self::CommandRejected { .. } => "CommandRejected",
+                    Self::ScenarioDialog { .. } => "ScenarioDialog",
+                    Self::ObjectiveDone { .. } => "ObjectiveDone",
+                    Self::ScenarioEnded { .. } => "ScenarioEnded",
                     Self::Other { type_name } => type_name,
                 }
             }

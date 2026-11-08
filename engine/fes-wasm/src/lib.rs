@@ -5,6 +5,7 @@ use fes_data::database::GameDatabase;
 use fes_data::{InMemoryDataSource, MapDef};
 use fes_sim::commands::CommandResult;
 use fes_sim::economy::pricing::market_view;
+use fes_sim::scenario::ScenarioDef;
 use fes_sim::{views, PlayerCommand, SimEventRecord, Simulation, SimulationBuilder};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -90,6 +91,23 @@ impl WasmSim {
         Ok(WasmSim { sim })
     }
 
+    /// Builds a scenario's world from the data files and the scenario file's text (RON).
+    pub fn new_scenario(files: JsValue, scenario_text: &str) -> Result<WasmSim, JsError> {
+        let (db, map) = definitions(files)?;
+        let def = ScenarioDef::parse(scenario_text).map_err(|e| JsError::new(&e))?;
+        let sim = SimulationBuilder::new(db, map, def.seed)
+            .with_default_modules()
+            .map(|b| b.scenario(def))
+            .and_then(SimulationBuilder::build)
+            .map_err(err)?;
+        Ok(WasmSim { sim })
+    }
+
+    /// Accepts a contract the scenario offered.
+    pub fn accept_contract(&mut self, id: &str) -> Result<(), JsError> {
+        self.sim.accept_contract(id).map_err(err)
+    }
+
     /// Rebuilds a world from the data files and a save.
     pub fn load(files: JsValue, bytes: &[u8]) -> Result<WasmSim, JsError> {
         let (db, map) = definitions(files)?;
@@ -129,7 +147,9 @@ impl WasmSim {
         to_js(&result)
     }
 
-    /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map, or goods.
+    /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map,
+    /// goods, or in a scenario results (the scenario statement; null in free mode), objectives and
+    /// scenario_contracts.
     pub fn view(&self, name: &str, arg: JsValue) -> Result<JsValue, JsError> {
         let ctx = self.sim.context();
         match name {
@@ -142,6 +162,9 @@ impl WasmSim {
             "market" => self.market(arg),
             "map" => to_js(&views::map(ctx)),
             "goods" => to_js(&views::goods(ctx)),
+            "results" => to_js(&self.sim.statement()),
+            "objectives" => to_js(&self.sim.objectives()),
+            "scenario_contracts" => to_js(&self.sim.scenario_contracts()),
             _ => Err(JsError::new(&format!("Unknown view '{name}'."))),
         }
     }

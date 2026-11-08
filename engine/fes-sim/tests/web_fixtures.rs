@@ -1,7 +1,7 @@
 //! Writes one JSON sample of every `PlayerCommand` and `SimEventRecord` variant, and of every view
 //! of a running world, to `web/tests/fixtures/`. The web app's Vitest suite parses them, so the
 //! hand-written TypeScript types in `web/src/sim/types.ts` cannot drift from the serde shapes.
-#![cfg(feature = "serde")]
+#![cfg(feature = "scenario")]
 mod common;
 
 use common::build_sample;
@@ -463,6 +463,22 @@ fn events_d() -> Vec<E> {
         E::Other {
             type_name: "TestEvent".to_string(),
         },
+        E::ScenarioDialog {
+            event: "offer".to_string(),
+            text: "Bring grain".to_string(),
+            coins: 900,
+            continent: 0,
+            turn: 4,
+        },
+        E::ObjectiveDone {
+            objective: "deliver".to_string(),
+            turn: 5,
+        },
+        E::ScenarioEnded {
+            net_profit: -120,
+            objectives_done: 1,
+            turn: 20,
+        },
     ]
 }
 
@@ -472,8 +488,8 @@ fn write_web_fixtures() {
     assert_eq!(commands.len(), 34, "one sample per PlayerCommand variant");
     write("commands.json", &commands);
     let events = events();
-    // 49 listed event types + 4 samples of the three generic variants.
-    assert_eq!(events.len(), 49 + 4);
+    // 49 listed event types + 4 samples of the three generic variants + 3 scenario events.
+    assert_eq!(events.len(), 49 + 4 + 3);
     write("events.json", &events);
 
     let mut sim = build_sample(&[]);
@@ -501,6 +517,26 @@ fn write_web_fixtures() {
         })
         .collect();
     write("market.json", &serde_json::json!({ "quotes": quotes }));
+    write_scenario_views();
+}
+
+/// The scenario views (results statement, objectives, scenario contracts) of a running scenario.
+fn write_scenario_views() {
+    let text = r#"(id: "t", title: "T", seed: 3, start_node: "aur_n1_r1_c1_v1", start_coins: 500,
+        weeks: 4, objectives: [(id: "o", text: "Profit", goal: NetProfit(10))],
+        events: [(id: "e", trigger: Week(1), effects: [OfferContract(id: "c", good: "wheat",
+        quantity: 2, node: "aur_n1_r1_c1", reward: 90, deadline_week: 3, text: "Bring")])])"#;
+    let def = fes_sim::scenario::ScenarioDef::parse(text).expect("scenario");
+    let source = fes_data::FileDataSource::new(common::data_dir());
+    let mut sim = fes_sim::SimulationBuilder::from_data(&source, 1)
+        .expect("builder")
+        .scenario(def)
+        .build()
+        .expect("build");
+    sim.step().expect("step");
+    write("results.json", &sim.statement().expect("statement"));
+    write("objectives.json", &sim.objectives());
+    write("scenario_contracts.json", &sim.scenario_contracts());
 }
 
 fn commands() -> Vec<P> {

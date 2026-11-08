@@ -8,7 +8,7 @@ use crate::economy::EconomyModule;
 use crate::error::SimError;
 use crate::module::{module_order, Module, SimBuilder};
 use crate::pipeline::System;
-use crate::scenario::{ScenarioRules, ScenarioRun};
+use crate::scenario::{ScenarioDef, ScenarioRules, ScenarioRun};
 use crate::schedule::TierSchedule;
 use crate::simulation::Simulation;
 use crate::world::{WorldModule, WorldState};
@@ -28,6 +28,7 @@ pub struct SimulationBuilder {
     modules: Vec<Box<dyn Module>>,
     overrides: Vec<SystemOverride>,
     scenario: Option<ScenarioRules>,
+    scenario_def: Option<ScenarioDef>,
 }
 
 impl SimulationBuilder {
@@ -44,6 +45,7 @@ impl SimulationBuilder {
             modules: Vec::new(),
             overrides: Vec::new(),
             scenario: None,
+            scenario_def: None,
         }
     }
 
@@ -99,6 +101,15 @@ impl SimulationBuilder {
         self
     }
 
+    /// Runs the world as this scenario: its seed, the player at its start with its coins, its
+    /// script and objectives, and the scenario rules (no random events or encounters).
+    pub fn scenario(mut self, def: ScenarioDef) -> Self {
+        self.seed = def.seed;
+        self.scenario = Some(ScenarioRules::scenario());
+        self.scenario_def = Some(def);
+        self
+    }
+
     /// C# `SimulationBuilder.Build`: clock, services, overrides, the command system, the modules in
     /// dependency order, the pipeline, then `initialize`.
     pub fn build(self) -> Result<Simulation, SimError> {
@@ -127,7 +138,9 @@ impl SimulationBuilder {
         let hash = data_hash(&self.database, &self.map);
         let mut sim = Simulation::new(ctx, pipeline, hash);
         if scenario {
-            sim.scenario = Some(ScenarioRun::start(&sim.ctx));
+            let run = ScenarioRun::start(&mut sim.ctx, self.scenario_def.as_ref())
+                .map_err(SimError::Invalid)?;
+            sim.scenario = Some(run);
         }
         Ok(sim)
     }

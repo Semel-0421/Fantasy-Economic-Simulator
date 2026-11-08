@@ -416,10 +416,29 @@ impl Command for Travel {
 impl Travel {
     fn encounter(&self, ctx: &mut SimContext, q: TripQuote) {
         let turn = ctx.turn();
-        if crate::scenario::rules::encounters_off(&ctx.services) {
+        let raid = take_raid(ctx, q.route);
+        if raid.is_some() && self.guards {
+            // A scripted raid that the guards beat off: an encounter that took nothing.
+            ctx.events.publish(TripEncounter {
+                destination: self.destination,
+                loss: LOSS_NONE,
+                loss_value: 0,
+                refund: 0,
+                turn,
+            });
             return;
         }
-        let loss = roll_encounter(ctx.seed(), turn, 0, 0, q.encounter_chance);
+        if raid.is_none() && crate::scenario::rules::encounters_off(&ctx.services) {
+            return;
+        }
+        let config = &ctx.services.database.config;
+        let (loss, cargo_share) = match raid {
+            Some(permille) => (LOSS_CARGO, Fx::from_permille(i64::from(permille))),
+            None => (
+                roll_encounter(ctx.seed(), turn, 0, 0, q.encounter_chance),
+                config.encounter_cargo_loss,
+            ),
+        };
         if loss == LOSS_NONE {
             return;
         }
@@ -434,11 +453,7 @@ impl Travel {
             pay_households(&mut ctx.world, n, node, value);
             value
         } else {
-            let lost = take_cargo(
-                ctx.world.get_mut::<CargoTable>(),
-                PLAYER_CART,
-                config.encounter_cargo_loss,
-            );
+            let lost = take_cargo(ctx.world.get_mut::<CargoTable>(), PLAYER_CART, cargo_share);
             let lost_quote = quote(
                 &ctx.world,
                 &ctx.services,
@@ -468,6 +483,15 @@ impl Travel {
             turn,
         });
     }
+}
+
+/// Takes the scripted raid waiting on `route` (scenarios only): its cargo loss in permille.
+fn take_raid(ctx: &mut SimContext, route: i32) -> Option<i32> {
+    let rules = ctx
+        .services
+        .try_get_mut::<crate::scenario::ScenarioRules>()?;
+    let i = rules.pending_raids.iter().position(|r| r.0 == route)?;
+    Some(rules.pending_raids.remove(i).1)
 }
 
 /// C# `Encounters.TakeCargo`: takes `share` of every carried good; returns what was lost.

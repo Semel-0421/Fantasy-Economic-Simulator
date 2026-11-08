@@ -43,6 +43,13 @@ function copyData() {
   for (const name of readdirSync(from)) {
     if (name.endsWith('.csv')) copyFileSync(join(from, name), join(to, name));
   }
+  // Scenario files (data/scenarios/*.ron, format in its README) ship as public/data/scenarios.
+  const scenarios = join(repo, 'data', 'scenarios');
+  const scenariosTo = join(to, 'scenarios');
+  mkdirSync(scenariosTo, { recursive: true });
+  for (const name of readdirSync(scenarios)) {
+    if (name.endsWith('.ron')) copyFileSync(join(scenarios, name), join(scenariosTo, name));
+  }
 }
 
 if (process.argv.includes('--force') || !existsSync(join(pkg, 'fes_wasm_bg.wasm'))) buildWasm();

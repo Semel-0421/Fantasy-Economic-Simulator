@@ -14,7 +14,7 @@ profile = []
 [dependencies]
 fes-core = { path = "../fes-core", features = ["serde"] }
 fes-data = { path = "../fes-data" }
-fes-sim = { path = "../fes-sim", features = ["serde"] }
+fes-sim = { path = "../fes-sim", features = ["serde", "scenario"] }
 serde = { workspace = true }
 serde-wasm-bindgen = "=0.6.5"
 wasm-bindgen = "=0.2.100"

@@ -1,0 +1,14 @@
+{
+  "revenue": 0,
+  "costs": {
+    "purchases": 0,
+    "travel": 0,
+    "protection": 0,
+    "losses": 0,
+    "other": 0
+  },
+  "net_profit": 0,
+  "start_coins": 500,
+  "end_coins": 500,
+  "weeks": 1
+}

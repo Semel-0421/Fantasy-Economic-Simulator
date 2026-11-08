@@ -9,9 +9,12 @@ publish.workspace = true
 testing = ["fes-core/testing", "dep:flate2", "dep:serde_json"]
 # Serialize/Deserialize on plain-data types for front ends (events, commands, views).
 serde = ["dep:serde", "fes-core/serde"]
+# Reading scenario data files (RON, data/scenarios/README.md).
+scenario = ["serde", "dep:ron"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
+ron = { version = "=0.8.1", optional = true }
 fes-core = { path = "../fes-core" }
 fes-data = { path = "../fes-data" }
 fes-save = { path = "../fes-save" }

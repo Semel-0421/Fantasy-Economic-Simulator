@@ -28,8 +28,13 @@ pub enum Opening {
     Off,
     /// Waiting for the player's first purchase.
     Waiting,
-    /// The first purchase: this good, at this price a unit.
-    Bought { good: i32, price: i32 },
+    /// The first purchase: this good, at this price a unit, this many units (only these sell at
+    /// the protected price).
+    Bought {
+        good: i32,
+        price: i32,
+        quantity: i32,
+    },
 }
 
 impl ScenarioRules {
@@ -46,11 +51,16 @@ impl ScenarioRules {
     }
 }
 
-/// The player bought `good` at `price` a unit: the first purchase of a protected opening is noted.
-pub fn note_purchase(services: &mut Services, good: i32, price: i32) {
+/// The player bought `quantity` of `good` at `price` a unit: the first purchase of a protected
+/// opening is noted.
+pub fn note_purchase(services: &mut Services, good: i32, price: i32, quantity: i32) {
     if let Some(r) = services.try_get_mut::<ScenarioRules>() {
         if r.active && r.opening == Opening::Waiting {
-            r.opening = Opening::Bought { good, price };
+            r.opening = Opening::Bought {
+                good,
+                price,
+                quantity,
+            };
         }
     }
 }
@@ -58,13 +68,27 @@ pub fn note_purchase(services: &mut Services, good: i32, price: i32) {
 /// The trader's offer for `good` during a protected opening: 1.5 times the price paid for the
 /// first goods bought, when that is more than `offer`. Otherwise `offer`.
 pub fn opening_offer(services: &Services, good: i32, offer: i32) -> i32 {
+    opening(services, good).map_or(offer, |(price, _)| offer.max(price.saturating_mul(3) / 2))
+}
+
+/// How many units of `good` still sell at the protected opening's offer (the first purchase's).
+pub fn opening_quantity(services: &Services, good: i32) -> i32 {
+    opening(services, good).map_or(0, |(_, quantity)| quantity)
+}
+
+fn opening(services: &Services, good: i32) -> Option<(i32, i32)> {
     match services.try_get::<ScenarioRules>() {
         Some(ScenarioRules {
             active: true,
-            opening: Opening::Bought { good: g, price },
+            opening:
+                Opening::Bought {
+                    good: g,
+                    price,
+                    quantity,
+                },
             ..
-        }) if *g == good => offer.max(price.saturating_mul(3) / 2),
-        _ => offer,
+        }) if *g == good => Some((*price, *quantity)),
+        _ => None,
     }
 }
 

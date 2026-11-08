@@ -20,6 +20,7 @@ import { renderResults } from './ui/results';
 import { nextScenario } from './data/scenarios';
 import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
 import { gainsOf, presentGrowth } from './ui/growth';
+import { finishWeek } from './ui/week_end';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
@@ -236,12 +237,18 @@ async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
     mapScreen?.moveCaravans(false);
     const gains = gainsOf(report, s.goodName);
     const after = localCoins(await game.view('purse'));
-    if (gains.length > 0 && after > before) {
-      await presentGrowth({ coins: hud.coins, game: app.querySelector('.game') }, before, after, gains);
-    }
-    hud.setBusy(false);
-    await showDialogs(s, scenarioDialogs(report));
-    if (s.scenario && scenarioEnd(report)) await showResults(game, s);
+    await finishWeek({
+      ended: s.scenario !== undefined && scenarioEnd(report) !== null,
+      present: async () => {
+        if (gains.length > 0 && after > before) {
+          await presentGrowth({ coins: hud.coins, game: app.querySelector('.game') }, before, after, gains);
+        }
+        hud.setBusy(false);
+      },
+      dialogs: () => showDialogs(s, scenarioDialogs(report)),
+      results: () => showResults(game, s),
+      onError: (e) => hud.addMessage(`The week's presentation failed: ${message(e)}`),
+    });
   } catch (e) {
     hud.addMessage(`The turn failed: ${message(e)}`);
   } finally {

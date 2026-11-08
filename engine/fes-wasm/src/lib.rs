@@ -206,9 +206,12 @@ impl WasmSim {
         }
     }
 
-    /// The save file bytes.
-    pub fn save(&self) -> Vec<u8> {
-        self.sim.save()
+    /// The save file bytes; an error in a scenario (scenarios do not save, spec 9.2).
+    pub fn save(&self) -> Result<Vec<u8>, JsError> {
+        if self.scenario.is_some() {
+            return Err(JsError::new("Scenarios cannot be saved."));
+        }
+        Ok(self.sim.save())
     }
 
     pub fn turn(&self) -> i32 {

@@ -12,7 +12,7 @@ pub use rules::{Opening, ScenarioRules};
 pub use script::{ScenarioContract, Script};
 pub use statement::{StatementCosts, StatementLedger, StatementView};
 
-use crate::agents::money_ledger::pay_households;
+use crate::agents::money_ledger::{pay_households, take_households};
 use crate::agents::player::PlayerState;
 use crate::agents::policy::PolicyState;
 use crate::context::SimContext;
@@ -81,7 +81,7 @@ impl ScenarioRun {
 }
 
 /// Moves the player to the start node with exactly the start coins; households give or take the
-/// difference so the world's money stays the same.
+/// difference so the world's money stays the same (taking only what they hold).
 fn place_player(ctx: &mut SimContext, def: &ScenarioDef) -> Result<(), String> {
     let at = script::Keys(ctx).node(&def.start_node)?;
     let nodes = ctx.services.get::<NodeTable>();
@@ -94,11 +94,22 @@ fn place_player(ctx: &mut SimContext, def: &ScenarioDef) -> Result<(), String> {
             ctx.world.get_mut::<PlayerState>().coins[c] = 0;
         }
     }
-    let local = nodes.continent[at as usize] as usize;
+    let local = nodes.continent[at as usize];
+    // The start node's households first, then the rest of the continent's, in node order.
+    let mut taken = take_households(&mut ctx.world, nodes, at, def.start_coins);
+    for n in (0..nodes.count() as i32).filter(|&n| nodes.continent[n as usize] == local) {
+        taken += take_households(&mut ctx.world, nodes, n, def.start_coins - taken);
+    }
+    if taken < def.start_coins {
+        pay_households(&mut ctx.world, nodes, at, taken);
+        return Err(format!(
+            "The households of the start continent hold less than {} coins.",
+            def.start_coins
+        ));
+    }
     let p = ctx.world.get_mut::<PlayerState>();
     p.node = at;
-    p.coins[local] = def.start_coins;
-    pay_households(&mut ctx.world, nodes, at, -def.start_coins);
+    p.coins[local as usize] = def.start_coins;
     Ok(())
 }
 

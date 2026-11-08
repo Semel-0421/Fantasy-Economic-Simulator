@@ -19,6 +19,20 @@ pub fn pay_households(world: &mut WorldState, nodes: &NodeTable, node: i32, amou
     world.get_mut::<HouseholdCash>().cash[at as usize] += amount;
 }
 
+/// Takes up to `want` coins from the households of `node`, never leaving them below zero;
+/// returns what was taken.
+pub fn take_households(world: &mut WorldState, nodes: &NodeTable, node: i32, want: i64) -> i64 {
+    let at = if nodes.absorbed() {
+        nodes.core[node as usize]
+    } else {
+        node
+    };
+    let cash = &mut world.get_mut::<HouseholdCash>().cash[at as usize];
+    let taken = want.min((*cash).max(0)).max(0);
+    *cash -= taken;
+    taken
+}
+
 /// A nation's reserve above its target and the player's deposits (C# `StateExcess`).
 pub fn state_excess(
     world: &WorldState,

@@ -11,7 +11,7 @@ use crate::agents::credit_system::BOND_PLAYER_HOLDER;
 use crate::agents::facilities::FacilityTable;
 use crate::agents::groups::GroupTable;
 use crate::agents::licenses::LicenseTable;
-use crate::agents::money_ledger::pay_households;
+use crate::agents::money_ledger::{pay_households, take_households};
 use crate::agents::player::PlayerState;
 use crate::agents::securities::ShareTable;
 use crate::commands::bonds::bond_held;
@@ -79,6 +79,9 @@ impl Keys<'_> {
             Effect::OfferContract { good, node, .. } => self.good(good).and(self.node(node)),
             Effect::Raid { from, to, .. } => self.route(from, to),
             Effect::PriceShock { node, good, .. } => self.good(good).and(self.node(node)),
+            Effect::CompanyNews { percent, .. } if !(0..=100).contains(percent) => {
+                Err(format!("CompanyNews percent {percent} must be 0 to 100."))
+            }
             Effect::CompanyNews { facility, .. }
             | Effect::CompanyOrders { facility, .. }
             | Effect::Dividend { facility, .. } => self.facility(*facility),
@@ -219,13 +222,13 @@ impl Script {
             ctx.world
                 .get_mut::<CargoTable>()
                 .change(PLAYER_CART, c.good, -c.quantity);
-            ctx.world.get_mut::<PlayerState>().coins[self.home] += c.reward;
+            let (paid, continent) = pay_reward(ctx, c.node, c.reward);
             c.delivered = true;
             out.push(SimEventRecord::ScenarioDialog {
                 event: c.id.clone(),
                 text: String::new(),
-                coins: c.reward,
-                continent: self.home as i32,
+                coins: paid,
+                continent,
                 turn,
             });
         }
@@ -255,8 +258,7 @@ impl Script {
                 percent,
                 text,
             } => {
-                let cash = &mut ctx.world.get_mut::<FacilityTable>().cash[*facility as usize];
-                *cash = *cash * i64::from(*percent) / 100;
+                company_news(ctx, *facility, *percent);
                 (text.clone(), 0, -1)
             }
             Effect::CompanyOrders {
@@ -266,13 +268,13 @@ impl Script {
             } => {
                 let f = *facility as usize;
                 let node = ctx.world.get::<FacilityTable>().node[f];
-                pay_households(
+                let got = take_households(
                     &mut ctx.world,
                     ctx.services.get::<NodeTable>(),
                     node,
-                    -coins,
+                    *coins,
                 );
-                ctx.world.get_mut::<FacilityTable>().cash[f] += coins;
+                ctx.world.get_mut::<FacilityTable>().cash[f] += got;
                 (text.clone(), 0, -1)
             }
             Effect::Dividend {
@@ -335,6 +337,43 @@ impl Script {
             expired: false,
         });
     }
+}
+
+/// A company loses `100 - percent`% of its cash to the households of its town (the money is
+/// spent or written off there, not destroyed).
+fn company_news(ctx: &mut SimContext, facility: i32, percent: i32) {
+    let f = facility as usize;
+    let facilities = ctx.world.get_mut::<FacilityTable>();
+    let node = facilities.node[f];
+    let cash = facilities.cash[f];
+    if cash <= 0 {
+        return;
+    }
+    let kept = cash * i64::from(percent) / 100;
+    facilities.cash[f] = kept;
+    pay_households(
+        &mut ctx.world,
+        ctx.services.get::<NodeTable>(),
+        node,
+        cash - kept,
+    );
+}
+
+/// Pays a contract's reward at the destination: from its households first, the rest from its
+/// nation's reserve, never more than they hold. Returns (paid, continent).
+fn pay_reward(ctx: &mut SimContext, node: i32, reward: i64) -> (i64, i32) {
+    let nodes = ctx.services.get::<NodeTable>();
+    let continent = nodes.continent[node as usize];
+    let mut paid = take_households(&mut ctx.world, nodes, node, reward);
+    let nation = ctx.services.get::<NodeBanks>().nation_of(nodes, node);
+    if nation >= 0 && paid < reward {
+        let bank = ctx.world.get_mut::<BankState>();
+        let more = (reward - paid).min(bank.spendable(nation as usize));
+        bank.reserve[nation as usize] -= more;
+        paid += more;
+    }
+    ctx.world.get_mut::<PlayerState>().coins[continent as usize] += paid;
+    (paid, continent)
 }
 
 fn raid(ctx: &mut SimContext, from: &str, to: &str, loss_permille: i32) {

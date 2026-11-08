@@ -69,11 +69,11 @@ elsewhere still sees the event.
 | Effect | What it does (existing system it uses) |
 |---|---|
 | `Dialog("text")` | a message (`ScenarioDialog` event) |
-| `OfferContract(id, good, quantity, node, reward, deadline_week, text)` | offers a delivery request; once the player accepts it (`accept_contract`), it is delivered the week the player stands at `node` with the goods in the cart: the goods leave the cart and `reward` coins (start currency) are paid. Not delivered by the end of `deadline_week`: expired |
+| `OfferContract(id, good, quantity, node, reward, deadline_week, text)` | offers a delivery request; once the player accepts it (`accept_contract`), it is delivered the week the player stands at `node` with the goods in the cart: the goods leave the cart and `reward` coins are paid in `node`'s coin, from its households, the rest from its nation's spendable reserve, never more than they hold. Not delivered by the end of `deadline_week`: expired |
 | `Raid(from, to, loss_permille)` | the player's next trip on that route meets robbers: without guards they take `loss_permille` of every good in the cart (an encounter, so insurance refunds as usual); guards beat them off (an encounter that took nothing). No message: the trip's `TripEncounter` shows it |
 | `PriceShock(node, good, percent, weeks, text)` | a market modifier on value for the good's category under the node, as a world event makes |
-| `CompanyNews(facility, percent, text)` | the company's cash becomes `percent`% of what it was; its share price follows its value |
-| `CompanyOrders(facility, coins, text)` | the company wins orders: `coins` move from its node's households into its cash; its share price follows its value |
+| `CompanyNews(facility, percent, text)` | the company's cash becomes `percent`% (0 to 100) of what it was; the lost cash goes to its node's households; its share price follows its value |
+| `CompanyOrders(facility, coins, text)` | the company wins orders: `coins` move from its node's households into its cash (at most what they hold); its share price follows its value |
 | `Dividend(facility, per_share, text)` | pays `per_share` coins per share the player holds, from the facility's cash then its group's, in its node's coin |
 | `BondIssue(issuer, text)` | announces bonds of the issuer (bond-desk issuer number) for the player to buy with `BuyBond` |
 | `Coupon(issuer, percent, text)` | pays `percent`% of the face the player holds of the issuer's bonds, from the nation's spendable reserve or the company group's cash, in the issuer's coin |
@@ -84,6 +84,15 @@ a company group; an unknown issuer fails the build.
 
 Every effect with text publishes a `ScenarioDialog { event, text, coins, continent, turn }`; `coins` is
 what the effect paid the player (a dividend, a contract reward), counted as revenue on the statement.
+
+## Money rule
+
+A scenario never makes or destroys coins. Every coin an effect pays comes from someone who holds it
+(households, a company, a group, a nation's reserve) and is capped at what they hold; every coin
+it takes goes to someone. The player's start coins come from the start continent's households
+(the start node's first); a scenario whose `start_coins` they cannot cover does not build. The
+protected opening pays 1.5 times the first purchase's price for that purchase's units only; more
+units sold in the same sale fetch the market's offer.
 
 ## Objectives
 

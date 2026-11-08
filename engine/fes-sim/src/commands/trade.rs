@@ -161,7 +161,7 @@ impl Command for BuyGoods {
             .change(PLAYER_CART, self.good, filled);
         market_buy(ctx.world.get_mut::<MarketStore>(), cell, filled);
         if filled > 0 {
-            crate::scenario::rules::note_purchase(&mut ctx.services, self.good, price);
+            crate::scenario::rules::note_purchase(&mut ctx.services, self.good, price, filled);
         }
         let turn = ctx.turn();
         ctx.events.publish(GoodsTraded {
@@ -199,11 +199,17 @@ pub struct SellGoods {
 }
 
 impl SellGoods {
-    fn offer(&self, ctx: &SimContext, cell: usize) -> i32 {
-        let offer = trader_offer(
+    /// The market's offer.
+    fn market_offer(&self, ctx: &SimContext, cell: usize) -> i32 {
+        trader_offer(
             ctx.services.database.config.trader_spread,
             ctx.world.get::<MarketStore>().price[cell],
-        );
+        )
+    }
+
+    /// The best offer: the protected opening's, while it lasts, else the market's.
+    fn offer(&self, ctx: &SimContext, cell: usize) -> i32 {
+        let offer = self.market_offer(ctx, cell);
         crate::scenario::rules::opening_offer(&ctx.services, self.good, offer)
     }
 
@@ -250,11 +256,22 @@ impl Command for SellGoods {
         };
         let filled = self.fill(ctx, cell);
         let node = player(ctx).node;
-        let price = self.offer(ctx, cell);
+        // A protected opening pays its offer for the first purchase's units only (spec 5.3).
+        let protected = filled.min(crate::scenario::rules::opening_quantity(
+            &ctx.services,
+            self.good,
+        ));
+        let parts = [
+            (protected, self.offer(ctx, cell)),
+            (filled - protected, self.market_offer(ctx, cell)),
+        ];
         if filled > 0 {
             crate::scenario::rules::note_sale(&mut ctx.services);
         }
-        let paid = i64::from(filled) * i64::from(price);
+        let paid: i64 = parts
+            .iter()
+            .map(|&(n, p)| i64::from(n) * i64::from(p))
+            .sum();
         change_local_coins(ctx, paid);
         ctx.world.get_mut::<PurseState>().change_float(node, -paid);
         ctx.world
@@ -262,15 +279,19 @@ impl Command for SellGoods {
             .change(PLAYER_CART, self.good, -filled);
         market_sell(ctx.world.get_mut::<MarketStore>(), cell, filled);
         let turn = ctx.turn();
-        ctx.events.publish(GoodsTraded {
-            market: node,
-            good: self.good,
-            bought: false,
-            requested: self.quantity,
-            filled,
-            price,
-            turn,
-        });
+        // One trade per price paid; a sale that filled nothing still reports the best offer.
+        let shown = if filled == 0 { &parts[..1] } else { &parts[..] };
+        for &(part, price) in shown.iter().filter(|p| p.0 > 0 || filled == 0) {
+            ctx.events.publish(GoodsTraded {
+                market: node,
+                good: self.good,
+                bought: false,
+                requested: self.quantity,
+                filled: part,
+                price,
+                turn,
+            });
+        }
     }
 }
 

@@ -275,7 +275,7 @@ describe('scenario golden paths', () => {
       await p.week();
     }
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);
-    expect(await p.finish()).toBe('Net profit 2,653 coins in 24 weeks');
+    expect(await p.finish()).toBe('Net profit 2,263 coins in 24 weeks');
     expect(await p.page.locator('#next-scenario').count()).toBe(0); // the last scenario
     await p.page.click('#results-menu');
     await p.page.waitForSelector('#scenario-1');

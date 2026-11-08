@@ -10,7 +10,7 @@ Played on the full-scale world (engine/fixtures/fullscale) in the browser: the P
 |---|---|---|---|---|---|
 | S1 First Venture | 20 | ~8 (goal reached week 10) | ~30-35 min | 1,359 (1,000) | 1,059 |
 | S2 Shares and Bonds | 22 | ~4 | ~25-30 min | 3,657 (objectives) | 3,657 |
-| S3 Licences and Trade Abroad | 24 | ~13 (home week 21) | ~30-35 min | 2,653 (1,000) | 1,235 |
+| S3 Licences and Trade Abroad | 24 | ~13 (home week 21) | ~30-35 min | 2,263 (1,000) | 1,235 |
 
 Human-pace estimate: intro and news ~2 min; a week with orders (read market, preview, confirm, travel)
 ~2.5 min; a quiet week ~0.5-1 min (looking at prices, the turn itself < 1 s). Not timed with real players.
@@ -22,6 +22,15 @@ Human-pace estimate: intro and news ~2 min; a week with orders (read market, pre
 - S3: the k0n1 shortage price shock 800% -> 1,000%. Revenue 9,780 -> 11,280; net 2,653 after 2,400 of
   licences and 1,203 of guards/insurance, so a player who buys fewer goods or loses a sale week still wins.
 - S2 unchanged (wide margin already).
+
+## After the final-review money fixes
+
+Scenario effects no longer make or destroy coins (start coins taken from the continent's
+households, clamped; contract rewards paid by the destination's households then nation reserve;
+company orders clamped; company news hands lost cash to households; protected opening limited to
+the first purchase's units). S1 1,359 and S2 3,657 unchanged; S3 2,653 -> 2,263 (the 30,000 start
+coins now come from several nodes' households, which shifts k0n0 prices). All stay above 1.3x their
+targets, so no scenario numbers were retuned.
 
 ## Budget
 

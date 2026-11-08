@@ -54,7 +54,7 @@ fn wasm_sim_matches_native_hash_after_11_turns() {
 fn save_and_load_keep_the_hash() {
     let mut sim = WasmSim::new(files(), 1).expect("build");
     sim.step().expect("step");
-    let loaded = WasmSim::load(files(), &sim.save()).expect("load");
+    let loaded = WasmSim::load(files(), &sim.save().expect("save")).expect("load");
     assert_eq!(loaded.world_hash(), sim.world_hash());
     assert_eq!(loaded.turn(), sim.turn());
 }
@@ -84,4 +84,11 @@ fn scenario_view_exposes_title_intro_and_weeks() {
         .view("scenario", JsValue::NULL)
         .expect("free")
         .is_null());
+}
+
+#[wasm_bindgen_test]
+fn a_scenario_refuses_to_save() {
+    let text = include_str!("../../../data/scenarios/s1_first_venture.ron");
+    let sim = WasmSim::new_scenario(files(), text).expect("scenario");
+    assert!(sim.save().is_err(), "scenarios do not save");
 }

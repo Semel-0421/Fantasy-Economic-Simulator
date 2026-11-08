@@ -173,7 +173,14 @@ export const viewSchemas = {
     inflation: arr(num),
     records: arr(tup(num, arr(num))),
   }),
-  market: obj({ quotes: arr(obj({ good: num, price: num, stock: num })) }),
+  /** Price is raw Fx (whole coins << 16); offer is what traders pay per unit on a sale, in coins. */
+  market: obj({ quotes: arr(obj({ good: num, price: num, stock: num, offer: num })) }),
+  /** Levels: 0 continent, 1 nation, 2 region, 3 city, 4 village. Terrain: 0 road, 1 mountain, 2 river, 3 sea. */
+  map: obj({
+    nodes: arr(obj({ id: num, key: str, name: str, level: num, parent: num, continent: num })),
+    routes: arr(obj({ from: num, to: num, turns: num, terrain: num })),
+  }),
+  goods: arr(obj({ id: num, key: str, base_price: num })),
 } as const;
 
 export type ViewName = keyof typeof viewSchemas;

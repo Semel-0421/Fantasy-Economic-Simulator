@@ -34,6 +34,8 @@ struct QuoteJs {
     good: i32,
     price: Fx,
     stock: i64,
+    /// What the traders pay per unit when the player sells.
+    offer: i32,
 }
 
 #[derive(Serialize)]
@@ -127,7 +129,7 @@ impl WasmSim {
         to_js(&result)
     }
 
-    /// A named view: purse, cargo, contracts, shares, licences, statement, or market (arg = node).
+    /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map, or goods.
     pub fn view(&self, name: &str, arg: JsValue) -> Result<JsValue, JsError> {
         let ctx = self.sim.context();
         match name {
@@ -138,6 +140,8 @@ impl WasmSim {
             "licences" => to_js(&views::licences(ctx)),
             "statement" => to_js(&views::statement(ctx)),
             "market" => self.market(arg),
+            "map" => to_js(&views::map(ctx)),
+            "goods" => to_js(&views::goods(ctx)),
             _ => Err(JsError::new(&format!("Unknown view '{name}'."))),
         }
     }
@@ -171,6 +175,7 @@ impl WasmSim {
                 good: q.good.0,
                 price: q.price,
                 stock: q.stock,
+                offer: views::sell_offer(self.sim.context(), (q.price.raw() >> 16) as i32),
             })
             .collect();
         to_js(&MarketJs { quotes })

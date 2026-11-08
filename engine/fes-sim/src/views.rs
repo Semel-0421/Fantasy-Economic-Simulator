@@ -267,3 +267,89 @@ pub fn statement(ctx: &SimContext) -> StatementView {
             .collect(),
     }
 }
+
+/// One node of the world map, in simulation node order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct MapNodeView {
+    pub id: i32,
+    pub key: String,
+    pub name: String,
+    /// `WorldLevel` as its number: 0 continent, 1 nation, 2 region, 3 city, 4 village.
+    pub level: u8,
+    /// Parent node, -1 for continents.
+    pub parent: i32,
+    pub continent: i32,
+}
+
+/// One directed route.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct MapRouteView {
+    pub from: i32,
+    pub to: i32,
+    pub turns: i32,
+    /// `RouteTerrain` as its number: 0 road, 1 mountain, 2 river, 3 sea.
+    pub terrain: u8,
+}
+
+/// The world's nodes and routes. The map data has no coordinates; the front end lays it out.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct MapView {
+    pub nodes: Vec<MapNodeView>,
+    pub routes: Vec<MapRouteView>,
+}
+
+/// One tradable item: base good at one grade.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct GoodView {
+    pub id: i32,
+    /// `base_key@grade`.
+    pub key: String,
+    pub base_price: i32,
+}
+
+pub fn map(ctx: &SimContext) -> MapView {
+    let nodes = ctx.services.get::<NodeTable>();
+    let routes = ctx.services.get::<crate::world::RouteTable>();
+    MapView {
+        nodes: (0..nodes.count() as i32)
+            .map(|n| MapNodeView {
+                id: n,
+                key: nodes.key_of(n).to_string(),
+                name: nodes.name_of(n).to_string(),
+                level: nodes.level[n as usize],
+                parent: nodes.parent[n as usize],
+                continent: nodes.continent[n as usize],
+            })
+            .collect(),
+        routes: (0..routes.from.len())
+            .map(|r| MapRouteView {
+                from: routes.from[r],
+                to: routes.to[r],
+                turns: routes.travel_turns[r],
+                terrain: routes.terrain[r],
+            })
+            .collect(),
+    }
+}
+
+pub fn goods(ctx: &SimContext) -> Vec<GoodView> {
+    ctx.services
+        .database
+        .goods
+        .iter()
+        .map(|g| GoodView {
+            id: g.id.0,
+            key: g.key(),
+            base_price: g.base_price,
+        })
+        .collect()
+}
+
+/// What the traders at a market pay the player per unit at this posted price (C# trader offer).
+pub fn sell_offer(ctx: &SimContext, price: i32) -> i32 {
+    crate::agents::bank_seizure::trader_offer(ctx.services.database.config.trader_spread, price)
+}

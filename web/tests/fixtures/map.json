@@ -1,0 +1,618 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "key": "aur",
+      "name": "Aurelia",
+      "level": 0,
+      "parent": -1,
+      "continent": 0
+    },
+    {
+      "id": 1,
+      "key": "bor",
+      "name": "Borealis",
+      "level": 0,
+      "parent": -1,
+      "continent": 1
+    },
+    {
+      "id": 2,
+      "key": "aur_n1",
+      "name": "Aurelia Kingdom",
+      "level": 1,
+      "parent": 0,
+      "continent": 0
+    },
+    {
+      "id": 3,
+      "key": "bor_n1",
+      "name": "Borealis Kingdom",
+      "level": 1,
+      "parent": 1,
+      "continent": 1
+    },
+    {
+      "id": 4,
+      "key": "aur_n1_r1",
+      "name": "Aurelia Region 1",
+      "level": 2,
+      "parent": 2,
+      "continent": 0
+    },
+    {
+      "id": 5,
+      "key": "aur_n1_r2",
+      "name": "Aurelia Region 2",
+      "level": 2,
+      "parent": 2,
+      "continent": 0
+    },
+    {
+      "id": 6,
+      "key": "bor_n1_r1",
+      "name": "Borealis Region 1",
+      "level": 2,
+      "parent": 3,
+      "continent": 1
+    },
+    {
+      "id": 7,
+      "key": "bor_n1_r2",
+      "name": "Borealis Region 2",
+      "level": 2,
+      "parent": 3,
+      "continent": 1
+    },
+    {
+      "id": 8,
+      "key": "aur_n1_r1_c1",
+      "name": "Aurelia City 1-1",
+      "level": 3,
+      "parent": 4,
+      "continent": 0
+    },
+    {
+      "id": 9,
+      "key": "aur_n1_r1_c2",
+      "name": "Aurelia City 1-2",
+      "level": 3,
+      "parent": 4,
+      "continent": 0
+    },
+    {
+      "id": 10,
+      "key": "aur_n1_r2_c1",
+      "name": "Aurelia City 2-1",
+      "level": 3,
+      "parent": 5,
+      "continent": 0
+    },
+    {
+      "id": 11,
+      "key": "aur_n1_r2_c2",
+      "name": "Aurelia City 2-2",
+      "level": 3,
+      "parent": 5,
+      "continent": 0
+    },
+    {
+      "id": 12,
+      "key": "bor_n1_r1_c1",
+      "name": "Borealis City 1-1",
+      "level": 3,
+      "parent": 6,
+      "continent": 1
+    },
+    {
+      "id": 13,
+      "key": "bor_n1_r1_c2",
+      "name": "Borealis City 1-2",
+      "level": 3,
+      "parent": 6,
+      "continent": 1
+    },
+    {
+      "id": 14,
+      "key": "bor_n1_r2_c1",
+      "name": "Borealis City 2-1",
+      "level": 3,
+      "parent": 7,
+      "continent": 1
+    },
+    {
+      "id": 15,
+      "key": "bor_n1_r2_c2",
+      "name": "Borealis City 2-2",
+      "level": 3,
+      "parent": 7,
+      "continent": 1
+    },
+    {
+      "id": 16,
+      "key": "aur_n1_r1_c1_v1",
+      "name": "Aurelia Village 1-1-1",
+      "level": 4,
+      "parent": 8,
+      "continent": 0
+    },
+    {
+      "id": 17,
+      "key": "aur_n1_r1_c1_v2",
+      "name": "Aurelia Village 1-1-2",
+      "level": 4,
+      "parent": 8,
+      "continent": 0
+    },
+    {
+      "id": 18,
+      "key": "aur_n1_r1_v9",
+      "name": "Aurelia Hamlet 1",
+      "level": 4,
+      "parent": 8,
+      "continent": 0
+    },
+    {
+      "id": 19,
+      "key": "aur_n1_r1_c2_v1",
+      "name": "Aurelia Village 1-2-1",
+      "level": 4,
+      "parent": 9,
+      "continent": 0
+    },
+    {
+      "id": 20,
+      "key": "aur_n1_r1_c2_v2",
+      "name": "Aurelia Village 1-2-2",
+      "level": 4,
+      "parent": 9,
+      "continent": 0
+    },
+    {
+      "id": 21,
+      "key": "aur_n1_r2_c1_v1",
+      "name": "Aurelia Village 2-1-1",
+      "level": 4,
+      "parent": 10,
+      "continent": 0
+    },
+    {
+      "id": 22,
+      "key": "aur_n1_r2_c1_v2",
+      "name": "Aurelia Village 2-1-2",
+      "level": 4,
+      "parent": 10,
+      "continent": 0
+    },
+    {
+      "id": 23,
+      "key": "aur_n1_r2_v9",
+      "name": "Aurelia Hamlet 2",
+      "level": 4,
+      "parent": 10,
+      "continent": 0
+    },
+    {
+      "id": 24,
+      "key": "aur_n1_r2_c2_v1",
+      "name": "Aurelia Village 2-2-1",
+      "level": 4,
+      "parent": 11,
+      "continent": 0
+    },
+    {
+      "id": 25,
+      "key": "aur_n1_r2_c2_v2",
+      "name": "Aurelia Village 2-2-2",
+      "level": 4,
+      "parent": 11,
+      "continent": 0
+    },
+    {
+      "id": 26,
+      "key": "bor_n1_r1_c1_v1",
+      "name": "Borealis Village 1-1-1",
+      "level": 4,
+      "parent": 12,
+      "continent": 1
+    },
+    {
+      "id": 27,
+      "key": "bor_n1_r1_c1_v2",
+      "name": "Borealis Village 1-1-2",
+      "level": 4,
+      "parent": 12,
+      "continent": 1
+    },
+    {
+      "id": 28,
+      "key": "bor_n1_r1_c2_v1",
+      "name": "Borealis Village 1-2-1",
+      "level": 4,
+      "parent": 13,
+      "continent": 1
+    },
+    {
+      "id": 29,
+      "key": "bor_n1_r1_c2_v2",
+      "name": "Borealis Village 1-2-2",
+      "level": 4,
+      "parent": 13,
+      "continent": 1
+    },
+    {
+      "id": 30,
+      "key": "bor_n1_r1_v9",
+      "name": "Borealis Hamlet 1",
+      "level": 4,
+      "parent": 13,
+      "continent": 1
+    },
+    {
+      "id": 31,
+      "key": "bor_n1_r2_c1_v1",
+      "name": "Borealis Village 2-1-1",
+      "level": 4,
+      "parent": 14,
+      "continent": 1
+    },
+    {
+      "id": 32,
+      "key": "bor_n1_r2_c1_v2",
+      "name": "Borealis Village 2-1-2",
+      "level": 4,
+      "parent": 14,
+      "continent": 1
+    },
+    {
+      "id": 33,
+      "key": "bor_n1_r2_v9",
+      "name": "Borealis Hamlet 2",
+      "level": 4,
+      "parent": 14,
+      "continent": 1
+    },
+    {
+      "id": 34,
+      "key": "bor_n1_r2_c2_v1",
+      "name": "Borealis Village 2-2-1",
+      "level": 4,
+      "parent": 15,
+      "continent": 1
+    },
+    {
+      "id": 35,
+      "key": "bor_n1_r2_c2_v2",
+      "name": "Borealis Village 2-2-2",
+      "level": 4,
+      "parent": 15,
+      "continent": 1
+    }
+  ],
+  "routes": [
+    {
+      "from": 16,
+      "to": 8,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 8,
+      "to": 16,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 17,
+      "to": 8,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 8,
+      "to": 17,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 19,
+      "to": 9,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 9,
+      "to": 19,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 20,
+      "to": 9,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 9,
+      "to": 20,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 18,
+      "to": 8,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 8,
+      "to": 18,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 21,
+      "to": 10,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 10,
+      "to": 21,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 22,
+      "to": 10,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 10,
+      "to": 22,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 24,
+      "to": 11,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 11,
+      "to": 24,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 25,
+      "to": 11,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 11,
+      "to": 25,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 23,
+      "to": 10,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 10,
+      "to": 23,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 8,
+      "to": 10,
+      "turns": 4,
+      "terrain": 1
+    },
+    {
+      "from": 10,
+      "to": 8,
+      "turns": 4,
+      "terrain": 1
+    },
+    {
+      "from": 26,
+      "to": 12,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 12,
+      "to": 26,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 27,
+      "to": 12,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 12,
+      "to": 27,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 28,
+      "to": 13,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 13,
+      "to": 28,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 29,
+      "to": 13,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 13,
+      "to": 29,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 30,
+      "to": 13,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 13,
+      "to": 30,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 31,
+      "to": 14,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 14,
+      "to": 31,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 32,
+      "to": 14,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 14,
+      "to": 32,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 34,
+      "to": 15,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 15,
+      "to": 34,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 35,
+      "to": 15,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 15,
+      "to": 35,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 33,
+      "to": 14,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 14,
+      "to": 33,
+      "turns": 1,
+      "terrain": 0
+    },
+    {
+      "from": 13,
+      "to": 14,
+      "turns": 3,
+      "terrain": 2
+    },
+    {
+      "from": 14,
+      "to": 13,
+      "turns": 3,
+      "terrain": 2
+    },
+    {
+      "from": 10,
+      "to": 13,
+      "turns": 4,
+      "terrain": 3
+    },
+    {
+      "from": 13,
+      "to": 10,
+      "turns": 4,
+      "terrain": 3
+    },
+    {
+      "from": 8,
+      "to": 9,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 9,
+      "to": 8,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 10,
+      "to": 11,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 11,
+      "to": 10,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 12,
+      "to": 13,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 13,
+      "to": 12,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 14,
+      "to": 15,
+      "turns": 2,
+      "terrain": 0
+    },
+    {
+      "from": 15,
+      "to": 14,
+      "turns": 2,
+      "terrain": 0
+    }
+  ]
+}

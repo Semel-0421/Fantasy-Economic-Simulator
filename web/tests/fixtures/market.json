@@ -2,181 +2,217 @@
   "quotes": [
     {
       "good": 0,
+      "offer": 4,
       "price": 327680,
       "stock": 0
     },
     {
       "good": 1,
+      "offer": 6,
       "price": 524288,
       "stock": 0
     },
     {
       "good": 4,
+      "offer": 3,
       "price": 262144,
       "stock": 0
     },
     {
       "good": 5,
+      "offer": 4,
       "price": 393216,
       "stock": 0
     },
     {
       "good": 8,
+      "offer": 9,
       "price": 786432,
       "stock": 0
     },
     {
       "good": 9,
+      "offer": 13,
       "price": 1114112,
       "stock": 27
     },
     {
       "good": 12,
+      "offer": 7,
       "price": 589824,
       "stock": 47
     },
     {
       "good": 13,
+      "offer": 13,
       "price": 1179648,
       "stock": 0
     },
     {
       "good": 16,
+      "offer": 7,
       "price": 589824,
       "stock": 0
     },
     {
       "good": 17,
+      "offer": 11,
       "price": 983040,
       "stock": 0
     },
     {
       "good": 20,
+      "offer": 11,
       "price": 983040,
       "stock": 0
     },
     {
       "good": 21,
+      "offer": 19,
       "price": 1638400,
       "stock": 0
     },
     {
       "good": 28,
+      "offer": 8,
       "price": 720896,
       "stock": 0
     },
     {
       "good": 29,
+      "offer": 12,
       "price": 1048576,
       "stock": 0
     },
     {
       "good": 72,
+      "offer": 4,
       "price": 393216,
       "stock": 0
     },
     {
       "good": 73,
+      "offer": 6,
       "price": 524288,
       "stock": 0
     },
     {
       "good": 76,
+      "offer": 3,
       "price": 262144,
       "stock": 0
     },
     {
       "good": 77,
+      "offer": 5,
       "price": 458752,
       "stock": 0
     },
     {
       "good": 80,
+      "offer": 2,
       "price": 196608,
       "stock": 0
     },
     {
       "good": 81,
+      "offer": 4,
       "price": 393216,
       "stock": 0
     },
     {
       "good": 84,
+      "offer": 10,
       "price": 851968,
       "stock": 0
     },
     {
       "good": 85,
+      "offer": 16,
       "price": 1376256,
       "stock": 0
     },
     {
       "good": 88,
+      "offer": 7,
       "price": 655360,
       "stock": 2
     },
     {
       "good": 89,
+      "offer": 10,
       "price": 851968,
       "stock": 8
     },
     {
       "good": 92,
+      "offer": 21,
       "price": 1835008,
       "stock": 0
     },
     {
       "good": 93,
+      "offer": 34,
       "price": 3014656,
       "stock": 0
     },
     {
       "good": 96,
+      "offer": 46,
       "price": 4063232,
       "stock": 0
     },
     {
       "good": 97,
+      "offer": 77,
       "price": 6750208,
       "stock": 0
     },
     {
       "good": 100,
+      "offer": 25,
       "price": 2228224,
       "stock": 0
     },
     {
       "good": 101,
+      "offer": 43,
       "price": 3735552,
       "stock": 0
     },
     {
       "good": 104,
+      "offer": 31,
       "price": 2686976,
       "stock": 0
     },
     {
       "good": 105,
+      "offer": 52,
       "price": 4521984,
       "stock": 0
     },
     {
       "good": 108,
+      "offer": 7,
       "price": 655360,
       "stock": 0
     },
     {
       "good": 109,
+      "offer": 12,
       "price": 1048576,
       "stock": 0
     },
     {
       "good": 112,
+      "offer": 7,
       "price": 589824,
       "stock": 0
     },
     {
       "good": 113,
+      "offer": 11,
       "price": 983040,
       "stock": 0
     }

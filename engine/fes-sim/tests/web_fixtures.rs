@@ -489,11 +489,16 @@ fn write_web_fixtures() {
     write("shares.json", &views::shares(ctx));
     write("licences.json", &views::licences(ctx));
     write("statement.json", &views::statement(ctx));
+    write("map.json", &views::map(ctx));
+    write("goods.json", &views::goods(ctx));
     let m = market_view(&sim, fes_core::NodeId(views::purse(sim.context()).node));
     let quotes: Vec<_> = m
         .quotes
         .iter()
-        .map(|q| serde_json::json!({"good": q.good.0, "price": q.price, "stock": q.stock}))
+        .map(|q| {
+            let offer = views::sell_offer(sim.context(), (q.price.raw() >> 16) as i32);
+            serde_json::json!({"good": q.good.0, "price": q.price, "stock": q.stock, "offer": offer})
+        })
         .collect();
     write("market.json", &serde_json::json!({ "quotes": quotes }));
 }

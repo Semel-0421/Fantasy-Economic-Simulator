@@ -1,4 +1,4 @@
-// The in-game screen: coins panel, date, Next week button, a map area and the turn log.
+// The in-game screen: coins panel, date, Next week button, the map with its tools, side panels and the turn log.
 import { SLOTS, type SaveMode, type Slot } from '../save/store';
 import { button, el } from './dom';
 import { slotName } from './menu';
@@ -10,6 +10,12 @@ export interface Hud {
   setBusy(busy: boolean): void;
   addTurn(turn: number, lines: LogLine[]): void;
   addMessage(text: string): void;
+  /** The element the map canvas goes into. */
+  mapHost: HTMLElement;
+  /** Under the map: travel controls. */
+  mapTools: HTMLElement;
+  /** Beside the map, above the log: market, cargo and purse. */
+  side: HTMLElement;
 }
 
 export interface HudActions {
@@ -20,22 +26,6 @@ export interface HudActions {
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
-/** A placeholder for the map that stays interactive, so a long turn visibly does not freeze input. */
-function mapPad(): HTMLElement {
-  const out = el('output', { id: 'map-hint', text: 'Click or press a key on the map.' });
-  const pad = el('div', { id: 'map', className: 'map', title: 'Map (placeholder)' }, el('span', { text: 'Map' }), out);
-  pad.tabIndex = 0;
-  let n = 0;
-  const poke = (): void => {
-    n += 1;
-    out.textContent = `Map input received: ${n}`;
-    pad.dataset.pokes = String(n);
-  };
-  pad.addEventListener('pointerdown', poke);
-  pad.addEventListener('keydown', poke);
-  return pad;
-}
-
 export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions): Hud {
   const coins = el('strong', { id: 'coins', text: '-' });
   const date = el('span', { id: 'date', text: '-' });
@@ -43,6 +33,9 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   const next = button('', actions.nextWeek, 'next');
   next.append(caption, el('span', { className: 'bar' }));
   const log = el('ol', { id: 'log', className: 'log' });
+  const mapHost = el('div', { id: 'map', className: 'map', title: 'Map: drag to pan, wheel or pinch to zoom, tap a town' });
+  const mapTools = el('div', { className: 'maptools' });
+  const side = el('div', { className: 'panels' });
   const slot = el('select', { id: 'slot' });
   slot.setAttribute('aria-label', 'Save slot');
   for (const s of SLOTS.filter((x) => x !== 'auto')) slot.append(new Option(slotName(s), s));
@@ -60,12 +53,20 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
         next,
         el('div', { className: 'tools' }, ...saveControls, button('Menu', actions.menu, 'menu')),
       ),
-      el('main', { className: 'play' }, mapPad(), el('aside', { className: 'logbox' }, el('h2', { text: 'Turn log' }), log)),
+      el(
+        'main',
+        { className: 'play' },
+        el('div', { className: 'mapcol' }, mapHost, mapTools),
+        el('aside', { className: 'side' }, side, el('section', { className: 'logbox' }, el('h2', { text: 'Turn log' }), log)),
+      ),
     ),
   );
 
   let timer = 0;
   return {
+    mapHost,
+    mapTools,
+    side,
     setState(turn, coinList, local) {
       const d = dateOf(turn);
       date.textContent = `Year ${d.year}, Week ${d.week}`;

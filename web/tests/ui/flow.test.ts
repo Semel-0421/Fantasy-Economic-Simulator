@@ -32,7 +32,7 @@ async function fresh(width = 1000): Promise<{ page: Page; errors: string[] }> {
 
 async function startFree(page: Page): Promise<void> {
   await page.click('#free-mode');
-  await page.waitForFunction(() => document.getElementById('coins')?.textContent !== '-', null, { timeout: 60000 });
+  await page.waitForFunction(() => (document.getElementById('coins')?.textContent ?? '-') !== '-', null, { timeout: 60000 });
 }
 
 describe('web flow', () => {

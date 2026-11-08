@@ -1,0 +1,582 @@
+[
+  {
+    "id": 0,
+    "key": "wheat@low",
+    "base_price": 6
+  },
+  {
+    "id": 1,
+    "key": "wheat@mid",
+    "base_price": 10
+  },
+  {
+    "id": 2,
+    "key": "wheat@high",
+    "base_price": 18
+  },
+  {
+    "id": 3,
+    "key": "wheat@best",
+    "base_price": 35
+  },
+  {
+    "id": 4,
+    "key": "barley@low",
+    "base_price": 5
+  },
+  {
+    "id": 5,
+    "key": "barley@mid",
+    "base_price": 8
+  },
+  {
+    "id": 6,
+    "key": "barley@high",
+    "base_price": 14
+  },
+  {
+    "id": 7,
+    "key": "barley@best",
+    "base_price": 28
+  },
+  {
+    "id": 8,
+    "key": "iron_ore@low",
+    "base_price": 12
+  },
+  {
+    "id": 9,
+    "key": "iron_ore@mid",
+    "base_price": 20
+  },
+  {
+    "id": 10,
+    "key": "iron_ore@high",
+    "base_price": 36
+  },
+  {
+    "id": 11,
+    "key": "iron_ore@best",
+    "base_price": 70
+  },
+  {
+    "id": 12,
+    "key": "copper_ore@low",
+    "base_price": 11
+  },
+  {
+    "id": 13,
+    "key": "copper_ore@mid",
+    "base_price": 18
+  },
+  {
+    "id": 14,
+    "key": "copper_ore@high",
+    "base_price": 32
+  },
+  {
+    "id": 15,
+    "key": "copper_ore@best",
+    "base_price": 63
+  },
+  {
+    "id": 16,
+    "key": "wool@low",
+    "base_price": 9
+  },
+  {
+    "id": 17,
+    "key": "wool@mid",
+    "base_price": 15
+  },
+  {
+    "id": 18,
+    "key": "wool@high",
+    "base_price": 27
+  },
+  {
+    "id": 19,
+    "key": "wool@best",
+    "base_price": 53
+  },
+  {
+    "id": 20,
+    "key": "linen@low",
+    "base_price": 13
+  },
+  {
+    "id": 21,
+    "key": "linen@mid",
+    "base_price": 22
+  },
+  {
+    "id": 22,
+    "key": "linen@high",
+    "base_price": 40
+  },
+  {
+    "id": 23,
+    "key": "linen@best",
+    "base_price": 77
+  },
+  {
+    "id": 24,
+    "key": "iron_tools@low",
+    "base_price": 54
+  },
+  {
+    "id": 25,
+    "key": "iron_tools@mid",
+    "base_price": 90
+  },
+  {
+    "id": 26,
+    "key": "iron_tools@high",
+    "base_price": 162
+  },
+  {
+    "id": 27,
+    "key": "iron_tools@best",
+    "base_price": 315
+  },
+  {
+    "id": 28,
+    "key": "bread@low",
+    "base_price": 10
+  },
+  {
+    "id": 29,
+    "key": "bread@mid",
+    "base_price": 14
+  },
+  {
+    "id": 30,
+    "key": "bread@high",
+    "base_price": 35
+  },
+  {
+    "id": 31,
+    "key": "bread@best",
+    "base_price": 84
+  },
+  {
+    "id": 32,
+    "key": "flour@low",
+    "base_price": 10
+  },
+  {
+    "id": 33,
+    "key": "flour@mid",
+    "base_price": 16
+  },
+  {
+    "id": 34,
+    "key": "flour@high",
+    "base_price": 29
+  },
+  {
+    "id": 35,
+    "key": "flour@best",
+    "base_price": 56
+  },
+  {
+    "id": 36,
+    "key": "malt@low",
+    "base_price": 5
+  },
+  {
+    "id": 37,
+    "key": "malt@mid",
+    "base_price": 9
+  },
+  {
+    "id": 38,
+    "key": "malt@high",
+    "base_price": 16
+  },
+  {
+    "id": 39,
+    "key": "malt@best",
+    "base_price": 32
+  },
+  {
+    "id": 40,
+    "key": "iron_bar@low",
+    "base_price": 42
+  },
+  {
+    "id": 41,
+    "key": "iron_bar@mid",
+    "base_price": 70
+  },
+  {
+    "id": 42,
+    "key": "iron_bar@high",
+    "base_price": 126
+  },
+  {
+    "id": 43,
+    "key": "iron_bar@best",
+    "base_price": 245
+  },
+  {
+    "id": 44,
+    "key": "copper_bar@low",
+    "base_price": 24
+  },
+  {
+    "id": 45,
+    "key": "copper_bar@mid",
+    "base_price": 40
+  },
+  {
+    "id": 46,
+    "key": "copper_bar@high",
+    "base_price": 72
+  },
+  {
+    "id": 47,
+    "key": "copper_bar@best",
+    "base_price": 140
+  },
+  {
+    "id": 48,
+    "key": "yarn@low",
+    "base_price": 14
+  },
+  {
+    "id": 49,
+    "key": "yarn@mid",
+    "base_price": 24
+  },
+  {
+    "id": 50,
+    "key": "yarn@high",
+    "base_price": 43
+  },
+  {
+    "id": 51,
+    "key": "yarn@best",
+    "base_price": 84
+  },
+  {
+    "id": 52,
+    "key": "clothes@low",
+    "base_price": 27
+  },
+  {
+    "id": 53,
+    "key": "clothes@mid",
+    "base_price": 45
+  },
+  {
+    "id": 54,
+    "key": "clothes@high",
+    "base_price": 81
+  },
+  {
+    "id": 55,
+    "key": "clothes@best",
+    "base_price": 158
+  },
+  {
+    "id": 56,
+    "key": "ale@low",
+    "base_price": 7
+  },
+  {
+    "id": 57,
+    "key": "ale@mid",
+    "base_price": 10
+  },
+  {
+    "id": 58,
+    "key": "ale@high",
+    "base_price": 25
+  },
+  {
+    "id": 59,
+    "key": "ale@best",
+    "base_price": 60
+  },
+  {
+    "id": 60,
+    "key": "cookware@low",
+    "base_price": 36
+  },
+  {
+    "id": 61,
+    "key": "cookware@mid",
+    "base_price": 60
+  },
+  {
+    "id": 62,
+    "key": "cookware@high",
+    "base_price": 108
+  },
+  {
+    "id": 63,
+    "key": "cookware@best",
+    "base_price": 210
+  },
+  {
+    "id": 64,
+    "key": "cart@low",
+    "base_price": 90
+  },
+  {
+    "id": 65,
+    "key": "cart@mid",
+    "base_price": 150
+  },
+  {
+    "id": 66,
+    "key": "cart@high",
+    "base_price": 270
+  },
+  {
+    "id": 67,
+    "key": "cart@best",
+    "base_price": 525
+  },
+  {
+    "id": 68,
+    "key": "wagon@low",
+    "base_price": 300
+  },
+  {
+    "id": 69,
+    "key": "wagon@mid",
+    "base_price": 500
+  },
+  {
+    "id": 70,
+    "key": "wagon@high",
+    "base_price": 900
+  },
+  {
+    "id": 71,
+    "key": "wagon@best",
+    "base_price": 1750
+  },
+  {
+    "id": 72,
+    "key": "porridge@low",
+    "base_price": 5
+  },
+  {
+    "id": 73,
+    "key": "porridge@mid",
+    "base_price": 7
+  },
+  {
+    "id": 74,
+    "key": "porridge@high",
+    "base_price": 18
+  },
+  {
+    "id": 75,
+    "key": "porridge@best",
+    "base_price": 42
+  },
+  {
+    "id": 76,
+    "key": "beans@low",
+    "base_price": 4
+  },
+  {
+    "id": 77,
+    "key": "beans@mid",
+    "base_price": 6
+  },
+  {
+    "id": 78,
+    "key": "beans@high",
+    "base_price": 15
+  },
+  {
+    "id": 79,
+    "key": "beans@best",
+    "base_price": 36
+  },
+  {
+    "id": 80,
+    "key": "vegetables@low",
+    "base_price": 3
+  },
+  {
+    "id": 81,
+    "key": "vegetables@mid",
+    "base_price": 5
+  },
+  {
+    "id": 82,
+    "key": "vegetables@high",
+    "base_price": 13
+  },
+  {
+    "id": 83,
+    "key": "vegetables@best",
+    "base_price": 30
+  },
+  {
+    "id": 84,
+    "key": "cheese@low",
+    "base_price": 13
+  },
+  {
+    "id": 85,
+    "key": "cheese@mid",
+    "base_price": 18
+  },
+  {
+    "id": 86,
+    "key": "cheese@high",
+    "base_price": 45
+  },
+  {
+    "id": 87,
+    "key": "cheese@best",
+    "base_price": 108
+  },
+  {
+    "id": 88,
+    "key": "salt_fish@low",
+    "base_price": 10
+  },
+  {
+    "id": 89,
+    "key": "salt_fish@mid",
+    "base_price": 14
+  },
+  {
+    "id": 90,
+    "key": "salt_fish@high",
+    "base_price": 35
+  },
+  {
+    "id": 91,
+    "key": "salt_fish@best",
+    "base_price": 84
+  },
+  {
+    "id": 92,
+    "key": "spice@low",
+    "base_price": 24
+  },
+  {
+    "id": 93,
+    "key": "spice@mid",
+    "base_price": 40
+  },
+  {
+    "id": 94,
+    "key": "spice@high",
+    "base_price": 72
+  },
+  {
+    "id": 95,
+    "key": "spice@best",
+    "base_price": 140
+  },
+  {
+    "id": 96,
+    "key": "silk@low",
+    "base_price": 54
+  },
+  {
+    "id": 97,
+    "key": "silk@mid",
+    "base_price": 90
+  },
+  {
+    "id": 98,
+    "key": "silk@high",
+    "base_price": 162
+  },
+  {
+    "id": 99,
+    "key": "silk@best",
+    "base_price": 315
+  },
+  {
+    "id": 100,
+    "key": "fur@low",
+    "base_price": 30
+  },
+  {
+    "id": 101,
+    "key": "fur@mid",
+    "base_price": 50
+  },
+  {
+    "id": 102,
+    "key": "fur@high",
+    "base_price": 90
+  },
+  {
+    "id": 103,
+    "key": "fur@best",
+    "base_price": 175
+  },
+  {
+    "id": 104,
+    "key": "amber@low",
+    "base_price": 36
+  },
+  {
+    "id": 105,
+    "key": "amber@mid",
+    "base_price": 60
+  },
+  {
+    "id": 106,
+    "key": "amber@high",
+    "base_price": 108
+  },
+  {
+    "id": 107,
+    "key": "amber@best",
+    "base_price": 210
+  },
+  {
+    "id": 108,
+    "key": "pickled_vegetables@low",
+    "base_price": 10
+  },
+  {
+    "id": 109,
+    "key": "pickled_vegetables@mid",
+    "base_price": 14
+  },
+  {
+    "id": 110,
+    "key": "pickled_vegetables@high",
+    "base_price": 35
+  },
+  {
+    "id": 111,
+    "key": "pickled_vegetables@best",
+    "base_price": 84
+  },
+  {
+    "id": 112,
+    "key": "dried_beans@low",
+    "base_price": 9
+  },
+  {
+    "id": 113,
+    "key": "dried_beans@mid",
+    "base_price": 13
+  },
+  {
+    "id": 114,
+    "key": "dried_beans@high",
+    "base_price": 33
+  },
+  {
+    "id": 115,
+    "key": "dried_beans@best",
+    "base_price": 78
+  }
+]

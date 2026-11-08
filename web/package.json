@@ -25,5 +25,8 @@
     "typescript-eslint": "8.35.1",
     "vite": "6.3.5",
     "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "pixi.js": "8.10.2"
   }
 }

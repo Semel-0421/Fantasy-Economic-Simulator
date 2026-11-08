@@ -8,6 +8,9 @@ use fes_sim::agents::credit_system::{
     bill_price, bill_room, CreditSystem, BILL_BANK, BILL_HOUSEHOLDS,
 };
 use fes_sim::agents::facilities::OWNER_NPC;
+use fes_sim::agents::money_ledger::state_excess;
+use fes_sim::agents::trader_loans::TraderLoanSystem;
+use fes_sim::agents::TraderLoans;
 use fes_sim::agents::{
     AgentTable, BankState, BillRoom, BillTable, BondTable, CreditStats, FacilityTable, GroupTable,
     PurseState,
@@ -365,4 +368,140 @@ fn a_group_short_of_cash_lists_shares_to_households() {
         .sum();
     assert!(listed > 0, "groups raised working cash by listing shares");
     assert!((0..count).all(|f| shares.outside(f as i32) <= max));
+}
+
+// ---- trader loans (TraderLoanTests) ----
+
+fn loans_sim() -> (Simulation, usize) {
+    let sim = common::build_sample(&["traders.float_keep_weeks,0"]);
+    let t = town(&sim, 0) as usize;
+    (sim, t)
+}
+
+fn cfg(sim: &mut Simulation) -> &mut fes_data::SimulationConfig {
+    &mut Arc::make_mut(&mut sim.context_mut().services.database).config
+}
+
+fn run_loans(sim: &mut Simulation) {
+    TraderLoanSystem.execute(sim.context_mut()).unwrap();
+}
+
+#[test]
+fn households_lend_only_what_they_can_spare() {
+    let (mut sim, node) = loans_sim();
+    cfg(&mut sim).trader_loan_share = Fx::from_permille(100);
+    cfg(&mut sim).trader_loan_keep_weeks = 26;
+    let cash = sim.context_mut().world.get_mut::<HouseholdCash>();
+    cash.desired[node] = 100;
+    cash.cash[node] = 2_600;
+    let float_before = sim.context().world.get::<PurseState>().float[0];
+    run_loans(&mut sim);
+    assert_eq!(
+        sim.context().world.get::<TraderLoans>().owed_households[node],
+        0
+    );
+    sim.context_mut().world.get_mut::<HouseholdCash>().cash[node] = 12_600;
+    run_loans(&mut sim);
+    let w = &sim.context().world;
+    assert_eq!(w.get::<TraderLoans>().owed_households[node], 1_000);
+    assert_eq!(w.get::<HouseholdCash>().cash[node], 11_600);
+    assert!(w.get::<PurseState>().float[0] > float_before);
+}
+
+#[test]
+fn traders_pay_interest_and_a_part_within_a_share_of_the_float() {
+    let (mut sim, node) = loans_sim();
+    let c = cfg(&mut sim);
+    c.trader_loan_share = Fx::ZERO;
+    c.trader_loan_interest = Fx::from_permille(520);
+    c.trader_loan_weeks = 10;
+    c.trader_loan_repay_share = Fx::from_permille(500);
+    let rate = c.trader_loan_interest;
+    let w = &mut sim.context_mut().world;
+    w.get_mut::<TraderLoans>().owed_households[node] = 100_000;
+    w.get_mut::<HouseholdCash>().cash[node] = 0;
+    w.get_mut::<PurseState>().float[0] = 1_000_000;
+    let interest = rate.mul_int(100_000) / 52;
+    run_loans(&mut sim);
+    let w = &sim.context().world;
+    assert_eq!(w.get::<TraderLoans>().owed_households[node], 90_000);
+    assert_eq!(w.get::<TraderLoans>().interest_households[node], 0);
+    assert_eq!(w.get::<HouseholdCash>().cash[node], 10_000 + interest);
+    let w = &mut sim.context_mut().world;
+    w.get_mut::<PurseState>().float[0] = 2_000;
+    w.get_mut::<HouseholdCash>().cash[node] = 0;
+    let second = rate.mul_int(90_000) / 52;
+    run_loans(&mut sim);
+    let w = &sim.context().world;
+    assert_eq!(w.get::<HouseholdCash>().cash[node], 1_000);
+    assert_eq!(w.get::<PurseState>().float[0], 1_000);
+    assert_eq!(w.get::<TraderLoans>().interest_households[node], 0);
+    assert_eq!(
+        w.get::<TraderLoans>().owed_households[node],
+        90_000 - (1_000 - second)
+    );
+    let w = &mut sim.context_mut().world;
+    w.get_mut::<PurseState>().float[0] = -500;
+    w.get_mut::<HouseholdCash>().cash[node] = 0;
+    let owed = w.get::<TraderLoans>().owed_households[node];
+    run_loans(&mut sim);
+    let w = &sim.context().world;
+    assert_eq!(w.get::<HouseholdCash>().cash[node], 0);
+    assert_eq!(w.get::<TraderLoans>().owed_households[node], owed);
+    assert!(w.get::<TraderLoans>().interest_households[node] > 0);
+}
+
+#[test]
+fn households_stop_lending_while_traders_are_behind() {
+    let (mut sim, node) = loans_sim();
+    cfg(&mut sim).trader_loan_share = Fx::from_permille(100);
+    cfg(&mut sim).trader_loan_keep_weeks = 0;
+    let weeks = i64::from(cfg(&mut sim).trader_loan_weeks);
+    let w = &mut sim.context_mut().world;
+    w.get_mut::<HouseholdCash>().cash[node] = 100_000;
+    w.get_mut::<TraderLoans>().owed_households[node] = 1_000_000;
+    w.get_mut::<PurseState>().float[0] = 0;
+    run_loans(&mut sim);
+    let w = &sim.context().world;
+    assert_eq!(w.get::<TraderLoans>().owed_households[node], 1_000_000);
+    assert_eq!(w.get::<HouseholdCash>().cash[node], 100_000);
+    sim.context_mut().world.get_mut::<PurseState>().float[0] = 10_000_000;
+    run_loans(&mut sim);
+    let owed = sim.context().world.get::<TraderLoans>().owed_households[node];
+    assert!(
+        owed > 1_000_000 - 1_000_000 / weeks,
+        "paying up opens lending again"
+    );
+}
+
+/// `traders.bank_loan_share_permille` is 0 in the shipped data, so this path is reached only here.
+#[test]
+fn bank_lends_its_excess_and_is_paid_back() {
+    let (mut sim, _) = loans_sim();
+    cfg(&mut sim).trader_bank_loan_share = Fx::from_permille(100);
+    sim.context_mut().world.get_mut::<BankState>().reserve[0] += 1_000_000;
+    let reserve = sim.context().world.get::<BankState>().reserve[0];
+    let excess = {
+        let ctx = sim.context();
+        state_excess(
+            &ctx.world,
+            ctx.services.get::<NodeTable>(),
+            ctx.services.get::<fes_sim::world::NodeBanks>(),
+            &ctx.services.database.config,
+            0,
+        )
+    };
+    assert!(excess > 0);
+    run_loans(&mut sim);
+    let owed = sim.context().world.get::<TraderLoans>().owed_bank[0];
+    assert_eq!(owed, Fx::from_permille(100).mul_int(excess));
+    assert_eq!(
+        sim.context().world.get::<BankState>().reserve[0],
+        reserve - owed
+    );
+    cfg(&mut sim).trader_bank_loan_share = Fx::ZERO;
+    sim.context_mut().world.get_mut::<PurseState>().float[0] = 10_000_000;
+    let lower = sim.context().world.get::<BankState>().reserve[0];
+    run_loans(&mut sim);
+    assert!(sim.context().world.get::<BankState>().reserve[0] > lower);
 }

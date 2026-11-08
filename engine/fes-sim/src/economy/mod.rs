@@ -103,7 +103,7 @@ impl Module for EconomyModule {
         b.world.add(cash)?;
         b.add_system(Box::new(WorldEventSystem))?;
         b.add_system(Box::new(ModifierFoldSystem))?;
-        b.add_system(Box::new(PricingSystem))?;
+        b.add_system(Box::<PricingSystem>::default())?;
         b.add_system(Box::new(CurrencySystem))
     }
 }

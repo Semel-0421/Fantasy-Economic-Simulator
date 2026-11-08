@@ -7,7 +7,7 @@ pub mod demand;
 pub mod reprice;
 
 use self::consumption::{Books, Scratch};
-use self::demand::DemandParams;
+use self::demand::{CurveMemo, DemandParams};
 use self::reprice::{PriceParams, Reprice};
 use super::{CurrencyState, HouseholdCash, HouseholdState, MarketFlows, MarketStore};
 use crate::context::SimContext;
@@ -33,7 +33,11 @@ pub fn luxury_share(config: &SimulationConfig, good: &GoodDef) -> Fx {
     shares[good.grade() as usize]
 }
 
-pub struct PricingSystem;
+#[derive(Default)]
+pub struct PricingSystem {
+    /// The household necessity curve by price ratio, kept across turns.
+    curve: CurveMemo,
+}
 
 impl System for PricingSystem {
     fn id(&self) -> &'static str {
@@ -61,7 +65,14 @@ impl System for PricingSystem {
         let mut wanted = std::mem::take(&mut households.necessity_wanted);
         let mut met = std::mem::take(&mut households.necessity_met);
 
-        run(ctx, &mut markets, &mut cash, &mut wanted, &mut met);
+        run(
+            ctx,
+            &mut markets,
+            &mut cash,
+            &mut wanted,
+            &mut met,
+            &mut self.curve,
+        );
 
         let households = ctx.world.get_mut::<HouseholdState>();
         households.necessity_wanted = wanted;
@@ -78,12 +89,14 @@ fn run(
     cash: &mut HouseholdCash,
     wanted: &mut [i64],
     met: &mut [i64],
+    curve: &mut CurveMemo,
 ) {
     let db = &ctx.services.database;
     let nodes = ctx.services.get::<NodeTable>();
     let households = ctx.world.get::<HouseholdState>();
     grow_at_home(db, nodes, markets, cash, households);
     let scratch = scratch(ctx, cash);
+    curve.prepare(&scratch.demand);
 
     let mut inline_mask = 0i32;
     for (l, level) in WorldLevel::ALL.iter().enumerate() {
@@ -97,6 +110,7 @@ fn run(
         cash,
         necessity_wanted: wanted,
         necessity_met: met,
+        curve,
     };
     if slow_mask != 0 {
         scratch.consume(slow_mask, &mut books);

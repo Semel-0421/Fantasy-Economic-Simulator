@@ -1,7 +1,7 @@
 //! Household consumption per market cell, shared by the repricing pass of markets that reprice
 //! every turn and by C# `ConsumptionJob` for the others (ported as a plain loop over markets in
 //! order).
-use super::demand::{cell_base, weekly, DemandParams};
+use super::demand::{cell_base, weekly_memo, CurveMemo, DemandParams};
 use crate::economy::markets::MODIFIER_TARGETS;
 use crate::economy::{HouseholdCash, MarketStore};
 use fes_core::Fx;
@@ -39,6 +39,8 @@ pub struct Books<'a> {
     pub cash: &'a mut HouseholdCash,
     pub necessity_wanted: &'a mut [i64],
     pub necessity_met: &'a mut [i64],
+    /// `prepare`d with `Scratch::demand` before the first cell.
+    pub curve: &'a mut CurveMemo,
 }
 
 /// One cell's consumption, as the market tallies it.
@@ -111,8 +113,9 @@ impl Scratch<'_> {
             value_mul,
         );
         let price = m.price[c];
-        let wish = weekly(
+        let wish = weekly_memo(
             &self.demand,
+            b.curve,
             weekly_base,
             price,
             anchor,

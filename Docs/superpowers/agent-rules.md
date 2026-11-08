@@ -52,7 +52,7 @@ Rule: record the configured model and effort when they can be seen; mark unknown
 
 ## 4. Copilot checks
 
-**Commit-batch check (fast)** — staged paths only; no forbidden files (rule 10); trailers present (rule 11); `git status --short` clean of surprises.
+**Commit-batch check (fast)** — staged paths only; no forbidden files (rule 10) in the staged set or the commit range; trailers present (rule 11); `git status --short` clean of surprises. Unstaged changes under `Packages/` and `ProjectSettings/` are Unity update files the user keeps local on purpose: list them, never block on them.
 
 **Pre-push gate (full)** — the commit-batch check, plus:
 - in `engine/`: `cargo fmt --check`; `cargo clippy --all-targets --all-features -- -D warnings`; `cargo test --all-features`; `cargo check -p fes-sim --target wasm32-unknown-unknown` (needs that target installed); `bash scripts/check_file_length.sh`; the parity commands of rule 13.

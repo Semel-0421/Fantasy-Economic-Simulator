@@ -14,6 +14,36 @@ native_table! {
     }
 }
 
+/// C# `TradeLicenseKind`: stored under a negative base good.
+pub const TRADE_LICENSE_INTERNATIONAL: i32 = -1;
+pub const TRADE_LICENSE_INTERCONTINENTAL: i32 = -2;
+
+impl LicenseTable {
+    /// C# `Find`.
+    pub fn find(&self, base_good: i32, nation: i32) -> Option<usize> {
+        (0..self.count()).find(|&r| self.base_good[r] == base_good && self.nation[r] == nation)
+    }
+
+    /// C# `IsValid`.
+    pub fn is_valid(&self, base_good: i32, nation: i32, turn: i32) -> bool {
+        self.find(base_good, nation)
+            .is_some_and(|r| turn < self.expires_turn[r])
+    }
+
+    /// C# `Extend`: adds a year, counted from the current expiry when still valid.
+    pub fn extend(&mut self, base_good: i32, nation: i32, turn: i32) {
+        let year = crate::clock::WEEKS_PER_YEAR;
+        match self.find(base_good, nation) {
+            None => {
+                self.base_good.push(base_good);
+                self.nation.push(nation);
+                self.expires_turn.push(turn + year);
+            }
+            Some(r) => self.expires_turn[r] = turn.max(self.expires_turn[r]) + year,
+        }
+    }
+}
+
 /// A license lapsed and was dropped (C# `LicenseExpired`); `nation` is the nation's node.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LicenseExpired {

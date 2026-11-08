@@ -1,4 +1,15 @@
 //! Player commands (C# `Commands.cs`): validated and applied at the start of a turn, in order.
+pub mod bank;
+pub mod bonds;
+pub mod facility;
+pub mod licenses;
+pub mod places;
+pub mod player_command;
+pub mod securities;
+pub mod support;
+pub mod trade;
+pub mod travel;
+
 use crate::agents::guidance::GuidanceSignal;
 use crate::context::SimContext;
 use crate::error::SimError;
@@ -18,6 +29,11 @@ pub enum CommandResult {
 pub trait Command: Debug + Send + Sync {
     fn validate(&self, ctx: &SimContext) -> CommandResult;
     fn apply(&self, ctx: &mut SimContext);
+
+    /// Runs right before `validate`. Only for C# validations that fill an unsaved per-turn cache
+    /// as a side effect (the first ask of `BondOffers` builds it): the cache must be built at the
+    /// same point of the turn even when validation then fails. Changes nothing else.
+    fn prepare(&self, _ctx: &mut SimContext) {}
 
     /// C# `IGuidanceSource.GetGuidance`: the expansion direction this command signals once it
     /// was applied this turn. Reads the world, never changes it; most commands signal none.
@@ -106,6 +122,7 @@ impl System for CommandSystem {
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
         for command in ctx.commands.drain() {
             let turn = ctx.turn();
+            command.prepare(ctx);
             if let CommandResult::Error(reason) = command.validate(ctx) {
                 ctx.events.publish(CommandRejected {
                     command,

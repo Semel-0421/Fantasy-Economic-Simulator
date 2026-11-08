@@ -19,10 +19,12 @@ pub mod schedule;
 pub mod simulation;
 #[cfg(feature = "testing")]
 pub mod testing;
+pub mod views;
 pub mod world;
 
 pub use builder::SimulationBuilder;
 pub use clock::SimClock;
+pub use commands::player_command::PlayerCommand;
 pub use commands::{
     Command, CommandApplied, CommandQueue, CommandRejected, CommandResult, CommandSystem,
 };

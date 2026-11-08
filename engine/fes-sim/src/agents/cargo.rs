@@ -25,6 +25,11 @@ pub fn merchant_holder(agent: i32) -> i32 {
     (2 << 28) + agent
 }
 
+/// C# `CargoHolders.GuildHall`: the holder id of a guild's hall.
+pub fn guild_hall_holder(guild: i32) -> i32 {
+    GUILD_HALL_BASE + guild
+}
+
 /// C# `CargoHolders.IsGuildHall`: the guild whose hall `holder` is, if it is one.
 pub fn guild_hall_of(holder: i32) -> Option<i32> {
     let guild = holder.wrapping_sub(GUILD_HALL_BASE);

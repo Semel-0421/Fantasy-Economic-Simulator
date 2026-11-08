@@ -21,6 +21,13 @@ impl Default for PlayerShip {
     }
 }
 
+impl PlayerShip {
+    /// C# `AvailableAt`: whether the player can sail the ship from `node`.
+    pub fn available_at(&self, node: i32) -> bool {
+        self.owned && (self.docked_at == node || self.docked_at < 0)
+    }
+}
+
 impl Component for PlayerShip {
     fn key(&self) -> &'static str {
         "agents.ship"

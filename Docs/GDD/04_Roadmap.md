@@ -228,7 +228,7 @@ Gaps
 
 Margin trials under DEC-099 to DEC-103, three seeds, year 30, reading people, growth, supply, share of bills lost. 15%: 14.96M, -0.01%, 40/94/102/142%, 30%. 20%: 15.09M, -0.08%, 33/94/99/138%, 25%. 25%: 15.11M, -0.09%, 49/91/99/146%, 11%. 30%: 15.30M, -0.04%, 60/94/98/149%, 3%. Chosen 25%. Six seeds, year 30: 15.33M, -0.14%, 49/92/96/147%, failures 7.4%, bills 3.5M issued a year, 11% lost. Three seeds, year 60: 15.69M, +0.15%, 82/100/101/155%, bills 4.7M, 30% lost.
 
-After DEC-109 to DEC-111, three seeds, year 30: 15.73M, -0.29% a year, necessities met in cities 83%, villages 153%, groups hold 12.5M against households' 2.6M. Direction trials for the next step: [PROPOSAL_STEP5_2026-11-03](reviews/PROPOSAL_STEP5_2026-11-03.md).
+After DEC-109 to DEC-111, three seeds, year 30: 15.73M, -0.29% a year, necessities met in cities 83%, villages 153%, groups hold 12.5M against households' 2.6M. Direction trials for the next step: PROPOSAL_STEP5_2026-11-03 (removed 2026-11-09; see git history).
 
 Direction A with the owner's choices (DEC-112), six seeds, year 30: 19.5M to 20.5M people, +0.24 to +0.46% a year, last falling year 10 to 14; necessities met cities 73 to 85%, villages 114 to 130%; groups 2.2M to 5.7M, households 11.2M to 15.6M; failures 0 to 77.
 

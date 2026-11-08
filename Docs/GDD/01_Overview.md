@@ -52,4 +52,4 @@ Rank names and the measures behind them are [Draft] (Claude named); thresholds i
 
 ## Not yet decided
 - What is out of scope (multiplayer, combat beyond encounters, character play) has not been discussed.
-- Screens and UI are not designed (reviews/REVIEW_2026-10-27.md).
+- Screens and UI are not designed (REVIEW_2026-10-27, removed 2026-11-09; see git history).

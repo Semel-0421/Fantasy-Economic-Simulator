@@ -14,7 +14,7 @@
 
 ---
 
-### Task 1: Engine memory and copies (Codex, gpt-6-astra, high)
+### Task 1: Engine memory and copies (Codex, gpt-6.1-sol, high)
 - Measure first, then change: (a) memory and time of `preview_queued` (scratch buffers, about 45 MB after the first preview); (b) every place the build, `load` or `preview` copies large state (`GameDatabase`/`MapDef` are already `Arc`; check world sections, saves, wasm `load`); (c) peak wasm memory over turns 0-53 in the Edge bench.
 - Change only what the numbers justify; results must stay equal. Target: preview scratch ≤ 20 MB or removed, no full-world copy outside `save`.
 - Tests: preview equality tests still pass; `preview_fullscale` hash unchanged; a test or bench line records the memory numbers.
@@ -33,6 +33,7 @@
 
 ### Task 4: Release path test (Codex, Copilot gate; needs the user's accounts)
 - After the user enables Pages and adds `BUTLER_API_KEY` and `ITCH_TARGET`: push, check the Pages deploy, tag `v0.1.0-rc1`, check the itch development channel upload.
+- The game has no in-app bench mode yet (Plan 5 planned `?bench=fullscale`; only `web/bench` exists). Add it: `?bench=fullscale` runs turns 0-53 on the full-scale world in the Worker and shows average, worst and the hash after turn 11. No UI layout work beyond a plain result text.
 - Measure the turn bench inside the itch embed (Plan 5 Task 9); record in `port-notes.md`. Gate: worst < 1 s, average < 0.7 s.
 - Ask the user before tagging and before every push.
 

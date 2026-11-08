@@ -20,7 +20,7 @@ Three AI agents work on this project, each in one role. Orca (`orca` CLI) starts
 ## Key rules (see the full file)
 
 - **Everything delivered to the user is in Korean.** Code, commits and agent-to-agent files are in English.
-- Codex and Copilot use their newest models; model and reasoning effort may be changed per task without asking the user.
+- Codex uses gpt-6.1-sol where possible and gpt-6-astra only for deep reasoning; model and reasoning effort may be changed per task without asking the user.
 - Only the user approves pushes, account work and scope expansion.
 - Never stage `Packages/`, `ProjectSettings/`, `.serena/`, build output, files over 5 MB, secrets; never `git add -A`.
 - Free mode must equal the C# reference (parity as in `.github/workflows/engine.yml`).

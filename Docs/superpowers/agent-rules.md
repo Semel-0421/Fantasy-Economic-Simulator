@@ -13,7 +13,7 @@ Reviews: `.superpowers/agent-rules/codex-review.md`, `copilot-review.md` (local)
 
 Rule: record the configured model and effort when they can be seen; mark unknown values as unknown.
 
-**Model and effort choice (user permission, 2026-11-09).** Codex and Copilot use the latest model available to them. The model and reasoning effort may be changed per task to fit the work, without asking the user: the Planner sets them at launch (`--model`, `--effort`), and an agent may switch its own (`/model` in Copilot) when the task needs it. Defaults: the strongest available model at high effort for engine, parity, scenario and review work; a cheaper model or lower effort for docs, mechanical edits and checklist runs. Each report states the model and effort used.
+**Model and effort choice (user permission, 2026-11-09).** Codex and Copilot use the latest model available to them. The model and reasoning effort may be changed per task to fit the work, without asking the user: the Planner sets them at launch (`--model`, `--effort`), and an agent may switch its own (`/model` in Copilot) when the task needs it. Codex model (user rule, 2026-11-09): use **gpt-6.1-sol** whenever possible, at high effort for engine, parity, scenario and review work and lower effort for docs and mechanical edits; launch **gpt-6-astra** only when the task needs deep reasoning (for example a parity divergence that Sol could not find, or a hard design or determinism problem), and say why in the report. Copilot: a cheaper model or lower effort for checklist runs. Each report states the model and effort used.
 
 ## 2. Roles
 

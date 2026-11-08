@@ -152,12 +152,9 @@ pub fn log_of_ratio(ratio_raw: i64, choke_raw: i64) -> i64 {
 /// log2 of a positive raw Fx, as raw Fx: the whole part from the top bit, the fraction by
 /// repeated squaring.
 fn log2(x_raw: i64) -> i64 {
-    let mut top: i32 = 0;
-    let mut v = x_raw;
-    while v > 1 {
-        v >>= 1;
-        top += 1;
-    }
+    debug_assert!(x_raw > 0);
+    // The index of the top set bit (the C# shift loop, in one instruction).
+    let top = 63 - x_raw.leading_zeros() as i32;
     let mut result = i64::from(top - FB as i32) << FB;
     let mut y = if top >= Q30 as i32 {
         x_raw >> (top - Q30 as i32)
@@ -165,6 +162,11 @@ fn log2(x_raw: i64) -> i64 {
         x_raw << (Q30 as i32 - top)
     };
     for bit in (0..FB).rev() {
+        // 1.0 squares to itself and sets no further bit: the rest of the loop would not change
+        // the result (an exact power of two, such as a price at its anchor).
+        if y == 1i64 << Q30 {
+            break;
+        }
         y = y.wrapping_mul(y) >> Q30;
         if y < 2i64 << Q30 {
             continue;
@@ -279,5 +281,44 @@ mod tests {
         assert_eq!(HIGH_ROOTS[100], 1407633882);
         assert_eq!(HIGH_ROOTS[128], 1518500250);
         assert_eq!(HIGH_ROOTS[255], 2141676967);
+    }
+
+    /// The C# loop as first ported: shift loop for the top bit, all sixteen squarings.
+    fn log2_reference(x_raw: i64) -> i64 {
+        let mut top: i32 = 0;
+        let mut v = x_raw;
+        while v > 1 {
+            v >>= 1;
+            top += 1;
+        }
+        let mut result = i64::from(top - FB as i32) << FB;
+        let mut y = if top >= Q30 as i32 {
+            x_raw >> (top - Q30 as i32)
+        } else {
+            x_raw << (Q30 as i32 - top)
+        };
+        for bit in (0..FB).rev() {
+            y = y.wrapping_mul(y) >> Q30;
+            if y >= 2i64 << Q30 {
+                y >>= 1;
+                result += 1i64 << bit;
+            }
+        }
+        result
+    }
+
+    #[test]
+    fn log2_matches_the_reference_loop() {
+        let mut x = 1i64;
+        while x < 1i64 << 40 {
+            let near = [-1i64, 0, 1, 7, 12345].map(|d| x + d);
+            for v in near.into_iter().filter(|&v| v > 0) {
+                assert_eq!(log2(v), log2_reference(v), "log2({v})");
+            }
+            x = x * 17 / 16 + 1;
+        }
+        for v in 1..300_000i64 {
+            assert_eq!(log2(v), log2_reference(v), "log2({v})");
+        }
     }
 }

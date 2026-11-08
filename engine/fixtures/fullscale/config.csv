@@ -1,0 +1,207 @@
+# Tunables. Missing keys use code defaults (see SimulationConfig).
+key,value
+lod.mode,1
+tier.continent.period,4
+tier.nation.period,4
+tier.nation.offset,1
+tier.region.period,2
+tier.city.period,1
+tier.village.period,1
+player.start_cash,500
+cargo.cart.max_weight,400
+cargo.cart.max_size,300
+# A continent of ten million starting 65% rural, as England and Wales in 1801; migration fills the towns (DEC-079). Node levels carry 1 nation, 2 regions, 4 cities, 10 villages.
+households.continent.population,1000
+households.nation.population,700000
+households.region.population,350000
+households.city.population,525000
+households.village.population,650000
+households.continent.income_permille,300
+households.nation.income_permille,300
+households.region.income_permille,300
+households.city.income_permille,500
+households.village.income_permille,2000
+# The rich pay for the hungry's necessities up to 2% of their holdings a week, buy more luxuries the more they hold, and pay a tenth of luxuries in tax (DEC-127).
+households.alms_permille,20
+households.luxury_wealth_permille,1000
+households.luxury_wealth_cap_permille,4000
+households.luxury_tax_permille,100
+# Cities work inputs; villages only raise them (DEC-076).
+producers.village.tertiary,0
+producers.city.secondary,6
+producers.city.tertiary,8
+# Demand follows people: the same per head at every level.
+demand.nation.weight_permille,5330
+demand.region.weight_permille,2670
+demand.city.weight_permille,4000
+demand.village.weight_permille,4950
+# Staple food: cereals 0.60 (Andreyeva 2010), 0.43 to 0.61 by income (Green 2013) (DEC-112).
+demand.necessity_elasticity_permille,600
+# Necessities follow a constant-elasticity curve, so hungry households keep buying as prices climb; none are bought from five times the anchor (DEC-126).
+demand.necessity_choke_permille,5000
+# Rural-urban migration over about fifteen years (DEC-079).
+migration.max_share_permille,80
+# Population grows below full supply: a slow pre-industrial rise that shortage slows and severe shortage reverses (DEC-112).
+households.base_growth_permille,10
+households.growth_response_permille,20
+households.urban_penalty_permille,0
+# Factories can be expanded and NPC groups invest on every node (DEC-080).
+facility.expansion_bonus_permille,250
+investment.payback_years,8
+# Nobody builds to make a good whose makers already run below this share of capacity (DEC-091).
+investment.min_plan_permille,800
+# Emancipation waits for a settled labor shortage.
+migration.emancipation_earliest_years,5
+migration.vacancy_permille,300
+groups.payout_permille,500
+# Wages follow output and the state pays towns short of money; weights from a 30-year grid (DEC-082).
+facility.output_wage_permille,25
+state.public_wage_permille,30
+# Merchants differ by what they carry with; they buy carts and wagons from factories (DEC-084).
+merchants.vehicle0.capacity_permille,500
+merchants.vehicle1.capacity_permille,1000
+merchants.vehicle2.capacity_permille,3000
+# Each capital class starts with its vehicle (DEC-121): top a wagon, average and most common a cart, the player's start packs.
+merchants.class0.vehicle,2
+merchants.class1.vehicle,1
+merchants.class2.vehicle,1
+merchants.class3.vehicle,0
+# A group keeps two weeks of upkeep in coins when it buys a load (DEC-122).
+merchants.reserve_upkeep_weeks,2
+# An arriving group sells necessities to the households first, at the price, from their cash; the rest goes to the traders (DEC-124).
+merchants.sell_to_households,1
+# Orders, quarterly factory plans, and vehicle running costs and risks (DEC-085).
+production.forecast_enabled,1
+# Plans lean on what households want and reach raw goods (DEC-091).
+production.forecast_primary,1
+production.forecast_household_permille,700
+production.forecast_cover_permille,2000
+merchants.vehicle0.cost_permille,600
+merchants.vehicle1.cost_permille,1000
+merchants.vehicle2.cost_permille,1800
+merchants.vehicle0.danger_permille,700
+merchants.vehicle1.danger_permille,1000
+merchants.vehicle2.danger_permille,1600
+merchants.vehicle0.premium_permille,800
+merchants.vehicle1.premium_permille,1000
+merchants.vehicle2.premium_permille,2000
+merchants.vehicle1.cash_times,6
+merchants.vehicle2.cash_times,20
+merchants.risk_aversion,4
+# Fewer merchants (DEC-086), most of them in the towns, where the goods are (DEC-095).
+merchants.continent,2
+merchants.nation,2
+merchants.region,8
+merchants.city,6
+merchants.village,2
+merchants.join_permille,300
+# Strategic grants and take-or-pay supply contracts (DEC-087).
+state.strategic_subsidy_permille,200
+contract.per_nation,8
+# Food grades: dearer and scarcer at the top (DEC-090).
+food.low.price_permille,700
+food.mid.price_permille,1000
+food.high.price_permille,2500
+food.best.price_permille,6000
+food.low.demand_permille,360
+food.mid.demand_permille,500
+food.high.demand_permille,100
+food.best.demand_permille,40
+# Groups weigh selling here against carrying the load on (DEC-093).
+merchants.weigh_sales,1
+# Traders start with most of the free money, and households lend them what they can spare (DEC-092).
+markets.trader_float_permille,900
+traders.loan_share_permille,10
+# Merchants judge three markets ahead, bid for what is missing even when they leave with something else, and come back down when stranded above their home; households spend faster (DEC-095, DEC-096).
+merchants.return_home,1
+merchants.judge_hops,3
+merchants.bids,2
+households.budget_weeks,13
+# Each continent makes its own goods; groups based at region level and above carry them across, and far trade flows at 65% (DEC-066, DEC-096).
+merchants.cross_level,2
+# Trade across borders needs its own license ([Draft] DEC-116).
+license.international_merchant_share_permille,500
+license.intercontinental_merchant_share_permille,500
+license.international_price,300
+license.intercontinental_price,1500
+merchants.cross_flow_permille,650
+# A market whose traders cannot pay for 20 units is no market; groups based at a port may sail whatever their personality; nations keep their international bank in coins (DEC-096).
+merchants.judge_coin_units,20
+merchants.port_crossers,1
+bank.international_balance,1
+# Traders pay sellers the price less their margin and spend what they hold beyond eight weeks of trade; far flows pay carriers their margin as wages (DEC-098).
+markets.trader_spread_permille,250
+traders.float_keep_weeks,8
+merchants.flow_wage_permille,1000
+# Bills for what traders cannot pay, government and corporate bonds on idle money, groups keeping their facilities in working cash (DEC-097).
+credit.bill_cap_weeks,8
+# A group below zero sells its bills to households, priced by what the traders can pay, less a discount (DEC-122).
+credit.bill_sale_discount_permille,150
+credit.state_debt_permille,300
+credit.company_debt_permille,500
+credit.working_weeks,4
+# Merchants weigh losses by personality, count a trip's costs when choosing a load, and may cover a load's price (DEC-099).
+merchants.cautious.loss_aversion,3
+merchants.normal.loss_aversion,2
+merchants.aggressive.loss_aversion,1
+merchants.count_trip_costs,1
+merchants.hedge_fee_permille,8
+merchants.hedge_floor_permille,900
+merchants.hedge_chance_permille,60
+# Classes hold no market; core towns take their people and roles (DEC-104).
+core.absorb,1
+# Off until facilities stop losing money as a rule: at 2, about 90% close within 30 years.
+facility.close_loss_years,999
+# A facility taken over after a bankruptcy may change its use once, for half the new type's value (DEC-125).
+facility.repurpose_cost_permille,500
+# Plots per node and a plot's value when all are free; a facility needs one, and the price rises as they get few (DEC-128).
+land.city.plots,40
+land.village.plots,12
+land.city.value,1500
+land.village.value,500
+# A facility is split into shares; its group lets others hold at most 49, raising working cash from households before bonds (DEC-129).
+facility.shares,100
+facility.max_listed_shares,49
+# Shares and land are pledged at their price; above 75% of the collateral the bank calls for margin, and after two weeks sells them back to the loan-to-value (DEC-130).
+bank.margin_call_permille,750
+bank.margin_call_weeks,2
+# Stock exchanges and property markets: households borrow on what they hold and pay it off over the years; the price runs on credit, new idle money and the last quarter's change, and bursts on published lines; financial events follow bursts and bank cover, not dice (DEC-131).
+finance.event_chance_permille,0
+market.credit_share_permille,5
+market.credit_weight_permille,250
+market.momentum_permille,900
+market.reversion_permille,300
+market.idle_weight_permille,400
+market.property_idle_weight_permille,20
+market.repay_permille,200
+market.weekly_move_permille,30
+market.heated_permille,1500
+market.burst_permille,2500
+market.leverage_limit_permille,600
+market.burst_drop_permille,300
+market.crunch_debt_share_permille,100
+market.venture_idle_weight_permille,30
+# Trading ventures at ports with a route across the sea: they raise capital from the port's nation, buy the far port's good dearest at home, sail half a year, a tenth are lost, and pay their profit by share; their shares trade on the continental exchange (DEC-132).
+venture.per_continent,3
+venture.shares,100
+venture.capital,20000
+venture.voyage_weeks,26
+venture.loss_permille,100
+venture.min_margin_permille,200
+venture.value_years,2
+# Short selling under an exchange's licence: a year of trading there and a deposit at its bank, for a fee; the deposit holds 150% of a short's value on opening and is called under 130%; the lender is paid 5% a year (DEC-133).
+short.licence_fee,1000
+short.licence_deposit,5000
+short.licence_weeks,52
+short.open_permille,1500
+short.call_permille,1300
+short.fee_permille,50
+short.max_lent_shares,20
+# What the bubble steps left out (DEC-134): land under houses earns rent, 30 parts per million of the node's income a year, ten years of it in a plot's value; a crunch lifts loan rates; groups list their shares on a dear exchange and buy them back on a cheap one.
+land.rent_ppm,30
+land.rent_years,10
+finance.crunch_lifts_rates,1
+share.group_list_premium_permille,1300
+share.group_buyback_premium_permille,800
+# The state opens a subsidised producer, or a land project's, at the node shortest of necessities where it may stand, with a plot and fewer than 24 facilities; a fine workshop at the core town shortest of them (DEC-135).
+state.max_per_node,24

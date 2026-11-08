@@ -43,6 +43,31 @@ namespace FES.Tests
                 ExportRun(run.name, run.seed, run.years, run.config, run.hash);
         }
 
+        /// <summary>
+        /// Writes the full-scale world's CSVs (the rules the game ships with) and the world hash after each of the
+        /// first turns, so the Rust build can time itself on the target scale and check parity there.
+        /// </summary>
+        [Test, Explicit, Timeout(int.MaxValue)]
+        public void WritesFullScaleData()
+        {
+            string dir = Path.Combine(Root, "fullscale");
+            Directory.CreateDirectory(dir);
+            var data = TestWorlds.FullScaleShipped();
+            foreach (string file in DataFiles.All)
+                if (data.Exists(file)) File.WriteAllText(Path.Combine(dir, file), data.ReadText(file), new UTF8Encoding(false));
+
+            const ulong seed = 1;
+            using var sim = SimulationBuilder.FromData(data, seed).Build();
+            var rows = new List<string> { "{\"turn\":0,\"world_hash\":" + ParityJson.Serialize(sim.ComputeHash()) + "}" };
+            for (int t = 0; t <= 10; t++)
+            {
+                sim.AdvanceTurn();
+                rows.Add("{\"turn\":" + sim.Turn + ",\"world_hash\":" + ParityJson.Serialize(sim.ComputeHash()) + "}");
+            }
+            File.WriteAllText(Path.Combine(dir, "turns.json"),
+                "{\"seed\":" + ParityJson.Serialize(seed) + ",\"turns\":[\n" + string.Join(",\n", rows) + "\n]}\n", new UTF8Encoding(false));
+        }
+
         // The golden runs, read from GoldenRunTests so the hashes have one source.
         static IEnumerable<(string name, ulong seed, int years, string[] config, string hash)> GoldenRuns()
         {

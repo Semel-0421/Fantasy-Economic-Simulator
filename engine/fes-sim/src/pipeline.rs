@@ -94,6 +94,31 @@ impl TurnPipeline {
         }
     }
 
+    /// Like `advance`, but returns each system's run time and the event dispatch time of each phase
+    /// (labelled `dispatch`), for profiling.
+    pub fn advance_timed(
+        &mut self,
+        ctx: &mut SimContext,
+    ) -> Result<Vec<(&'static str, std::time::Duration)>, SimError> {
+        let mut times = Vec::with_capacity(self.systems.len() + 9);
+        ctx.events.begin_turn();
+        let mut i = 0;
+        while i < self.systems.len() {
+            let phase = self.systems[i].phase();
+            while i < self.systems.len() && self.systems[i].phase() == phase {
+                let start = std::time::Instant::now();
+                self.systems[i].execute(ctx)?;
+                times.push((self.systems[i].id(), start.elapsed()));
+                i += 1;
+            }
+            let start = std::time::Instant::now();
+            ctx.dispatch_events()?;
+            times.push(("dispatch", start.elapsed()));
+        }
+        ctx.clock_mut().advance();
+        Ok(times)
+    }
+
     pub fn advance(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
         ctx.events.begin_turn();
         let mut i = 0;

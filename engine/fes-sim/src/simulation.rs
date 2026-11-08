@@ -65,6 +65,11 @@ impl Simulation {
         })
     }
 
+    /// Runs one turn and returns how long each system and each phase dispatch took.
+    pub fn step_timed(&mut self) -> Result<Vec<(&'static str, std::time::Duration)>, SimError> {
+        self.pipeline.advance_timed(&mut self.ctx)
+    }
+
     /// Queues a player command for the next turn's Commands phase.
     pub fn queue(&mut self, cmd: Box<dyn Command>) {
         self.ctx.commands.enqueue_boxed(cmd);

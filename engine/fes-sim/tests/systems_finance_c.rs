@@ -26,7 +26,9 @@ use fes_sim::agents::policy_system::{
 use fes_sim::agents::production::lines::find_nearest_market;
 use fes_sim::agents::strategic_subsidy::StrategicSubsidySystem;
 use fes_sim::agents::{AgentTable, OrderTable};
-use fes_sim::agents::{BankState, BondOffers, ContractTable, GroupTable, PolicyState};
+use fes_sim::agents::{
+    BankState, BondOffers, ContractTable, GroupTable, MerchantGenetics, PolicyState,
+};
 use fes_sim::agents::{DemandForecast, FacilityTable, PurseState};
 use fes_sim::economy::HouseholdState;
 use fes_sim::economy::MarketStore;
@@ -716,4 +718,39 @@ fn status_quo_bias_stops_policies_short_of_the_limit() {
     let p = sim.context().world.get::<PolicyState>();
     assert!(p.toll_step.iter().all(|s| s.abs() < max));
     assert!(p.license_price_step.iter().all(|s| s.abs() < max));
+}
+
+// ---- merchant generation (MerchantTests, deferred from Task 3) ----
+
+#[test]
+fn new_year_sets_weights_by_fitness_and_a_share_of_groups_hands_over() {
+    let source = common::sample_with_config(
+        "key,value\nmerchants.generation_permille,500\nmerchants.mutation_permille,0\nmerchants.fitness_capital_permille,0\n",
+    );
+    let mut sim = build(&source, 42);
+    let player_node = sim
+        .context()
+        .world
+        .get::<fes_sim::agents::PlayerState>()
+        .node;
+    let continent = sim.context().services.get::<NodeTable>().continent[player_node as usize];
+    let first = continent as usize * 9;
+    let uniform = sim.context().world.get::<MerchantGenetics>().weight[first];
+    for _ in 0..WEEKS_PER_YEAR {
+        step(&mut sim);
+    }
+    let before = sim.context().world.get::<AgentTable>().trait_id.clone();
+    let genetics = sim.context_mut().world.get_mut::<MerchantGenetics>();
+    genetics.year_bankruptcies[first..first + 9].fill(0);
+    genetics.year_bankruptcies[first] = 1000;
+    step(&mut sim);
+    let genetics = sim.context().world.get::<MerchantGenetics>();
+    assert!(
+        genetics.weight[first] < uniform,
+        "a failing trait is drawn less"
+    );
+    assert_eq!(genetics.year_bankruptcies[first], 0);
+    let after = &sim.context().world.get::<AgentTable>().trait_id;
+    let changed = before.iter().zip(after).filter(|(b, a)| b != a).count();
+    assert!(changed > before.len() / 5, "about half hand over");
 }

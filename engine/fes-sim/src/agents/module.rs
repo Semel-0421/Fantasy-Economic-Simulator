@@ -97,6 +97,9 @@ impl Module for AgentsModule {
         ))?;
         b.add_system(Box::new(super::credit_system::CreditSystem::default()))?;
         b.add_system(Box::new(super::trader_loans::TraderLoanSystem))?;
-        b.add_system(Box::new(super::policy_system::PolicySystem))
+        b.add_system(Box::new(super::policy_system::PolicySystem))?;
+        b.add_system(Box::new(
+            super::merchant_generation::MerchantGenerationSystem::default(),
+        ))
     }
 }

@@ -339,3 +339,30 @@ fn a_group_with_coins_keeps_its_bill() {
     assert_eq!(sim.context().world.get::<BillTable>().holder[row], a as i32);
     assert_eq!(sim.context().world.get::<AgentTable>().cash[a], 100);
 }
+
+// ---- ShareTests (deferred "Listed" test) ----
+
+#[test]
+fn a_group_short_of_cash_lists_shares_to_households() {
+    let mut sim = build(
+        &sample_config(&["credit.working_weeks,4", "credit.company_debt_permille,0"]),
+        1,
+    );
+    for _ in 0..30 {
+        sim.step().unwrap();
+    }
+    let max = sim
+        .context()
+        .services
+        .database
+        .config
+        .facility_max_listed_shares;
+    let w = &sim.context().world;
+    let shares = w.get::<fes_sim::agents::ShareTable>();
+    let count = w.get::<FacilityTable>().count();
+    let listed: i64 = (0..count)
+        .map(|f| i64::from(shares.outside(f as i32)))
+        .sum();
+    assert!(listed > 0, "groups raised working cash by listing shares");
+    assert!((0..count).all(|f| shares.outside(f as i32) <= max));
+}

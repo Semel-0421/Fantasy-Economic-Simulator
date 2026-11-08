@@ -15,6 +15,7 @@ use fes_sim::agents::purses::PurseState;
 use fes_sim::agents::securities::{
     AssetMarkets, ShareTable, ShortLicences, ShortTable, VentureTable,
 };
+use fes_sim::agents::LoanTable;
 use fes_sim::commands::bank::BankTransfer;
 use fes_sim::commands::bonds::{BuyBond, SellBond, BOND_PLAYER_HOLDER};
 use fes_sim::commands::places::BuildRoad;
@@ -381,6 +382,122 @@ fn a_short_sale_sells_borrowed_shares_into_the_deposit_and_is_bought_back() {
 }
 
 #[test]
+fn the_lender_is_paid_a_fee_each_week() {
+    let mut sim = listed();
+    let f = listed_facility(&sim);
+    let nation = nation(&sim, f);
+    at_the_exchange(&mut sim, f);
+    licence(&mut sim, nation);
+    deposit(&mut sim, nation, 100_000);
+    run(
+        &mut sim,
+        &SellShort {
+            venture: false,
+            asset: f as i32,
+            count: 10,
+        },
+    );
+    let deposit = sim.world().get::<BankState>().player_deposit[nation as usize];
+    let config = sim.context().services.database.config.clone();
+    let fee = config.short_fee.mul_int(10 * share_price_of(&sim, f)) / 52;
+    let interest = config.deposit_interest_per_year.mul_int(deposit) / 52;
+    assert!(fee > 0);
+    sim.step().expect("step");
+    let paid = deposit + interest - sim.world().get::<BankState>().player_deposit[nation as usize];
+    assert!(paid > fee / 2, "a week's fee left the deposit");
+    assert!(paid < fee * 2, "no more than about a week's fee");
+}
+
+#[test]
+fn a_rising_price_calls_for_margin_then_the_bank_buys_back() {
+    let mut sim = listed();
+    let f = listed_facility(&sim);
+    let nation = nation(&sim, f);
+    at_the_exchange(&mut sim, f);
+    licence(&mut sim, nation);
+    let price = share_price_of(&sim, f);
+    let open = sim.context().services.database.config.short_open_share;
+    deposit(&mut sim, nation, open.mul_int(10 * price) - 10 * price + 1);
+    run(
+        &mut sim,
+        &SellShort {
+            venture: false,
+            asset: f as i32,
+            count: 10,
+        },
+    );
+    sim.context_mut()
+        .world
+        .get_mut::<PlayerState>()
+        .coins
+        .fill(0);
+    let weeks = sim.context().services.database.config.margin_call_weeks;
+    let (mut called, mut covered) = (0, Vec::new());
+    for _ in 0..=weeks + 1 {
+        sim.context_mut().world.get_mut::<AssetMarkets>().premium[nation as usize] =
+            fes_core::Fx::from_int(4).raw();
+        let report = sim.step().expect("step");
+        called += count_of(&report, "ShortCalled");
+        covered.extend(
+            report
+                .events
+                .iter()
+                .filter(|e| e.type_name.ends_with("ShortsCovered"))
+                .map(|e| e.debug.clone()),
+        );
+    }
+    assert_eq!(1, called);
+    assert_eq!(1, covered.len());
+    let lent: i64 = covered[0]
+        .split("lent: ")
+        .nth(1)
+        .and_then(|t| t.split(|c: char| !c.is_ascii_digit()).next())
+        .and_then(|t| t.parse().ok())
+        .expect("lent");
+    assert!(
+        lent > 0,
+        "the deposit fell short, and the bank lent the rest"
+    );
+    assert_eq!(0, sim.world().get::<ShortTable>().count());
+    assert_eq!(1, sim.world().get::<LoanTable>().count());
+}
+
+#[test]
+fn shorts_keep_the_coins_and_are_saved() {
+    let mut sim = listed();
+    let f = listed_facility(&sim);
+    let nation = nation(&sim, f);
+    at_the_exchange(&mut sim, f);
+    licence(&mut sim, nation);
+    deposit(&mut sim, nation, 100_000);
+    let counts = common::continent_count(&sim);
+    let supply: Vec<i64> = (0..counts)
+        .map(|c| common::continent_money(&sim, c))
+        .collect();
+    run(
+        &mut sim,
+        &SellShort {
+            venture: false,
+            asset: f as i32,
+            count: 10,
+        },
+    );
+    let check = |sim: &Simulation, what: &str| {
+        for (c, expected) in supply.iter().enumerate() {
+            assert_eq!(*expected, common::continent_money(sim, c), "{what}");
+        }
+    };
+    check(&sim, "after the sale");
+    for t in 0..10 {
+        sim.context_mut().world.get_mut::<AssetMarkets>().premium[nation as usize] =
+            fes_core::Fx::from_int(5).raw();
+        sim.step().expect("step");
+        check(&sim, &format!("turn {t}"));
+    }
+    common::assert_saved_and_loaded(&sim);
+}
+
+#[test]
 fn the_player_trades_venture_shares_at_the_continental_exchange() {
     let mut sim = build_sample(&[]);
     let n = nodes(&sim);
@@ -521,6 +638,12 @@ fn at_branch() -> (Simulation, i32) {
     (sim, b.branch_nation(&n, branch))
 }
 
+fn total_money(sim: &Simulation) -> i64 {
+    (0..common::continent_count(sim))
+        .map(|c| common::continent_money(sim, c))
+        .sum()
+}
+
 fn player_bonds(sim: &Simulation, issuer: i32) -> i64 {
     views::purse(sim.context())
         .bonds
@@ -536,6 +659,7 @@ fn the_player_buys_a_state_bond_and_earns_in_the_account() {
     let node = sim.world().get::<PlayerState>().node;
     let coins = *coins_at(&mut sim, node);
     let deposit = sim.world().get::<BankState>().player_deposit[nation as usize];
+    let money = total_money(&sim);
     run(
         &mut sim,
         &BuyBond {
@@ -545,6 +669,7 @@ fn the_player_buys_a_state_bond_and_earns_in_the_account() {
     );
     assert_eq!(coins - 1_000, *coins_at(&mut sim, node));
     assert_eq!(1_000, player_bonds(&sim, issuer));
+    assert_eq!(money, total_money(&sim));
     sim.step().expect("step");
     assert!(sim.world().get::<BankState>().player_deposit[nation as usize] > deposit);
     assert!(player_bonds(&sim, issuer) < 1_000);
@@ -564,6 +689,7 @@ fn the_player_sells_a_bond_to_those_with_idle_money() {
     }
     let node = sim.world().get::<PlayerState>().node;
     let coins = *coins_at(&mut sim, node);
+    let money = total_money(&sim);
     run(
         &mut sim,
         &SellBond {
@@ -574,6 +700,7 @@ fn the_player_sells_a_bond_to_those_with_idle_money() {
     let sold = *coins_at(&mut sim, node) - coins;
     assert!(sold > 0);
     assert_eq!(500 - sold, player_bonds(&sim, issuer));
+    assert_eq!(money, total_money(&sim));
     assert!(
         error(
             &SellBond {

@@ -464,6 +464,24 @@ fn cargo_leaves_a_nation_only_with_its_license() {
 }
 
 #[test]
+fn a_license_pays_the_nation_without_making_coins() {
+    let mut sim = build_sample(&[]);
+    let n = nodes(&sim);
+    let seat = (0..n.count() as i32)
+        .find(|&x| n.ancestor_at(x, WorldLevel::Nation) >= 0 && n.is_seat(x))
+        .expect("a seat");
+    player(&mut sim).node = seat;
+    *coins_at(&mut sim, seat) += 100_000;
+    let continent = n.continent[seat as usize] as usize;
+    let money = common::continent_money(&sim, continent);
+    BuyTradeLicense {
+        kind: fes_sim::agents::licenses::TRADE_LICENSE_INTERNATIONAL,
+    }
+    .apply(sim.context_mut());
+    assert_eq!(money, common::continent_money(&sim, continent));
+}
+
+#[test]
 fn a_loan_is_taken_up_to_the_credit_limit_and_repaid() {
     let mut sim = build_sample(&[]);
     let n = nodes(&sim);

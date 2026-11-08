@@ -26,6 +26,8 @@ use fes_core::det::det_hash;
 /// the saved sections do not determine.
 #[derive(Default)]
 pub struct MerchantSystem {
+    /// C# `IdleMerchantBehavior` instead of `ArbitrageMerchantBehavior`.
+    idle: bool,
     statics: Option<Statics>,
     scratch: Scratch,
     pool: Pool,
@@ -70,6 +72,11 @@ impl System for MerchantSystem {
     }
 
     fn execute(&mut self, ctx: &mut SimContext) -> Result<(), SimError> {
+        if self.idle {
+            // C# keeps tolls current in `PolicySystem`, whatever the merchant behavior.
+            refresh_tolls(ctx);
+            return Ok(());
+        }
         let traits = self.run_detailed(ctx);
         let statics = self.statics.as_ref().expect("statics");
         self.pool.pool_idle_groups(ctx, &traits, statics);
@@ -91,6 +98,15 @@ impl System for MerchantSystem {
 }
 
 impl MerchantSystem {
+    /// C# `IdleMerchantBehavior` (tests, or a world without trade): merchant groups exist but
+    /// never trade, travel or go bankrupt. Use with `SimulationBuilder::replace_system`.
+    pub fn idle() -> Self {
+        Self {
+            idle: true,
+            ..Self::default()
+        }
+    }
+
     /// C# `RunDetailed` (after refreshing the tolls), without the aggregate flow. Returns the
     /// trait table it used.
     pub fn run_detailed(&mut self, ctx: &mut SimContext) -> MerchantTraitTable {

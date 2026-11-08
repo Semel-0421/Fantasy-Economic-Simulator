@@ -191,6 +191,8 @@ fn load_then_save_is_identity() {
 fn step_without_state_changing_systems_only_advances_the_clock() {
     let run = &runs()[0];
     // Production, pricing and merchants change state every turn; without them no ported system does on turn 0.
+    // Merchants are removed rather than idled (C# `IdleMerchantBehavior`): this Rust-only test strips
+    // every state-changing system, and an idle merchant system would only refresh the derived tolls.
     let mut sim = SimulationBuilder::from_data(&overridden_source(&run.dir), run.seed)
         .expect("builder")
         .remove_system("agents.production")

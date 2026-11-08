@@ -6,7 +6,7 @@ use common::sample_with_config;
 use fes_sim::agents::asset_prices::{facility_value, Refs};
 use fes_sim::agents::balance_sheet::{collateral_value, credit_limit};
 use fes_sim::agents::facilities::{FacilityTable, OWNER_BANK, OWNER_PLAYER};
-use fes_sim::agents::{AuctionTable, BankState, LoanTable, PlayerState};
+use fes_sim::agents::{AuctionTable, BankState, LoanTable, MerchantSystem, PlayerState};
 use fes_sim::commands::bank::{BankTransfer, Exchange, RepayLoan, TakeLoan};
 use fes_sim::commands::trade::BuyGoods;
 use fes_sim::economy::{CurrencyState, MarketStore};
@@ -22,7 +22,7 @@ fn quiet(seed: u64) -> Simulation {
     let source = sample_with_config(QUIET);
     SimulationBuilder::from_data(&source, seed)
         .expect("builder")
-        .remove_system("agents.merchants")
+        .replace_system(Box::new(MerchantSystem::idle()))
         .build()
         .expect("build")
 }
@@ -347,7 +347,7 @@ fn bank_state_survives_save_and_load() {
         (*services.database).clone(),
         (*services.map).clone(),
         &sim.save(),
-        |b| b.remove_system("agents.merchants"),
+        |b| b.replace_system(Box::new(MerchantSystem::idle())),
     )
     .expect("load");
     assert_eq!(sim.world_hash(), copy.world_hash());

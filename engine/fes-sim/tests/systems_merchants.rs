@@ -24,7 +24,7 @@ use fes_sim::agents::{
 use fes_sim::economy::{HouseholdCash, MarketStore};
 use fes_sim::replay::{replay_turn, StepFile, StepResult};
 use fes_sim::world::NodeTable;
-use fes_sim::{SimEventRecord, Simulation, System};
+use fes_sim::{SimEventRecord, Simulation, SimulationBuilder, System};
 
 const TURNS: [i32; 8] = [0, 1, 3, 51, 52, 53, 103, 104];
 const PORTED: [&str; 9] = [
@@ -453,4 +453,23 @@ fn aggregate_flow_moves_stock_toward_the_higher_price() {
     assert_eq!(supply[0], 31);
     assert_eq!(demand[0], 31);
     assert_eq!(supply[1], 28);
+}
+
+/// C# `IdleMerchantBehavior`: merchant groups exist but never trade or travel.
+#[test]
+fn idle_merchants_keep_their_cash_and_place() {
+    let mut sim = SimulationBuilder::from_data(&sample_config(&[]), 42)
+        .expect("builder")
+        .replace_system(Box::new(MerchantSystem::idle()))
+        .build()
+        .expect("build");
+    let before = (agents(&sim).cash.clone(), agents(&sim).node.clone());
+    assert!(!before.0.is_empty());
+    for _ in 0..3 {
+        sim.step().expect("step");
+    }
+    assert_eq!(
+        before,
+        (agents(&sim).cash.clone(), agents(&sim).node.clone())
+    );
 }

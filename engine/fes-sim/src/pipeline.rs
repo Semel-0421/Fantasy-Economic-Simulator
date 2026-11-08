@@ -95,7 +95,9 @@ impl TurnPipeline {
     }
 
     /// Like `advance`, but returns each system's run time and the event dispatch time of each phase
-    /// (labelled `dispatch`), for profiling.
+    /// (labelled `dispatch`), for profiling. Native only: `std::time::Instant` panics on
+    /// `wasm32-unknown-unknown`.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn advance_timed(
         &mut self,
         ctx: &mut SimContext,

@@ -48,7 +48,9 @@ impl Simulation {
         })
     }
 
-    /// Runs one turn and returns how long each system and each phase dispatch took.
+    /// Runs one turn and returns how long each system and each phase dispatch took. Native only:
+    /// `std::time::Instant` panics on `wasm32-unknown-unknown`; `step` never reads the clock.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn step_timed(&mut self) -> Result<Vec<(&'static str, std::time::Duration)>, SimError> {
         self.pipeline.advance_timed(&mut self.ctx)
     }

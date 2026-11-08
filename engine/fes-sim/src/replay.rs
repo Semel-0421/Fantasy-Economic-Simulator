@@ -12,7 +12,7 @@ use fes_save::{read_save, RawSection};
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 const MAGIC: &[u8; 8] = b"FESSTEP1";
 
@@ -187,9 +187,7 @@ fn replay_record(
     let mut took = None;
     let runs_rust = match label.split_once(':') {
         Some(("system", id)) if ported.contains(&id) => {
-            let start = Instant::now();
-            sim.pipeline.run_system(id, &mut sim.ctx)?;
-            took = Some(start.elapsed());
+            took = timed(|| sim.pipeline.run_system(id, &mut sim.ctx))?;
             true
         }
         Some(("system", _)) => false,
@@ -247,4 +245,19 @@ fn differ_at(a: &[u8], b: &[u8]) -> Option<usize> {
         .zip(b)
         .position(|(x, y)| x != y)
         .or((a.len() != b.len()).then(|| a.len().min(b.len())))
+}
+
+/// Runs `f` and returns its result with how long it took; on `wasm32` (no `Instant`) the time is
+/// `None`.
+#[cfg(not(target_arch = "wasm32"))]
+fn timed<R, E>(f: impl FnOnce() -> Result<R, E>) -> Result<Option<std::time::Duration>, E> {
+    let start = std::time::Instant::now();
+    f()?;
+    Ok(Some(start.elapsed()))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn timed<R, E>(f: impl FnOnce() -> Result<R, E>) -> Result<Option<std::time::Duration>, E> {
+    f()?;
+    Ok(None)
 }

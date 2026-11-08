@@ -102,20 +102,36 @@ impl TurnPipeline {
         &mut self,
         ctx: &mut SimContext,
     ) -> Result<Vec<(&'static str, std::time::Duration)>, SimError> {
+        let origin = std::time::Instant::now();
+        let mut now = || origin.elapsed().as_secs_f64() * 1000.0;
+        let times = self.advance_clocked(ctx, &mut now)?;
+        Ok(times
+            .into_iter()
+            .map(|(id, ms)| (id, std::time::Duration::from_secs_f64(ms / 1000.0)))
+            .collect())
+    }
+
+    /// Like `advance_timed`, with the clock (milliseconds) supplied by the caller, so a `wasm32`
+    /// host can pass `performance.now`. Returns milliseconds per system and per dispatch.
+    pub fn advance_clocked(
+        &mut self,
+        ctx: &mut SimContext,
+        now: &mut dyn FnMut() -> f64,
+    ) -> Result<Vec<(&'static str, f64)>, SimError> {
         let mut times = Vec::with_capacity(self.systems.len() + 9);
         ctx.events.begin_turn();
         let mut i = 0;
         while i < self.systems.len() {
             let phase = self.systems[i].phase();
             while i < self.systems.len() && self.systems[i].phase() == phase {
-                let start = std::time::Instant::now();
+                let start = now();
                 self.systems[i].execute(ctx)?;
-                times.push((self.systems[i].id(), start.elapsed()));
+                times.push((self.systems[i].id(), now() - start));
                 i += 1;
             }
-            let start = std::time::Instant::now();
+            let start = now();
             ctx.dispatch_events()?;
-            times.push(("dispatch", start.elapsed()));
+            times.push(("dispatch", now() - start));
         }
         ctx.clock_mut().advance();
         Ok(times)

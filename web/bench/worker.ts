@@ -10,6 +10,8 @@ export interface BenchResult {
   hashAfter11: string;
   expectedHash11: string;
   hashMatches: boolean;
+  /** Per-system ms for the worst turn, when the wasm was built with PROFILE=1. */
+  worstTurnSystems?: [string, number][];
 }
 
 export type BenchMessage =
@@ -49,9 +51,14 @@ async function run(): Promise<BenchResult> {
   const buildMs = performance.now() - t0;
   const turnsMs: number[] = [];
   let hashAfter11 = '';
+  const profiled = 'step_profiled' in sim;
+  const systems: [string, number][][] = [];
   for (let turn = 0; turn < TURNS; turn++) {
     const start = performance.now();
-    sim.step();
+    if (profiled) {
+      const times = (sim as unknown as { step_profiled(): [string, number][] }).step_profiled();
+      systems.push(times.filter(([, ms]) => ms >= 1).sort((a, b) => b[1] - a[1]));
+    } else sim.step();
     const ms = performance.now() - start;
     turnsMs.push(ms);
     if (sim.turn() === 11) hashAfter11 = sim.world_hash();
@@ -68,6 +75,7 @@ async function run(): Promise<BenchResult> {
     hashAfter11,
     expectedHash11,
     hashMatches: hashAfter11 === expectedHash11,
+    worstTurnSystems: profiled ? systems[turnsMs.indexOf(worstMs)] : undefined,
   };
 }
 

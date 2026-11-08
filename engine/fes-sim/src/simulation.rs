@@ -55,6 +55,15 @@ impl Simulation {
         self.pipeline.advance_timed(&mut self.ctx)
     }
 
+    /// Runs one turn timing each system with a caller clock in milliseconds (`performance.now` on
+    /// `wasm32`); the turn's results are the same as `step`.
+    pub fn step_clocked(
+        &mut self,
+        now: &mut dyn FnMut() -> f64,
+    ) -> Result<Vec<(&'static str, f64)>, SimError> {
+        self.pipeline.advance_clocked(&mut self.ctx, now)
+    }
+
     /// What the Commands phase would answer for `cmd` now, without applying it (a UI preview,
     /// C# calling `ICommand.Validate`). Runs `prepare` then `validate` on the live context, so the
     /// unsaved bond-offer cache is refreshed exactly as a C# preview refreshes it.

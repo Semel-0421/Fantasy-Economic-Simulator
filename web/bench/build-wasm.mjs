@@ -9,7 +9,9 @@ const engine = join(here, '..', '..', 'engine');
 const pkg = join(here, 'pkg');
 const run = (cmd, args, cwd = here) => execFileSync(cmd, args, { cwd, stdio: 'inherit' });
 
-run('cargo', ['build', '-p', 'fes-wasm', '--release', '--target', 'wasm32-unknown-unknown'], engine);
+// PROFILE=1 builds `WasmSim::step_profiled` (per-system times) into the wasm.
+const profile = process.env.PROFILE === '1' ? ['--features', 'profile'] : [];
+run('cargo', ['build', '-p', 'fes-wasm', '--release', '--target', 'wasm32-unknown-unknown', ...profile], engine);
 const raw = join(engine, 'target', 'wasm32-unknown-unknown', 'release', 'fes_wasm.wasm');
 run('wasm-bindgen', ['--target', 'web', '--out-dir', pkg, raw]);
 const out = join(pkg, 'fes_wasm_bg.wasm');

@@ -10,6 +10,13 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "profile")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = performance, js_name = now)]
+    fn performance_now() -> f64;
+}
+
 /// One running world.
 #[wasm_bindgen]
 pub struct WasmSim {
@@ -95,6 +102,13 @@ impl WasmSim {
             turn: report.turn,
             events: &report.events,
         })
+    }
+
+    /// Runs one turn and returns `[[system id, ms], ...]` timed with `performance.now` (bench only).
+    #[cfg(feature = "profile")]
+    pub fn step_profiled(&mut self) -> Result<JsValue, JsError> {
+        let times = self.sim.step_clocked(&mut performance_now).map_err(err)?;
+        to_js(&times)
     }
 
     /// Queues a `PlayerCommand` for the next turn.

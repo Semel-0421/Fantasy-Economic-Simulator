@@ -7,6 +7,10 @@ publish.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# `WasmSim::step_profiled` (per-system times from performance.now) for the bench.
+profile = []
+
 [dependencies]
 fes-core = { path = "../fes-core", features = ["serde"] }
 fes-data = { path = "../fes-data" }

@@ -20,3 +20,8 @@ jobs:
       - run: bash scripts/check_file_length.sh
       - run: cargo run -p fes-parity -- --fixtures fixtures
       - run: cargo run -p fes-parity -- --fixtures fixtures --steps
+      - run: |
+          for run in Default_Seed2 Default_Seed3 NoBills; do
+            cargo run --release -p fes-parity -- --fixtures fixtures --runs --run "$run"
+          done
+      - run: cargo run --release -p fes-parity -- --fixtures fixtures --runs --run Default_Seed1_ThirtyYears --until 520

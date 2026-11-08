@@ -190,6 +190,9 @@ impl DetailedJob<'_> {
 
     fn roll_encounter(&mut self, a: usize, node: i32, value: i64, chance: i64, insured: bool) {
         let r = self.r;
+        if r.encounters_off {
+            return;
+        }
         let mut rng = DetRandom::for_key(r.seed, r.turn, r.encounter_stream, a as i32, 1);
         if rng.next_fx01().raw() >= chance {
             return;

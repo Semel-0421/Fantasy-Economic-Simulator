@@ -263,6 +263,8 @@ fn update_event(ctx: &mut SimContext, config: &SimulationConfig, n: usize, ratio
         CREDIT_CRUNCH
     } else if config.bank_run_cover.raw() > 0 && ratio < config.bank_run_cover {
         BANK_RUN
+    } else if crate::scenario::rules::random_events_off(&ctx.services) {
+        return;
     } else {
         let stream = det_hash::of("agents.finance.events");
         let mut rng = DetRandom::for_key(ctx.seed(), turn, stream, n as i32, 0);

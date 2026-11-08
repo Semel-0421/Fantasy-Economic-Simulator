@@ -39,6 +39,9 @@ impl System for WorldEventSystem {
         ctx.world
             .get_mut::<MarketModifierTable>()
             .remove_expired(turn);
+        if crate::scenario::rules::random_events_off(&ctx.services) {
+            return Ok(());
+        }
         let db = Arc::clone(&ctx.services.database);
         for def in &db.events {
             let nodes = ctx.services.get::<NodeTable>();

@@ -416,6 +416,9 @@ impl Command for Travel {
 impl Travel {
     fn encounter(&self, ctx: &mut SimContext, q: TripQuote) {
         let turn = ctx.turn();
+        if crate::scenario::rules::encounters_off(&ctx.services) {
+            return;
+        }
         let loss = roll_encounter(ctx.seed(), turn, 0, 0, q.encounter_chance);
         if loss == LOSS_NONE {
             return;

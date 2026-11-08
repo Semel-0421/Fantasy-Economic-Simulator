@@ -8,6 +8,7 @@ use crate::economy::EconomyModule;
 use crate::error::SimError;
 use crate::module::{module_order, Module, SimBuilder};
 use crate::pipeline::System;
+use crate::scenario::{ScenarioRules, ScenarioRun};
 use crate::schedule::TierSchedule;
 use crate::simulation::Simulation;
 use crate::world::{WorldModule, WorldState};
@@ -26,6 +27,7 @@ pub struct SimulationBuilder {
     seed: u64,
     modules: Vec<Box<dyn Module>>,
     overrides: Vec<SystemOverride>,
+    scenario: Option<ScenarioRules>,
 }
 
 impl SimulationBuilder {
@@ -41,6 +43,7 @@ impl SimulationBuilder {
             seed,
             modules: Vec::new(),
             overrides: Vec::new(),
+            scenario: None,
         }
     }
 
@@ -90,10 +93,20 @@ impl SimulationBuilder {
         self
     }
 
+    /// Runs the world as a scenario with these teaching rules (spec 5.7); free mode never calls it.
+    pub fn scenario_rules(mut self, rules: ScenarioRules) -> Self {
+        self.scenario = Some(rules);
+        self
+    }
+
     /// C# `SimulationBuilder.Build`: clock, services, overrides, the command system, the modules in
     /// dependency order, the pipeline, then `initialize`.
     pub fn build(self) -> Result<Simulation, SimError> {
-        let services = Services::new(Arc::clone(&self.database), Arc::clone(&self.map));
+        let mut services = Services::new(Arc::clone(&self.database), Arc::clone(&self.map));
+        let scenario = self.scenario.is_some();
+        if let Some(rules) = self.scenario {
+            services.add(rules)?;
+        }
         let mut world = WorldState::new();
         world.add(SimClock::new(self.seed))?;
         let mut builder = SimBuilder::new(world, services);
@@ -112,6 +125,10 @@ impl SimulationBuilder {
         let mut ctx = SimContext::new(builder.world, builder.services, schedule)?;
         pipeline.initialize(&mut ctx)?;
         let hash = data_hash(&self.database, &self.map);
-        Ok(Simulation::new(ctx, pipeline, hash))
+        let mut sim = Simulation::new(ctx, pipeline, hash);
+        if scenario {
+            sim.scenario = Some(ScenarioRun::start(&sim.ctx));
+        }
+        Ok(sim)
     }
 }

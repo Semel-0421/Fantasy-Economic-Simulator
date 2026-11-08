@@ -349,6 +349,7 @@ fn job_rules(ctx: &SimContext) -> JobRules {
         seed: ctx.seed(),
         turn: ctx.turn(),
         encounter_stream: det_hash::of("agents.encounters"),
+        encounters_off: crate::scenario::rules::encounters_off(&ctx.services),
         license_stream: det_hash::of("agents.licenses.merchants"),
         licensed_permille: c.licensed_merchant_permille,
         international_stream: det_hash::of("agents.licenses.international"),

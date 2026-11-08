@@ -16,6 +16,7 @@ pub mod pipeline;
 pub mod replay;
 #[cfg(feature = "testing")]
 pub mod replay_services;
+pub mod scenario;
 pub mod schedule;
 pub mod simulation;
 #[cfg(feature = "testing")]

@@ -5,6 +5,7 @@ use crate::context::SimContext;
 use crate::error::SimError;
 use crate::event_record::SimEventRecord;
 use crate::pipeline::TurnPipeline;
+use crate::scenario::{ScenarioRun, StatementView};
 use crate::world::WorldState;
 use fes_data::database::GameDatabase;
 use fes_data::MapDef;
@@ -21,6 +22,7 @@ pub struct Simulation {
     pub(crate) ctx: SimContext,
     pub(crate) pipeline: TurnPipeline,
     data_hash: u64,
+    pub(crate) scenario: Option<ScenarioRun>,
 }
 
 impl Simulation {
@@ -29,6 +31,7 @@ impl Simulation {
             ctx,
             pipeline,
             data_hash,
+            scenario: None,
         }
     }
 
@@ -36,16 +39,17 @@ impl Simulation {
     pub fn step(&mut self) -> Result<TurnReport, SimError> {
         let turn = self.turn();
         self.pipeline.advance(&mut self.ctx)?;
-        Ok(TurnReport {
-            turn,
-            events: self
-                .ctx
-                .events
-                .turn_log()
-                .iter()
-                .map(|e| SimEventRecord::of(e.as_ref()))
-                .collect(),
-        })
+        let events: Vec<SimEventRecord> = self
+            .ctx
+            .events
+            .turn_log()
+            .iter()
+            .map(|e| SimEventRecord::of(e.as_ref()))
+            .collect();
+        if let Some(run) = self.scenario.as_mut() {
+            run.after_turn(&mut self.ctx, &events);
+        }
+        Ok(TurnReport { turn, events })
     }
 
     /// Runs one turn and returns how long each system and each phase dispatch took. Native only:
@@ -114,6 +118,16 @@ impl Simulation {
         sim.ctx.world.load_sections(&sections)?;
         sim.pipeline.notify_loaded(&mut sim.ctx)?;
         Ok(sim)
+    }
+
+    /// True when this world runs a scenario.
+    pub fn is_scenario(&self) -> bool {
+        self.scenario.is_some()
+    }
+
+    /// The scenario's results statement so far (`None` in free mode).
+    pub fn statement(&self) -> Option<StatementView> {
+        self.scenario.as_ref().map(|s| s.ledger.view(&self.ctx))
     }
 
     pub fn world_hash(&self) -> u64 {

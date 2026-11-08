@@ -23,6 +23,8 @@ pub struct JobRules {
     pub seed: u64,
     pub turn: i32,
     pub encounter_stream: u32,
+    /// A scenario switched the random encounters off (never in free mode).
+    pub encounters_off: bool,
     pub license_stream: u32,
     pub licensed_permille: i32,
     pub international_stream: u32,

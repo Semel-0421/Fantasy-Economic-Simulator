@@ -62,3 +62,24 @@ export function createHost(Sim: typeof WasmSim): Host {
     },
   };
 }
+
+/**
+ * Answers requests in order from a host that may still be starting. If the start failed, or a call
+ * throws, the request still gets an `ok: false` answer, so the page never waits for ever.
+ */
+export function serve(ready: Promise<Host>, post: (response: Response, transfer: Transferable[]) => void): (request: Request) => void {
+  ready.catch(() => undefined); // reported per request below
+  let queue: Promise<void> = Promise.resolve();
+  return (request) => {
+    queue = queue
+      .then(async () => {
+        const host = await ready;
+        const { response, transfer } = await host.handle(request);
+        post(response, transfer);
+      })
+      .catch((error: unknown) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        post({ id: request.id, ok: false, message: `The simulation failed: ${reason}` }, []);
+      });
+  };
+}

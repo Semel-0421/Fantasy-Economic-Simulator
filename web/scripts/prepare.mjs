@@ -1,7 +1,7 @@
 // Build-time assets: the wasm package (src/sim/pkg) and the game data (public/data).
 // The wasm is rebuilt only when missing or with --force (`npm run wasm`).
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,7 +12,16 @@ const engine = join(repo, 'engine');
 const pkg = join(web, 'src', 'sim', 'pkg');
 const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: 'inherit' });
 
+/** wasm-bindgen-cli must be the version the engine's wasm-bindgen crate is locked to (engine/Cargo.lock). */
+function checkBindgen() {
+  const lock = readFileSync(join(engine, 'Cargo.lock'), 'utf8');
+  const wanted = /name = "wasm-bindgen"\r?\nversion = "([^"]+)"/.exec(lock)?.[1];
+  const have = /wasm-bindgen (\S+)/.exec(execFileSync('wasm-bindgen', ['--version'], { encoding: 'utf8' }))?.[1];
+  if (wanted !== have) throw new Error(`wasm-bindgen-cli ${have} does not match Cargo.lock ${wanted}: cargo install wasm-bindgen-cli --version ${wanted} --locked`);
+}
+
 function buildWasm() {
+  checkBindgen();
   run('cargo', ['build', '-p', 'fes-wasm', '--release', '--target', 'wasm32-unknown-unknown'], engine);
   const raw = join(engine, 'target', 'wasm32-unknown-unknown', 'release', 'fes_wasm.wasm');
   run('wasm-bindgen', ['--target', 'web', '--out-dir', pkg, raw], web);

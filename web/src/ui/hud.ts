@@ -10,6 +10,8 @@ export interface Hud {
   setBusy(busy: boolean): void;
   addTurn(turn: number, lines: LogLine[]): void;
   addMessage(text: string): void;
+  /** Shows that the simulation is gone: a persistent alert; the turn and save buttons stop. */
+  fail(text: string): void;
   /** The element the map canvas goes into. */
   mapHost: HTMLElement;
   /** Under the map: travel controls. */
@@ -33,18 +35,25 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   const next = button('', actions.nextWeek, 'next');
   next.append(caption, el('span', { className: 'bar' }));
   const log = el('ol', { id: 'log', className: 'log' });
+  log.setAttribute('role', 'log');
+  log.setAttribute('aria-live', 'polite');
+  const alert = el('p', { id: 'failure', className: 'failure' });
+  alert.setAttribute('role', 'alert');
+  alert.hidden = true;
   const mapHost = el('div', { id: 'map', className: 'map', title: 'Map: drag to pan, wheel or pinch to zoom, tap a town' });
   const mapTools = el('div', { className: 'maptools' });
   const side = el('div', { className: 'panels' });
   const slot = el('select', { id: 'slot' });
   slot.setAttribute('aria-label', 'Save slot');
   for (const s of SLOTS.filter((x) => x !== 'auto')) slot.append(new Option(slotName(s), s));
-  const saveControls = mode === 'free' ? [slot, button('Save', () => actions.save(slot.value as Slot), 'save')] : [];
+  const saveButton = mode === 'free' ? button('Save', () => actions.save(slot.value as Slot), 'save') : null;
+  const saveControls = saveButton ? [slot, saveButton] : [];
 
   root.replaceChildren(
     el(
       'div',
       { className: 'game' },
+      alert,
       el(
         'header',
         { className: 'hud' },
@@ -63,6 +72,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   );
 
   let timer = 0;
+  let failed = false;
   return {
     mapHost,
     mapTools,
@@ -75,7 +85,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
     },
     setBusy(busy) {
       window.clearInterval(timer);
-      next.disabled = busy;
+      next.disabled = busy || failed;
       next.classList.toggle('busy', busy);
       next.setAttribute('aria-busy', String(busy));
       if (!busy) {
@@ -94,6 +104,18 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
       const items = lines.slice(0, 200).map((l) => el('li', { text: l.detail ? `${l.title}: ${l.detail}` : l.title }));
       const head = el('strong', { text: `Year ${d.year}, Week ${d.week} - ${lines.length} events` });
       log.prepend(el('li', { className: 'turn' }, head, el('ul', {}, ...items)));
+    },
+    fail(text) {
+      failed = true;
+      window.clearInterval(timer);
+      caption.textContent = 'Next week';
+      next.classList.remove('busy');
+      next.setAttribute('aria-busy', 'false');
+      next.disabled = true;
+      saveButton?.setAttribute('disabled', '');
+      alert.textContent = `${text} Use Menu to start again.`;
+      alert.hidden = false;
+      log.prepend(el('li', { className: 'message', text }));
     },
     addMessage(text) {
       log.prepend(el('li', { className: 'message', text }));

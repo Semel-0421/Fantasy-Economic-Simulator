@@ -39,7 +39,7 @@ export function previewText(side: Side, label: string, quantity: number, e: Esti
   const verb = side === 'buy' ? 'Buy' : 'Sell';
   const amount = e.units === quantity ? `${quantity}` : `${e.units} of ${quantity}`;
   const cut = e.units === quantity ? '' : ` (only ${e.units} can be filled now)`;
-  return `${verb} ${amount} ${label} at ${e.unit} each: ${e.total} coins${cut}.`;
+  return `${verb} ${amount} ${label} at ${e.unit} each (estimated, at today's price): ${e.total} coins${cut}.`;
 }
 
 export interface MarketActions {

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { MessageChannel } from 'node:worker_threads';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SimBridge } from '../src/sim/bridge';
-import { createHost } from '../src/sim/host';
+import { createHost, serve } from '../src/sim/host';
 import type { GameFiles } from '../src/data/files';
 import init, { WasmSim } from '../src/sim/pkg/fes_wasm.js';
 
@@ -89,5 +89,63 @@ describe('SimBridge', () => {
     const loaded = await connect(0, bytes);
     expect(await loaded.worldHash()).toBe(hash);
     expect(await loaded.turn()).toBe(4);
+  });
+
+  it('rejects every call and reports the failure when the Worker dies mid-call', async () => {
+    const sent: number[] = [];
+    const port = {
+      postMessage: (m: { id: number }) => void sent.push(m.id),
+      onmessage: null,
+      onerror: null,
+      onmessageerror: null,
+    } as unknown as ConstructorParameters<typeof SimBridge>[0];
+    const bridge = new SimBridge(port);
+    const failures: string[] = [];
+    bridge.onFailure((e) => failures.push(e.message));
+    const a = bridge.turn();
+    const b = bridge.next();
+    expect(sent).toHaveLength(2);
+    port.onerror?.({ message: 'wasm trapped' });
+    await expect(a).rejects.toThrow(/stopped.*wasm trapped/);
+    await expect(b).rejects.toThrow(/stopped/);
+    await expect(bridge.turn()).rejects.toThrow(/stopped/); // later calls fail at once, nothing hangs
+    expect(sent).toHaveLength(2);
+    expect(bridge.failed).not.toBeNull();
+    expect(failures).toHaveLength(1);
+    bridge.onFailure((e) => failures.push(e.message)); // already failed: told at once
+    expect(failures).toHaveLength(2);
+  });
+
+  it('rejects pending calls when a message cannot be read', async () => {
+    const port = { postMessage: () => undefined, onmessage: null, onerror: null, onmessageerror: null } as unknown as ConstructorParameters<typeof SimBridge>[0];
+    const bridge = new SimBridge(port);
+    const call = bridge.turn();
+    port.onmessageerror?.({});
+    await expect(call).rejects.toThrow(/could not be read/);
+  });
+
+  it('answers every request with an error when the wasm fails to start', async () => {
+    const { port1, port2 } = new MessageChannel();
+    port2.on('message', serve(Promise.reject(new Error('bad wasm')), (response) => port2.postMessage(response)));
+    const bridge = new SimBridge(port1 as never);
+    open.push(bridge);
+    await expect(bridge.startWorld(files(), 1)).rejects.toThrow(/bad wasm/);
+    await expect(bridge.next()).rejects.toThrow(/bad wasm/);
+  });
+
+  it('answers a request whose call throws, and keeps answering', async () => {
+    const { port1, port2 } = new MessageChannel();
+    let calls = 0;
+    const host = {
+      handle: (request: { id: number }) => {
+        if (calls++ === 0) return Promise.reject(new Error('unreachable executed'));
+        return Promise.resolve({ response: { id: request.id, ok: true as const, value: 5 }, transfer: [] });
+      },
+    };
+    port2.on('message', serve(Promise.resolve(host), (response) => port2.postMessage(response)));
+    const bridge = new SimBridge(port1 as never);
+    open.push(bridge);
+    await expect(bridge.turn()).rejects.toThrow(/unreachable executed/);
+    await expect(bridge.turn()).resolves.toBe(5);
   });
 });

@@ -1,19 +1,25 @@
 // Service worker template. The build (vite.config.ts) fills in a content-versioned cache name and the
 // list of every file of dist, and writes the result to dist/sw.js.
+// An update never takes over a running game: a new worker installs, waits, and the page offers a
+// reload (src/ui/update.ts); only that reload message activates it, and only then are the old
+// caches deleted. The first install does not claim open pages either: it serves from the next load.
 const CACHE = '__CACHE__';
 const FILES = JSON.parse('__FILES__');
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((names) => Promise.all(names.filter((n) => n.startsWith('fes-') && n !== CACHE).map((n) => caches.delete(n))))
-      .then(() => self.clients.claim()),
+      .then((names) => Promise.all(names.filter((n) => n.startsWith('fes-') && n !== CACHE).map((n) => caches.delete(n)))),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'activate') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {

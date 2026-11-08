@@ -90,6 +90,8 @@ pub struct CurveMemo {
     params: Option<[i64; QUINTILES + 2]>,
     ratio: Vec<i64>,
     factor: Vec<i64>,
+    /// Whether a slot holds a ratio yet (no ratio value is reserved as "empty").
+    valid: Vec<bool>,
 }
 
 const MEMO_BITS: u32 = 16;
@@ -101,14 +103,16 @@ impl CurveMemo {
         key[2..].copy_from_slice(&p.quintile_raw);
         if self.params != Some(key) {
             self.params = Some(key);
-            self.ratio = vec![i64::MIN; 1 << MEMO_BITS];
+            self.ratio = vec![0; 1 << MEMO_BITS];
+            self.valid = vec![false; 1 << MEMO_BITS];
             self.factor = vec![0; 1 << MEMO_BITS];
         }
     }
 
     fn factor(&mut self, p: &DemandParams, ratio: i64) -> i64 {
         let slot = (ratio as u64 & ((1 << MEMO_BITS) - 1)) as usize;
-        if self.ratio[slot] != ratio {
+        if !self.valid[slot] || self.ratio[slot] != ratio {
+            self.valid[slot] = true;
             self.ratio[slot] = ratio;
             self.factor[slot] = necessity_factor(p, ratio);
         }

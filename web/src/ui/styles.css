@@ -95,3 +95,7 @@ button.link { min-height: 36px; padding: 0.15rem 0.3rem; border: none; backgroun
 .log ul { font-size: 0.85rem; max-height: 10rem; overflow: auto; margin-top: 0.25rem; }
 .log .message { color: var(--danger); }
 @media (min-width: 760px) { .play { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } .map { height: 30rem; } }
+
+.failure { margin: 0 0 0.5rem; padding: 0.6rem 0.8rem; border: 2px solid var(--danger); color: var(--danger); background: var(--paper); font-weight: bold; }
+.failure[hidden] { display: none; }
+.update-prompt { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 10; padding: 0.6rem 0.8rem; border: 2px solid var(--ink); background: var(--paper); display: flex; gap: 0.6rem; align-items: center; justify-content: center; }

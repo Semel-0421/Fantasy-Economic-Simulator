@@ -7,6 +7,8 @@ import type { CommandResult, PlayerCommand, TurnReport, ViewName, Views } from '
 export interface Port {
   postMessage(message: Request, transfer?: Transferable[]): void;
   onmessage: ((e: MessageEvent<Response>) => void) | null;
+  onerror?: ((e: unknown) => void) | null;
+  onmessageerror?: ((e: unknown) => void) | null;
   terminate?(): void;
   close?(): void;
 }
@@ -16,12 +18,42 @@ interface Pending {
   reject(reason: Error): void;
 }
 
+function errorText(e: unknown): string {
+  const message = (e as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : 'the Worker raised an error';
+}
+
 export class SimBridge {
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
 
+  private failure: Error | null = null;
+  private readonly failListeners: ((error: Error) => void)[] = [];
+
   constructor(private readonly port: Port) {
     port.onmessage = (e) => this.receive(e.data);
+    port.onerror = (e) => this.fail(`The simulation stopped: ${errorText(e)}`);
+    port.onmessageerror = () => this.fail('The simulation stopped: a message could not be read.');
+  }
+
+  /** The error that stopped the Worker, or null while it runs. */
+  get failed(): Error | null {
+    return this.failure;
+  }
+
+  /** Calls `listener` once if the Worker dies (immediately if it already has). */
+  onFailure(listener: (error: Error) => void): void {
+    if (this.failure) listener(this.failure);
+    else this.failListeners.push(listener);
+  }
+
+  private fail(message: string): void {
+    if (this.failure) return;
+    const error = new Error(message);
+    this.failure = error;
+    for (const p of this.pending.values()) p.reject(error);
+    this.pending.clear();
+    for (const l of this.failListeners.splice(0)) l(error);
   }
 
   /** Starts a Worker and a new world from the game data next to the page. */
@@ -90,6 +122,10 @@ export class SimBridge {
   private call<T>(body: RequestBody, transfer: Transferable[] = []): Promise<T> {
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
+      if (this.failure) {
+        reject(this.failure);
+        return;
+      }
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
       this.port.postMessage({ id, ...body } as Request, transfer);
     });

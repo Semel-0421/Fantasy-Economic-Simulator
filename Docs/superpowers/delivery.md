@@ -52,7 +52,7 @@ gets slower.
   Mobile friendly: on.
 - **SharedArrayBuffer support: off.** The game does not use threads or `SharedArrayBuffer`.
 - The build uses relative URLs, so it runs from the itch.io iframe path. The service worker caches the build
-  for offline play inside the page's own scope (one cache name per build, old ones are deleted on update).
+  for offline play inside the page's own scope (one cache name per build, old ones are deleted when the new worker activates).
 - Channels: the pipeline pushes only to `development`.
 
 ## The judged page is updated by hand only
@@ -68,3 +68,13 @@ after checking the development build. Do not add a workflow that pushes to the d
 - `web/vite.config.ts` writes `dist/sw.js` after each build from `web/src/sw.template.js`: it precaches every
   built file (wasm, worker, data CSVs, assets) under the cache name `fes-<hash of contents>`.
 - `web/tests/e2e/smoke.test.ts` checks the manifest and plays a turn offline after one visit.
+
+## Updates appear after a reload
+
+The service worker never takes over a running game. When a new build is deployed, the browser installs the new
+worker in the background and the old worker keeps serving the old cache, so an open tab keeps working on the
+build it loaded. The page then shows "A new version is ready - Reload". Pressing Reload tells the waiting worker
+to activate; it deletes the old cache and the page reloads onto the new build. Closing every tab of the game also
+lets the new worker activate on the next visit. Players who ignore the prompt stay on the old build. The first
+install does not claim open pages: offline play starts from the next load. `web/tests/e2e/smoke.test.ts` covers
+this (build A cached, build B deployed, the old tab keeps playing, the prompt appears, Reload switches caches).

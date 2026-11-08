@@ -100,7 +100,7 @@ describe('trading screens', () => {
     await page.click('#buy');
     await page.waitForFunction(() => !document.getElementById('trade-confirm')!.hidden);
     expect(await page.isHidden('#trade-error')).toBe(true);
-    expect(await page.textContent('#trade-preview')).toMatch(/^Buy 2 .* at \d+ each: \d+ coins\.$/);
+    expect(await page.textContent('#trade-preview')).toMatch(/^Buy 2 .* at \d+ each \(estimated, at today's price\): \d+ coins\.$/);
     await page.click('#confirm');
     await page.waitForFunction(() => document.querySelector('#log .message')?.textContent?.startsWith('Order for this week'));
     const coinsBefore = await page.textContent('#coins');

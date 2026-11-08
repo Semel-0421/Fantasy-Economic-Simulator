@@ -23,9 +23,9 @@ describe('trading helpers', () => {
   });
 
   it('words the preview, saying when the order is cut down', () => {
-    expect(previewText('buy', 'Wheat (mid)', 3, { units: 3, unit: 10, total: 30 })).toBe('Buy 3 Wheat (mid) at 10 each: 30 coins.');
+    expect(previewText('buy', 'Wheat (mid)', 3, { units: 3, unit: 10, total: 30 })).toBe("Buy 3 Wheat (mid) at 10 each (estimated, at today's price): 30 coins.");
     expect(previewText('sell', 'Wheat (mid)', 5, { units: 2, unit: 9, total: 18 })).toBe(
-      'Sell 2 of 5 Wheat (mid) at 9 each: 18 coins (only 2 can be filled now).',
+      "Sell 2 of 5 Wheat (mid) at 9 each (estimated, at today's price): 18 coins (only 2 can be filled now).",
     );
   });
 

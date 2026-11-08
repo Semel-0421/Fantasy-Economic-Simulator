@@ -12,6 +12,7 @@ import { travelPanel, type TravelPanel } from './ui/travel';
 import { goodLabel, marketPanel, type MarketPanel } from './ui/market';
 import { cargoPanel } from './ui/cargo';
 import { pursePanel } from './ui/purse';
+import { registerServiceWorker } from './ui/update';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
@@ -86,6 +87,7 @@ async function begin(starting: Promise<SimBridge>): Promise<void> {
     save: (slot) => void saveNow(game, hud, slot),
     menu: () => void showMenu(),
   });
+  game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
   const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
   const select = (node: number): void => {
@@ -163,9 +165,5 @@ showMenu().catch((e: unknown) => {
   app.textContent = `Could not start: ${message(e)}`;
 });
 
-// Offline after one visit: the service worker precaches the whole build (production only).
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker not registered', e));
-  });
-}
+// Offline after one visit, and a reload prompt when a new build is waiting (production only).
+registerServiceWorker();

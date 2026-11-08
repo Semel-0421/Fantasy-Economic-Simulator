@@ -48,6 +48,19 @@ describe('web flow', () => {
     expect(errors).toEqual([]);
   });
 
+  it('says so and returns to the menu when the simulation fails to load', async () => {
+    const context = await browser.newContext({ viewport: { width: 1000, height: 800 } });
+    await context.route('**/*.wasm', (route) => route.abort());
+    const page = await context.newPage();
+    await page.goto(url);
+    await page.click('#free-mode');
+    await page.waitForSelector('#notice', { timeout: 30000 });
+    expect(await page.textContent('#notice')).toMatch(/^Could not start: /);
+    expect(await page.locator('#status').count()).toBe(0); // no endless "Loading"
+    expect(await page.isDisabled('#free-mode')).toBe(false);
+    await context.close();
+  });
+
   it('plays a turn with visible progress, a live map, a log, an autosave and Continue', async () => {
     const { page, errors } = await fresh();
     await startFree(page);

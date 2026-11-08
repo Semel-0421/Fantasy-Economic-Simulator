@@ -33,6 +33,10 @@ pub trait Command: std::any::Any + Debug + Send + Sync {
     /// Runs right before `validate`. Only for C# validations that fill an unsaved per-turn cache
     /// as a side effect (the first ask of `BondOffers` builds it): the cache must be built at the
     /// same point of the turn even when validation then fails. Changes nothing else.
+    ///
+    /// UI previews must call `prepare` before `validate` too (`Simulation::preview` does both):
+    /// C# `Validate` refreshes `BondOffers` as a side effect, so a preview that skipped `prepare`
+    /// could answer from a stale offer cache and differ from what the Commands phase decides.
     fn prepare(&self, _ctx: &mut SimContext) {}
 
     /// C# `IGuidanceSource.GetGuidance`: the expansion direction this command signals once it

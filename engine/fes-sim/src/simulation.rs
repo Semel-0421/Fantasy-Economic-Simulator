@@ -1,6 +1,6 @@
 //! One running world (C# `GameSimulation`): step, queue commands, save and load.
 use crate::builder::SimulationBuilder;
-use crate::commands::Command;
+use crate::commands::{Command, CommandResult};
 use crate::context::SimContext;
 use crate::error::SimError;
 use crate::event_record::SimEventRecord;
@@ -53,6 +53,14 @@ impl Simulation {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn step_timed(&mut self) -> Result<Vec<(&'static str, std::time::Duration)>, SimError> {
         self.pipeline.advance_timed(&mut self.ctx)
+    }
+
+    /// What the Commands phase would answer for `cmd` now, without applying it (a UI preview,
+    /// C# calling `ICommand.Validate`). Runs `prepare` then `validate` on the live context, so the
+    /// unsaved bond-offer cache is refreshed exactly as a C# preview refreshes it.
+    pub fn preview(&mut self, cmd: &dyn Command) -> CommandResult {
+        cmd.prepare(&mut self.ctx);
+        cmd.validate(&self.ctx)
     }
 
     /// Queues a player command for the next turn's Commands phase.

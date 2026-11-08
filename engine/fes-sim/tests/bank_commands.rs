@@ -8,10 +8,11 @@ use fes_sim::agents::balance_sheet::{collateral_value, credit_limit};
 use fes_sim::agents::facilities::{FacilityTable, OWNER_BANK, OWNER_PLAYER};
 use fes_sim::agents::{AuctionTable, BankState, LoanTable, MerchantSystem, PlayerState};
 use fes_sim::commands::bank::{BankTransfer, Exchange, RepayLoan, TakeLoan};
+use fes_sim::commands::bonds::SellBond;
 use fes_sim::commands::trade::BuyGoods;
 use fes_sim::economy::{CurrencyState, MarketStore};
 use fes_sim::world::{NodeBanks, NodeTable};
-use fes_sim::{Command, SimEventRecord, Simulation, SimulationBuilder, TurnReport};
+use fes_sim::{Command, CommandResult, SimEventRecord, Simulation, SimulationBuilder, TurnReport};
 
 const CITY: &str = "aur_n1_r1_c1";
 const VILLAGE: &str = "aur_n1_r1_c1_v1";
@@ -352,4 +353,28 @@ fn bank_state_survives_save_and_load() {
     .expect("load");
     assert_eq!(sim.world_hash(), copy.world_hash());
     assert_eq!(1, copy.world().get::<LoanTable>().count());
+}
+
+#[test]
+fn preview_answers_like_the_commands_phase_without_applying() {
+    let mut sim = quiet(42);
+    place_at(&mut sim, CITY, 1_000);
+    let hash = sim.world_hash();
+    assert_eq!(
+        CommandResult::Ok,
+        sim.preview(&BankTransfer { amount: 1_000 })
+    );
+    assert!(matches!(
+        sim.preview(&BankTransfer { amount: 2_000 }),
+        CommandResult::Error(_)
+    ));
+    assert!(matches!(
+        sim.preview(&SellBond {
+            issuer: 0,
+            amount: 1
+        }),
+        CommandResult::Error(_)
+    ));
+    assert_eq!(hash, sim.world_hash(), "preview applies nothing");
+    assert_eq!(1_000, local_coins(&sim));
 }

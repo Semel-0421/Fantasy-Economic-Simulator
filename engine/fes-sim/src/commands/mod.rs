@@ -87,6 +87,11 @@ impl CommandQueue {
         self.queue.push(Arc::from(command));
     }
 
+    /// The commands waiting for the next Commands phase, in order.
+    pub fn queued(&self) -> &[Arc<dyn Command>] {
+        &self.queue
+    }
+
     /// Commands applied in this turn's Commands phase, in order.
     pub fn applied_this_turn(&self) -> &[Arc<dyn Command>] {
         &self.applied

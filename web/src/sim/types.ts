@@ -213,6 +213,15 @@ export const viewSchemas = {
   ),
 } as const;
 
+/** `WasmSim.preview_queued`: the position once this week's queued commands and this one apply. */
+export const commandPreviewSchema = obj({
+  error: opt(str),
+  purse: viewSchemas.purse,
+  cargo: viewSchemas.cargo,
+  stock: arr(tup(num, num)),
+});
+export type CommandPreview = Infer<typeof commandPreviewSchema>;
+
 export type ViewName = keyof typeof viewSchemas;
 export type Views = { [K in ViewName]: Infer<(typeof viewSchemas)[K]> };
 

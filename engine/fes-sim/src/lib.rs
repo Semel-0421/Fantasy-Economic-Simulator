@@ -12,6 +12,7 @@ pub mod events;
 pub mod full_run;
 pub mod module;
 pub mod pipeline;
+pub mod preview;
 #[cfg(feature = "testing")]
 pub mod replay;
 #[cfg(feature = "testing")]

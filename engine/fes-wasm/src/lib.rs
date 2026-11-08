@@ -147,6 +147,13 @@ impl WasmSim {
         to_js(&result)
     }
 
+    /// The player's position once the commands queued this week and then `cmd` apply, without
+    /// changing anything: `{error, purse, cargo, stock}` (spec 5.2a: preview equals applied).
+    pub fn preview_queued(&mut self, cmd: JsValue) -> Result<JsValue, JsError> {
+        let boxed = command(cmd)?.into_command();
+        to_js(&self.sim.preview_queued(boxed.as_ref()))
+    }
+
     /// A named view: purse, cargo, contracts, shares, licences, statement, market (arg = node), map,
     /// goods, or in a scenario results (the scenario statement; null in free mode), objectives and
     /// scenario_contracts.

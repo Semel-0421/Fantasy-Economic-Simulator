@@ -6,6 +6,7 @@ import {
   simEventSchema,
   turnReportSchema,
   viewSchemas,
+  commandPreviewSchema,
   type PlayerCommand,
   type SimEventRecord,
 } from '../src/sim/types';
@@ -38,6 +39,7 @@ describe('engine JSON fixtures fit the TypeScript types', () => {
     for (const [name, schema] of Object.entries(viewSchemas)) {
       expect(validate(schema, fixture(name)), name).toBeNull();
     }
+    expect(validate(commandPreviewSchema, fixture('command_preview'))).toBeNull();
   });
 
   it('rejects shapes that do not fit', () => {

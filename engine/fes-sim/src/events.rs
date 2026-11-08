@@ -67,6 +67,16 @@ impl EventBus {
         self.pending.push(Arc::new(e));
     }
 
+    /// Number of published events not yet delivered.
+    pub(crate) fn pending_len(&self) -> usize {
+        self.pending.len()
+    }
+
+    /// Drops the events published after the first `len` (a preview's scratch events).
+    pub(crate) fn truncate_pending(&mut self, len: usize) {
+        self.pending.truncate(len);
+    }
+
     pub(crate) fn begin_turn(&mut self) {
         self.turn_log.clear();
     }

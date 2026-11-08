@@ -537,6 +537,14 @@ fn write_scenario_views() {
     write("results.json", &sim.statement().expect("statement"));
     write("objectives.json", &sim.objectives());
     write("scenario_contracts.json", &sim.scenario_contracts());
+    let buy = P::BuyGoods {
+        good: 1,
+        quantity: 2,
+        pay_from_deposit: false,
+    };
+    sim.queue(buy.clone().into_command());
+    let preview = sim.preview_queued(buy.into_command().as_ref());
+    write("command_preview.json", &preview);
 }
 
 fn commands() -> Vec<P> {

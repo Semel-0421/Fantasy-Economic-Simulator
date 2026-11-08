@@ -17,6 +17,13 @@ Rule: record the configured model and effort when they can be seen; mark unknown
 
 **Token efficiency (user rule, 2026-11-09), for every agent including Claude Code.** Pick the cheapest model and lowest reasoning effort that can do the task well: minimum cost for maximum result. Start low for mechanical, routine or well-specified work (file moves, checklists, status checks, short summaries); raise model or effort only when the task needs it or a cheaper attempt failed. Avoid re-running unchanged checks, re-reading large files, and long agent loops; reuse recorded results for the same tree. Claude keeps its own turns short and delegates implementation instead of doing it itself.
 
+**Usage-limit handover (user rule, 2026-11-09).** When an agent nears its usage limit (Codex 5-hour or weekly limit, Claude Code session limit, Copilot credits), the work moves to an agent that still has room, so it does not stop.
+- Before the limit: the agent writes a handover note in `.superpowers/sdd/<plan>/handover.md`: task, plan step, files changed and uncommitted, gates run with results, next steps. Uncommitted work stays in the working tree; nothing is reverted.
+- The Planner (or, if Claude is the one out of room, the user or the next agent) picks the successor by remaining quota, from Orca's `orca account list --json` rate limits or the agent's own status: Codex <-> Copilot for building and checks; Codex or Copilot for planning or review when Claude is out of room (they follow the plans and rules, write `.ko.md` copies, and leave design decisions marked for Claude or the user).
+- The successor reads the handover note, works under the same rules and role limits of the task it takes over (for example Copilot taking build work commits but never pushes), and states in its report that it took over and from whom.
+- The original agent resumes its role once its limit resets; the handover note is closed with the final state.
+- The gate that checks a commit is never run by the agent that built it.
+
 ## 2. Roles
 
 - **Claude — Planner and final reviewer.** Writes plans with exact done-criteria (files, gates, numbers). Answers Codex's scope questions. Reviews each finished plan against its spec, and decides design, determinism and parity questions that Copilot escalates. Does not implement plan tasks unless the user asks.

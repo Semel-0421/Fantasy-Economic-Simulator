@@ -159,6 +159,11 @@ fn player_actions_conserve_money() {
             }),
         ],
     );
+    facility_and_policy(&mut sim, city, facility);
+    travel_and_road(&mut sim);
+}
+
+fn facility_and_policy(sim: &mut Simulation, city: i32, facility: usize) {
     let price = {
         let ctx = sim.context();
         let r = Refs {
@@ -175,7 +180,7 @@ fn player_actions_conserve_money() {
             .expect("a guild") as i32
     };
     step(
-        &mut sim,
+        sim,
         "facility and guild",
         vec![
             Box::new(BuyFacility {
@@ -191,7 +196,7 @@ fn player_actions_conserve_money() {
         nodes.ancestor_at(city, fes_core::WorldLevel::Nation)
     };
     step(
-        &mut sim,
+        sim,
         "loan and lobbying",
         vec![
             Box::new(TakeLoan { amount: 500 }),
@@ -204,9 +209,12 @@ fn player_actions_conserve_money() {
             }),
         ],
     );
-    let home = local_continent(&sim) as i32;
+}
+
+fn travel_and_road(sim: &mut Simulation) {
+    let home = local_continent(sim) as i32;
     step(
-        &mut sim,
+        sim,
         "exchange",
         vec![Box::new(Exchange {
             from_continent: home,
@@ -214,17 +222,17 @@ fn player_actions_conserve_money() {
             amount: 1_000,
         })],
     );
-    let village = node(&sim, "aur_n1_r1_c1_v1");
+    let village = node(sim, "aur_n1_r1_c1_v1");
     step(
-        &mut sim,
+        sim,
         "road",
         vec![Box::new(BuildRoad {
             destination: village,
         })],
     );
-    let there = node(&sim, "aur_n1_r1_c2");
+    let there = node(sim, "aur_n1_r1_c2");
     step(
-        &mut sim,
+        sim,
         "travel",
         vec![Box::new(Travel {
             destination: there,
@@ -233,7 +241,7 @@ fn player_actions_conserve_money() {
         })],
     );
     for t in 0..12 {
-        step(&mut sim, &format!("after, week {t}"), vec![]);
+        step(sim, &format!("after, week {t}"), vec![]);
     }
 }
 

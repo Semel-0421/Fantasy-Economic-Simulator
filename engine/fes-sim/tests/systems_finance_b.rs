@@ -186,6 +186,46 @@ fn two_losing_years_close_it() {
 }
 
 #[test]
+fn a_good_year_between_losses_keeps_it_open() {
+    let mut sim = build_sample(&["facility.close_loss_years,2"]);
+    let f = pick(&sim, false);
+    year(&mut sim, f, -FORTUNE);
+    year(&mut sim, f, FORTUNE);
+    year(&mut sim, f, -FORTUNE);
+    assert!(sim.context().world.get::<FacilityTable>().level[f] > 0);
+}
+
+#[test]
+fn a_closed_facility_costs_nothing_and_cannot_be_bought() {
+    use fes_sim::commands::facility::BuyFacility;
+    use fes_sim::{Command, CommandResult};
+    let mut sim = build_sample(&["facility.close_loss_years,2"]);
+    let f = pick(&sim, false);
+    year(&mut sim, f, -FORTUNE);
+    year(&mut sim, f, -FORTUNE);
+    assert_eq!(0, sim.context().world.get::<FacilityTable>().level[f]);
+    step(&mut sim);
+    let node = {
+        let facilities = sim.context().world.get::<FacilityTable>();
+        assert_eq!(0, facilities.cash[f], "no upkeep, wages or sales");
+        facilities.node[f]
+    };
+    sim.context_mut()
+        .world
+        .get_mut::<fes_sim::agents::PlayerState>()
+        .node = node;
+    let buy = BuyFacility {
+        facility: f as i32,
+        price: i64::MAX / 4,
+        axis: 0,
+    };
+    assert_eq!(
+        CommandResult::Error("The facility is closed.".to_string()),
+        buy.validate(sim.context())
+    );
+}
+
+#[test]
 fn state_facilities_stay_open() {
     let mut sim = build_sample(&["facility.close_loss_years,2"]);
     let f = pick(&sim, true);

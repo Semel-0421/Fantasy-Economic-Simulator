@@ -371,12 +371,11 @@ fn money_totals_count_cash_where_it_is_and_deposits_only_once() {
     let total = totals.nation_total(n);
     assert_eq!(total, cash + sim.world().get::<BankState>().reserve[n]);
 
-    // A deposit (as `BankTransferCommand` applies it) moves coins from cash into the reserve.
-    let world = &mut sim.context_mut().world;
-    world.get_mut::<PlayerState>().coins[continent] -= 400;
-    let bank = world.get_mut::<BankState>();
-    bank.player_deposit[n] += 400;
-    bank.reserve[n] += 400;
+    // A deposit moves coins from cash into the reserve.
+    fes_sim::Command::apply(
+        &fes_sim::commands::bank::BankTransfer { amount: 400 },
+        sim.context_mut(),
+    );
     recompute(&mut sim);
     let totals = sim.context().services.get::<MoneyTotals>();
     let bank = sim.world().get::<BankState>();

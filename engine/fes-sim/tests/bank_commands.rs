@@ -278,12 +278,16 @@ fn loans_are_limited_by_collateral_and_the_reserve() {
     assert_eq!(0, loans.overdue_weeks[0]);
     let balance = loans.balance[0];
 
-    let continent = continent_of(&sim, node(&sim, CITY));
+    repay_and_run_dry(&mut sim, nation, balance);
+}
+
+fn repay_and_run_dry(sim: &mut Simulation, nation: usize, balance: i64) {
+    let continent = continent_of(sim, node(sim, CITY));
     sim.context_mut().world.get_mut::<PlayerState>().coins[continent] = 10_000;
-    let report = turn(&mut sim, vec![Box::new(RepayLoan { amount: balance })]);
+    let report = turn(sim, vec![Box::new(RepayLoan { amount: balance })]);
     assert_eq!(1, named(&report, "LoanRepaid").len());
     sim.context_mut().world.get_mut::<BankState>().reserve[nation] = 10;
-    let report = turn(&mut sim, vec![Box::new(TakeLoan { amount: 100 })]);
+    let report = turn(sim, vec![Box::new(TakeLoan { amount: 100 })]);
     assert_eq!(1, rejected(&report), "the bank's reserve is too small");
 }
 

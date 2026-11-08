@@ -612,3 +612,88 @@ fn player_commands_are_plain_data() {
     let _ = views::shares(sim.context());
     let _ = views::contracts(sim.context());
 }
+
+#[test]
+fn the_asking_price_follows_what_a_facility_earns() {
+    use fes_sim::agents::production::lines::find_nearest_market;
+    let mut sim = build_sample(&[]);
+    let f = for_sale(&sim, false);
+    let (cell, value, quantity) = {
+        let ctx = sim.context();
+        let t = ctx.world.get::<FacilityTable>();
+        let db = &ctx.services.database;
+        let output = db.recipes[db.facilities[t.def_index[f] as usize].recipe].outputs[0];
+        let (_, cell) = find_nearest_market(
+            ctx.services.get::<NodeTable>(),
+            ctx.world.get::<MarketStore>(),
+            t.node[f],
+            output.good.0,
+        )
+        .expect("a market");
+        let value = fes_sim::agents::asset_prices::facility_value(db, t, f) + t.cash[f].max(0);
+        (cell, value, i64::from(output.quantity))
+    };
+    sim.context_mut().world.get_mut::<MarketStore>().price[cell] = 1;
+    let poor = asked(&sim, f);
+    sim.context_mut().world.get_mut::<MarketStore>().price[cell] = 1000;
+    let rich = asked(&sim, f);
+    assert!(poor >= value, "a seller never asks less than its value");
+    assert!(rich > poor + 52 * 2 * quantity * 500);
+}
+
+#[test]
+fn travel_sets_the_player_off_charges_the_trip_and_arrives() {
+    use fes_sim::commands::travel::{find_route, try_quote, Travel};
+    let mut sim = build_sample(&[]);
+    let n = nodes(&sim);
+    let from = n.try_find("aur_n1_r1_c1_v1").expect("village").0;
+    let to = n.try_find("aur_n1_r1_c1").expect("city").0;
+    player(&mut sim).node = from;
+    player(&mut sim).coins.fill(0);
+    let travel = Travel {
+        destination: to,
+        guards: false,
+        insurance: false,
+    };
+    assert_eq!(
+        Some("Unknown destination."),
+        error(
+            &Travel {
+                destination: -1,
+                ..travel.clone()
+            },
+            &sim
+        )
+        .as_deref()
+    );
+    assert_eq!(
+        Some("Not enough coins for the trip."),
+        error(&travel, &sim).as_deref()
+    );
+    *coins_at(&mut sim, from) = 10_000;
+    let quote = try_quote(sim.context(), to, false, false).expect("a route");
+    assert!(ok(&travel, &sim));
+    travel.apply(sim.context_mut());
+    let p = sim.world().get::<PlayerState>();
+    let route = find_route(
+        sim.context().services.get::<fes_sim::world::RouteTable>(),
+        from,
+        to,
+    );
+    let turns = sim
+        .context()
+        .services
+        .get::<fes_sim::world::RouteTable>()
+        .travel_turns[route as usize];
+    assert_eq!(to, p.travel_destination);
+    assert_eq!(sim.turn() + turns, p.arrival_turn);
+    let paid = quote.departure_cost() + quote.toll;
+    assert_eq!(10_000 - paid, p.coins[n.continent[from as usize] as usize]);
+    assert_eq!(Some("Already travelling."), error(&travel, &sim).as_deref());
+    for _ in 0..turns + 1 {
+        sim.step().expect("step");
+    }
+    let p = sim.world().get::<PlayerState>();
+    assert_eq!(to, p.node);
+    assert!(!p.is_travelling());
+}

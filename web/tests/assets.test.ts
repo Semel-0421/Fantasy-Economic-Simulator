@@ -5,6 +5,12 @@ import { loadAssets } from '../src/assets/loader';
 import { play, setVolume } from '../src/audio/sound';
 
 describe('optional assets', () => {
+  it('uses 28x32 hex terrain tiles and retires square terrain ids', () => {
+    for (const terrain of ['plains', 'forest', 'hills', 'mountain', 'water', 'road-overlay']) {
+      expect(MANIFEST[`terrain-${terrain}`]).toEqual({ path: `map/terrain/${terrain.replace('-', '_')}.png`, size: '28x32' });
+    }
+    for (const old of ['ground', 'road', 'river', 'sea']) expect(MANIFEST[`terrain-${old}`]).toBeUndefined();
+  });
   it('matches every README id, path and size', () => {
     const readme = readFileSync('public/assets/README.md', 'utf8');
     const rows = [...readme.matchAll(/\| `([^`]+)` \| `([^`]+\.(?:png|ogg))` \| ([^|]+) \|/g)]

@@ -19,11 +19,12 @@
 
 | id | file path | tool | prompt or process | date | screenshot path | notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `terrain-ground` | `web/public/assets/map/terrain/ground.png` | SpriteCook (예정) | [terrain-ground](art-list.md#terrain-ground)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/terrain-ground/generation.png` | 제작 예정; 증거 미확보 |
-| `terrain-road` | `web/public/assets/map/terrain/road.png` | SpriteCook (예정) | [terrain-road](art-list.md#terrain-road)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/terrain-road/generation.png` | 제작 예정; 증거 미확보 |
-| `terrain-mountain` | `web/public/assets/map/terrain/mountain.png` | SpriteCook (예정) | [terrain-mountain](art-list.md#terrain-mountain)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/terrain-mountain/generation.png` | 제작 예정; 증거 미확보 |
-| `terrain-river` | `web/public/assets/map/terrain/river.png` | SpriteCook (예정) | [terrain-river](art-list.md#terrain-river)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/terrain-river/generation.png` | 제작 예정; 증거 미확보 |
-| `terrain-sea` | `web/public/assets/map/terrain/sea.png` | SpriteCook (예정) | [terrain-sea](art-list.md#terrain-sea)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/terrain-sea/generation.png` | 제작 예정; 증거 미확보 |
+| `terrain-plains` | `web/public/assets/map/terrain/plains.png` | SpriteCook (??) | [terrain-plains](art-list.md#terrain-plains)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-plains/generation.png` | ?? ??; ?? ??? |
+| `terrain-forest` | `web/public/assets/map/terrain/forest.png` | SpriteCook (??) | [terrain-forest](art-list.md#terrain-forest)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-forest/generation.png` | ?? ??; ?? ??? |
+| `terrain-hills` | `web/public/assets/map/terrain/hills.png` | SpriteCook (??) | [terrain-hills](art-list.md#terrain-hills)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-hills/generation.png` | ?? ??; ?? ??? |
+| `terrain-mountain` | `web/public/assets/map/terrain/mountain.png` | SpriteCook (??) | [terrain-mountain](art-list.md#terrain-mountain)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-mountain/generation.png` | ?? ??; ?? ??? |
+| `terrain-water` | `web/public/assets/map/terrain/water.png` | SpriteCook (??) | [terrain-water](art-list.md#terrain-water)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-water/generation.png` | ?? ??; ?? ??? |
+| `terrain-road-overlay` | `web/public/assets/map/terrain/road_overlay.png` | SpriteCook (??) | [terrain-road-overlay](art-list.md#terrain-road-overlay)? 28?32 RGBA ?? ?? ???? | ? | `Docs/assets/evidence/terrain-road-overlay/generation.png` | ?? ??; ?? ???; ?? ?? |
 | `town-village` | `web/public/assets/map/towns/village.png` | SpriteCook (예정) | [town-village](art-list.md#town-village)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/town-village/generation.png` | 제작 예정; 증거 미확보 |
 | `town-city` | `web/public/assets/map/towns/city.png` | SpriteCook (예정) | [town-city](art-list.md#town-city)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/town-city/generation.png` | 제작 예정; 증거 미확보 |
 | `town-region` | `web/public/assets/map/towns/region.png` | SpriteCook (예정) | [town-region](art-list.md#town-region)의 프롬프트; 생성 후 실제 편집 과정 추가 | — | `Docs/assets/evidence/town-region/generation.png` | 제작 예정; 증거 미확보 |

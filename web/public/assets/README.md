@@ -20,11 +20,12 @@ assets/
 
 | id | assets/ 아래 경로 | 크기 또는 길이 | 형식 |
 | --- | --- | --- | --- |
-| `terrain-ground` | `map/terrain/ground.png` | 32x32 | PNG RGBA |
-| `terrain-road` | `map/terrain/road.png` | 32x32 | PNG RGBA |
-| `terrain-mountain` | `map/terrain/mountain.png` | 32x32 | PNG RGBA |
-| `terrain-river` | `map/terrain/river.png` | 32x32 | PNG RGBA |
-| `terrain-sea` | `map/terrain/sea.png` | 32x32 | PNG RGBA |
+| `terrain-plains` | `map/terrain/plains.png` | 28x32 | PNG RGBA |
+| `terrain-forest` | `map/terrain/forest.png` | 28x32 | PNG RGBA |
+| `terrain-hills` | `map/terrain/hills.png` | 28x32 | PNG RGBA |
+| `terrain-mountain` | `map/terrain/mountain.png` | 28x32 | PNG RGBA |
+| `terrain-water` | `map/terrain/water.png` | 28x32 | PNG RGBA |
+| `terrain-road-overlay` | `map/terrain/road_overlay.png` | 28x32 | PNG RGBA |
 | `town-village` | `map/towns/village.png` | 32x32 | PNG RGBA |
 | `town-city` | `map/towns/city.png` | 32x32 | PNG RGBA |
 | `town-region` | `map/towns/region.png` | 32x32 | PNG RGBA |
@@ -90,3 +91,7 @@ assets/
 ## 제작 자료와 적용 전 검사
 
 [한국어 그림 목록](../../../Docs/assets/art-list.ko.md), [한국어 소리 목록](../../../Docs/assets/sound-list.ko.md), [자산 원장](../../../Docs/assets/asset-log.md)을 사용한다. 생성 후 규격과 음량·루프 경계를 검수하고 실제 도구·날짜·증거를 기록한다. `.gitkeep`은 폴더 유지용이며 자산 파일이나 로딩 대상이 아니다. WAV 원본과 도구 스크린샷은 public 폴더에 넣지 않는다. 파일이 실제 준비되고 UI에 연결된 뒤 이미지 표시·오디오 재생·용량을 별도로 검증해야 한다.
+
+## ?? ?? ?? (Plan 7C)
+
+?? 5?? 28?32 RGBA ??? ?? ????? ??? ?? ????. `road_overlay.png`? ?? ??? ?? ????. ?? ???? ground/road/river/sea ??? ???? ???. ??????????? ?? ??? ???? ?? ??? ?? ??? ??? ???.

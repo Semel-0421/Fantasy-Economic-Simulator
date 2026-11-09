@@ -1,17 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { labelCandidates, placeLabels, overlaps } from '../src/map/labels';
-import { layoutMap, LEVEL, type MapData } from '../src/map/layout';
+import { LEVEL } from '../src/map/layout';
+import { layoutHexMap } from '../src/map/hex_layout';
+import { fullscaleMap as map } from './fullscale-map';
 import { fitCamera } from '../src/map/camera';
 import { scenarioNodeKeys } from '../src/data/scenarios';
 
-const rows = readFileSync('../engine/fixtures/fullscale/map_nodes.csv', 'utf8').trim().split(/\r?\n/).slice(1).map((row) => row.split(','));
-const ids = new Map(rows.map((row, id) => [row[0]!, id]));
-const levels: Record<string, number> = { Continent: 0, Nation: 1, Region: 2, City: 3, Village: 4 };
-const map: MapData = { nodes: rows.map(([key, name, level, parent], id) => ({
-  id, key: key!, name: name || key!, level: levels[level!]!, parent: ids.get(parent!) ?? -1, continent: 0,
-})), routes: [] };
-const layout = layoutMap(map);
+const layout = layoutHexMap(map);
 const candidates = labelCandidates(map, layout, (name) => ({ w: name.length * 9 + 4, h: 24 }));
 const player = map.nodes.find((node) => node.level === LEVEL.city)!.id;
 const state = { player, selected: -1, targets: new Set<number>(), neighbours: new Set<number>() };

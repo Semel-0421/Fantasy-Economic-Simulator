@@ -1,6 +1,6 @@
 # Judged-build art generation list
 
-Tool: SpriteCook. These are **45 planned PNG deliverables**, not generated or integrated assets. Paths are relative to `web/public/assets/`. Each English prompt is ready to paste.
+Tool: SpriteCook. These are **45 required PNG deliverables plus one optional road overlay**, not generated or integrated assets. Paths are relative to `web/public/assets/`. Each English prompt is ready to paste.
 
 ## Shared production specification
 
@@ -8,11 +8,11 @@ Use readable 2D map symbols, PNG RGBA at native pixel size, and two pixels of cl
 
 Shared 12-color palette (alpha separate): `#2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F`.
 
-Use earth/parchment and dark outlines; water uses teal/blue, stone gray, and the player gold. Prompts do not guarantee valid exports: correct size, palette, alpha and tile seams after generation. The frame uses four-pixel nine-slice borders and an empty transparent center. Road/Mountain/River/Sea art represents existing route types, not new terrain rules. Nation and Continent are scope emblems, not invented settlements. Two static caravan sprites suffice; future movement changes position rather than requiring animation frames.
+Use earth/parchment and dark outlines; water uses teal/blue, stone gray, and the player gold. Prompts do not guarantee valid exports: correct size, palette, alpha and tile seams after generation. The frame uses four-pixel nine-slice borders and an empty transparent center. Hex terrain is decorative; roads, rivers, mountain passes and sea lanes retain the engine route rules. Nation and Continent are scope emblems, not invented settlements. Two static caravan sprites suffice; future movement changes position rather than requiring animation frames.
 
 ## Complete goods coverage
 
-Both data sets ship: 29 named base goods in `Assets/StreamingAssets/Data/goods.csv` and 1,000 synthetic base goods in `engine/fixtures/fullscale/goods.csv`. Named goods use the same-key PNG. All synthetic goods share `goods/trade_crate.png` except the three scenario-specific visual overrides below. Existing names/keys and grade text remain the identity; do not invent semantic names for synthetic keys.
+Both data sets ship: 29 named base goods in `Assets/StreamingAssets/Data/goods.csv` and 1,000 synthetic base goods in `engine/fixtures/fullscale/goods.csv`. Named goods use the same-key PNG. All synthetic goods share `goods/trade_crate.png` except the three scenario-specific visual overrides below. Plan 7C supplies UI display names; engine keys, grade text and this art mapping stay unchanged.
 
 | Base key | PNG |
 | --- | --- |
@@ -54,54 +54,64 @@ Each prefix `g0` through `g19` has suffixes `0` through `49`. Grain/tools overri
 
 ## Deliverables and ready-to-paste prompts
 
-<a id="terrain-ground"></a>
+<a id="terrain-plains"></a>
 
-### terrain-ground: Map ground
+### terrain-plains: Plains hex tile
 
-File: `map/terrain/ground.png` · 32x32 px · PNG RGBA · opaque seamless tile · shared 12-color palette above.
+File: `map/terrain/plains.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
 
 ```text
-Create one original 32x32 pixel-art quiet parchment-colored ground tile with sparse low-contrast grass flecks for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing quiet parchment grassland for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-road"></a>
+<a id="terrain-forest"></a>
 
-### terrain-road: Road route texture
+### terrain-forest: Forest hex tile
 
-File: `map/terrain/road.png` · 32x32 px · PNG RGBA · opaque seamless tile · shared 12-color palette above.
+File: `map/terrain/forest.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
 
 ```text
-Create one original 32x32 pixel-art packed-earth road texture tile without buildings for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing deep green woodland for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-hills"></a>
+
+### terrain-hills: Hills hex tile
+
+File: `map/terrain/hills.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing low rolling ochre hills for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="terrain-mountain"></a>
 
-### terrain-mountain: Mountain route texture
+### terrain-mountain: Mountain hex tile
 
-File: `map/terrain/mountain.png` · 32x32 px · PNG RGBA · opaque seamless tile · shared 12-color palette above.
+File: `map/terrain/mountain.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
 
 ```text
-Create one original 32x32 pixel-art gray rocky mountain-pass texture tile without snow or buildings for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing grey rocky mountains for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-river"></a>
+<a id="terrain-water"></a>
 
-### terrain-river: River route texture
+### terrain-water: Water hex tile
 
-File: `map/terrain/river.png` · 32x32 px · PNG RGBA · opaque seamless tile · shared 12-color palette above.
+File: `map/terrain/water.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
 
 ```text
-Create one original 32x32 pixel-art muted blue flowing river-water texture tile without banks or boats for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing deep teal open water for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-sea"></a>
+<a id="terrain-road-overlay"></a>
 
-### terrain-sea: Sea route texture
+### terrain-road-overlay: Road-overlay hex tile
 
-File: `map/terrain/sea.png` · 32x32 px · PNG RGBA · opaque seamless tile · shared 12-color palette above.
+File: `map/terrain/road_overlay.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside. ?? ?? (optional).
 
 ```text
-Create one original 32x32 pixel-art deep teal open-water texture tile with sparse gentle waves, no coast or boats for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing a packed-earth road overlay, otherwise transparent for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="town-village"></a>

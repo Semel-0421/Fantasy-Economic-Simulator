@@ -4,12 +4,14 @@
 import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { textures } from '../assets/loader';
 import { labelCandidates, placeLabels, type Label } from './labels';
-import { drawWorld, mapControls, playerMark } from './symbols';
+import { mapControls, playerMark } from './symbols';
 import { caravanLayer, type Caravan } from './caravans';
 import { fitCamera, panBy, toWorld, zoomAt, type Camera } from './camera';
-import { layoutMap, pickTown, type MapData } from './layout';
+import type { MapData } from './layout';
+import { layoutHexMap, pickHexTown } from './hex_layout';
+import { drawHexWorld, drawEmblems } from './hex_draw';
 
-import { INK, PAPER, PAPER_DARK, SEA, DANGER } from './colours';
+import { INK, PAPER, SEA, GOLD, DANGER } from './colours';
 /** How far (screen px) a press may move and still count as a tap. */
 const TAP_SLOP = 8;
 
@@ -49,9 +51,9 @@ function drawLabels(map: MapData, layer: Container): Map<number, Text> {
 
 export async function createMap(host: HTMLElement, map: MapData, onSelect: (node: number) => void): Promise<MapScreen> {
   await document.fonts.ready;
-  const layout = layoutMap(map);
+  const layout = layoutHexMap(map);
   const app = new Application();
-  await app.init({ resizeTo: host, background: PAPER_DARK, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
+  await app.init({ resizeTo: host, background: SEA, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
   const canvas = app.canvas;
   canvas.style.touchAction = 'none';
   canvas.tabIndex = 0;
@@ -60,7 +62,9 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   host.prepend(canvas);
 
   const scene: Scene = { world: new Container(), marks: new Graphics(), labels: new Map() };
-  const townSprites = drawWorld(map, layout, scene.world);
+  const { terrain, grid, emblems, townSprites } = drawHexWorld(map, layout, scene.world);
+  const townMarks = new Graphics();
+  emblems.addChild(townMarks);
   // Labels live in screen space (CSS pixels, never scaled), so their size is constant at every zoom.
   const labelLayer = new Container();
   scene.labels = drawLabels(map, labelLayer);
@@ -73,7 +77,8 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   scene.world.addChild(caravans.graphics, scene.marks);
   app.stage.addChild(scene.world, labelLayer);
 
-  let base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
+  const bounds = { x: layout.landBounds.x - 28, y: layout.landBounds.y - 32, w: layout.landBounds.w + 56, h: layout.landBounds.h + 64 };
+  let base = fitCamera(host.clientWidth || 1, host.clientHeight || 1, bounds);
   let cam: Camera = base;
   let touched = false;
   const state = { player: -1, destination: -1, selected: -1, targets: new Set<number>(), neighbours: new Set<number>() };
@@ -98,6 +103,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     for (const text of scene.labels.values()) text.visible = false;
     boxes = placeLabels(candidates, cam, cam.scale / base.scale, state, host.clientWidth, host.clientHeight);
     offsets = new Map(boxes.map((box) => { const a = anchorOf(box.id); return [box.id, { dx: box.x - a.x, dy: box.y - a.y }]; }));
+    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites);
     for (const box of boxes) {
       const text = scene.labels.get(box.id)!;
       text.visible = true;
@@ -106,25 +112,33 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   };
 
   const apply = (): void => {
+    grid.visible = cam.scale * 28 >= 10;
     scene.world.position.set(cam.x, cam.y);
     scene.world.scale.set(cam.scale);
     moveLabels();
-    for (const { sprite, level } of townSprites) {
-      sprite.visible = level < 2 || cam.scale / base.scale >= 4;
-      sprite.width = sprite.height = 32 / cam.scale;
-    }
+    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites);
     drawMarks();
   };
 
   const drawMarks = (): void => {
     const g = scene.marks.clear();
     const at = (id: number): { x: number; y: number } | undefined => layout.points.get(id);
+    for (const target of state.targets) {
+      const point = at(target);
+      if (point) {
+        g.circle(point.x, point.y, 8 / cam.scale).stroke({ width: 3.5 / cam.scale, color: INK });
+        g.circle(point.x, point.y, 8 / cam.scale).stroke({ width: 1.5 / cam.scale, color: PAPER });
+      }
+    }
     const p = at(state.player);
     const d = state.destination >= 0 ? at(state.destination) : undefined;
     if (p && d) g.moveTo(p.x, p.y).lineTo(d.x, d.y).stroke({ width: 5, color: DANGER, alpha: 0.8 });
     if (d) g.circle(d.x, d.y, 14 / cam.scale).stroke({ width: 2 / cam.scale, color: DANGER });
     const sel = at(state.selected);
-    if (sel) g.circle(sel.x, sel.y, 16 / cam.scale).stroke({ width: 2 / cam.scale, color: SEA });
+    if (sel) {
+      g.circle(sel.x, sel.y, 16 / cam.scale).stroke({ width: 4 / cam.scale, color: INK });
+      g.circle(sel.x, sel.y, 16 / cam.scale).stroke({ width: 2 / cam.scale, color: GOLD });
+    }
     if (marker) {
       marker.visible = !!p;
       marker.width = marker.height = 16 / cam.scale;
@@ -133,7 +147,8 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   };
 
   const resize = new ResizeObserver(() => {
-    base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
+    terrain.updateCacheTexture();
+    base = fitCamera(host.clientWidth || 1, host.clientHeight || 1, bounds);
     if (!touched) cam = base;
     apply();
     updateLabels();
@@ -181,7 +196,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     pointers.delete(e.pointerId);
     if (pointers.size === 0 && !moved && downAt && e.type === 'pointerup') {
       const w = toWorld(cam, downAt.x, downAt.y);
-      const id = pickTown(map, layout.points, w.x, w.y, 30 / cam.scale);
+      const id = pickHexTown(map, layout, w.x, w.y);
       if (id >= 0) onSelect(id);
     }
     if (pointers.size === 0) { downAt = null; updateLabels(); }
@@ -230,7 +245,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
       drawMarks();
       updateLabels();
     },
-    setTargets(nodes) { state.targets = new Set(nodes); updateLabels(); },
+    setTargets(nodes) { state.targets = new Set(nodes); drawMarks(); updateLabels(); },
     labelBoxes() { return boxes; },
     renderedLabelBoxes() {
       const rect = canvas.getBoundingClientRect();

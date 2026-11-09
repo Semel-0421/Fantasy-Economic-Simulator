@@ -47,6 +47,10 @@ describe('map layout', () => {
 });
 
 describe('camera', () => {
+  it('fits land bounds at their actual origin with the requested margin', () => {
+    const camera = fitCamera(1000, 500, { x: 100, y: 200, w: 400, h: 200 });
+    expect(camera).toEqual({ scale: 2.5, x: -250, y: -500 });
+  });
   it('fits the world, zooms around a point and pans', () => {
     const cam = fitCamera(500, 300);
     expect(cam.scale).toBeCloseTo(Math.min(500 / WORLD_W, 300 / WORLD_H));

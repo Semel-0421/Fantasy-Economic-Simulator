@@ -1,5 +1,5 @@
 // Pan and zoom as plain values: screen = world * scale + (x, y).
-import { WORLD_H, WORLD_W } from './layout';
+import { WORLD_H, WORLD_W, type Box } from './layout';
 
 export interface Camera {
   x: number;
@@ -11,9 +11,9 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 12;
 
 /** The camera that shows the whole world centred in a w x h view. */
-export function fitCamera(w: number, h: number): Camera {
-  const scale = Math.min(w / WORLD_W, h / WORLD_H);
-  return { scale, x: (w - WORLD_W * scale) / 2, y: (h - WORLD_H * scale) / 2 };
+export function fitCamera(w: number, h: number, bounds: Box = { x: 0, y: 0, w: WORLD_W, h: WORLD_H }): Camera {
+  const scale = Math.min(w / bounds.w, h / bounds.h);
+  return { scale, x: (w - bounds.w * scale) / 2 - bounds.x * scale, y: (h - bounds.h * scale) / 2 - bounds.y * scale };
 }
 
 export function toWorld(cam: Camera, sx: number, sy: number): { x: number; y: number } {

@@ -54,54 +54,64 @@
 
 ## 개별 자산과 붙여 넣을 프롬프트
 
-<a id="terrain-ground"></a>
+<a id="terrain-plains"></a>
 
-### terrain-ground: 지도 바탕
+### terrain-plains: plains ?? ??
 
-파일: `map/terrain/ground.png` · 32x32 px · PNG RGBA · 불투명 반복 타일 · 위의 공용 12색 팔레트.
+??: `map/terrain/plains.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
 
 ```text
-Create one original 32x32 pixel-art quiet parchment-colored ground tile with sparse low-contrast grass flecks for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing quiet parchment grassland for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-road"></a>
+<a id="terrain-forest"></a>
 
-### terrain-road: 도로 경로 질감
+### terrain-forest: forest ?? ??
 
-파일: `map/terrain/road.png` · 32x32 px · PNG RGBA · 불투명 반복 타일 · 위의 공용 12색 팔레트.
+??: `map/terrain/forest.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
 
 ```text
-Create one original 32x32 pixel-art packed-earth road texture tile without buildings for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing deep green woodland for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-hills"></a>
+
+### terrain-hills: hills ?? ??
+
+??: `map/terrain/hills.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing low rolling ochre hills for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="terrain-mountain"></a>
 
-### terrain-mountain: 산악 경로 질감
+### terrain-mountain: mountain ?? ??
 
-파일: `map/terrain/mountain.png` · 32x32 px · PNG RGBA · 불투명 반복 타일 · 위의 공용 12색 팔레트.
+??: `map/terrain/mountain.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
 
 ```text
-Create one original 32x32 pixel-art gray rocky mountain-pass texture tile without snow or buildings for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing grey rocky mountains for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-river"></a>
+<a id="terrain-water"></a>
 
-### terrain-river: 강 경로 질감
+### terrain-water: water ?? ??
 
-파일: `map/terrain/river.png` · 32x32 px · PNG RGBA · 불투명 반복 타일 · 위의 공용 12색 팔레트.
+??: `map/terrain/water.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
 
 ```text
-Create one original 32x32 pixel-art muted blue flowing river-water texture tile without banks or boats for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing deep teal open water for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
-<a id="terrain-sea"></a>
+<a id="terrain-road-overlay"></a>
 
-### terrain-sea: 바다 경로 질감
+### terrain-road-overlay: road-overlay ?? ??
 
-파일: `map/terrain/sea.png` · 32x32 px · PNG RGBA · 불투명 반복 타일 · 위의 공용 12색 팔레트.
+??: `map/terrain/road_overlay.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??. ?? ?? (optional).
 
 ```text
-Create one original 32x32 pixel-art deep teal open-water texture tile with sparse gentle waves, no coast or boats for a medieval fantasy trading strategy game. Top-down map-symbol view, crisp hand-placed pixel clusters, one-pixel dark outline, flat two-tone shading, light from upper left. Use only this palette: #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Opaque background; all four edges must tile seamlessly. Single static asset, no text, letters, numbers, logos, gradients, antialiasing or reference to existing franchises. Export one PNG at exactly 32x32 pixels; no mockup or sprite sheet.
+Create one original 28x32 pixel-art pointy-top hex tile showing a packed-earth road overlay, otherwise transparent for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="town-village"></a>

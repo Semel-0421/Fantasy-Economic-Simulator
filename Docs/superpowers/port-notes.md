@@ -176,3 +176,10 @@ Linear memory cannot shrink, so its size after turns 0-53 is the high-water mark
 including allocator slack and the hash after turn 11. The turn workload and
 stored `ceiling.json` are unchanged. This bench does not issue previews or loads;
 those paths are covered by the native full-scale measurement above.
+
+## itch.io embed host measurement (Plan 7A Task 4, 2026-11-09)
+
+Release `v0.1.0-rc1` on the itch.io `development` channel, served from `html-classic.itch.zone`, opened with
+`?bench=fullscale` in the user's Chrome 156 (Windows, development desktop): full-scale free mode, turns 0-53.
+Average **375.7 ms**, worst **823.0 ms** (turn 52), hash after turn 11 `348782575289596057` equals C#.
+Gate (worst < 1 s, average < 0.7 s): **pass**. Plan 5 Task 9 is closed by this measurement.

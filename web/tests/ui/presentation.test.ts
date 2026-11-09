@@ -15,6 +15,35 @@ beforeAll(async () => {
 afterAll(async () => { await browser?.close(); await server?.close(); });
 
 describe('presentation', () => {
+  it('sets reduced-motion growth to the final coins immediately and keeps only the badge', async () => {
+    const page = await browser.newPage({ reducedMotion: 'reduce' });
+    await page.goto(url); await page.click('#free-mode'); await page.waitForSelector('#map canvas');
+    await page.evaluate(`(async () => {
+      const { presentGrowth } = await import('/src/ui/growth.ts');
+      await presentGrowth({ coins: document.getElementById('coins'), game: document.querySelector('.game') }, 500, 2500, [{ label: 'Dividend', coins: 2000 }]);
+    })()`);
+    expect(await page.textContent('#coins')).toBe('2,500');
+    expect(await page.locator('.game[inert], .panel.growing').count()).toBe(0);
+    expect(await page.getAttribute('#growth', 'aria-live')).toBe('polite');
+    expect(await page.getAttribute('#growth', 'title')).toContain('Dividend');
+    await page.waitForSelector('#growth', { state: 'detached', timeout: 2500 });
+    await page.close();
+  });
+  it('skips growth by key at the exact final total and releases the game', async () => {
+    const page = await browser.newPage({ reducedMotion: 'no-preference' });
+    await page.goto(url); await page.click('#free-mode'); await page.waitForSelector('#map canvas');
+    await page.evaluate(`(async () => {
+      const { presentGrowth } = await import('/src/ui/growth.ts');
+      window.growthDone = false;
+      void presentGrowth({ coins: document.getElementById('coins'), game: document.querySelector('.game') }, 500, 123456, [{ label: 'Sale abroad', coins: 122956 }]).then(() => { window.growthDone = true; });
+    })()`);
+    expect(await page.locator('.game[inert]').count()).toBe(1);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => (window as unknown as { growthDone: boolean }).growthDone);
+    expect(await page.textContent('#coins')).toBe('123,456');
+    expect(await page.locator('.game[inert]').count()).toBe(0);
+    await page.close();
+  });
   it('keeps menu copy and profit targets equal to the approved scenario data', () => {
     for (const entry of SCENARIOS) {
       const text = readFileSync(`../data/scenarios/${entry.file}`, 'utf8');

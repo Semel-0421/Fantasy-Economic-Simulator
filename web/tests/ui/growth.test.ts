@@ -1,7 +1,7 @@
 // The growth presentation's logic (what counts as a gain, the counted value over time) and the
 // caravans' positions on the map while a week computes.
 import { describe, expect, it } from 'vitest';
-import { countedValue, gainsOf, GROWTH_MS } from '../../src/ui/growth';
+import { countedValue, gainsOf, growthDuration } from '../../src/ui/growth';
 import { caravanPoints, MAX_CARAVANS } from '../../src/map/caravans';
 import type { TurnReport } from '../../src/sim/types';
 
@@ -9,6 +9,16 @@ const report = (events: unknown[]): TurnReport => ({ turn: 9, events } as TurnRe
 const name = (g: number): string => `Good ${g}`;
 
 describe('growth presentation', () => {
+  it('scales logarithmically with relative gain and stays within 800–2000ms', () => {
+    const durations = [0, 1, 10, 100, 1000, 10000, 1000000].map((gain) => growthDuration(gain, 500));
+    expect(durations).toEqual([...durations].sort((a, b) => a - b));
+    for (const duration of durations) expect(duration).toBeGreaterThanOrEqual(800);
+    for (const duration of durations) expect(duration).toBeLessThanOrEqual(2000);
+    expect(growthDuration(0, 500)).toBe(800);
+    expect(growthDuration(10000, 1)).toBe(2000);
+    expect(growthDuration(100, 100)).toBeGreaterThan(growthDuration(100, 1000));
+    expect(Number.isFinite(growthDuration(100, 0))).toBe(true);
+  });
   it('counts sales, payouts and delivered contracts, not purchases', () => {
     const r = report([
       { GoodsTraded: { market: 1, good: 3, bought: false, requested: 30, filled: 30, price: 12, turn: 9 } },
@@ -25,10 +35,11 @@ describe('growth presentation', () => {
   });
 
   it('counts up from the old coins to the new with an ease-out, ending exactly', () => {
-    expect(countedValue(100, 600, 0)).toBe(100);
-    expect(countedValue(100, 600, GROWTH_MS)).toBe(600);
-    expect(countedValue(100, 600, GROWTH_MS * 10)).toBe(600);
-    const half = countedValue(100, 600, GROWTH_MS / 2);
+    const duration = growthDuration(500, 100);
+    expect(countedValue(100, 600, 0, duration)).toBe(100);
+    expect(countedValue(100, 600, duration, duration)).toBe(600);
+    expect(countedValue(100, 600, duration * 10, duration)).toBe(600);
+    const half = countedValue(100, 600, duration / 2, duration);
     expect(half).toBeGreaterThan(350); // ease-out: past the midpoint at half time
     expect(Number.isInteger(half)).toBe(true);
   });

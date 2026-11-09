@@ -11,8 +11,11 @@ export interface Gain {
   coins: number;
 }
 
-/** How long the count-up runs, in milliseconds. */
-export const GROWTH_MS = 1200;
+/** A tenfold-purse gain reaches the cap; small gains still get a readable 800ms. */
+export function growthDuration(total: number, coinsBefore: number): number {
+  const relative = Math.max(0, total) / Math.max(1, Math.abs(coinsBefore));
+  return Math.min(2000, 800 + 1200 * Math.log1p(relative) / Math.log(11));
+}
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
@@ -32,8 +35,8 @@ export function gainsOf(report: TurnReport, goodName: (good: number) => string):
 }
 
 /** The number shown `elapsed` ms into the count-up (ease-out cubic), a whole coin, exact at the end. */
-export function countedValue(from: number, to: number, elapsed: number): number {
-  const t = Math.min(1, Math.max(0, elapsed / GROWTH_MS));
+export function countedValue(from: number, to: number, elapsed: number, duration: number): number {
+  const t = Math.min(1, Math.max(0, elapsed / duration));
   if (t >= 1) return to;
   const eased = 1 - (1 - t) ** 3;
   return Math.round(from + (to - from) * eased);
@@ -57,9 +60,13 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
   const { coins, game } = targets;
   const panel = coins.parentElement;
   const total = gains.reduce((s, g) => s + g.coins, 0);
+  const duration = growthDuration(total, from);
   const badge = el('span', { id: 'growth', className: 'growth', text: `+${fmt(total)}` });
   badge.title = gains.map((g) => `${g.label}: +${fmt(g.coins)}`).join('\n');
   badge.setAttribute('role', 'status');
+  badge.setAttribute('aria-live', 'polite');
+  badge.setAttribute('aria-atomic', 'true');
+  badge.append(el('span', { className: 'sr-only', text: `. ${badge.title.replaceAll('\n', '. ')}` }));
   panel?.append(badge);
   play('coin');
   const finish = (): void => {
@@ -90,8 +97,8 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
     const frame = (now: number): void => {
       if (done) return;
       const elapsed = now - t0;
-      coins.textContent = fmt(countedValue(from, to, elapsed));
-      if (elapsed >= GROWTH_MS) stop();
+      coins.textContent = fmt(countedValue(from, to, elapsed, duration));
+      if (elapsed >= duration) stop();
       else requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);

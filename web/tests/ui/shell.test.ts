@@ -2,6 +2,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdirSync } from 'node:fs';
+import { overlaps } from '../../src/map/labels';
+import type { Label } from '../../src/map/labels';
 
 let server: ViteDevServer, browser: Browser, url: string;
 beforeAll(async () => {
@@ -27,6 +29,9 @@ describe('desktop shell', () => {
     const page = await start(true);
     expect(await page.locator('#tab-goal[aria-selected="true"]').count()).toBe(1);
     expect(await page.textContent('#date')).toBe('Week 1 / 20');
+    const labels = await page.evaluate(() => (window as unknown as { __fesMap: { labelBoxes(): Label[] } }).__fesMap.labelBoxes());
+    expect(labels.length).toBeLessThanOrEqual(40);
+    for (const [index, a] of labels.entries()) for (const b of labels.slice(index + 1)) expect(overlaps(a, b)).toBe(false);
     await page.focus('#tab-goal');
     await page.keyboard.press('ArrowRight');
     expect(await page.getAttribute('#tab-market', 'aria-selected')).toBe('true');

@@ -18,6 +18,11 @@ export function nextScenario(n: number): number | null {
   return SCENARIOS.some((s) => s.n === n + 1) ? n + 1 : null;
 }
 
+/** Existing scenario node literals identify teaching destinations without changing the Worker API. */
+export function scenarioNodeKeys(text: string): string[] {
+  return [...new Set([...text.matchAll(/"(k\d+(?:n\d+)?(?:r\d+)?(?:c\d+)?(?:v\d+)?)"/g)].map((match) => match[1]!))];
+}
+
 /** The folder of the full-scale world the scenarios run on. */
 export function scenarioDataUrl(): string {
   return new URL('data/fullscale/', document.baseURI).href;

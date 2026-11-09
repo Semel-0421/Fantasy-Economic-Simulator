@@ -24,6 +24,9 @@
 h1 { font-size: var(--type-title); }
 h2 { font-size: var(--type-lg); }
 h3 { font-size: var(--type-body); }
+.map-controls { position: absolute; z-index: 3; top: var(--space-2); right: var(--space-2); display: flex; gap: var(--space-1); }
+.map-controls button { width: 44px; height: 44px; padding: var(--space-2); }
+.map-controls svg { display: block; width: 24px; height: 24px; }
 @media (min-width: 900px) {
   .play { grid-template-columns: minmax(0, 5fr) minmax(0, 3fr); }
   .map { height: max(560px, calc(100dvh - 112px)); }

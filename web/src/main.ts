@@ -25,7 +25,7 @@ import { registerServiceWorker } from './ui/update';
 import { dialogs, type Dialogs } from './ui/dialog';
 import { scenarioDialogs, scenarioEnd, scenarioPanel, type ScenarioPanel } from './ui/scenario';
 import { renderResults } from './ui/results';
-import { nextScenario } from './data/scenarios';
+import { nextScenario, loadScenarioText, scenarioNodeKeys } from './data/scenarios';
 import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
 import { gainsOf, presentGrowth } from './ui/growth';
 import { finishWeek } from './ui/week_end';
@@ -190,6 +190,10 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   hud.panels.finance.append(screens.purse.node, screens.exchange.node, screens.bonds.node, screens.licences.node);
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
+    if (scenarioNumber !== undefined) {
+      const keys = new Set(scenarioNodeKeys(await loadScenarioText(scenarioNumber)));
+      mapScreen.setTargets(map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id));
+    }
     // The browser tests find towns on the canvas through this handle (development builds only).
     if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
   } catch (e) {

@@ -66,6 +66,13 @@ describe('map', () => {
     await page.mouse.wheel(0, -400);
     const zoomed = await screenOf(page, dest);
     expect(zoomed).not.toEqual(panned);
+    await page.locator('#map canvas').focus();
+    await page.keyboard.press('0');
+    expect(await screenOf(page, dest)).toEqual(before);
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    expect(await screenOf(page, dest)).not.toEqual(before);
+    await page.getByRole('button', { name: 'Fit map', exact: true }).click();
+    expect(await screenOf(page, dest)).toEqual(before);
 
     await page.click('#travel');
     await page.waitForFunction(() => document.querySelector('#log .message')?.textContent?.includes('Travel to'));

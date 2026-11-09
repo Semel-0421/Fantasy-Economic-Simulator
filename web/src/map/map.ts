@@ -1,18 +1,23 @@
 // The world map drawn with PixiJS: region outlines, routes, towns by level, the player's position and
 // destination, and the selected town. Drag pans, the wheel and a two-finger pinch zoom, a tap selects
 // the nearest town. All input is DOM pointer events on the canvas; the Pixi scene only draws.
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { textures } from '../assets/loader';
+import { labelCandidates, placeLabels, type Label } from './labels';
+import { drawWorld, mapControls, playerMark } from './symbols';
 import { caravanLayer, type Caravan } from './caravans';
 import { fitCamera, panBy, toWorld, zoomAt, type Camera } from './camera';
-import { LEVEL, isTown, layoutMap, pickTown, routePairs, type Layout, type MapData } from './layout';
+import { layoutMap, pickTown, type MapData } from './layout';
 
-import { INK, PAPER, PAPER_DARK, GOLD, SEA, DANGER, TERRAIN_COLOURS } from './colours';
+import { INK, PAPER, PAPER_DARK, SEA, DANGER } from './colours';
 /** How far (screen px) a press may move and still count as a tap. */
 const TAP_SLOP = 8;
 
 export interface MapScreen {
   setPlayer(node: number, destination: number): void;
   select(node: number): void;
+  setTargets(nodes: number[]): void;
+  labelBoxes(): readonly Label[];
   /** The merchants on the road (caravans view); they rest near the town they left. */
   setCaravans(list: Caravan[]): void;
   /** While a week computes (true) the caravans move toward their destinations. */
@@ -25,56 +30,41 @@ export interface MapScreen {
 interface Scene {
   world: Container;
   marks: Graphics;
-  labels: Text[];
+  labels: Map<number, Text>;
 }
 
-function drawBase(map: MapData, layout: Layout, world: Container): Text[] {
-  const g = new Graphics();
-  for (const n of map.nodes) {
-    const b = layout.boxes.get(n.id);
-    if (!b) continue;
-    const width = n.level === LEVEL.continent ? 4 : n.level === LEVEL.nation ? 2.5 : 1.2;
-    g.roundRect(b.x, b.y, b.w, b.h, 12).stroke({ width, color: INK, alpha: 0.25 + 0.15 * (2 - n.level) });
+function drawLabels(map: MapData, world: Container): Map<number, Text> {
+  const labels = new Map<number, Text>();
+  for (const node of map.nodes) {
+    const text = new Text({ text: node.name, style: {
+      fontFamily: 'Atkinson Hyperlegible, system-ui', fontSize: 14, fill: PAPER, stroke: { color: INK, width: 2 },
+    } });
+    text.visible = false;
+    labels.set(node.id, text);
+    world.addChild(text);
   }
-  for (const r of routePairs(map)) {
-    const a = layout.points.get(r.from);
-    const b = layout.points.get(r.to);
-    if (!a || !b) continue;
-    g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: 2 + Math.min(r.turns, 4), color: TERRAIN_COLOURS[r.terrain] ?? INK, alpha: 0.7 });
-  }
-  const labels: Text[] = [];
-  for (const n of map.nodes) {
-    const p = layout.points.get(n.id);
-    if (!p) continue;
-    if (isTown(n)) {
-      const city = n.level === LEVEL.city;
-      g.circle(p.x, p.y, city ? 14 : 8).fill(city ? PAPER : PAPER_DARK).stroke({ width: city ? 4 : 2.5, color: INK });
-    }
-    const box = layout.boxes.get(n.id);
-    const text = new Text({
-      text: n.name,
-      style: { fontFamily: 'Atkinson Hyperlegible, system-ui', fontSize: isTown(n) ? (n.level === LEVEL.city ? 15 : 12) : 16, fill: INK },
-    });
-    text.anchor.set(0.5, isTown(n) ? -0.9 : 0);
-    text.position.set(box ? box.x + box.w / 2 : p.x, box ? box.y + 4 : p.y);
-    text.alpha = isTown(n) ? 1 : 0.6;
-    labels.push(text);
-  }
-  world.addChild(g, ...labels);
   return labels;
 }
 
 export async function createMap(host: HTMLElement, map: MapData, onSelect: (node: number) => void): Promise<MapScreen> {
+  await document.fonts.ready;
   const layout = layoutMap(map);
   const app = new Application();
   await app.init({ resizeTo: host, background: PAPER_DARK, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
   const canvas = app.canvas;
   canvas.style.touchAction = 'none';
-  canvas.setAttribute('aria-hidden', 'true');
+  canvas.tabIndex = 0;
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', 'World map. Plus and minus zoom; zero fits the world. Choose a route below to travel by keyboard.');
   host.prepend(canvas);
 
-  const scene: Scene = { world: new Container(), marks: new Graphics(), labels: [] };
-  scene.labels = drawBase(map, layout, scene.world);
+  const scene: Scene = { world: new Container(), marks: new Graphics(), labels: new Map() };
+  const townSprites = drawWorld(map, layout, scene.world);
+  scene.labels = drawLabels(map, scene.world);
+  const sizes = new Map([...scene.labels.values()].map((text) => [text.text, { w: text.width + 4, h: text.height + 4 }]));
+  const candidates = labelCandidates(map, layout, (name) => sizes.get(name)!);
+  const marker = textures.has('player-marker') ? new Sprite(textures.get('player-marker')) : null;
+  if (marker) { marker.anchor.set(0.5); scene.world.addChild(marker); }
   const reduced = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const caravans = caravanLayer(layout.points, reduced);
   scene.world.addChild(caravans.graphics, scene.marks);
@@ -83,14 +73,30 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   let base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
   let cam: Camera = base;
   let touched = false;
-  const state = { player: -1, destination: -1, selected: -1 };
+  const state = { player: -1, destination: -1, selected: -1, targets: new Set<number>(), neighbours: new Set<number>() };
+  let boxes: Label[] = [];
+  let labelTimer = 0;
+  const updateLabels = (): void => {
+    for (const text of scene.labels.values()) text.visible = false;
+    boxes = placeLabels(candidates, cam, cam.scale / base.scale, state, host.clientWidth, host.clientHeight);
+    for (const box of boxes) {
+      const text = scene.labels.get(box.id)!;
+      text.visible = true;
+      text.scale.set(1 / cam.scale);
+      text.position.set((box.x - cam.x + 2) / cam.scale, (box.y - cam.y + 2) / cam.scale);
+    }
+  };
 
   const apply = (): void => {
     scene.world.position.set(cam.x, cam.y);
     scene.world.scale.set(cam.scale);
     // Labels keep a readable size whatever the zoom.
-    const s = Math.min(1 / cam.scale, 4);
-    for (const t of scene.labels) t.scale.set(s);
+    for (const text of scene.labels.values()) if (text.visible) text.scale.set(1 / cam.scale);
+    for (const { sprite, level } of townSprites) {
+      sprite.visible = level < 2 || cam.scale / base.scale >= 4;
+      sprite.width = sprite.height = 32 / cam.scale;
+    }
+    drawMarks();
   };
 
   const drawMarks = (): void => {
@@ -99,16 +105,21 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     const p = at(state.player);
     const d = state.destination >= 0 ? at(state.destination) : undefined;
     if (p && d) g.moveTo(p.x, p.y).lineTo(d.x, d.y).stroke({ width: 5, color: DANGER, alpha: 0.8 });
-    if (d) g.circle(d.x, d.y, 22).stroke({ width: 4, color: DANGER });
+    if (d) g.circle(d.x, d.y, 14 / cam.scale).stroke({ width: 2 / cam.scale, color: DANGER });
     const sel = at(state.selected);
-    if (sel) g.circle(sel.x, sel.y, 28).stroke({ width: 4, color: SEA });
-    if (p) g.circle(p.x, p.y, 11).fill(GOLD).stroke({ width: 3, color: INK });
+    if (sel) g.circle(sel.x, sel.y, 16 / cam.scale).stroke({ width: 2 / cam.scale, color: SEA });
+    if (marker) {
+      marker.visible = !!p;
+      marker.width = marker.height = 16 / cam.scale;
+      if (p) marker.position.set(p.x, p.y);
+    } else if (p) playerMark(g, p.x, p.y, cam.scale);
   };
 
   const resize = new ResizeObserver(() => {
     base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
     if (!touched) cam = base;
     apply();
+    updateLabels();
   });
   resize.observe(host);
 
@@ -156,7 +167,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
       const id = pickTown(map, layout.points, w.x, w.y, 30 / cam.scale);
       if (id >= 0) onSelect(id);
     }
-    if (pointers.size === 0) downAt = null;
+    if (pointers.size === 0) { downAt = null; updateLabels(); }
   };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
@@ -168,22 +179,42 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
       cam = zoomAt(cam, Math.exp(-e.deltaY * 0.0015), p.x, p.y, base.scale);
       touched = true;
       apply();
+      window.clearTimeout(labelTimer);
+      labelTimer = window.setTimeout(updateLabels, 120);
     },
     { passive: false },
   );
 
+  const zoom = (factor: number): void => {
+    cam = zoomAt(cam, factor, host.clientWidth / 2, host.clientHeight / 2, base.scale);
+    touched = true;
+    apply(); updateLabels();
+  };
+  const fit = (): void => { cam = base; touched = false; apply(); updateLabels(); };
+  const controls = mapControls(zoom, fit);
+  host.append(controls);
+  canvas.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.metaKey || !['+', '=', '-', '0'].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === '0') fit(); else zoom(event.key === '-' ? 1 / 1.5 : 1.5);
+  });
   apply();
-  drawMarks();
+  updateLabels();
   return {
     setPlayer(node, destination) {
       state.player = node;
       state.destination = destination;
+      state.neighbours = new Set(map.routes.filter((route) => route.from === node).map((route) => route.to));
       drawMarks();
+      updateLabels();
     },
     select(node) {
       state.selected = node;
       drawMarks();
+      updateLabels();
     },
+    setTargets(nodes) { state.targets = new Set(nodes); updateLabels(); },
+    labelBoxes() { return boxes; },
     setCaravans(list) {
       caravans.set(list);
     },
@@ -197,6 +228,8 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     destroy() {
       caravans.destroy();
       resize.disconnect();
+      window.clearTimeout(labelTimer);
+      controls.remove();
       app.destroy(true, { children: true });
     },
   };

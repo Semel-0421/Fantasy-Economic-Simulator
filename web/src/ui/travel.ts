@@ -83,10 +83,13 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
     return label;
   };
 
+  // Collapsed to one line until the player opens it or picks a town, so it never hides the map.
+  const summaryText = el('span', { className: 'travel-where' });
+  const summary = el('summary', { id: 'travel-summary' }, el('span', { className: 'travel-title', text: 'Travel' }), summaryText);
   const node = el(
-    'section',
-    { id: 'travel-panel', className: 'card' },
-    el('h2', { text: 'Travel' }),
+    'details',
+    { id: 'travel-panel', className: 'card travel' },
+    summary,
     where,
     selected,
     el('div', { className: 'row' }, check(guards, 'Guards'), check(insurance, 'Insurance'), go),
@@ -102,11 +105,13 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
       if (destination >= 0) {
         where.textContent = `Travelling from ${nameOf(at)} to ${nameOf(destination)}; arriving ${(actions.dateLabel ?? calendarDate)(arrival)}.`;
       } else where.textContent = `You are in ${nameOf(at)}.`;
+      summaryText.textContent = destination >= 0 ? `To ${nameOf(destination)}` : `At ${nameOf(at)}`;
       listRoutes();
       describeSelected();
     },
     select(id) {
       target = id;
+      if (id >= 0) (node as HTMLDetailsElement).open = true;
       error.show('');
       describeSelected();
     },

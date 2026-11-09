@@ -76,6 +76,6 @@ export function freeHint(host: HTMLElement): void {
   try { localStorage.setItem('fes-free-hint-done', '1'); } catch { /* Session-only fallback. */ }
   const dismiss = button('Close', () => hint.remove());
   dismiss.setAttribute('aria-label', 'Dismiss hint');
-  const hint = el('div', { className: 'free-hint' }, el('p', { text: 'Free mode: the full economy, no goals. Save from the top bar.' }), dismiss);
+  const hint = el('div', { className: 'free-hint' }, el('p', { text: 'Free mode: the full economy, no goals. Save your game any time.' }), dismiss);
   host.prepend(hint);
 }

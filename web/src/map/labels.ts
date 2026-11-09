@@ -12,6 +12,9 @@ export function labelCandidates(map: MapData, layout: Layout, measure: (name: st
   });
 }
 export const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+/** Space kept clear around each placed label, in CSS pixels. */
+export const LABEL_MARGIN = 2;
+const padded = (b: Box): Box => ({ x: b.x - LABEL_MARGIN, y: b.y - LABEL_MARGIN, w: b.w + 2 * LABEL_MARGIN, h: b.h + 2 * LABEL_MARGIN });
 
 /** Greedy placement is in CSS pixels: font size and the collision margin never shrink with zoom. */
 export function placeLabels(labels: Label[], camera: Camera, zoom: number, state: LabelState, width: number, height: number): Label[] {
@@ -26,7 +29,7 @@ export function placeLabels(labels: Label[], camera: Camera, zoom: number, state
     const x = Math.max(2, Math.min(width - label.w - 2, cx - label.w / 2));
     const y = Math.max(2, Math.min(height - label.h - 2, cy + (label.level >= LEVEL.city ? 12 : 4)));
     const box = { ...label, x, y };
-    if (placed.some((other) => overlaps(box, other))) continue;
+    if (placed.some((other) => overlaps(padded(box), other))) continue;
     placed.push(box);
     if (zoom < 2 && placed.length >= 40) break;
   }

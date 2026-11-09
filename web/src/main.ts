@@ -1,5 +1,5 @@
 // Entry point: main menu, then a free-mode or scenario game on the simulation Worker.
-import '@fontsource/pixelify-sans/latin-400.css';
+import './ui/fonts.css';
 import '@fontsource/atkinson-hyperlegible/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
@@ -149,6 +149,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     },
     dateLabel,
     info?.weeks,
+    info?.title,
   );
   hudScreen = hud;
   game.onFailure((e) => hud.fail(e.message));

@@ -37,3 +37,14 @@ h3 { font-size: var(--type-body); }
   #next { flex: 0 0 220px; min-height: 64px; background: var(--action-primary); color: var(--text-on-primary); }
   .tools { align-self: center; }
 }
+/* Review round 1: one-line travel summary, tab labels that always fit, objective rows with drawn marks. */
+.travel > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; cursor: pointer; list-style: none; }
+.travel > summary::-webkit-details-marker { display: none; }
+.travel > summary::after { content: '\25BE'; margin-left: auto; }
+.travel[open] > summary::after { content: '\25B4'; }
+.travel-title { font-family: var(--font-display); font-size: var(--type-lg); }
+.travel-where { font-size: var(--type-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabs button { flex: 1 1 auto; min-width: max-content; white-space: nowrap; padding-inline: var(--space-2); }
+#objectives li { display: flex; align-items: center; gap: var(--space-2); }
+#objectives .objective-text { flex: 1; }
+.travel:not([open]) { padding-block: 2px; }

@@ -60,7 +60,7 @@ async function order(page: Page, side: 'buy' | 'sell'): Promise<void> {
 }
 
 describe('production UI', () => {
-  for (const viewport of [{ width: 1280, height: 800 }, { width: 360, height: 740 }]) {
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 900, height: 700 }, { width: 360, height: 740 }]) {
     for (const reducedMotion of ['no-preference', 'reduce'] as const) {
       it(`${viewport.width}x${viewport.height}, ${reducedMotion}`, async () => {
         const context = await browser.newContext({ viewport, reducedMotion, serviceWorkers: 'block' });

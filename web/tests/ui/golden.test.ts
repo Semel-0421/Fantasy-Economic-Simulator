@@ -108,6 +108,8 @@ class Player {
 
   /** Travel panel: the route button, guards and insurance, Travel (no Confirm: it queues at once). */
   async travel(key: string, protectedTrip: boolean): Promise<void> {
+    // The travel card starts as a one-line summary; a player opens it to see the routes.
+    if ((await this.page.locator('#travel-panel[open]').count()) === 0) await this.page.click('#travel-summary');
     await this.page.click(`#routes button[data-node="${this.node(key)}"]`);
     await this.page.setChecked('#guards', protectedTrip);
     await this.page.setChecked('#insurance', protectedTrip);
@@ -244,7 +246,9 @@ describe('scenario golden paths', () => {
     await p.go('k0n0r0', false);
     await p.go('k0n0r0c1', true);
     await p.week();
-    expect(await p.page.textContent('#objectives')).toContain('[x] Deliver the tool order');
+    const delivered = p.page.locator('#objectives li', { hasText: 'Deliver the tool order' });
+    expect(await delivered.locator('.objective-mark.checked').count()).toBe(1);
+    expect(await delivered.textContent()).toContain('Done, week');
     expect(p.news.some((n) => n.includes('Delivery complete. Promised 1500 coins; you received 1500 coins.'))).toBe(true);
     expect(p.news.some((n) => n.includes('You receive 1,500 coins.'))).toBe(true);
     expect(await p.finish(1000)).toBe('Net profit 1,359 coins in 20 weeks');

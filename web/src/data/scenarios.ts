@@ -10,9 +10,9 @@ export interface ScenarioEntry {
 }
 
 export const SCENARIOS: readonly ScenarioEntry[] = [
-  { n: 1, title: 'First Venture', file: 's1_first_venture.ron', pitch: 'Make a profit on your first sale.', targetProfit: 1000 },
-  { n: 2, title: 'Shares and Bonds', file: 's2_shares_and_bonds.ron', pitch: 'Buy company shares or national bonds.', targetProfit: 2500 },
-  { n: 3, title: 'Licences and Trade Abroad', file: 's3_licences_abroad.ron', pitch: 'Buy g19_0 here and sell it in k0n1, where supplies are short.', targetProfit: 1000 },
+  { n: 1, title: 'First Venture', file: 's1_first_venture.ron', pitch: 'Learn to trade: buy cheap, sell dear, deliver a contract.', targetProfit: 1000 },
+  { n: 2, title: 'Shares and Bonds', file: 's2_shares_and_bonds.ron', pitch: 'Grow coins through company shares and bonds.', targetProfit: 2500 },
+  { n: 3, title: 'Licences and Trade Abroad', file: 's3_licences_abroad.ron', pitch: 'Licences and trade between nations.', targetProfit: 1000 },
 ];
 
 /** The scenario after `n`, or null after the last. */

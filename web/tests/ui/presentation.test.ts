@@ -46,10 +46,14 @@ describe('presentation', () => {
     expect(await page.locator('.game[inert]').count()).toBe(0);
     await page.close();
   });
-  it('keeps menu copy and profit targets equal to the approved scenario data', () => {
+  it('uses the Planner menu pitches and keeps profit targets equal to scenario data', () => {
+    expect(SCENARIOS.map((entry) => entry.pitch)).toEqual([
+      'Learn to trade: buy cheap, sell dear, deliver a contract.',
+      'Grow coins through company shares and bonds.',
+      'Licences and trade between nations.',
+    ]);
     for (const entry of SCENARIOS) {
       const text = readFileSync(`../data/scenarios/${entry.file}`, 'utf8');
-      expect(text).toContain(entry.pitch);
       const targets = [...text.matchAll(/goal:\s*NetProfit\((\d+)\)/g)].map((match) => Number(match[1]));
       expect(entry.targetProfit).toBe(Math.max(...targets));
     }

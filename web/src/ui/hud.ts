@@ -37,7 +37,7 @@ export interface HudActions {
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
-export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions, dateLabel: DateLabel = calendarDate, weeks?: number): Hud {
+export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions, dateLabel: DateLabel = calendarDate, weeks?: number, title = mode === 'free' ? 'Free mode' : 'Scenario'): Hud {
   const coins = el('strong', { id: 'coins', text: '-' });
   const date = el('span', { id: 'date', text: '-' });
   const caption = el('span', { id: 'next-label', text: 'Next week' });
@@ -80,8 +80,14 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   icon.append(path);
   menuButton.append(icon, el('span', { className: 'menu-label', text: 'Menu' }));
 
+  // The landmark and the page heading sit outside .game, so they stay in the accessibility tree while
+  // the growth presentation makes .game inert.
   root.replaceChildren(
     el(
+      'main',
+      { className: 'game-main' },
+      el('h1', { className: 'sr-only', text: title }),
+      el(
       'div',
       { className: 'game' },
       alert,
@@ -95,10 +101,11 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
         next,
       ),
       el(
-        'main',
+        'div',
         { className: 'play' },
         el('div', { className: 'mapcol' }, mapHost),
         tabs.node,
+      ),
       ),
     ),
   );

@@ -44,7 +44,7 @@
   --type-xl: 24px;
   --type-title: 32px;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --font-display: 'Pixelify Sans', system-ui, sans-serif;
+  --font-display: 'Pixelify Sans', 'Atkinson Hyperlegible', system-ui, sans-serif;
   --line-height: 1.5;
   --dur-fast: 120ms;
   --dur-base: 200ms;

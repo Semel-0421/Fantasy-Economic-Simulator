@@ -21,6 +21,13 @@ export function scenarioDialogs(report: TurnReport): DialogText[] {
 }
 
 /** The ScenarioEnded event of a turn, or null. */
+/** A drawn check box (decorative; the row's text says done or to do). */
+function objectiveMark(done: boolean): HTMLElement {
+  const mark = el('span', { className: `objective-mark${done ? ' checked' : ''}` });
+  mark.setAttribute('aria-hidden', 'true');
+  return mark;
+}
+
 export function scenarioEnd(report: TurnReport): { net_profit: number; objectives_done: number; turn: number } | null {
   for (const e of report.events) if (typeof e === 'object' && 'ScenarioEnded' in e) return e.ScenarioEnded;
   return null;
@@ -74,8 +81,9 @@ export function scenarioPanel(
           el(
             'li',
             { className: o.done ? 'done' : '' },
-            el('span', { text: `${o.done ? '[x]' : '[ ]'} ${o.text}` }),
-            el('span', { text: o.done ? `week ${o.done_week}` : '' }),
+            objectiveMark(o.done),
+            el('span', { className: 'objective-text', text: o.text }),
+            el('span', { text: o.done ? `Done, week ${o.done_week}` : 'To do' }),
           ),
         ),
       );

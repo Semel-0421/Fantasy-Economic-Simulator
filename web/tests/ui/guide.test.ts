@@ -52,7 +52,7 @@ describe('guide in play', () => {
   it('shows the supplied free-mode hint once and lets it be dismissed', async () => {
     const page = await browser.newPage();
     await page.goto(url); await page.click('#free-mode'); await page.waitForSelector('#map canvas');
-    expect(await page.textContent('.free-hint')).toContain('Free mode: the full economy, no goals. Save from the top bar.');
+    expect(await page.textContent('.free-hint')).toContain('Free mode: the full economy, no goals. Save your game any time.');
     await page.getByRole('button', { name: 'Dismiss hint' }).click();
     expect(await page.locator('.free-hint').count()).toBe(0);
     await page.click('#menu'); await page.click('#free-mode'); await page.waitForSelector('#map canvas');

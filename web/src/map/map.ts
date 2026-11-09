@@ -18,6 +18,7 @@ export interface MapScreen {
   select(node: number): void;
   setTargets(nodes: number[]): void;
   labelBoxes(): readonly Label[];
+  renderedLabelBoxes(): readonly Label[];
   /** The merchants on the road (caravans view); they rest near the town they left. */
   setCaravans(list: Caravan[]): void;
   /** While a week computes (true) the caravans move toward their destinations. */
@@ -33,7 +34,7 @@ interface Scene {
   labels: Map<number, Text>;
 }
 
-function drawLabels(map: MapData, world: Container): Map<number, Text> {
+function drawLabels(map: MapData, layer: Container): Map<number, Text> {
   const labels = new Map<number, Text>();
   for (const node of map.nodes) {
     const text = new Text({ text: node.name, style: {
@@ -41,7 +42,7 @@ function drawLabels(map: MapData, world: Container): Map<number, Text> {
     } });
     text.visible = false;
     labels.set(node.id, text);
-    world.addChild(text);
+    layer.addChild(text);
   }
   return labels;
 }
@@ -60,38 +61,54 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
 
   const scene: Scene = { world: new Container(), marks: new Graphics(), labels: new Map() };
   const townSprites = drawWorld(map, layout, scene.world);
-  scene.labels = drawLabels(map, scene.world);
-  const sizes = new Map([...scene.labels.values()].map((text) => [text.text, { w: text.width + 4, h: text.height + 4 }]));
+  // Labels live in screen space (CSS pixels, never scaled), so their size is constant at every zoom.
+  const labelLayer = new Container();
+  scene.labels = drawLabels(map, labelLayer);
+  const sizes = new Map([...scene.labels.values()].map((text) => [text.text, { w: text.width, h: text.height }]));
   const candidates = labelCandidates(map, layout, (name) => sizes.get(name)!);
   const marker = textures.has('player-marker') ? new Sprite(textures.get('player-marker')) : null;
   if (marker) { marker.anchor.set(0.5); scene.world.addChild(marker); }
   const reduced = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const caravans = caravanLayer(layout.points, reduced);
   scene.world.addChild(caravans.graphics, scene.marks);
-  app.stage.addChild(scene.world);
+  app.stage.addChild(scene.world, labelLayer);
 
   let base = fitCamera(host.clientWidth || 1, host.clientHeight || 1);
   let cam: Camera = base;
   let touched = false;
   const state = { player: -1, destination: -1, selected: -1, targets: new Set<number>(), neighbours: new Set<number>() };
   let boxes: Label[] = [];
+  /** Each placed label's offset from its node's screen position, so pans and zooms carry it along. */
+  let offsets = new Map<number, { dx: number; dy: number }>();
   let labelTimer = 0;
+  const byId = new Map(candidates.map((label) => [label.id, label]));
+  const anchorOf = (id: number): { x: number; y: number } => {
+    const c = byId.get(id)!;
+    return { x: c.x * cam.scale + cam.x, y: c.y * cam.scale + cam.y };
+  };
+  const moveLabels = (): void => {
+    boxes = boxes.map((box) => {
+      const a = anchorOf(box.id), o = offsets.get(box.id)!;
+      const moved = { ...box, x: a.x + o.dx, y: a.y + o.dy };
+      scene.labels.get(box.id)!.position.set(moved.x, moved.y);
+      return moved;
+    });
+  };
   const updateLabels = (): void => {
     for (const text of scene.labels.values()) text.visible = false;
     boxes = placeLabels(candidates, cam, cam.scale / base.scale, state, host.clientWidth, host.clientHeight);
+    offsets = new Map(boxes.map((box) => { const a = anchorOf(box.id); return [box.id, { dx: box.x - a.x, dy: box.y - a.y }]; }));
     for (const box of boxes) {
       const text = scene.labels.get(box.id)!;
       text.visible = true;
-      text.scale.set(1 / cam.scale);
-      text.position.set((box.x - cam.x + 2) / cam.scale, (box.y - cam.y + 2) / cam.scale);
+      text.position.set(box.x, box.y);
     }
   };
 
   const apply = (): void => {
     scene.world.position.set(cam.x, cam.y);
     scene.world.scale.set(cam.scale);
-    // Labels keep a readable size whatever the zoom.
-    for (const text of scene.labels.values()) if (text.visible) text.scale.set(1 / cam.scale);
+    moveLabels();
     for (const { sprite, level } of townSprites) {
       sprite.visible = level < 2 || cam.scale / base.scale >= 4;
       sprite.width = sprite.height = 32 / cam.scale;
@@ -215,6 +232,14 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     },
     setTargets(nodes) { state.targets = new Set(nodes); updateLabels(); },
     labelBoxes() { return boxes; },
+    renderedLabelBoxes() {
+      const rect = canvas.getBoundingClientRect();
+      return boxes.map((box) => {
+        const bounds = scene.labels.get(box.id)!.getBounds(); // stage space = CSS pixels of the canvas
+        return { ...box, x: bounds.x * rect.width / app.screen.width, y: bounds.y * rect.height / app.screen.height,
+          w: bounds.width * rect.width / app.screen.width, h: bounds.height * rect.height / app.screen.height };
+      });
+    },
     setCaravans(list) {
       caravans.set(list);
     },

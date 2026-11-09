@@ -39,6 +39,7 @@ class Player {
     const intro = (await this.page.textContent('#dialog')) ?? '';
     expect(await this.page.locator('.game[inert]').count()).toBe(1); // the game takes no input behind it
     await this.page.click('#dialog-ok');
+    if (await this.page.locator('#guide-skip').count()) await this.page.click('#guide-skip');
     await this.page.waitForSelector('#deadline');
     const [map, goods] = (await this.page.evaluate(async () => {
       const g = (window as unknown as { __fesGame: Game }).__fesGame;

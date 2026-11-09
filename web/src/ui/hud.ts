@@ -23,6 +23,7 @@ export interface Hud {
   panels: Record<Tab, HTMLElement>;
   setTravel(text: string): void;
   setSelected(text: string): void;
+  showTab(id: Tab): void;
   destroy(): void;
   /** The coins number (the growth presentation counts it up). */
   coins: HTMLElement;
@@ -114,6 +115,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
     panels: tabs.panels,
     setTravel(text) { status.textContent = text; },
     setSelected: phone.select,
+    showTab: tabs.activate,
     destroy() { window.clearInterval(timer); tabs.destroy(); phone.destroy(); },
     coins,
     setState(turn, coinList, local) {

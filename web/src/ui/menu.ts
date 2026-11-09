@@ -3,6 +3,7 @@ import { BROKEN_MESSAGE, type Slot, type SlotInfo } from '../save/store';
 import { SCENARIOS } from '../data/scenarios';
 import { button, el } from './dom';
 import { renderCredits } from './credits';
+import { resetGuide } from './guide';
 import { setVolume, setMusic } from '../audio/sound';
 
 export interface MenuActions {
@@ -40,7 +41,7 @@ export function readMusic(): boolean {
   try { return localStorage.getItem('fes-music') !== 'off'; } catch { return true; }
 }
 
-function settings(): HTMLElement {
+function settings(replay: () => void): HTMLElement {
   const music = el('input', { id: 'music', type: 'checkbox' });
   music.checked = readMusic();
   music.addEventListener('change', () => {
@@ -60,6 +61,7 @@ function settings(): HTMLElement {
     el('label', {}, 'Sound volume ', slider),
     el('label', { className: 'check' }, music, 'Music'),
     el('p', { className: 'note', text: 'Reduced motion follows your system setting.' }),
+    button('Show the guide again', replay, 'guide-replay'),
   );
 }
 
@@ -99,7 +101,7 @@ export function renderMenu(root: HTMLElement, saves: SlotInfo[], latest: SlotInf
       cont,
       el('h2', { text: 'Saves' }),
       el('ul', { className: 'saves', id: 'saves' }, ...saves.map((s) => saveRow(s, actions))),
-      settings(),
+      settings(() => { resetGuide(); actions.scenario(1); }),
       button('Credits', () => renderCredits(root, () => renderMenu(root, saves, latest, actions, notice)), 'credits'),
     ),
   );

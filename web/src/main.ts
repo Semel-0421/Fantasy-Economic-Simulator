@@ -6,6 +6,7 @@ import './ui/styles.css';
 import './ui/shell.css';
 import './ui/phone.css';
 import './ui/presentation.css';
+import './ui/guide.css';
 import { prepareAssets } from './assets/loader';
 import { installSound, musicScene, setVolume, setMusic } from './audio/sound';
 import { readVolume, readMusic } from './ui/menu';
@@ -30,6 +31,7 @@ import { nextScenario, loadScenarioText, scenarioNodeKeys, SCENARIOS } from './d
 import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
 import { gainsOf, presentGrowth } from './ui/growth';
 import { finishWeek } from './ui/week_end';
+import { guideDone, showGuide, freeHint } from './ui/guide';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
@@ -39,6 +41,7 @@ let saves: SaveStore | null = null;
 let bridge: SimBridge | null = null;
 let mapScreen: MapScreen | null = null;
 let hudScreen: Hud | null = null;
+let guideCleanup: (() => void) | null = null;
 
 function showFullscaleBench(): void {
   const out = Object.assign(document.createElement('pre'), { id: 'bench-result', textContent: 'Running full-scale benchmark...' });
@@ -88,6 +91,8 @@ async function openSaves(): Promise<void> {
 
 async function showMenu(notice = ''): Promise<void> {
   musicScene('menu');
+  guideCleanup?.();
+  guideCleanup = null;
   hudScreen?.destroy();
   hudScreen = null;
   bridge?.dispose();
@@ -189,11 +194,13 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   hud.panels.market.append(screens.market.node);
   hud.panels.cargo.append(screens.cargo.node);
   hud.panels.finance.append(screens.purse.node, screens.exchange.node, screens.bonds.node, screens.licences.node);
+  let teachingTargets: number[] = [];
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
     if (scenarioNumber !== undefined) {
       const keys = new Set(scenarioNodeKeys(await loadScenarioText(scenarioNumber)));
-      mapScreen.setTargets(map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id));
+      teachingTargets = map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id);
+      mapScreen.setTargets(teachingTargets);
     }
     // The browser tests find towns on the canvas through this handle (development builds only).
     if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
@@ -202,6 +209,19 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   }
   await refresh(game, screens);
   if (info && screens.scenario) await showDialogs(screens, [{ title: info.title, text: info.intro }]);
+  if (scenarioNumber === 1 && !guideDone()) {
+    const target = map.nodes.find((node) => node.level === 3 && teachingTargets.includes(node.id))?.id ?? -1;
+    guideCleanup = showGuide(app.querySelector<HTMLElement>('.game')!, (step) => {
+      if (step === 1) hud.showTab('market');
+      if (step === 2) {
+        if (target >= 0) select(target);
+        const point = mapScreen?.screenOf(target), mapBox = hud.mapHost.getBoundingClientRect();
+        const card = app.querySelector<HTMLElement>(matchMedia('(max-width: 899px)').matches ? '#phone-travel' : '#travel-panel');
+        return [...(point ? [new DOMRect(mapBox.left + point.x - 12, mapBox.top + point.y - 12, 24, 24)] : []), ...(card ? [card.getBoundingClientRect()] : [])];
+      }
+      return [app.querySelector<HTMLElement>(step === 0 ? '#coins' : step === 1 ? '#tab-market' : '#next')!.getBoundingClientRect()];
+    });
+  } else if (!info) freeHint(hud.panels.market);
 }
 
 /** News dialogs; the game behind them is inert (no input) until the last is dismissed. */
@@ -224,6 +244,8 @@ async function showResults(game: SimBridge, s: Screens): Promise<void> {
   const [statement, objectives] = await Promise.all([game.view('results'), game.view('objectives')]);
   if (!scenario || !statement) return;
   const next = nextScenario(scenario.n);
+  guideCleanup?.();
+  guideCleanup = null;
   bridge?.dispose();
   bridge = null;
   hudScreen?.destroy();

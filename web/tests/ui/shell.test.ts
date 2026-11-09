@@ -20,7 +20,10 @@ async function start(scenario: boolean, width = 1280, height = 800): Promise<Pag
   await page.goto(url);
   await page.click(scenario ? '#scenario-1' : '#free-mode');
   await page.waitForSelector('#map canvas');
-  if (scenario) await page.click('#dialog-ok');
+  if (scenario) {
+    await page.click('#dialog-ok');
+    if (await page.locator('#guide-skip').count()) await page.click('#guide-skip');
+  }
   return page;
 }
 

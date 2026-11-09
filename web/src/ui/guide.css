@@ -1,0 +1,6 @@
+.guide-overlay { position: fixed; inset: 0; z-index: 30; background: var(--scrim); }
+.guide-focus { position: fixed; pointer-events: none; border: var(--border-width) solid var(--accent-coin); box-shadow: 0 0 0 2px var(--surface-frame); }
+.guide-card { position: fixed; width: min(360px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: var(--space-4); }
+.guide-card .row { margin-top: var(--space-4); }
+.free-hint { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); border: var(--border-width) solid var(--border-card); margin-bottom: var(--space-3); }
+.free-hint p { flex: 1; margin: 0; font-size: var(--type-sm); }

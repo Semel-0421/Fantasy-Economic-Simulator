@@ -21,6 +21,7 @@ import type { MapData } from './map/layout';
 import { rejectionsIn } from './ui/errors';
 import { travelPanel, type TravelPanel } from './ui/travel';
 import { goodLabel, marketPanel, type MarketPanel } from './ui/market';
+import { placeName } from './data/names';
 import { cargoPanel } from './ui/cargo';
 import { pursePanel } from './ui/purse';
 import { registerServiceWorker } from './ui/update';
@@ -154,6 +155,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   hudScreen = hud;
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
+  for (const node of map.nodes) if (/^k\d+(?:n\d+)?(?:r\d+)?(?:c\d+)?(?:v\d+)?$/.test(node.key)) node.name = placeName(node.key);
   const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
   const select = (node: number): void => {
     mapScreen?.select(node);
@@ -269,7 +271,7 @@ async function refresh(game: SimBridge, s: Screens): Promise<void> {
     game.view('caravans'),
   ]);
   const market = await game.view('market', purse.node);
-  s.hud.setState(turn, purse.coins, purse.local_continent);
+  s.hud.setState(turn, purse.coins, purse.local_continent, s.map.nodes.filter((node) => node.level === 0).sort((a, b) => a.continent - b.continent).map((node) => node.name));
   s.market.update(s.map.nodes[purse.node]?.name ?? '', market.quotes, new Map(cargo.cart));
   s.cargo.update(cargo);
   s.purse.update(purse);
@@ -295,7 +297,13 @@ async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
   try {
     const before = localCoins(await game.view('purse'));
     const { report, saveError } = await playTurn({ bridge: game, saves, mode: s.scenario ? 'scenario' : 'free' });
-    hud.addTurn(report.turn, report.events.map(describeEvent));
+    hud.addTurn(report.turn, report.events.map((event) => describeEvent(event, (field, value) => {
+      if (typeof value !== 'number' || value < 0) return String(value);
+      if (field === 'good') return s.goodName(value);
+      if (['node', 'market', 'from', 'to', 'destination', 'nation', 'nation_node', 'home', 'headquarters'].includes(field)) return s.map.nodes[value]?.name ?? String(value);
+      if (field.endsWith('continent')) return s.map.nodes.find((node) => node.level === 0 && node.continent === value)?.name ?? String(value);
+      return String(value);
+    })));
     for (const reason of rejectionsIn(report)) hud.addMessage(`Order refused: ${reason}`);
     if (saveError) hud.addMessage(`Autosave failed: ${saveError}`);
     await refresh(game, s);

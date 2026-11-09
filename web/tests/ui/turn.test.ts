@@ -27,6 +27,14 @@ describe('turn flow', () => {
     expect(line.detail).toContain('won by player true');
   });
 
+  it('resolves event good and place ids for the player log', () => {
+    const line = describeEvent({ GoodsTraded: { good: 4, market: 9, requested: 2, filled: 2, price: 30, bought: true, turn: 1 } },
+      (field, value) => field === 'good' ? 'Golden wheat (mid)' : field === 'market' ? 'Ashford' : String(value));
+    expect(line.detail).toContain('good Golden wheat (mid)');
+    expect(line.detail).toContain('market Ashford');
+    expect(line.detail).toContain('filled 2');
+  });
+
   it('autosaves after a free-mode turn', async () => {
     const writes: unknown[][] = [];
     const saves = { write: async (...a: unknown[]) => void writes.push(a) };

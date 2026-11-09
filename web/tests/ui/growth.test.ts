@@ -9,6 +9,10 @@ const report = (events: unknown[]): TurnReport => ({ turn: 9, events } as TurnRe
 const name = (g: number): string => `Good ${g}`;
 
 describe('growth presentation', () => {
+  it('uses display names in scenario gain labels', () => {
+    const gains = gainsOf(report([{ ScenarioDialog: { event: 'coupon', text: 'k0n0 pays for g19_0.', coins: 40, continent: 0, turn: 9 } }]), name);
+    expect(gains[0]?.label).toBe('Varn pays for Sunstone.');
+  });
   it('scales logarithmically with relative gain and stays within 800–2000ms', () => {
     const durations = [0, 1, 10, 100, 1000, 10000, 1000000].map((gain) => growthDuration(gain, 500));
     expect(durations).toEqual([...durations].sort((a, b) => a - b));

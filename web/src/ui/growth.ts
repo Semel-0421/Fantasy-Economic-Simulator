@@ -5,6 +5,7 @@
 import type { SimEventRecord, TurnReport } from '../sim/types';
 import { play } from '../audio/sound';
 import { el } from './dom';
+import { displayText } from '../data/names';
 
 export interface Gain {
   label: string;
@@ -28,7 +29,7 @@ export function gainsOf(report: TurnReport, goodName: (good: number) => string):
       const t = e.GoodsTraded;
       if (!t.bought && t.filled > 0) out.push({ label: `Sold ${t.filled} ${goodName(t.good)}`, coins: t.filled * t.price });
     } else if ('ScenarioDialog' in e && e.ScenarioDialog.coins > 0) {
-      out.push({ label: e.ScenarioDialog.text, coins: e.ScenarioDialog.coins });
+      out.push({ label: displayText(e.ScenarioDialog.text), coins: e.ScenarioDialog.coins });
     }
   }
   return out;

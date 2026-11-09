@@ -8,7 +8,7 @@ import { slotName } from './menu';
 import { calendarDate, type DateLabel, type LogLine } from './turn';
 
 export interface Hud {
-  setState(turn: number, coins: number[], localContinent: number): void;
+  setState(turn: number, coins: number[], localContinent: number, continents: string[]): void;
   /** Shows the button as working (with elapsed seconds) or ready again. */
   setBusy(busy: boolean): void;
   addTurn(turn: number, lines: LogLine[]): void;
@@ -125,10 +125,10 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
     showTab: tabs.activate,
     destroy() { window.clearInterval(timer); tabs.destroy(); phone.destroy(); },
     coins,
-    setState(turn, coinList, local) {
+    setState(turn, coinList, local, continents) {
       date.textContent = `${dateLabel(turn)}${weeks === undefined ? '' : ` / ${weeks}`}`;
       coins.textContent = fmt(coinList[local] ?? coinList[0] ?? 0);
-      coins.title = coinList.map((c, i) => `Continent ${i}: ${fmt(c)}`).join('\n');
+      coins.title = coinList.map((c, i) => `${continents[i] ?? `Continent ${i}`}: ${fmt(c)}`).join('\n');
     },
     setBusy(busy) {
       window.clearInterval(timer);

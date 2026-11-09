@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`display names > keeps a stable twenty-name sample independent of call order 1`] = `
+[
+  "Aldermere",
+  "Varn",
+  "Ashford Vale",
+  "Ashford",
+  "Halmegar",
+  "Millbrook",
+  "Oromon",
+  "Lordemer",
+  "Melfaval",
+  "Thornhold",
+  "Marsh beets",
+  "Valley onions",
+  "Old-town beets",
+  "Highland leeks",
+  "Lowland turnips",
+  "Coastal leeks",
+  "River turnips",
+  "Northern leeks",
+  "Lowland beets",
+  "Coastal onions",
+]
+`;

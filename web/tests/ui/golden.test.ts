@@ -238,7 +238,7 @@ describe('scenario golden paths', () => {
     await p.week();
     const deadline = (await p.page.textContent('#deadline')) ?? '';
     expect(deadline.startsWith(`${(await p.page.textContent('#date'))!.replace(' / 20', '')} of 20`)).toBe(true);
-    expect(p.news.some((n) => n.includes('Deliver 18 crates of g6_0 to k0n0r0c1 by week 12.'))).toBe(true);
+    expect(p.news.some((n) => n.includes('Deliver 18 crates of Smithed tools to Thornhold by week 12.'))).toBe(true);
     await p.page.click('#tab-goal');
     await p.page.click('#accept-tools');
     await p.page.waitForFunction(() => document.querySelector('#scenario-contracts')?.textContent?.includes('Accepted'));
@@ -285,7 +285,7 @@ describe('scenario golden paths', () => {
     const g = p.good('g19_0');
     await p.page.click('#tab-finance');
     expect(await p.page.locator('#licence-good option').count()).toBeLessThanOrEqual(50);
-    expect(await p.page.locator('#licence-good option').first().textContent()).toBe('G19 0');
+    expect(await p.page.locator('#licence-good option').first().textContent()).toBe('Sunstone');
     await p.page.setChecked('#licence-show-all', true);
     expect(await p.page.locator('#licence-good option').count()).toBe(1000);
     await p.page.setChecked('#licence-show-all', false);
@@ -298,8 +298,8 @@ describe('scenario golden paths', () => {
       await p.trade('sell', g, left);
       await p.week();
     }
-    expect(await p.page.textContent('#licences-held')).toContain('Licence to sell G19 0');
-    expect(await p.page.textContent('#licences-held')).toContain('k0n1');
+    expect(await p.page.textContent('#licences-held')).toContain('Licence to sell Sunstone');
+    expect(await p.page.textContent('#licences-held')).toContain('Halvesh');
     expect(await p.page.textContent('#licences-held')).toContain('expires week');
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);
     expect(await p.finish(1000)).toBe('Net profit 2,263 coins in 24 weeks');

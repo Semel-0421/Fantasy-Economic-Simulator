@@ -1,8 +1,9 @@
 // How the simulation's refusals reach the player: a preview's message before an order is placed,
 // and the CommandRejected events of a turn for orders that failed when they ran. The text is the
-// simulation's own (the C# message), never rewritten.
+// simulation's own (the C# message), with display names substituted for world keys.
 import type { CommandResult, SimEventRecord, TurnReport } from '../sim/types';
 import { el } from './dom';
+import { displayText } from '../data/names';
 
 /** The message of a refused preview, or null when the command would be accepted. */
 export const rejection = (result: CommandResult): string | null => (result.result === 'Error' ? result.message : null);
@@ -24,7 +25,7 @@ export function errorBox(id: string): { node: HTMLElement; show(text: string): v
   return {
     node,
     show(text) {
-      node.textContent = text;
+      node.textContent = displayText(text);
       node.hidden = text === '';
     },
   };

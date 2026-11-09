@@ -3,6 +3,7 @@
 import type { TurnReport, Views } from '../sim/types';
 import type { DialogText } from './dialog';
 import { button, el } from './dom';
+import { displayText } from '../data/names';
 
 type Contract = Views['scenario_contracts'][number];
 type Objective = Views['objectives'][number];
@@ -14,7 +15,7 @@ export function scenarioDialogs(report: TurnReport): DialogText[] {
   for (const e of report.events) {
     if (typeof e === 'object' && 'ScenarioDialog' in e) {
       const d = e.ScenarioDialog;
-      out.push({ title: 'News', text: d.coins > 0 ? `${d.text}\n\nYou receive ${fmt(d.coins)} coins.` : d.text });
+      out.push({ title: 'News', text: displayText(d.coins > 0 ? `${d.text}\n\nYou receive ${fmt(d.coins)} coins.` : d.text) });
     }
   }
   return out;

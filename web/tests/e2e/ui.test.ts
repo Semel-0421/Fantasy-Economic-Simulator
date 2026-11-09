@@ -52,7 +52,7 @@ async function screen(page: Page, name: string, errors: string[], focus = true):
 }
 
 async function order(page: Page, side: 'buy' | 'sell'): Promise<void> {
-  await page.getByRole('button', { name: 'G1 0 (mid)', exact: true }).click();
+  await page.getByRole('button', { name: 'Golden wheat (mid)', exact: true }).click();
   await page.fill('#qty', '1');
   await page.click(`#${side}`);
   await page.waitForSelector('#confirm');

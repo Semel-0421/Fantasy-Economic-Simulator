@@ -1,4 +1,5 @@
 import { goodIcon } from '../assets/goods';
+import { goodName } from '../data/names';
 // The market of the town the player stands in (market view): goods, buy price, trader offer, stock
 // and what the cart holds. Choosing a good opens the trade form; Buy or Sell first previews the
 // command (cost, or the simulation's refusal) and only Confirm queues it for this week.
@@ -21,8 +22,7 @@ export const coinsOf = (raw: number): number => Math.floor(raw / FX_ONE);
 /** `fine_cloth@best` -> `Fine cloth (best)`. */
 export function goodLabel(key: string): string {
   const [base = key, grade] = key.split('@');
-  const words = base.replace(/_/g, ' ');
-  const name = words.charAt(0).toUpperCase() + words.slice(1);
+  const name = goodName(base);
   return grade ? `${name} (${grade})` : name;
 }
 

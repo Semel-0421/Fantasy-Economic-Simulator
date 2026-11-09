@@ -152,7 +152,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
     { id: 'trade', className: 'trade' },
     chosen,
     el('div', { className: 'row' }, qty, buy, sell),
-    el('label', { className: 'check' }, deposit, 'Pay the rest from my bank deposit'),
+    el('label', { className: 'check' }, deposit, 'Pay the rest from your bank deposit'),
     error.node,
     preview,
     pending,

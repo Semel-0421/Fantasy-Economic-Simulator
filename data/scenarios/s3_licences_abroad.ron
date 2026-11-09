@@ -5,7 +5,7 @@
 (
     id: "s3_licences_abroad",
     title: "Licences and Trade Abroad",
-    intro: "Start in k0n0r0 with 30,000 coins. Buy g19_0 here and sell it in k0n1, where supplies are short. First buy the international trade licence here for 300 coins. Travel through k0n0 and k0 to k0n1, then buy its licence for g19_0 before selling. Return to k0n0r0 by week 24.",
+    intro: "Start in k0n0r0 with 30,000 coins. Buy g19_0 here and sell it in k0n1, where it is scarce. First buy the international trade licence here for 300 coins. Travel through k0n0 and k0 to k0n1, then buy that nation's licence for g19_0 before you sell. Return to k0n0r0 by week 24.",
     seed: 33,
     start_node: "k0n0r0",
     start_coins: 30000,

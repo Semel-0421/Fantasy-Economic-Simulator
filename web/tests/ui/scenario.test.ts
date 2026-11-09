@@ -58,7 +58,7 @@ describe('scenario screens', () => {
       'Travel',
       'Guards and insurance',
       'Cargo lost',
-      'Licences, interest and other (gains count as negative)',
+      'Licences, interest and other costs (gains shown as negative)',
       'Ending coins',
       'Shares and bonds held',
       'Net profit (your score)',

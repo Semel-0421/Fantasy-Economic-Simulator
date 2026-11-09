@@ -166,7 +166,7 @@ export interface BondsPanel {
 /** The nation's bonds at the bank the player stands in (issuer -1); held bonds at face. */
 export function bondsPanel(actions: OrderActions): BondsPanel {
   const held = el('p', { id: 'bonds-held' });
-  const amount = numberInput('bond-amount', 'Coins of bonds', '100');
+  const amount = numberInput('bond-amount', 'Bond amount (coins)', '100');
   amount.step = '100';
   const form = orderForm('bond', actions);
   let coins = 0;

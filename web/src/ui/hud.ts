@@ -50,7 +50,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   const alert = el('p', { id: 'failure', className: 'failure' });
   alert.setAttribute('role', 'alert');
   alert.hidden = true;
-  const mapHost = el('div', { id: 'map', className: 'map', title: 'Map: drag to pan, wheel or pinch to zoom, tap a town' });
+  const mapHost = el('div', { id: 'map', className: 'map', title: 'Map: drag to move, scroll or pinch to zoom, tap a town' });
   const mapTools = el('div', { className: 'maptools' });
   const tabs = gameTabs(mode !== 'free');
   tabs.panels.log.append(el('section', { className: 'logbox' }, el('h2', { text: 'Turn log' }), log));
@@ -162,7 +162,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
       next.setAttribute('aria-busy', 'false');
       next.disabled = true;
       saveButton?.setAttribute('disabled', '');
-      alert.textContent = `${text} Use Menu to start again.`;
+      alert.textContent = `${text} Open the menu to start again.`;
       alert.hidden = false;
       log.prepend(el('li', { className: 'message', text }));
     },

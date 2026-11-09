@@ -17,7 +17,7 @@
     ],
     events: [
         (id: "listing", trigger: Week(1), effects: [
-            Dialog("The tool workshop in k0n0r1c4 (facility 130) offers shares for about 85 coins each. A large order may be coming. Buy shares now, or keep your cash."),
+            Dialog("The tool workshop in k0n0r1c4 offers shares for about 85 coins each. A large order may be coming. Buy shares now, or keep your cash."),
         ]),
         (id: "orders", trigger: Week(3), effects: [
             CompanyOrders(facility: 130, coins: 6000, text: "The k0n0r1c4 workshop has won 6,000 coins of orders. Its cash and share price rise."),

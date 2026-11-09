@@ -56,15 +56,17 @@ describe('map', () => {
     expect(await page.textContent('#selected')).toMatch(/week/);
 
     const before = await screenOf(page, dest);
-    await page.mouse.move(at.x + 40, at.y + 40);
+    const canvas = (await page.locator('#map canvas').boundingBox())!;
+    const drag = { x: canvas.x + canvas.width * 0.7, y: canvas.y + Math.min(100, canvas.height / 3) };
+    expect(await page.locator('#map canvas').evaluate((node, point) => document.elementFromPoint(point.x, point.y) === node, drag)).toBe(true);
+    await page.mouse.move(drag.x, drag.y);
     await page.mouse.down();
-    await page.mouse.move(at.x + 100, at.y + 70, { steps: 5 });
+    await page.mouse.move(drag.x + 60, drag.y + 30, { steps: 5 });
     await page.mouse.up();
     const panned = await screenOf(page, dest);
     expect(panned.x - before.x).toBeCloseTo(60, 0);
     expect(panned.y - before.y).toBeCloseTo(30, 0);
-    const canvas = (await page.locator('#map canvas').boundingBox())!;
-    await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+    await page.mouse.move(drag.x, drag.y);
     await page.mouse.wheel(0, -400);
     await page.waitForFunction(({ node, position }) => {
       const point = (window as unknown as { __fesMap: { screenOf(id: number): Pt } }).__fesMap.screenOf(node);

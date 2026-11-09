@@ -133,7 +133,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   try {
     bridge = await starting;
   } catch (e) {
-    await showMenu(`Could not start: ${message(e)}`);
+    await showMenu(`Couldn't start the game: ${message(e)}`);
     return;
   }
   const game = bridge;
@@ -208,7 +208,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     // The browser tests find towns on the canvas through this handle (development builds only).
     if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
   } catch (e) {
-    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: `The map could not be drawn (${message(e)}); use the routes list.` }));
+    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: `The map couldn't be drawn (${message(e)}). Use the routes list to travel.` }));
   }
   await refresh(game, screens);
   if (info && screens.scenario) await showDialogs(screens, [{ title: info.title, text: info.intro }]);
@@ -237,7 +237,7 @@ async function accept(game: SimBridge, s: Screens, id: string): Promise<void> {
     await game.acceptContract(id);
     s.hud.addMessage('Contract accepted.');
   } catch (e) {
-    s.hud.addMessage(`Could not accept: ${message(e)}`);
+    s.hud.addMessage(`Couldn't accept the contract: ${message(e)}`);
   }
   await refresh(game, s);
 }
@@ -320,7 +320,7 @@ async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
       },
       dialogs: () => showDialogs(s, scenarioDialogs(report)),
       results: () => showResults(game, s),
-      onError: (e) => hud.addMessage(`The week's presentation failed: ${message(e)}`),
+      onError: (e) => hud.addMessage(`Something went wrong while showing this week: ${message(e)}`),
     });
   } catch (e) {
     hud.addMessage(`The turn failed: ${message(e)}`);
@@ -349,7 +349,7 @@ if (new URLSearchParams(location.search).get('bench') === 'fullscale') {
   setMusic(readMusic());
   installSound();
   prepareAssets().then(() => showMenu()).catch((e: unknown) => {
-    app.textContent = `Could not start: ${message(e)}`;
+    app.textContent = `Couldn't start the game: ${message(e)}`;
   });
 
   // Offline after one visit, and a reload prompt when a new build is waiting (production only).

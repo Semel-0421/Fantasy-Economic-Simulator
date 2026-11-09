@@ -2,7 +2,7 @@
 (
     id: "s1_first_venture",
     title: "First Venture",
-    intro: "Start in k0n0r0c0v1 with 500 coins and an empty cart. Buy cheap grain (g1_0), then take it to k0n0r0c0, one week away. Your first sale pays at least 1.5 times your purchase price. After that sale, normal market prices apply.",
+    intro: "Start in k0n0r0c0v1 with 500 coins and an empty cart. Buy cheap g1_0 here, then take it to k0n0r0c0, one week away. Your first sale pays at least 1.5 times what you paid. After that sale, normal market prices apply.",
     seed: 11,
     start_node: "k0n0r0c0v1",
     start_coins: 500,

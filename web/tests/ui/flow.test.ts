@@ -54,7 +54,7 @@ describe('web flow', () => {
     await page.goto(url);
     await page.click('#free-mode');
     await page.waitForSelector('#notice', { timeout: 30000 });
-    expect(await page.textContent('#notice')).toMatch(/^Could not start: /);
+    expect(await page.textContent('#notice')).toMatch(/^Couldn't start the game: /);
     expect(await page.locator('#status').count()).toBe(0); // no endless "Loading"
     expect(await page.isDisabled('#free-mode')).toBe(false);
     await context.close();

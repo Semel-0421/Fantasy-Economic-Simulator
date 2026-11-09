@@ -24,7 +24,7 @@ export function statementRows(s: Statement): StatementRow[] {
     cost('Guards and insurance', s.costs.protection),
     cost('Cargo lost', s.costs.losses),
     // The engine's residual line: licences, interest, and price gains on holdings (a negative cost).
-    cost('Licences, interest and other (gains count as negative)', s.costs.other),
+    cost('Licences, interest and other costs (gains shown as negative)', s.costs.other),
     { label: 'Ending coins', value: fmt(s.end_coins), kind: 'plain' },
   ];
   if (s.holdings !== 0) rows.push({ label: 'Shares and bonds held', value: fmt(s.holdings), kind: 'plain' });

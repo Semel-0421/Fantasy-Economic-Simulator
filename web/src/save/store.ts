@@ -51,7 +51,7 @@ function isEntry(v: unknown): v is Entry {
 const done = <T>(req: IDBRequest<T>): Promise<T> =>
   new Promise((resolve, reject) => {
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB request failed.'));
+    req.onerror = () => reject(req.error ?? new Error("Your browser couldn't open its save storage."));
   });
 
 export class SaveStore {
@@ -68,7 +68,7 @@ export class SaveStore {
   }
 
   async write(slot: Slot, mode: SaveMode, bytes: Uint8Array, turn: number): Promise<void> {
-    if (mode === 'scenario') throw new Error('A scenario cannot be saved.');
+    if (mode === 'scenario') throw new Error("Scenarios start fresh each time and can't be saved.");
     if (!SLOTS.includes(slot)) throw new Error(`Unknown save slot: ${String(slot)}`);
     const entry: Entry = { format: FORMAT, mode: 'free', turn, savedAt: Date.now(), bytes: bytes.slice(), checksum: checksum(bytes) };
     await this.putRaw(slot, entry);

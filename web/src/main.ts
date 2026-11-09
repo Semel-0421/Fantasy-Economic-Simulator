@@ -27,7 +27,7 @@ import { registerServiceWorker } from './ui/update';
 import { dialogs, type Dialogs } from './ui/dialog';
 import { scenarioDialogs, scenarioEnd, scenarioPanel, type ScenarioPanel } from './ui/scenario';
 import { renderResults } from './ui/results';
-import { nextScenario, loadScenarioText, scenarioNodeKeys, SCENARIOS } from './data/scenarios';
+import { nextScenario, scenarioNodeKeys, SCENARIOS } from './data/scenarios';
 import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
 import { gainsOf, presentGrowth } from './ui/growth';
 import { finishWeek } from './ui/week_end';
@@ -182,7 +182,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     market: marketPanel(goodName, orders, (g) => goods[g]?.key ?? ''),
     exchange: exchangePanel(townOf, orders),
     bonds: bondsPanel(orders),
-    licences: licencePanel(goods, goodName, orders),
+    licences: licencePanel(goods, goodName, orders, { csv: game.sourceFiles['goods.csv'] ?? '', scenario: game.scenarioSource, nation: townOf, dateLabel }),
     cargo: cargoPanel(goodName, (g) => goods[g]?.key ?? ''),
     purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
   };
@@ -198,7 +198,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
     if (scenarioNumber !== undefined) {
-      const keys = new Set(scenarioNodeKeys(await loadScenarioText(scenarioNumber)));
+      const keys = new Set(scenarioNodeKeys(game.scenarioSource));
       teachingTargets = map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id);
       mapScreen.setTargets(teachingTargets);
     }

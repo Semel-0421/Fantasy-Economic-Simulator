@@ -279,6 +279,12 @@ describe('scenario golden paths', () => {
     const { p, errors } = await player();
     await p.open(3);
     const g = p.good('g19_0');
+    await p.page.click('#tab-finance');
+    expect(await p.page.locator('#licence-good option').count()).toBeLessThanOrEqual(50);
+    expect(await p.page.locator('#licence-good option').first().textContent()).toBe('G19 0');
+    await p.page.setChecked('#licence-show-all', true);
+    expect(await p.page.locator('#licence-good option').count()).toBe(1000);
+    await p.page.setChecked('#licence-show-all', false);
     await p.licence();
     await p.trade('buy', g, 60);
     await p.week();
@@ -288,6 +294,9 @@ describe('scenario golden paths', () => {
       await p.trade('sell', g, left);
       await p.week();
     }
+    expect(await p.page.textContent('#licences-held')).toContain('Licence to sell G19 0');
+    expect(await p.page.textContent('#licences-held')).toContain('k0n1');
+    expect(await p.page.textContent('#licences-held')).toContain('expires week');
     for (const to of ['k0', 'k0n0', 'k0n0r0']) await p.go(to, false);
     expect(await p.finish(1000)).toBe('Net profit 2,263 coins in 24 weeks');
     expect(await p.page.locator('#next-scenario').count()).toBe(0); // the last scenario

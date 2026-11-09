@@ -26,6 +26,10 @@ function errorText(e: unknown): string {
 
 export class SimBridge {
   private nextId = 1;
+  private loadedFiles: GameFiles = {};
+  private loadedScenario = '';
+  get sourceFiles(): Readonly<GameFiles> { return this.loadedFiles; }
+  get scenarioSource(): string { return this.loadedScenario; }
   private readonly pending = new Map<number, Pending>();
 
   private failure: Error | null = null;
@@ -100,16 +104,22 @@ export class SimBridge {
   }
 
   async startWorld(files: GameFiles, seed: number | bigint): Promise<this> {
+    this.loadedFiles = files;
+    this.loadedScenario = '';
     await this.call({ op: 'start', files, seed: BigInt(seed) });
     return this;
   }
 
   async loadWorld(files: GameFiles, bytes: Uint8Array): Promise<this> {
+    this.loadedFiles = files;
+    this.loadedScenario = '';
     await this.call({ op: 'load', files, bytes }, [bytes.buffer]);
     return this;
   }
 
   async startScenario(files: GameFiles, text: string): Promise<this> {
+    this.loadedFiles = files;
+    this.loadedScenario = text;
     await this.call({ op: 'scenario', files, text });
     return this;
   }

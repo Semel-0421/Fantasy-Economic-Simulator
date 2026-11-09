@@ -5,6 +5,8 @@ import type { CommandResult, PlayerCommand, Views } from '../sim/types';
 import { button, el } from './dom';
 import { errorBox, rejection } from './errors';
 import { goodLabel } from './market';
+import { licenceChoices } from './licence_goods';
+import type { DateLabel } from './turn';
 
 export type Listing = Views['exchange'][number];
 export type ShareSide = 'buy' | 'sell';
@@ -205,39 +207,64 @@ export interface LicencePanel {
   update(held: Views['licences']): void;
 }
 
+export function heldLicenceText(held: Views['licences'][number], baseName: (base: number) => string, nationName: (nation: number) => string,
+  dateLabel: DateLabel = (turn) => `Week ${turn + 1}`): string {
+  const date = dateLabel(held.expires_turn);
+  const expiry = date.startsWith('Week ') ? date.toLowerCase() : `week ${held.expires_turn + 1} (${date})`;
+  return `${licenceName(held.base_good, baseName)} · ${nationName(held.nation)} · expires ${expiry}`;
+}
+
 /** Trade licences and licences to sell a good, bought in the nation the player stands in. */
-export function licencePanel(goods: Views['goods'], goodName: (g: number) => string, actions: OrderActions): LicencePanel {
+export function licencePanel(goods: Views['goods'], goodName: (g: number) => string, actions: OrderActions,
+  source: { csv: string; scenario: string; nation: (nation: number) => string; dateLabel: DateLabel }): LicencePanel {
   const list = el('ul', { id: 'licences-held', className: 'rows' });
   const select = el('select', { id: 'licence-good' });
   select.setAttribute('aria-label', 'Good');
-  for (const g of goods) select.append(new Option(goodName(g.id), String(g.id)));
   const form = orderForm('licence', actions);
+  const all = licenceChoices(goods, source.csv, source.scenario, true);
+  const baseNames = new Map(all.map((good) => [good.base, good.name]));
+  const baseName = (base: number): string => baseNames.get(base) ?? `Good ${base}`;
+  const showAll = el('input', { type: 'checkbox', id: 'licence-show-all' });
   const trade = (kind: number) => (): void =>
     void form.ask({ BuyTradeLicense: { kind } }, `Buy an ${licenceName(kind, goodName).toLowerCase()} for a year.`);
   const forGood = (): void => {
+    if (!select.value) return;
     const good = Number(select.value);
-    void form.ask({ BuyLicense: { good } }, `Buy a licence to sell ${goodName(good)} in this nation for a year.`);
+    void form.ask({ BuyLicense: { good } }, `Buy a licence to sell ${select.selectedOptions[0]!.text} in this nation for a year.`);
   };
+  const buy = button('Buy licence', forGood, 'licence-buy');
+  const populate = (): void => {
+    const previous = select.value;
+    const choices = showAll.checked ? all : licenceChoices(goods, source.csv, source.scenario, false);
+    select.replaceChildren(...choices.map((good) => new Option(good.name, String(good.id))));
+    if (choices.some((good) => String(good.id) === previous)) select.value = previous;
+    buy.disabled = choices.length === 0;
+    form.reset();
+  };
+  showAll.addEventListener('change', populate);
+  populate();
   select.addEventListener('change', () => form.reset());
   const node = el(
     'section',
     { id: 'licences', className: 'card' },
     el('h2', { text: 'Licences' }),
     list,
+    el('p', { className: 'note', text: 'International: trade between nations. Intercontinental: trade between continents.' }),
     el(
       'div',
       { className: 'row' },
       button('International trade licence', trade(TRADE_INTERNATIONAL), 'licence-trade'),
       button('Intercontinental trade licence', trade(TRADE_INTERCONTINENTAL), 'licence-trade-far'),
     ),
-    el('div', { className: 'row' }, select, button('Buy licence', forGood, 'licence-buy')),
+    el('label', { className: 'check' }, showAll, 'Show all goods'),
+    el('div', { className: 'row' }, select, buy),
     ...form.nodes,
   );
   return {
     node,
     update(held) {
       list.replaceChildren(
-        ...(held.length ? held.map((l) => el('li', { text: licenceName(l.base_good, goodName) })) : [el('li', { text: 'No licences held.' })]),
+        ...(held.length ? held.map((l) => el('li', { text: heldLicenceText(l, baseName, source.nation, source.dateLabel) })) : [el('li', { text: 'No licences held.' })]),
       );
       form.reset();
     },

@@ -37,7 +37,6 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
   let busy = false;
 
   const go = button('Travel', () => void travel(), 'travel');
-  go.className = 'primary';
   go.disabled = true;
 
   async function travel(): Promise<void> {

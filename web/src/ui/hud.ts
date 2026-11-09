@@ -2,6 +2,7 @@
 import { SLOTS, type SaveMode, type Slot } from '../save/store';
 import { button, el } from './dom';
 import { isMuted, toggleMute } from '../audio/sound';
+import { gameTabs, type Tab } from './tabs';
 import { slotName } from './menu';
 import { calendarDate, type DateLabel, type LogLine } from './turn';
 
@@ -18,7 +19,8 @@ export interface Hud {
   /** Under the map: travel controls. */
   mapTools: HTMLElement;
   /** Beside the map, above the log: market, cargo and purse. */
-  side: HTMLElement;
+  panels: Record<Tab, HTMLElement>;
+  setTravel(text: string): void;
   /** The coins number (the growth presentation counts it up). */
   coins: HTMLElement;
 }
@@ -31,11 +33,12 @@ export interface HudActions {
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
-export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions, dateLabel: DateLabel = calendarDate): Hud {
+export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions, dateLabel: DateLabel = calendarDate, weeks?: number): Hud {
   const coins = el('strong', { id: 'coins', text: '-' });
   const date = el('span', { id: 'date', text: '-' });
   const caption = el('span', { id: 'next-label', text: 'Next week' });
   const next = button('', actions.nextWeek, 'next');
+  next.className = 'primary';
   next.append(caption, el('span', { className: 'bar' }));
   const log = el('ol', { id: 'log', className: 'log' });
   log.setAttribute('role', 'log');
@@ -45,7 +48,11 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   alert.hidden = true;
   const mapHost = el('div', { id: 'map', className: 'map', title: 'Map: drag to pan, wheel or pinch to zoom, tap a town' });
   const mapTools = el('div', { className: 'maptools' });
-  const side = el('div', { className: 'panels' });
+  const tabs = gameTabs(mode !== 'free');
+  tabs.panels.log.append(el('section', { className: 'logbox' }, el('h2', { text: 'Turn log' }), log));
+  const status = el('span', { className: 'travel-status', id: 'travel-status' });
+  status.setAttribute('role', 'status');
+  mapHost.append(mapTools);
   const slot = el('select', { id: 'slot' });
   slot.setAttribute('aria-label', 'Save slot');
   for (const s of SLOTS.filter((x) => x !== 'auto')) slot.append(new Option(slotName(s), s));
@@ -67,14 +74,15 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
         { className: 'hud' },
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Coins' }), coins),
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Date' }), date),
-        next,
+        status,
         el('div', { className: 'tools' }, mute, ...saveControls, button('Menu', actions.menu, 'menu')),
+        next,
       ),
       el(
         'main',
         { className: 'play' },
-        el('div', { className: 'mapcol' }, mapHost, mapTools),
-        el('aside', { className: 'side' }, side, el('section', { className: 'logbox' }, el('h2', { text: 'Turn log' }), log)),
+        el('div', { className: 'mapcol' }, mapHost),
+        tabs.node,
       ),
     ),
   );
@@ -84,10 +92,11 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   return {
     mapHost,
     mapTools,
-    side,
+    panels: tabs.panels,
+    setTravel(text) { status.textContent = text; },
     coins,
     setState(turn, coinList, local) {
-      date.textContent = dateLabel(turn);
+      date.textContent = `${dateLabel(turn)}${weeks === undefined ? '' : ` / ${weeks}`}`;
       coins.textContent = fmt(coinList[local] ?? coinList[0] ?? 0);
       coins.title = coinList.map((c, i) => `Continent ${i}: ${fmt(c)}`).join('\n');
     },
@@ -96,13 +105,16 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
       next.disabled = busy || failed;
       next.classList.toggle('busy', busy);
       next.setAttribute('aria-busy', String(busy));
+      tabs.node.inert = busy;
+      mapTools.inert = busy;
+      if (saveButton) saveButton.disabled = busy || failed;
       if (!busy) {
         caption.textContent = 'Next week';
         return;
       }
       const t0 = performance.now();
       const tick = (): void => {
-        caption.textContent = `The merchants are moving... ${Math.floor((performance.now() - t0) / 1000)}s`;
+        caption.textContent = `Merchants moving… ${Math.floor((performance.now() - t0) / 1000)}s`;
       };
       tick();
       timer = window.setInterval(tick, 250);

@@ -1,0 +1,33 @@
+.game { background: var(--surface-frame); color: var(--text-on-frame); }
+.hud { gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-frame); border-bottom: var(--border-width) solid var(--wood-light); }
+.hud .panel { min-width: 0; padding: 0 var(--space-2); border: 0; background: var(--surface-frame); color: var(--text-on-frame); }
+.hud .label { font-size: var(--type-sm); }
+.hud #coins { color: var(--accent-coin); font-size: var(--type-title); line-height: 1.2; white-space: nowrap; }
+#date { font-family: var(--font-display); font-size: var(--type-lg); }
+.travel-status { align-self: center; max-width: 20ch; font-size: var(--type-sm); }
+.hud :focus-visible, .map-controls :focus-visible { outline-color: var(--focus-on-frame); }
+.play { padding: var(--space-3); gap: var(--space-3); align-items: start; }
+.side { gap: 0; color: var(--text-on-card); background: var(--surface-card); border: var(--border-width) solid var(--wood-light); }
+.tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-2); background: var(--surface-card-muted); }
+.tabs button { flex: 1; padding: var(--space-2); border-color: var(--border-card); font-size: var(--type-body); }
+.tabs [aria-selected="true"] { background: var(--surface-frame); color: var(--text-on-frame); }
+.tabs [aria-selected="true"]:focus-visible { outline-color: var(--focus-on-frame); outline-offset: -6px; }
+.tab-panel { min-width: 0; padding: var(--space-3); overflow: auto; }
+.tab-panel:focus-visible { outline-offset: -4px; }
+.tab-panel .card { border: 0; padding: var(--space-1) 0 var(--space-4); }
+.tab-panel .card + .card { border-top: var(--border-width) solid var(--border-card); padding-top: var(--space-4); }
+.game button.primary:not(#next) { background: var(--sea); color: var(--paper); font-size: var(--type-body); }
+.maptools { position: absolute; z-index: 2; bottom: var(--space-3); left: var(--space-3); width: min(26rem, calc(100% - 24px)); max-height: 52%; overflow: auto; color: var(--text-on-card); touch-action: auto; }
+.maptools .card { border: var(--border-width) solid var(--border-card); box-shadow: var(--pixel-border); }
+.routes button, button.link { min-height: 44px; }
+.settings summary { min-height: 44px; }
+h1 { font-size: var(--type-title); }
+h2 { font-size: var(--type-lg); }
+h3 { font-size: var(--type-body); }
+@media (min-width: 900px) {
+  .play { grid-template-columns: minmax(0, 5fr) minmax(0, 3fr); }
+  .map { height: max(560px, calc(100dvh - 112px)); }
+  .tab-panel { max-height: calc(100dvh - 180px); }
+  #next { flex: 0 0 220px; min-height: 64px; background: var(--action-primary); color: var(--text-on-primary); }
+  .tools { align-self: center; }
+}

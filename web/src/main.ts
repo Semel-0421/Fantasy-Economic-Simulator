@@ -3,6 +3,7 @@ import '@fontsource/pixelify-sans/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
+import './ui/shell.css';
 import { prepareAssets } from './assets/loader';
 import { installSound, musicScene, setVolume } from './audio/sound';
 import { readVolume } from './ui/menu';
@@ -11,7 +12,7 @@ import { SimBridge } from './sim/bridge';
 import type { PlayerCommand } from './sim/types';
 import { renderHud, type Hud } from './ui/hud';
 import { renderMenu } from './ui/menu';
-import { calendarDate, describeEvent, playTurn, scenarioDate } from './ui/turn';
+import { calendarDate, describeEvent, playTurn, scenarioDate, type DateLabel } from './ui/turn';
 import { createMap, type MapScreen } from './map/map';
 import type { MapData } from './map/layout';
 import { rejectionsIn } from './ui/errors';
@@ -58,6 +59,7 @@ function showFullscaleBench(): void {
 /** The screens of one running game that refresh from views. */
 interface Screens {
   hud: Hud;
+  dateLabel: DateLabel;
   travel: TravelPanel;
   market: MarketPanel;
   cargo: ReturnType<typeof cargoPanel>;
@@ -136,6 +138,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
       menu: () => void showMenu(),
     },
     dateLabel,
+    info?.weeks,
   );
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
@@ -160,6 +163,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   const townOf = (n: number): string => map.nodes[n]?.name ?? `Place ${n}`;
   const screens: Screens = {
     hud,
+    dateLabel,
     travel,
     map,
     goodName,
@@ -173,16 +177,11 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   if (info && scenarioNumber !== undefined) {
     const panel = scenarioPanel(info.title, info.weeks, { good: goodName, node: (n) => map.nodes[n]?.name ?? `Place ${n}` }, (id) => void accept(game, screens, id));
     screens.scenario = { n: scenarioNumber, title: info.title, panel, dialogs: dialogs(document.body, () => app.querySelector('.game')) };
-    hud.side.append(panel.node);
+    hud.panels.goal.append(panel.node);
   }
-  hud.side.append(
-    screens.market.node,
-    screens.cargo.node,
-    screens.purse.node,
-    screens.exchange.node,
-    screens.bonds.node,
-    screens.licences.node,
-  );
+  hud.panels.market.append(screens.market.node);
+  hud.panels.cargo.append(screens.cargo.node);
+  hud.panels.finance.append(screens.purse.node, screens.exchange.node, screens.bonds.node, screens.licences.node);
   try {
     mapScreen = await createMap(hud.mapHost, map, select);
     // The browser tests find towns on the canvas through this handle (development builds only).
@@ -243,6 +242,9 @@ async function refresh(game: SimBridge, s: Screens): Promise<void> {
   s.licences.update(licences);
   mapScreen?.setCaravans(caravans);
   s.travel.setPlayer(purse.node, purse.travel_destination, purse.arrival_turn);
+  s.hud.setTravel(purse.travel_destination >= 0
+    ? `Travelling to ${s.map.nodes[purse.travel_destination]?.name ?? ''} · Arrives ${s.dateLabel(purse.arrival_turn)}`
+    : `At ${s.map.nodes[purse.node]?.name ?? ''}`);
   if (s.scenario) {
     const [results, objectives, contracts] = await Promise.all([game.view('results'), game.view('objectives'), game.view('scenario_contracts')]);
     s.scenario.panel.update(results?.weeks ?? 0, objectives, contracts);

@@ -74,6 +74,7 @@ class Player {
 
   /** Market panel: choose the good, the quantity, Buy or Sell, Confirm. */
   async trade(side: 'buy' | 'sell', good: number, quantity: number): Promise<void> {
+    await this.page.click('#tab-market');
     await this.page.click(`#market-table tr[data-good="${good}"] button`);
     await this.page.fill('#qty', String(quantity));
     await this.place(`#${side}`, 'trade', '#confirm');
@@ -81,6 +82,7 @@ class Player {
 
   /** Exchange panel: choose the company, the count, Buy or Sell, Confirm. */
   async shares(side: 'buy' | 'sell', facility: number, count: number): Promise<void> {
+    await this.page.click('#tab-finance');
     await this.page.click(`#share-${facility}`);
     await this.page.fill('#share-count', String(count));
     await this.place(`#share-${side}`, 'share');
@@ -88,6 +90,7 @@ class Player {
 
   /** Bonds panel: all coins, in whole hundreds. */
   async bondsWithAllCoins(): Promise<number> {
+    await this.page.click('#tab-finance');
     await this.page.click('#bond-all');
     const amount = Number(await this.page.inputValue('#bond-amount'));
     await this.place('#bond-buy', 'bond');
@@ -96,6 +99,7 @@ class Player {
 
   /** Licences panel: the international trade licence, or a licence to sell `good`. */
   async licence(good?: number): Promise<void> {
+    await this.page.click('#tab-finance');
     if (good === undefined) return this.place('#licence-trade', 'licence');
     await this.page.selectOption('#licence-good', String(good));
     await this.place('#licence-buy', 'licence');
@@ -221,7 +225,7 @@ describe('scenario golden paths', () => {
     const { p, errors } = await player();
     expect(await p.open(1)).toContain('500 coins');
     expect(await p.page.textContent('#deadline')).toBe('Week 1 of 20 - 20 weeks left');
-    expect(await p.page.textContent('#date')).toBe('Week 1'); // the header counts scenario weeks too
+    expect(await p.page.textContent('#date')).toBe('Week 1 / 20'); // the header counts scenario weeks too
     expect(await p.page.locator('#save').count()).toBe(0); // scenarios never save
     const grain = p.good('g1_0');
     const tools = p.good('g6_0');
@@ -230,8 +234,9 @@ describe('scenario golden paths', () => {
     await p.trade('sell', grain, 30);
     await p.week();
     const deadline = (await p.page.textContent('#deadline')) ?? '';
-    expect(deadline.startsWith(`${await p.page.textContent('#date')} of 20`)).toBe(true);
+    expect(deadline.startsWith(`${(await p.page.textContent('#date'))!.replace(' / 20', '')} of 20`)).toBe(true);
     expect(p.news.some((n) => n.includes('Deliver 18 crates of g6_0 to k0n0r0c1 by week 12.'))).toBe(true);
+    await p.page.click('#tab-goal');
     await p.page.click('#accept-tools');
     await p.page.waitForFunction(() => document.querySelector('#scenario-contracts')?.textContent?.includes('Accepted'));
     await p.trade('buy', tools, 18);

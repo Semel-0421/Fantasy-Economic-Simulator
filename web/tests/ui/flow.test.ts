@@ -102,6 +102,7 @@ describe('web flow', () => {
     await startFree(page);
     await page.selectOption('#slot', 'manual1');
     await page.click('#save');
+    await page.click('#tab-log');
     await page.waitForSelector('#log .message');
     await page.evaluate(
       () =>

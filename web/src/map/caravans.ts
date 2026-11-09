@@ -16,7 +16,7 @@ const REST = 0.2;
 const LEG_MS = 1000;
 
 /** Each drawable caravan's point at `progress` (0..1, clamped) along its road. */
-export function caravanPoints(list: Caravan[], points: Map<number, Point>, progress: number): Point[] {
+export function caravanPoints(list: Caravan[], points: Map<number, Point>, progress: number, wrap = 0): Point[] {
   const t = Math.min(1, Math.max(0, progress));
   const out: Point[] = [];
   for (const c of list) {
@@ -24,7 +24,9 @@ export function caravanPoints(list: Caravan[], points: Map<number, Point>, progr
     const a = points.get(c.from);
     const b = points.get(c.to);
     if (!a || !b) continue;
-    out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    // On a wrapped world a caravan takes the short way round the seam.
+    const dx = wrap ? (b.x - a.x) - wrap * Math.round((b.x - a.x) / wrap) : b.x - a.x;
+    out.push({ x: a.x + dx * t, y: a.y + (b.y - a.y) * t });
   }
   return out;
 }
@@ -37,14 +39,17 @@ export interface CaravanLayer {
   destroy(): void;
 }
 
-export function caravanLayer(points: Map<number, Point>, reducedMotion: () => boolean): CaravanLayer {
+/** `wrap`: the world's circumference; caravans are drawn on every copy of the wrapped world. */
+export function caravanLayer(points: Map<number, Point>, reducedMotion: () => boolean, changed: () => void = () => {}, wrap = 0): CaravanLayer {
   const graphics = new Graphics();
   let list: Caravan[] = [];
   let raf = 0;
   const draw = (progress: number): void => {
     const g = graphics.clear();
-    for (const p of caravanPoints(list, points, progress)) g.rect(p.x - 4, p.y - 4, 8, 8);
+    const offsets = wrap ? [-wrap, 0, wrap] : [0];
+    for (const p of caravanPoints(list, points, progress, wrap)) for (const dx of offsets) g.rect(p.x + dx - 4, p.y - 4, 8, 8);
     g.fill({ color: WOOD, alpha: 0.85 }).stroke({ width: 1.5, color: PAPER });
+    changed();
   };
   const stop = (): void => {
     if (raf) cancelAnimationFrame(raf);

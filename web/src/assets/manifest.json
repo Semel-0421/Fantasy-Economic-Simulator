@@ -19,6 +19,14 @@
     "path": "map/terrain/water.png",
     "size": "28x32"
   },
+  "terrain-desert": {
+    "path": "map/terrain/desert.png",
+    "size": "28x32"
+  },
+  "terrain-snow": {
+    "path": "map/terrain/snow.png",
+    "size": "28x32"
+  },
   "terrain-road-overlay": {
     "path": "map/terrain/road_overlay.png",
     "size": "28x32"

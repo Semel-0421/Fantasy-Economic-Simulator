@@ -15,7 +15,8 @@
     "check:assets": "node scripts/check-assets.mjs",
     "assets:log": "node scripts/assets-log.mjs",
     "capture": "node --experimental-strip-types scripts/capture.mjs",
-    "test:ui": "npm run prepare:assets && vitest run --config vitest.ui.config.ts"
+    "test:ui": "npm run prepare:assets && vitest run --config vitest.ui.config.ts",
+    "maps:samples": "npm run prepare:assets && node scripts/map-samples.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

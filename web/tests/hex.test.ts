@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { axialToPixel, pixelToAxial, neighbours, hexLine, hexKey, hexDistance } from '../src/map/hex';
-import { layoutHexMap, pickHexTown, hexRouteEdges } from '../src/map/hex_layout';
+import { layoutHexMap, pickHexTown, hexRouteEdges, nearestCopy, wrapHex, type HexTile } from '../src/map/hex_layout';
 import { fullscaleMap as map } from './fullscale-map';
 import { NATION_COLOURS, HEX_TERRAIN_COLOURS, INK } from '../src/map/colours';
 
@@ -11,7 +11,7 @@ describe('pointy 28x32 hex grid', () => {
       return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
     };
     expect(new Set(NATION_COLOURS).size).toBe(8);
-    expect(HEX_TERRAIN_COLOURS).toEqual({ plains: 0x8aa374, forest: 0x3f5f43, hills: 0xa67c52, mountain: 0x7d7d7d, water: 0x2f5d62 });
+    expect(HEX_TERRAIN_COLOURS).toEqual({ plains: 0x8aa374, forest: 0x3f5f43, hills: 0xa67c52, mountain: 0x7d7d7d, water: 0x2f5d62, desert: 0xe4d4ae, snow: 0xf3e9d2 });
     expect((luminance(HEX_TERRAIN_COLOURS.plains) + 0.05) / (luminance(INK) + 0.05)).toBeGreaterThanOrEqual(3);
   });
   it('round trips centres and identifies their six neighbours and a continuous line', () => {
@@ -28,73 +28,87 @@ describe('pointy 28x32 hex grid', () => {
   });
 });
 
-describe('full-scale hex layout', () => {
-  it('decorates route lines without changing territory or travel data', () => {
-    for (const terrain of [0, 1, 2, 3]) {
-      const route = { ...map.routes[0]!, terrain }, input = { ...map, routes: [route] };
-      const before = JSON.stringify(input), layout = layoutHexMap(input);
-      for (const hex of hexLine(layout.nodeHexes.get(route.from)!, layout.nodeHexes.get(route.to)!)) {
-        const tile = layout.hexes.get(hexKey(hex))!;
-        if (terrain > 0) expect(tile.terrain).toBe(['plains', 'mountain', 'water', 'water'][terrain]);
-        expect(tile.road).toBe(terrain === 0);
-      }
-      expect(JSON.stringify(input)).toBe(before);
-    }
+describe('full-scale seeded hex layout (wrapped east-west)', () => {
+  const layout = layoutHexMap(map, 'scenario-1');
+  const at = (hex: { q: number; r: number }): HexTile | undefined => layout.hexes.get(hexKey(wrapHex(layout, hex)));
+  it('is deterministic per seed, independent of input order, and differs between seeds', () => {
+    const again = layoutHexMap({ nodes: [...map.nodes].reverse(), routes: [...map.routes].reverse() }, 'scenario-1');
+    expect(again).toEqual(layout);
+    const other = layoutHexMap(map, 'sample-7');
+    expect([...other.hexes.values()].map((t) => t.terrain).join()).not.toBe([...layout.hexes.values()].map((t) => t.terrain).join());
   });
-  it('keeps green terrain visible, coastlines irregular and road strokes unique', () => {
-    const layout = layoutHexMap(map);
-    const land = [...layout.hexes.values()].filter((tile) => tile.continent >= 0);
-    expect(land.filter((tile) => tile.terrain === 'forest' || tile.terrain === 'hills').length / land.length).toBeGreaterThan(0.3);
-    for (const [id, centre] of layout.islandCentres) {
-      const coast = land.filter((tile) => tile.continent === id && neighbours(tile).some((n) => layout.hexes.get(hexKey(n))?.continent !== id));
-      expect(new Set(coast.map((tile) => hexDistance(tile, centre))).size).toBeGreaterThanOrEqual(3);
-    }
-    const edges = hexRouteEdges(map, layout);
-    expect(new Set(edges.map((edge) => [hexKey(edge.from), hexKey(edge.to)].sort().join('|'))).size).toBe(edges.length);
-    for (const nation of map.nodes.filter((node) => node.level === 1)) {
-      const points = land.filter((tile) => tile.nation === nation.id).map(axialToPixel);
-      const w = Math.max(...points.map((p) => p.x)) - Math.min(...points.map((p) => p.x)) + 28;
-      const h = Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y)) + 32;
-      expect(Math.max(w / h, h / w)).toBeLessThan(3);
-    }
-  });
-  it('is deterministic, separates all nodes and puts each town inside its region', () => {
-    const a = layoutHexMap(map), b = layoutHexMap({ nodes: [...map.nodes].reverse(), routes: [...map.routes].reverse() });
-    expect(a).toEqual(b);
-    expect(a.nodeHexes.size).toBe(1580);
-    expect(new Set([...a.nodeHexes.values()].map(hexKey)).size).toBe(1580);
+  it('puts every place on its own land hex inside its region, and picks it back', () => {
+    expect(layout.nodeHexes.size).toBe(1580);
+    expect(new Set([...layout.nodeHexes.values()].map(hexKey)).size).toBe(1580);
     for (const node of map.nodes) {
-      const hex = a.nodeHexes.get(node.id)!;
-      expect(a.points.get(node.id)).toEqual(axialToPixel(hex));
+      const hex = layout.nodeHexes.get(node.id)!, tile = at(hex)!;
+      expect(layout.points.get(node.id)).toEqual(axialToPixel(hex));
+      expect(tile.terrain, node.key).not.toBe('water');
       if (node.level < 3) continue;
       const region = node.level === 3 ? node.parent : map.nodes[node.parent]!.parent;
-      expect(a.hexes.get(hexKey(hex))!.region).toBe(region);
-      const p = a.points.get(node.id)!;
-      expect(pickHexTown(map, a, p.x, p.y)).toBe(node.id);
+      expect(tile.region).toBe(region);
+      const p = layout.points.get(node.id)!;
+      expect(pickHexTown(map, layout, p.x, p.y)).toBe(node.id);
+      // The same place is picked one full turn round the cylinder.
+      expect(pickHexTown(map, layout, p.x + layout.width, p.y)).toBe(node.id);
     }
-    expect(pickHexTown(map, a, -1000, -1000)).toBe(-1);
+    expect(pickHexTown(map, layout, 10, -1000)).toBe(-1);
   });
-  it('keeps every continent, nation and region connected through hex neighbours', () => {
-    const layout = layoutHexMap(map);
-    for (const [level, field] of [[0, 'continent'], [1, 'nation'], [2, 'region']] as const) {
-      for (const node of map.nodes.filter((node) => node.level === level)) {
-        const cells = [...layout.hexes.values()].filter((tile) => tile[field] === node.id);
-        const pending = [cells[0]!], seen = new Set<string>(), members = new Set(cells.map(hexKey));
-        while (pending.length) {
-          const tile = pending.pop()!, key = hexKey(tile);
-          if (seen.has(key)) continue;
-          seen.add(key);
-          for (const n of neighbours(tile)) if (members.has(hexKey(n)) && !seen.has(hexKey(n))) pending.push(n as typeof tile);
+  for (const seed of ['scenario-1', 'sample-7']) {
+    it(`keeps every continent, nation and region connected across the seam (${seed})`, () => {
+      const l = seed === 'scenario-1' ? layout : layoutHexMap(map, seed);
+      for (const [level, field] of [[0, 'continent'], [1, 'nation'], [2, 'region']] as const) {
+        for (const node of map.nodes.filter((n) => n.level === level)) {
+          const cells = [...l.hexes.values()].filter((tile) => tile[field] === node.id);
+          const pending = [cells[0]!], seen = new Set<string>(), members = new Set(cells.map(hexKey));
+          while (pending.length) {
+            const tile = pending.pop()!, key = hexKey(tile);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            for (const n of neighbours(tile)) {
+              const k = hexKey(wrapHex(l, n));
+              if (members.has(k) && !seen.has(k)) pending.push(l.hexes.get(k)!);
+            }
+          }
+          expect(seen.size, `${field} ${node.key}`).toBe(cells.length);
         }
-        expect(seen.size, `${field} ${node.key}`).toBe(cells.length);
+      }
+    });
+  }
+  it('has realistic proportions: separate continents, mountains, rivers that reach water', () => {
+    const land = [...layout.hexes.values()].filter((t) => t.terrain !== 'water');
+    expect(land.length / layout.hexes.size).toBeGreaterThan(0.2);
+    expect(land.length / layout.hexes.size).toBeLessThan(0.45);
+    expect(land.filter((t) => t.terrain === 'mountain').length / land.length).toBeGreaterThan(0.03);
+    expect(layout.rivers.length).toBeGreaterThan(20);
+    const down = new Map(layout.rivers.map((r) => [hexKey(r.from), r.to]));
+    for (const r of layout.rivers) {
+      expect(hexDistance(r.from, nearestCopy(layout, r.from, r.to))).toBe(1);
+      let hex = r.to, steps = 0;
+      while (down.has(hexKey(wrapHex(layout, hex))) && steps++ < 400) hex = down.get(hexKey(wrapHex(layout, hex)))!;
+      const end = at(hex)!;
+      // A river ends in the sea, a lake, or where it leaves the river network.
+      expect(end.terrain === 'water' || !end.river).toBe(true);
+    }
+    for (const id of new Set(land.map((t) => t.continent).filter((c) => c >= 0))) {
+      // No land hex of one continent touches another continent: the sea keeps them apart.
+      for (const tile of land.filter((t) => t.continent === id)) for (const n of neighbours(tile)) {
+        const other = at(n);
+        if (other && other.continent >= 0) expect(other.continent).toBe(id);
       }
     }
   });
-  it('lays out the full world once within the development time budget', () => {
+  it('draws each road edge once and marks road hexes only on land', () => {
+    const edges = hexRouteEdges(map, layout);
+    expect(new Set(edges.map((e) => [hexKey(e.from), hexKey(wrapHex(layout, e.to))].sort().join('|'))).size).toBe(edges.length);
+    for (const tile of layout.hexes.values()) if (tile.road) expect(tile.terrain).not.toBe('water');
+  });
+  it('generates the full world within the time budget (it runs in a Web Worker in the game)', () => {
     const start = performance.now();
-    const layout = layoutHexMap(map);
+    layoutHexMap(map, 'sample-5');
     const ms = performance.now() - start;
-    console.info(`Full-scale hex layout: ${map.nodes.length} nodes, ${layout.hexes.size} tiles, ${ms.toFixed(3)}ms`);
-    expect(ms).toBeLessThan(process.env.CI === 'true' ? 200 : 100);
+    console.info(`Full-scale seeded layout: ${ms.toFixed(1)}ms`);
+    expect(ms).toBeLessThan(process.env.CI === 'true' ? 3000 : 1200);
   });
 });
+

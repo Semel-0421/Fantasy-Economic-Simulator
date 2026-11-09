@@ -28,6 +28,15 @@ it('shows the full-scale hex map at three widths and samples actual pan/zoom fra
       expect(boxes.length).toBeGreaterThan(0);
       for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(overlaps(a, b)).toBe(false);
       await page.screenshot({ path: `test-results/hex/${width}.png`, fullPage: true });
+      // Render on demand: an idle map draws no frames.
+      const idle = await page.evaluate(async () => {
+        const map = (window as unknown as { __fesMap: MapScreen }).__fesMap;
+        await new Promise((r) => setTimeout(r, 400));
+        const before = map.renderCount();
+        await new Promise((r) => setTimeout(r, 1000));
+        return map.renderCount() - before;
+      });
+      expect(idle).toBe(0);
       if (width === 1280) {
         const sample = await page.evaluate(async () => {
           const canvas = document.querySelector<HTMLCanvasElement>('#map canvas')!, box = canvas.getBoundingClientRect();

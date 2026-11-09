@@ -48,7 +48,7 @@ export function describeEvent(event: SimEventRecord, nameOf: (field: string, val
 
 /** What a turn needs from the Worker handle and the save store. */
 export interface TurnDeps {
-  bridge: { next(): Promise<TurnReport>; save(): Promise<Uint8Array> };
+  bridge: { next(): Promise<TurnReport>; save(): Promise<Uint8Array>; mapSeed?: string };
   saves: Pick<SaveStore, 'write'> | null;
   mode: SaveMode;
 }
@@ -64,7 +64,7 @@ export async function playTurn(deps: TurnDeps): Promise<TurnOutcome> {
   const report = await deps.bridge.next();
   if (deps.mode !== 'free' || !deps.saves) return { report };
   try {
-    await deps.saves.write('auto', 'free', await deps.bridge.save(), report.turn);
+    await deps.saves.write('auto', 'free', await deps.bridge.save(), report.turn, ...(deps.bridge.mapSeed ? [deps.bridge.mapSeed] : []));
     return { report };
   } catch (e) {
     return { report, saveError: e instanceof Error ? e.message : String(e) };

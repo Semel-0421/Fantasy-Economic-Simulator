@@ -25,6 +25,8 @@ assets/
 | `terrain-hills` | `map/terrain/hills.png` | 28x32 | PNG RGBA |
 | `terrain-mountain` | `map/terrain/mountain.png` | 28x32 | PNG RGBA |
 | `terrain-water` | `map/terrain/water.png` | 28x32 | PNG RGBA |
+| `terrain-desert` | `map/terrain/desert.png` | 28x32 | PNG RGBA |
+| `terrain-snow` | `map/terrain/snow.png` | 28x32 | PNG RGBA |
 | `terrain-road-overlay` | `map/terrain/road_overlay.png` | 28x32 | PNG RGBA |
 | `town-village` | `map/towns/village.png` | 32x32 | PNG RGBA |
 | `town-city` | `map/towns/city.png` | 32x32 | PNG RGBA |

@@ -8,7 +8,8 @@ import { mapControls, playerMark } from './symbols';
 import { caravanLayer, type Caravan } from './caravans';
 import { fitCamera, panBy, toWorld, zoomAt, type Camera } from './camera';
 import type { MapData } from './layout';
-import { layoutHexMap, pickHexTown } from './hex_layout';
+import { pickHexTown } from './hex_layout';
+import { layoutInWorker } from './gen/layout_async';
 import { drawHexWorld, drawEmblems } from './hex_draw';
 
 import { INK, PAPER, SEA, GOLD, DANGER } from './colours';
@@ -21,6 +22,8 @@ export interface MapScreen {
   setTargets(nodes: number[]): void;
   labelBoxes(): readonly Label[];
   renderedLabelBoxes(): readonly Label[];
+  /** Frames rendered so far (the map renders on demand). */
+  renderCount(): number;
   /** The merchants on the road (caravans view); they rest near the town they left. */
   setCaravans(list: Caravan[]): void;
   /** While a week computes (true) the caravans move toward their destinations. */
@@ -49,11 +52,28 @@ function drawLabels(map: MapData, layer: Container): Map<number, Text> {
   return labels;
 }
 
-export async function createMap(host: HTMLElement, map: MapData, onSelect: (node: number) => void): Promise<MapScreen> {
+/** The GPU's largest texture side (WebGL); a safe 4096 where it cannot be read. */
+function maxTextureSize(app: Application): number {
+  const gl = (app.renderer as unknown as { gl?: WebGLRenderingContext }).gl;
+  return gl ? Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 4096 : 4096;
+}
+
+export async function createMap(host: HTMLElement, map: MapData, onSelect: (node: number) => void, seed = 'world'): Promise<MapScreen> {
   await document.fonts.ready;
-  const layout = layoutHexMap(map);
+  // The world is generated in a Web Worker so the page never stalls while it is built.
+  const layout = await layoutInWorker(map, seed);
   const app = new Application();
-  await app.init({ resizeTo: host, background: SEA, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
+  // No antialiasing (pixel art, cheaper on weak GPUs) and no free-running ticker: the map renders
+  // only when something on it changes (render on demand).
+  await app.init({ resizeTo: host, background: SEA, antialias: false, autoStart: false, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
+  app.ticker.stop();
+  let frame = 0;
+  /** Number of frames rendered (tests check that an idle map renders none). */
+  let rendered = 0;
+  const requestRender = (): void => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = 0; rendered++; app.render(); });
+  };
   const canvas = app.canvas;
   canvas.style.touchAction = 'none';
   canvas.tabIndex = 0;
@@ -62,7 +82,11 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   host.prepend(canvas);
 
   const scene: Scene = { world: new Container(), marks: new Graphics(), labels: new Map() };
-  const { terrain, grid, emblems, townSprites } = drawHexWorld(map, layout, scene.world);
+  const { grid, emblems, townSprites } = drawHexWorld(map, layout, scene.world, app.renderer, maxTextureSize(app));
+  const W = layout.width;
+  /** World x at the centre of the view, and a world x moved by whole turns to the copy nearest it. */
+  const centreX = (): number => (host.clientWidth / 2 - cam.x) / cam.scale;
+  const nearX = (x: number): number => x + W * Math.round((centreX() - x) / W);
   const townMarks = new Graphics();
   emblems.addChild(townMarks);
   // Labels live in screen space (CSS pixels, never scaled), so their size is constant at every zoom.
@@ -73,7 +97,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   const marker = textures.has('player-marker') ? new Sprite(textures.get('player-marker')) : null;
   if (marker) { marker.anchor.set(0.5); scene.world.addChild(marker); }
   const reduced = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const caravans = caravanLayer(layout.points, reduced);
+  const caravans = caravanLayer(layout.points, reduced, () => requestRender(), W);
   scene.world.addChild(caravans.graphics, scene.marks);
   app.stage.addChild(scene.world, labelLayer);
 
@@ -89,7 +113,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   const byId = new Map(candidates.map((label) => [label.id, label]));
   const anchorOf = (id: number): { x: number; y: number } => {
     const c = byId.get(id)!;
-    return { x: c.x * cam.scale + cam.x, y: c.y * cam.scale + cam.y };
+    return { x: nearX(c.x) * cam.scale + cam.x, y: c.y * cam.scale + cam.y };
   };
   const moveLabels = (): void => {
     boxes = boxes.map((box) => {
@@ -101,9 +125,10 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   };
   const updateLabels = (): void => {
     for (const text of scene.labels.values()) text.visible = false;
-    boxes = placeLabels(candidates, cam, cam.scale / base.scale, state, host.clientWidth, host.clientHeight);
+    boxes = placeLabels(candidates, cam, cam.scale / base.scale, state, host.clientWidth, host.clientHeight, W);
     offsets = new Map(boxes.map((box) => { const a = anchorOf(box.id); return [box.id, { dx: box.x - a.x, dy: box.y - a.y }]; }));
-    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites);
+    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites, centreX());
+    requestRender();
     for (const box of boxes) {
       const text = scene.labels.get(box.id)!;
       text.visible = true;
@@ -111,18 +136,25 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     }
   };
 
+  /** Keeps the view centre inside the middle copy of the world, so the three copies always cover it. */
+  const wrapCamera = (): void => {
+    const turns = Math.floor(centreX() / W);
+    if (turns) cam = { ...cam, x: cam.x + turns * W * cam.scale };
+  };
   const apply = (): void => {
+    wrapCamera();
     grid.visible = cam.scale * 28 >= 10;
     scene.world.position.set(cam.x, cam.y);
     scene.world.scale.set(cam.scale);
     moveLabels();
-    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites);
+    drawEmblems(townMarks, map, layout, new Set(boxes.map((box) => box.id)), cam.scale, townSprites, centreX());
     drawMarks();
+    requestRender();
   };
 
   const drawMarks = (): void => {
     const g = scene.marks.clear();
-    const at = (id: number): { x: number; y: number } | undefined => layout.points.get(id);
+    const at = (id: number): { x: number; y: number } | undefined => { const p = layout.points.get(id); return p && { x: nearX(p.x), y: p.y }; };
     for (const target of state.targets) {
       const point = at(target);
       if (point) {
@@ -132,7 +164,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     }
     const p = at(state.player);
     const d = state.destination >= 0 ? at(state.destination) : undefined;
-    if (p && d) g.moveTo(p.x, p.y).lineTo(d.x, d.y).stroke({ width: 5, color: DANGER, alpha: 0.8 });
+    if (p && d) g.moveTo(p.x, p.y).lineTo(p.x + (d.x - p.x) - W * Math.round((d.x - p.x) / W), d.y).stroke({ width: 5, color: DANGER, alpha: 0.8 });
     if (d) g.circle(d.x, d.y, 14 / cam.scale).stroke({ width: 2 / cam.scale, color: DANGER });
     const sel = at(state.selected);
     if (sel) {
@@ -144,10 +176,10 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
       marker.width = marker.height = 16 / cam.scale;
       if (p) marker.position.set(p.x, p.y);
     } else if (p) playerMark(g, p.x, p.y, cam.scale);
+    requestRender();
   };
 
   const resize = new ResizeObserver(() => {
-    terrain.updateCacheTexture();
     base = fitCamera(host.clientWidth || 1, host.clientHeight || 1, bounds);
     if (!touched) cam = base;
     apply();
@@ -232,12 +264,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   });
   apply();
   updateLabels();
-  // Build the cached terrain and grid textures now, while the map loads, rather than lazily on a
-  // later frame: on slow (software) renderers that one-time build otherwise lands during play.
-  const gridShown = grid.visible;
-  grid.visible = true;
-  app.render();
-  grid.visible = gridShown;
+  requestRender();
   return {
     setPlayer(node, destination) {
       state.player = node;
@@ -253,6 +280,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     },
     setTargets(nodes) { state.targets = new Set(nodes); drawMarks(); updateLabels(); },
     labelBoxes() { return boxes; },
+    renderCount() { return rendered; },
     renderedLabelBoxes() {
       const rect = canvas.getBoundingClientRect();
       return boxes.map((box) => {
@@ -269,9 +297,10 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
     },
     screenOf(node) {
       const p = layout.points.get(node);
-      return p ? { x: p.x * cam.scale + cam.x, y: p.y * cam.scale + cam.y } : null;
+      return p ? { x: nearX(p.x) * cam.scale + cam.x, y: p.y * cam.scale + cam.y } : null;
     },
     destroy() {
+      if (frame) cancelAnimationFrame(frame);
       caravans.destroy();
       resize.disconnect();
       window.clearTimeout(labelTimer);

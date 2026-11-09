@@ -110,7 +110,10 @@ async function showMenu(notice = ''): Promise<void> {
     latest,
     {
       scenario: (n) => void begin(SimBridge.scenario(n), n),
-      freeMode: () => void begin(SimBridge.start(Math.floor(Math.random() * 0x7fffffff))),
+      freeMode: () => {
+        const seed = Math.floor(Math.random() * 0x7fffffff);
+        void begin(SimBridge.start(seed), undefined, `free-${seed}`);
+      },
       continueLatest: (slot) => void resume(slot),
       loadSlot: (slot) => void resume(slot),
     },
@@ -121,13 +124,16 @@ async function showMenu(notice = ''): Promise<void> {
 async function resume(slot: Slot): Promise<void> {
   try {
     const bytes = await (saves as SaveStore).read(slot);
-    await begin(SimBridge.load(bytes));
+    await begin(SimBridge.load(bytes), undefined, (await (saves as SaveStore).mapSeedOf(slot)) ?? 'world');
   } catch {
     await showMenu(BROKEN_MESSAGE);
   }
 }
 
-async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Promise<void> {
+/** Every player sees the same map in a scenario; free mode gets its own from the game seed. */
+const scenarioMapSeed = (n: number): string => `scenario-${n}`;
+
+async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapSeed?: string): Promise<void> {
   musicScene('game');
   app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: 'Loading the simulation...' }));
   try {
@@ -137,6 +143,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     return;
   }
   const game = bridge;
+  game.mapSeed = mapSeed ?? (scenarioNumber === undefined ? 'world' : scenarioMapSeed(scenarioNumber));
   const info = scenarioNumber === undefined ? null : await game.view('scenario');
   // A scenario shows its own week everywhere (header, log, arrivals), as its panel does.
   const dateLabel = info ? scenarioDate(await game.turn()) : calendarDate;
@@ -199,7 +206,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
   hud.panels.finance.append(screens.purse.node, screens.exchange.node, screens.bonds.node, screens.licences.node);
   let teachingTargets: number[] = [];
   try {
-    mapScreen = await createMap(hud.mapHost, map, select);
+    mapScreen = await createMap(hud.mapHost, map, select, game.mapSeed);
     if (scenarioNumber !== undefined) {
       const keys = new Set(scenarioNodeKeys(game.scenarioSource));
       teachingTargets = map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id);
@@ -335,7 +342,7 @@ const localCoins = (p: { coins: number[]; local_continent: number }): number => 
 async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
   try {
     if (!saves) throw new Error('Saving is unavailable in this browser.');
-    await saves.write(slot, 'free', await game.save(), await game.turn());
+    await saves.write(slot, 'free', await game.save(), await game.turn(), game.mapSeed);
     hud.addMessage(`Saved to ${slot.replace('manual', 'slot ')}.`);
   } catch (e) {
     hud.addMessage(`Save failed: ${message(e)}`);

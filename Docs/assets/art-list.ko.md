@@ -1,6 +1,6 @@
 # 심사 빌드 그림 제작 목록
 
-도구: SpriteCook. 아래는 **제작 예정 45개 PNG**의 규격이며 생성·검수·UI 연결은 아직 하지 않았다. 경로는 `web/public/assets/` 기준이다. 영어 프롬프트는 그대로 붙여 넣는다.
+도구: SpriteCook. 아래는 **제작 예정 45개 PNG**와 선택 사항 육각 타일 3개(도로 덮개, 사막, 설원; 사막·설원은 시드 지도 생성기가 배치)의 규격이며 생성·검수·UI 연결은 아직 하지 않았다. 경로는 `web/public/assets/` 기준이다. 영어 프롬프트는 그대로 붙여 넣는다.
 
 ## 공통 제작 규격
 
@@ -102,6 +102,26 @@ Create one original 28x32 pixel-art pointy-top hex tile showing grey rocky mount
 
 ```text
 Create one original 28x32 pixel-art pointy-top hex tile showing deep teal open water for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-desert"></a>
+
+### terrain-desert: desert ?? ??
+
+??: `map/terrain/desert.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing dry sand dunes and sparse scrub for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-snow"></a>
+
+### terrain-snow: snow ?? ??
+
+??: `map/terrain/snow.png` ? 28x32 px ? PNG RGBA ? ??? ?? ??.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing snowfield and ice with faint drifts for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="terrain-road-overlay"></a>

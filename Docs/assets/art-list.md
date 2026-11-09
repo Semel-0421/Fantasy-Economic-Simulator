@@ -1,6 +1,6 @@
 # Judged-build art generation list
 
-Tool: SpriteCook. These are **45 required PNG deliverables plus one optional road overlay**, not generated or integrated assets. Paths are relative to `web/public/assets/`. Each English prompt is ready to paste.
+Tool: SpriteCook. These are **45 required PNG deliverables plus three optional hex tiles (road overlay, desert, snow; the seeded map generator places desert and snow)**, not generated or integrated assets. Paths are relative to `web/public/assets/`. Each English prompt is ready to paste.
 
 ## Shared production specification
 
@@ -102,6 +102,26 @@ File: `map/terrain/water.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparen
 
 ```text
 Create one original 28x32 pixel-art pointy-top hex tile showing deep teal open water for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-desert"></a>
+
+### terrain-desert: Desert hex tile
+
+File: `map/terrain/desert.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing dry sand dunes and sparse scrub for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
+```
+
+<a id="terrain-snow"></a>
+
+### terrain-snow: Snow hex tile
+
+File: `map/terrain/snow.png` ? 28x32 px ? PNG RGBA ? pointy-top hex, transparent outside.
+
+```text
+Create one original 28x32 pixel-art pointy-top hex tile showing snowfield and ice with faint drifts for a medieval fantasy trading map. Hex vertices: (14,0), (28,8), (28,24), (14,32), (0,24), (0,8); pixels outside are transparent. Crisp pixel clusters, flat two-tone shading, light from upper left. Use only #2B2118 #F3E9D2 #E4D4AE #B07716 #6B5135 #A67C52 #3F5F43 #8AA374 #2F5D62 #3D7EA6 #7D7D7D #8C2F1F. Single static asset, no text, numbers, logos, antialiasing, reference art or franchise motifs. Export exactly 28x32 PNG RGBA, no mockup or sheet. Terrain is decorative; travel rules are unchanged.
 ```
 
 <a id="terrain-road-overlay"></a>

@@ -25,6 +25,8 @@ function errorText(e: unknown): string {
 }
 
 export class SimBridge {
+  /** Seed of the generated map shown for this game (UI only; saved with free-mode saves). */
+  mapSeed = 'world';
   private nextId = 1;
   private loadedFiles: GameFiles = {};
   private loadedScenario = '';

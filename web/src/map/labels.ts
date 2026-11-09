@@ -8,7 +8,9 @@ export function labelCandidates(map: MapData, layout: Layout, measure: (name: st
   return map.nodes.map((node) => {
     const point = layout.points.get(node.id)!;
     const box = layout.boxes.get(node.id);
-    return { id: node.id, level: node.level, x: point.x, y: box ? box.y : point.y, ...measure(node.name) };
+    // Anchor at the place's own hex (its territory's centre), never at a bounding-box edge that
+    // may lie out at sea.
+    return { id: node.id, level: node.level, x: point.x, y: box ? point.y - 8 : point.y, ...measure(node.name) };
   });
 }
 export const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -17,14 +19,17 @@ export const LABEL_MARGIN = 2;
 const padded = (b: Box): Box => ({ x: b.x - LABEL_MARGIN, y: b.y - LABEL_MARGIN, w: b.w + 2 * LABEL_MARGIN, h: b.h + 2 * LABEL_MARGIN });
 
 /** Greedy placement is in CSS pixels: font size and the collision margin never shrink with zoom. */
-export function placeLabels(labels: Label[], camera: Camera, zoom: number, state: LabelState, width: number, height: number): Label[] {
+/** `wrap` is the world's circumference in world pixels (0: no wrap); a label uses the copy nearest the view centre. */
+export function placeLabels(labels: Label[], camera: Camera, zoom: number, state: LabelState, width: number, height: number, wrap = 0): Label[] {
+  const centre = (width / 2 - camera.x) / camera.scale;
+  const nearX = (x: number): number => wrap ? x + wrap * Math.round((centre - x) / wrap) : x;
   const priority = (label: Label): number => label.id === state.player ? 0 : label.id === state.selected ? 1
     : state.targets.has(label.id) ? 2 : state.neighbours.has(label.id) ? 3 : 4 + label.level;
   const eligible = labels.filter((label) => label.level <= LEVEL.nation || priority(label) < 4 || (label.level === LEVEL.region ? zoom >= 2 : zoom >= 4));
   eligible.sort((a, b) => priority(a) - priority(b) || a.id - b.id);
   const placed: Label[] = [];
   for (const label of eligible) {
-    const cx = label.x * camera.scale + camera.x, cy = label.y * camera.scale + camera.y;
+    const cx = nearX(label.x) * camera.scale + camera.x, cy = label.y * camera.scale + camera.y;
     if (cx < 0 || cx > width || cy < 0 || cy > height) continue;
     const x = Math.max(2, Math.min(width - label.w - 2, cx - label.w / 2));
     const y = Math.max(2, Math.min(height - label.h - 2, cy + (label.level >= LEVEL.city ? 12 : 4)));

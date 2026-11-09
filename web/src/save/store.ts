@@ -26,6 +26,8 @@ interface Entry {
   savedAt: number;
   bytes: Uint8Array;
   checksum: number;
+  /** The seed the map was generated from (absent in saves made before seeded maps). */
+  mapSeed?: string;
 }
 
 /** FNV-1a over the bytes: catches truncated or tampered entries. */
@@ -67,10 +69,10 @@ export class SaveStore {
     this.db.close();
   }
 
-  async write(slot: Slot, mode: SaveMode, bytes: Uint8Array, turn: number): Promise<void> {
+  async write(slot: Slot, mode: SaveMode, bytes: Uint8Array, turn: number, mapSeed?: string): Promise<void> {
     if (mode === 'scenario') throw new Error("Scenarios start fresh each time and can't be saved.");
     if (!SLOTS.includes(slot)) throw new Error(`Unknown save slot: ${String(slot)}`);
-    const entry: Entry = { format: FORMAT, mode: 'free', turn, savedAt: Date.now(), bytes: bytes.slice(), checksum: checksum(bytes) };
+    const entry: Entry = { format: FORMAT, mode: 'free', turn, savedAt: Date.now(), bytes: bytes.slice(), checksum: checksum(bytes), ...(mapSeed ? { mapSeed } : {}) };
     await this.putRaw(slot, entry);
   }
 
@@ -102,6 +104,12 @@ export class SaveStore {
     const ok = (await this.list()).filter((s) => s.status === 'ok');
     ok.sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0));
     return ok[0] ?? null;
+  }
+
+  /** The map seed stored with a slot, if any. */
+  async mapSeedOf(slot: Slot): Promise<string | undefined> {
+    const v: unknown = await done(this.db.transaction(STORE).objectStore(STORE).get(slot));
+    return isEntry(v) && typeof v.mapSeed === 'string' ? v.mapSeed : undefined;
   }
 
   async read(slot: Slot): Promise<Uint8Array> {

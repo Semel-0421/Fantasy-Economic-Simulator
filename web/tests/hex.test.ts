@@ -111,4 +111,3 @@ describe('full-scale seeded hex layout (wrapped east-west)', () => {
     expect(ms).toBeLessThan(process.env.CI === 'true' ? 3000 : 1200);
   });
 });
-

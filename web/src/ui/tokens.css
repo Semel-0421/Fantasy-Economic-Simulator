@@ -1,0 +1,56 @@
+:root {
+  --wood-dark: #2B2118;
+  --parchment: #F3E9D2;
+  --parchment-dark: #E4D4AE;
+  --gold: #B07716;
+  --wood: #6B5135;
+  --wood-light: #A67C52;
+  --forest: #3F5F43;
+  --sage: #8AA374;
+  --sea: #2F5D62;
+  --water: #3D7EA6;
+  --stone: #7D7D7D;
+  --rust: #8C2F1F;
+  --gold-bright: #F3C14A;
+  --surface-frame: var(--wood-dark);
+  --surface-card: var(--parchment);
+  --surface-card-muted: var(--parchment-dark);
+  --text-on-card: var(--wood-dark);
+  --text-on-frame: var(--parchment);
+  --accent-coin: var(--gold-bright);
+  --action-primary: var(--gold);
+  --text-on-primary: var(--wood-dark);
+  --danger: var(--rust);
+  --focus: var(--sea);
+  --focus-on-frame: var(--gold-bright);
+  --border-card: var(--wood);
+  --paper: var(--surface-card);
+  --paper-dark: var(--surface-card-muted);
+  --ink: var(--text-on-card);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-none: 0;
+  --radius-small: 2px;
+  --border-width: 2px;
+  --pixel-border: 0 0 0 var(--border-width) var(--border-card);
+  --type-xs: 12px;
+  --type-sm: 14px;
+  --type-body: 16px;
+  --type-lg: 20px;
+  --type-xl: 24px;
+  --type-title: 32px;
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-display: 'Pixelify Sans', system-ui, sans-serif;
+  --line-height: 1.5;
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --scrim: color-mix(in srgb, var(--surface-frame) 65%, transparent);
+  color-scheme: light;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; }
+}

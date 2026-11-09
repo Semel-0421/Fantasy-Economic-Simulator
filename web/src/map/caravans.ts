@@ -2,6 +2,7 @@
 // left toward where they are going; when the new view arrives they settle at its positions. With
 // reduced motion they are drawn still. Only a fixed number are drawn, so a full-scale world stays light.
 import { Graphics } from 'pixi.js';
+import { WOOD, PAPER } from './colours';
 import type { Views } from '../sim/types';
 
 export type Caravan = Views['caravans'][number];
@@ -43,7 +44,7 @@ export function caravanLayer(points: Map<number, Point>, reducedMotion: () => bo
   const draw = (progress: number): void => {
     const g = graphics.clear();
     for (const p of caravanPoints(list, points, progress)) g.rect(p.x - 4, p.y - 4, 8, 8);
-    g.fill({ color: 0x5a3d1e, alpha: 0.85 }).stroke({ width: 1.5, color: 0xf3e9d2 });
+    g.fill({ color: WOOD, alpha: 0.85 }).stroke({ width: 1.5, color: PAPER });
   };
   const stop = (): void => {
     if (raf) cancelAnimationFrame(raf);

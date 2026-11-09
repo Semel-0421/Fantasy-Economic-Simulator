@@ -1,4 +1,7 @@
 // Entry point: main menu, then a free-mode or scenario game on the simulation Worker.
+import '@fontsource/pixelify-sans/latin-400.css';
+import '@fontsource/atkinson-hyperlegible/latin-400.css';
+import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
 import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';

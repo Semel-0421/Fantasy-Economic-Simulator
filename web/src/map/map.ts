@@ -6,11 +6,7 @@ import { caravanLayer, type Caravan } from './caravans';
 import { fitCamera, panBy, toWorld, zoomAt, type Camera } from './camera';
 import { LEVEL, isTown, layoutMap, pickTown, routePairs, type Layout, type MapData } from './layout';
 
-const INK = 0x2b2118;
-const GOLD = 0xb07716;
-const SEA = 0x2f5d62;
-const DANGER = 0x8c2f1f;
-const TERRAIN_COLOURS = [0x6b5135, 0x7d7d7d, 0x3d7ea6, 0x2f5d62];
+import { INK, PAPER, PAPER_DARK, GOLD, SEA, DANGER, TERRAIN_COLOURS } from './colours';
 /** How far (screen px) a press may move and still count as a tap. */
 const TAP_SLOP = 8;
 
@@ -52,12 +48,12 @@ function drawBase(map: MapData, layout: Layout, world: Container): Text[] {
     if (!p) continue;
     if (isTown(n)) {
       const city = n.level === LEVEL.city;
-      g.circle(p.x, p.y, city ? 14 : 8).fill(city ? 0xf3e9d2 : 0xe4d4ae).stroke({ width: city ? 4 : 2.5, color: INK });
+      g.circle(p.x, p.y, city ? 14 : 8).fill(city ? PAPER : PAPER_DARK).stroke({ width: city ? 4 : 2.5, color: INK });
     }
     const box = layout.boxes.get(n.id);
     const text = new Text({
       text: n.name,
-      style: { fontFamily: 'Georgia, serif', fontSize: isTown(n) ? (n.level === LEVEL.city ? 15 : 12) : 16, fill: INK },
+      style: { fontFamily: 'Atkinson Hyperlegible, system-ui', fontSize: isTown(n) ? (n.level === LEVEL.city ? 15 : 12) : 16, fill: INK },
     });
     text.anchor.set(0.5, isTown(n) ? -0.9 : 0);
     text.position.set(box ? box.x + box.w / 2 : p.x, box ? box.y + 4 : p.y);
@@ -71,7 +67,7 @@ function drawBase(map: MapData, layout: Layout, world: Container): Text[] {
 export async function createMap(host: HTMLElement, map: MapData, onSelect: (node: number) => void): Promise<MapScreen> {
   const layout = layoutMap(map);
   const app = new Application();
-  await app.init({ resizeTo: host, background: 0xefe3c4, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
+  await app.init({ resizeTo: host, background: PAPER_DARK, antialias: true, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
   const canvas = app.canvas;
   canvas.style.touchAction = 'none';
   canvas.setAttribute('aria-hidden', 'true');

@@ -232,6 +232,12 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   });
   apply();
   updateLabels();
+  // Build the cached terrain and grid textures now, while the map loads, rather than lazily on a
+  // later frame: on slow (software) renderers that one-time build otherwise lands during play.
+  const gridShown = grid.visible;
+  grid.visible = true;
+  app.render();
+  grid.visible = gridShown;
   return {
     setPlayer(node, destination) {
       state.player = node;

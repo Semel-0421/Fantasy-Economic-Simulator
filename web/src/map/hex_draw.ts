@@ -60,6 +60,8 @@ export function drawHexWorld(map: MapData, layout: HexLayout, world: Container):
   }
   terrain.addChild(tints, roads, edges, dots);
   terrain.cacheAsTexture({ resolution: 1, antialias: false });
+  // Thousands of hex outlines: cache them too, or every frame re-tessellates them (slow on CI's software GL).
+  grid.cacheAsTexture({ resolution: 1, antialias: false });
   world.addChild(terrain, grid, emblems);
   return { terrain, grid, emblems, townSprites };
 }

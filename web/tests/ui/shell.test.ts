@@ -13,8 +13,8 @@ beforeAll(async () => {
 }, 60000);
 afterAll(async () => { await browser?.close(); await server?.close(); });
 
-async function start(scenario: boolean): Promise<Page> {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+async function start(scenario: boolean, width = 1280, height = 800): Promise<Page> {
+  const page = await browser.newPage({ viewport: { width, height } });
   await page.goto(url);
   await page.click(scenario ? '#scenario-1' : '#free-mode');
   await page.waitForSelector('#map canvas');
@@ -47,6 +47,34 @@ describe('desktop shell', () => {
     expect(map.width / main.width).toBeGreaterThanOrEqual(0.6);
     expect(await page.locator('#map #travel-panel').count()).toBe(1);
     await page.screenshot({ path: 'test-results/ui/task-3-desktop.png' });
+    await page.close();
+  });
+});
+
+describe('phone shell', () => {
+  it('shows Goal and Next week at 360x740, on every tab and sheet height', async () => {
+    const page = await start(true, 360, 740);
+    expect(await page.locator('#tab-more').count()).toBe(1);
+    const goal = (await page.locator('#objectives').boundingBox())!;
+    expect(goal.y).toBeGreaterThanOrEqual(0);
+    expect(goal.y + Math.min(goal.height, 44)).toBeLessThan(740);
+    const visibleNext = async (): Promise<void> => {
+      const box = (await page.locator('#next').boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(740);
+      expect(box.width).toBeGreaterThanOrEqual(336);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    };
+    for (const id of ['market', 'cargo', 'more', 'goal']) {
+      await page.click(`#tab-${id}`);
+      await visibleNext();
+    }
+    for (const state of ['full', 'collapsed', 'half']) {
+      await page.click(state === 'half' ? '#tab-goal' : '#sheet-handle');
+      expect(await page.getAttribute('.game', 'data-sheet')).toBe(state);
+      await visibleNext();
+    }
+    await page.screenshot({ path: 'test-results/ui/task-4-phone.png' });
     await page.close();
   });
 });

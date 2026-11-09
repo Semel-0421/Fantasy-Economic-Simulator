@@ -4,6 +4,7 @@ import '@fontsource/atkinson-hyperlegible/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
 import './ui/shell.css';
+import './ui/phone.css';
 import { prepareAssets } from './assets/loader';
 import { installSound, musicScene, setVolume } from './audio/sound';
 import { readVolume } from './ui/menu';
@@ -36,6 +37,7 @@ const app: HTMLElement = root;
 let saves: SaveStore | null = null;
 let bridge: SimBridge | null = null;
 let mapScreen: MapScreen | null = null;
+let hudScreen: Hud | null = null;
 
 function showFullscaleBench(): void {
   const out = Object.assign(document.createElement('pre'), { id: 'bench-result', textContent: 'Running full-scale benchmark...' });
@@ -85,6 +87,8 @@ async function openSaves(): Promise<void> {
 
 async function showMenu(notice = ''): Promise<void> {
   musicScene('menu');
+  hudScreen?.destroy();
+  hudScreen = null;
   bridge?.dispose();
   bridge = null;
   mapScreen?.destroy();
@@ -140,12 +144,14 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     dateLabel,
     info?.weeks,
   );
+  hudScreen = hud;
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
   const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
   const select = (node: number): void => {
     mapScreen?.select(node);
     travel.select(node);
+    hud.setSelected(map.nodes[node]?.name ?? '');
   };
   const travel = travelPanel(map, {
     preview: (c) => game.preview(c),
@@ -215,6 +221,8 @@ async function showResults(game: SimBridge, s: Screens): Promise<void> {
   const next = nextScenario(scenario.n);
   bridge?.dispose();
   bridge = null;
+  hudScreen?.destroy();
+  hudScreen = null;
   mapScreen?.destroy();
   mapScreen = null;
   renderResults(app, scenario.title, statement, objectives, {

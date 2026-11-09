@@ -3,6 +3,7 @@ import { SLOTS, type SaveMode, type Slot } from '../save/store';
 import { button, el } from './dom';
 import { isMuted, toggleMute } from '../audio/sound';
 import { gameTabs, type Tab } from './tabs';
+import { phoneShell } from './phone';
 import { slotName } from './menu';
 import { calendarDate, type DateLabel, type LogLine } from './turn';
 
@@ -21,6 +22,8 @@ export interface Hud {
   /** Beside the map, above the log: market, cargo and purse. */
   panels: Record<Tab, HTMLElement>;
   setTravel(text: string): void;
+  setSelected(text: string): void;
+  destroy(): void;
   /** The coins number (the growth presentation counts it up). */
   coins: HTMLElement;
 }
@@ -63,6 +66,18 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   }, 'mute');
   mute.setAttribute('aria-label', 'Mute sound');
   mute.setAttribute('aria-pressed', String(isMuted()));
+  const menuButton = button('', actions.menu, 'menu');
+  menuButton.setAttribute('aria-label', 'Main menu');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('class', 'menu-icon');
+  icon.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(icon.namespaceURI, 'path');
+  path.setAttribute('d', 'M3 6H21 M3 12H21 M3 18H21');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '2');
+  icon.append(path);
+  menuButton.append(icon, el('span', { className: 'menu-label', text: 'Menu' }));
 
   root.replaceChildren(
     el(
@@ -75,7 +90,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Coins' }), coins),
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Date' }), date),
         status,
-        el('div', { className: 'tools' }, mute, ...saveControls, button('Menu', actions.menu, 'menu')),
+        el('div', { className: 'tools' }, mute, ...saveControls, menuButton),
         next,
       ),
       el(
@@ -89,11 +104,17 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
 
   let timer = 0;
   let failed = false;
+  const phone = phoneShell(root.querySelector<HTMLElement>('.game')!, tabs, {
+    header: root.querySelector<HTMLElement>('.hud')!, tools: root.querySelector<HTMLElement>('.tools')!,
+    next, map: mapHost, travel: mapTools, extras: [mute, ...saveControls], menu: actions.menu,
+  });
   return {
     mapHost,
     mapTools,
     panels: tabs.panels,
     setTravel(text) { status.textContent = text; },
+    setSelected: phone.select,
+    destroy() { window.clearInterval(timer); tabs.destroy(); phone.destroy(); },
     coins,
     setState(turn, coinList, local) {
       date.textContent = `${dateLabel(turn)}${weeks === undefined ? '' : ` / ${weeks}`}`;

@@ -63,17 +63,22 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
   const duration = growthDuration(total, from);
   const badge = el('span', { id: 'growth', className: 'growth', text: `+${fmt(total)}` });
   badge.title = gains.map((g) => `${g.label}: +${fmt(g.coins)}`).join('\n');
-  badge.setAttribute('role', 'status');
-  badge.setAttribute('aria-live', 'polite');
-  badge.setAttribute('aria-atomic', 'true');
-  badge.append(el('span', { className: 'sr-only', text: `. ${badge.title.replaceAll('\n', '. ')}` }));
+  badge.setAttribute('aria-hidden', 'true');
+  const announcement = el('span', { id: 'growth-announcement', className: 'sr-only' });
+  announcement.setAttribute('role', 'status');
+  announcement.setAttribute('aria-live', 'polite');
+  announcement.setAttribute('aria-atomic', 'true');
+  document.body.append(announcement);
+  requestAnimationFrame(() => {
+    if (announcement.isConnected) announcement.textContent = `+${fmt(total)}. ${badge.title.replaceAll('\n', '. ')}`;
+  });
   panel?.append(badge);
   play('coin');
   const finish = (): void => {
     coins.textContent = fmt(to);
     panel?.classList.remove('growing');
     game?.removeAttribute('inert');
-    window.setTimeout(() => badge.remove(), 1500);
+    window.setTimeout(() => { badge.remove(); announcement.remove(); }, 1500);
   };
   if (prefersReducedMotion()) {
     finish();

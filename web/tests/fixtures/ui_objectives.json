@@ -1,0 +1,5 @@
+[
+  { "id": "first_sale", "text": "Make a profit on your first sale.", "done": true, "done_week": 2 },
+  { "id": "contract", "text": "Deliver the tool order to k0n0r0c1.", "done": true, "done_week": 12 },
+  { "id": "triple", "text": "Earn 1,000 coins of net profit.", "done": true, "done_week": 13 }
+]

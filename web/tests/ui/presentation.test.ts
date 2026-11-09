@@ -24,7 +24,7 @@ describe('presentation', () => {
     })()`);
     expect(await page.textContent('#coins')).toBe('2,500');
     expect(await page.locator('.game[inert], .panel.growing').count()).toBe(0);
-    expect(await page.getAttribute('#growth', 'aria-live')).toBe('polite');
+    expect(await page.getAttribute('#growth-announcement', 'aria-live')).toBe('polite');
     expect(await page.getAttribute('#growth', 'title')).toContain('Dividend');
     await page.waitForSelector('#growth', { state: 'detached', timeout: 2500 });
     await page.close();
@@ -38,6 +38,8 @@ describe('presentation', () => {
       void presentGrowth({ coins: document.getElementById('coins'), game: document.querySelector('.game') }, 500, 123456, [{ label: 'Sale abroad', coins: 122956 }]).then(() => { window.growthDone = true; });
     })()`);
     expect(await page.locator('.game[inert]').count()).toBe(1);
+    await page.waitForFunction(() => document.getElementById('growth-announcement')?.textContent?.includes('Sale abroad'));
+    expect(await page.locator('[aria-live="polite"]').evaluateAll((nodes) => nodes.filter((node) => !node.closest('[inert]') && node.textContent?.includes('Sale abroad')).length)).toBe(1);
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => (window as unknown as { growthDone: boolean }).growthDone);
     expect(await page.textContent('#coins')).toBe('123,456');

@@ -25,6 +25,17 @@ jobs:
         env:
           BROWSER_CHANNEL: chromium
         run: npm run smoke
+      - name: Production UI and accessibility on Chromium
+        working-directory: web
+        env:
+          BROWSER_CHANNEL: chromium
+        run: npm run test:ui
+      - name: UI screenshots and accessibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-review
+          path: web/test-results/ui/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

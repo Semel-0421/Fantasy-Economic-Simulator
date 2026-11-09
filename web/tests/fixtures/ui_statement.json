@@ -1,0 +1,9 @@
+{
+  "revenue": 3200,
+  "costs": { "purchases": 1000, "travel": 60, "protection": 0, "losses": 0, "other": 0 },
+  "net_profit": 2140,
+  "start_coins": 500,
+  "end_coins": 2640,
+  "holdings": 0,
+  "weeks": 20
+}

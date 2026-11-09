@@ -15,6 +15,23 @@ beforeAll(async () => {
 afterAll(async () => { await browser?.close(); await server?.close(); });
 
 describe('presentation', () => {
+  it('switches tool credits automatically for a fake allowlisted present-file list', async () => {
+    const page = await browser.newPage();
+    try {
+      await page.goto(url); await page.waitForSelector('#credits');
+      await page.evaluate(`(async () => {
+        const { loadAssets } = await import('/src/assets/loader.ts');
+        await loadAssets(['goods/wheat.png', 'audio/sfx/coin.ogg'], {
+          image: async () => ({ source: { scaleMode: 'nearest' } }), audio: async () => ({})
+        });
+      })()`);
+      await page.click('#credits');
+      const text = await page.locator('main').innerText();
+      expect(text).toContain('Art made with SpriteCook.');
+      expect(text).toContain('Music and sound effects made with ElevenLabs.');
+      expect(text).not.toContain('placeholders drawn in code');
+    } finally { await page.close(); }
+  });
   it('sets reduced-motion growth to the final coins immediately and keeps only the badge', async () => {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(url); await page.click('#free-mode'); await page.waitForSelector('#map canvas');
@@ -63,6 +80,7 @@ describe('presentation', () => {
     expect(Object.keys(BUNDLED_LICENSES).sort()).toEqual(Object.keys(deps).sort());
     const page = await browser.newPage();
     await page.goto(url);
+    await page.waitForSelector('#credits');
     expect(await page.locator('#credits').count()).toBe(1);
     await page.screenshot({ path: 'test-results/ui/task-6-menu.png' });
     await page.click('#credits');

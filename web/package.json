@@ -12,6 +12,8 @@
     "test": "npm run prepare:assets && vitest run",
     "build": "npm run prepare:assets && tsc --noEmit && vite build",
     "smoke": "node scripts/smoke.mjs",
+    "check:assets": "node scripts/check-assets.mjs",
+    "assets:log": "node scripts/assets-log.mjs",
     "test:ui": "npm run prepare:assets && vitest run --config vitest.ui.config.ts"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@
 // Next scenario / Main menu (scenarios never save, so nothing else is offered).
 import type { Views } from '../sim/types';
 import { button, el } from './dom';
+import { play } from '../audio/sound';
 
 type Statement = NonNullable<Views['results']>;
 const fmt = (n: number): string => n.toLocaleString('en-US');
@@ -37,15 +38,23 @@ export interface ResultsActions {
   menu(): void;
 }
 
-export function renderResults(root: HTMLElement, title: string, s: Statement, objectives: Views['objectives'], actions: ResultsActions): void {
+export function renderResults(root: HTMLElement, title: string, s: Statement, objectives: Views['objectives'], actions: ResultsActions, target = 0): void {
+  play('results');
   const table = el('table', { className: 'grid statement', id: 'statement' });
+  table.setAttribute('aria-label', 'Financial statement');
   for (const r of statementRows(s)) {
-    table.append(el('tr', { className: r.kind }, el('th', { text: r.label }), el('td', { text: r.value })));
+    const heading = el('th', { text: r.label });
+    heading.scope = 'row';
+    table.append(el('tr', { className: r.kind }, heading, el('td', { text: r.value })));
   }
   const goals = el(
     'ul',
     { className: 'rows', id: 'results-objectives' },
-    ...objectives.map((o) => el('li', {}, el('span', { text: o.text }), el('span', { text: o.done ? `Done in week ${o.done_week}` : 'Not done' }))),
+    ...objectives.map((o) => {
+      const mark = el('span', { className: `objective-mark${o.done ? ' checked' : ''}` });
+      mark.setAttribute('aria-hidden', 'true');
+      return el('li', {}, mark, el('span', { text: o.text }), el('span', { text: o.done ? `Done in week ${o.done_week}` : 'Not done' }));
+    }),
   );
   const buttons = el('div', { className: 'row' });
   if (actions.next) {
@@ -60,6 +69,7 @@ export function renderResults(root: HTMLElement, title: string, s: Statement, ob
       { className: 'menu results', id: 'results' },
       el('h1', { text: `${title}: results` }),
       el('p', { id: 'score', className: 'score', text: `Net profit ${fmt(s.net_profit)} coins in ${s.weeks} weeks` }),
+      el('p', { id: 'results-target', text: `Target ${fmt(target)} · You ${fmt(s.net_profit)}${target > 0 ? ` · ${(s.net_profit / target).toFixed(1)}x` : ''}` }),
       table,
       el('h2', { text: 'Objectives' }),
       goals,

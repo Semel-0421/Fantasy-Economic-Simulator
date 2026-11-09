@@ -5,9 +5,10 @@ import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
 import './ui/shell.css';
 import './ui/phone.css';
+import './ui/presentation.css';
 import { prepareAssets } from './assets/loader';
-import { installSound, musicScene, setVolume } from './audio/sound';
-import { readVolume } from './ui/menu';
+import { installSound, musicScene, setVolume, setMusic } from './audio/sound';
+import { readVolume, readMusic } from './ui/menu';
 import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';
 import type { PlayerCommand } from './sim/types';
@@ -25,7 +26,7 @@ import { registerServiceWorker } from './ui/update';
 import { dialogs, type Dialogs } from './ui/dialog';
 import { scenarioDialogs, scenarioEnd, scenarioPanel, type ScenarioPanel } from './ui/scenario';
 import { renderResults } from './ui/results';
-import { nextScenario, loadScenarioText, scenarioNodeKeys } from './data/scenarios';
+import { nextScenario, loadScenarioText, scenarioNodeKeys, SCENARIOS } from './data/scenarios';
 import { bondsPanel, exchangePanel, licencePanel, type BondsPanel, type ExchangePanel, type LicencePanel } from './ui/finance';
 import { gainsOf, presentGrowth } from './ui/growth';
 import { finishWeek } from './ui/week_end';
@@ -232,7 +233,7 @@ async function showResults(game: SimBridge, s: Screens): Promise<void> {
   renderResults(app, scenario.title, statement, objectives, {
     next: next === null ? undefined : () => void begin(SimBridge.scenario(next), next),
     menu: () => void showMenu(),
-  });
+  }, SCENARIOS.find((entry) => entry.n === scenario.n)?.targetProfit);
 }
 
 async function refresh(game: SimBridge, s: Screens): Promise<void> {
@@ -314,6 +315,7 @@ if (new URLSearchParams(location.search).get('bench') === 'fullscale') {
   showFullscaleBench();
 } else {
   setVolume(readVolume());
+  setMusic(readMusic());
   installSound();
   prepareAssets().then(() => showMenu()).catch((e: unknown) => {
     app.textContent = `Could not start: ${message(e)}`;

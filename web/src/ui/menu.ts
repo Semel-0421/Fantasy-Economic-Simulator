@@ -2,7 +2,8 @@
 import { BROKEN_MESSAGE, type Slot, type SlotInfo } from '../save/store';
 import { SCENARIOS } from '../data/scenarios';
 import { button, el } from './dom';
-import { setVolume } from '../audio/sound';
+import { renderCredits } from './credits';
+import { setVolume, setMusic } from '../audio/sound';
 
 export interface MenuActions {
   scenario(n: number): void;
@@ -35,7 +36,17 @@ function writeVolume(v: number): void {
   }
 }
 
+export function readMusic(): boolean {
+  try { return localStorage.getItem('fes-music') !== 'off'; } catch { return true; }
+}
+
 function settings(): HTMLElement {
+  const music = el('input', { id: 'music', type: 'checkbox' });
+  music.checked = readMusic();
+  music.addEventListener('change', () => {
+    setMusic(music.checked);
+    try { localStorage.setItem('fes-music', music.checked ? 'on' : 'off'); } catch { /* Session preference still applies. */ }
+  });
   const slider = el('input', { id: 'volume', type: 'range' });
   slider.min = '0';
   slider.max = '100';
@@ -47,6 +58,8 @@ function settings(): HTMLElement {
     { className: 'settings' },
     el('summary', { text: 'Settings' }),
     el('label', {}, 'Sound volume ', slider),
+    el('label', { className: 'check' }, music, 'Music'),
+    el('p', { className: 'note', text: 'Reduced motion follows your system setting.' }),
   );
 }
 
@@ -66,12 +79,14 @@ export function renderMenu(root: HTMLElement, saves: SlotInfo[], latest: SlotInf
   const scenarios = SCENARIOS.map((s) => {
     const b = button(`Scenario ${s.n}: ${s.title}`, () => actions.scenario(s.n), `scenario-${s.n}`);
     b.classList.add('scenario');
-    return el('li', {}, b);
+    if (s.n === 1) b.classList.add('primary');
+    const pitch = el('p', { className: 'scenario-pitch', id: `pitch-${s.n}`, text: s.pitch });
+    b.setAttribute('aria-describedby', pitch.id);
+    return el('li', {}, b, pitch, el('p', { className: 'note', text: s.n === 1 ? '~30 min · Recommended first' : '~30 min' }));
   });
   const cont = button('Continue', () => latest && actions.continueLatest(latest.slot), 'continue');
   cont.disabled = !latest;
   const free = button('Free mode', actions.freeMode, 'free-mode');
-  free.classList.add('primary');
   root.replaceChildren(
     el(
       'main',
@@ -85,6 +100,7 @@ export function renderMenu(root: HTMLElement, saves: SlotInfo[], latest: SlotInf
       el('h2', { text: 'Saves' }),
       el('ul', { className: 'saves', id: 'saves' }, ...saves.map((s) => saveRow(s, actions))),
       settings(),
+      button('Credits', () => renderCredits(root, () => renderMenu(root, saves, latest, actions, notice)), 'credits'),
     ),
   );
 }

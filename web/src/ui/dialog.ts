@@ -1,6 +1,7 @@
 // Modal dialogs for scenario news: one at a time, in order. While one is open the rest of the page
 // takes no input (it is inert behind a backdrop) until the player presses Continue.
 import { button, el } from './dom';
+import { play } from '../audio/sound';
 
 export interface DialogText {
   title: string;
@@ -19,12 +20,10 @@ export function dialogs(host: HTMLElement, page: () => HTMLElement | null): Dial
   let open = false;
   const one = (item: DialogText): Promise<void> =>
     new Promise((resolve) => {
+      const close = (): void => { backdrop.remove(); resolve(); };
       const ok = button(
         'Continue',
-        () => {
-          backdrop.remove();
-          resolve();
-        },
+        close,
         'dialog-ok',
       );
       ok.classList.add('primary');
@@ -34,8 +33,13 @@ export function dialogs(host: HTMLElement, page: () => HTMLElement | null): Dial
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-modal', 'true');
       box.setAttribute('aria-labelledby', 'dialog-title');
+      box.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { event.preventDefault(); close(); }
+        if (event.key === 'Tab') { event.preventDefault(); ok.focus(); }
+      });
       const backdrop = el('div', { className: 'backdrop' }, box);
       host.append(backdrop);
+      play('event');
       ok.focus();
     });
   return {
@@ -46,12 +50,15 @@ export function dialogs(host: HTMLElement, page: () => HTMLElement | null): Dial
       if (items.length === 0) return;
       open = true;
       const behind = page();
+      const previous = document.activeElement;
       behind?.setAttribute('inert', '');
       try {
         for (const item of items) await one(item);
       } finally {
         behind?.removeAttribute('inert');
         open = false;
+        if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+        else behind?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
       }
     },
   };

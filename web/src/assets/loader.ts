@@ -3,6 +3,7 @@ import { MANIFEST } from './manifest';
 
 export const textures = new Map<string, Texture>();
 export const sounds = new Map<string, AudioBuffer>();
+export const availableFiles = new Set<string>();
 let context: AudioContext | null = null;
 
 export function audioContext(): AudioContext | null {
@@ -27,6 +28,8 @@ const decoders: Decoders = {
 /** Only the contract's paths that the build found on disk can be requested. */
 export async function loadAssets(present: readonly string[], deps: Decoders = decoders): Promise<void> {
   const files = new Set(present);
+  availableFiles.clear();
+  for (const asset of Object.values(MANIFEST)) if (files.has(asset.path)) availableFiles.add(asset.path);
   let failures = 0;
   await Promise.all(Object.entries(MANIFEST).filter(([, asset]) => files.has(asset.path)).map(async ([id, asset]) => {
     try {

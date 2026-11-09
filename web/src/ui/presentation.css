@@ -1,0 +1,35 @@
+body { background: var(--surface-frame); }
+.menu { max-width: 40rem; padding: var(--space-8) var(--space-4); color: var(--text-on-frame); gap: var(--space-3); }
+.menu h1 { text-wrap: balance; margin-bottom: var(--space-4); }
+.menu > h2, .credits h2 { margin-top: var(--space-6); }
+.menu :focus-visible { outline-color: var(--focus-on-frame); }
+.scenarios { display: flex; flex-direction: column; gap: var(--space-3); }
+.scenarios li { display: block; padding: var(--space-3); background: var(--paper); color: var(--ink); border: var(--border-width) solid var(--wood-light); }
+.scenarios button { width: 100%; text-align: left; font-size: var(--type-xl); }
+.scenarios p { margin: var(--space-2) 0 0; }
+.scenario-pitch { font-size: var(--type-body); }
+.scenarios :focus-visible { outline-color: var(--focus); }
+.menu .notice { color: var(--danger); }
+.menu .save { flex-wrap: wrap; border-color: var(--wood-light); }
+.menu .save-error { color: var(--paper); background: var(--danger); padding: var(--space-2); }
+.settings { margin-top: var(--space-4); }
+.settings input[type="range"] { min-height: 44px; vertical-align: middle; accent-color: var(--accent-coin); }
+.credits a { display: block; min-height: 44px; padding: var(--space-2) 0; color: var(--text-on-frame); }
+.results { max-width: 48rem; }
+.results .statement, .results #results-objectives { background: var(--paper); color: var(--ink); border: var(--border-width) solid var(--wood-light); padding: var(--space-3); }
+.results #score { font-size: var(--type-title); color: var(--accent-coin); line-height: 1.5; margin: var(--space-3) 0; }
+.statement th, .statement td { padding: var(--space-2) var(--space-3); }
+.statement th { font-weight: normal; }
+.statement tr.total { font-weight: bold; border-top: var(--border-width) solid var(--ink); }
+.results .rows li { padding: var(--space-3); align-items: center; flex-wrap: wrap; }
+.results .rows li > span:nth-child(2) { flex: 1; }
+.objective-mark { display: inline-block; position: relative; flex: 0 0 16px; width: 16px; height: 16px; border: var(--border-width) solid var(--ink); }
+.objective-mark.checked::after { content: ''; position: absolute; width: 5px; height: 10px; left: 3px; top: -1px; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.backdrop { background: var(--scrim); }
+.dialog { color: var(--ink); border: var(--border-width) solid var(--border-card); box-shadow: var(--pixel-border); border-radius: var(--radius-small); font-family: var(--font-body); }
+.dialog h2 { font-family: var(--font-body); font-weight: bold; }
+.dialog button { font-family: var(--font-body); }
+@media (max-width: 899px) {
+  .results .statement { font-size: var(--type-sm); }
+  .statement th, .statement td { padding: var(--space-2); }
+}

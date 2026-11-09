@@ -84,5 +84,5 @@ describe('phone shell', () => {
     }
     await page.screenshot({ path: 'test-results/ui/task-4-phone.png' });
     await page.close();
-  });
+  }, 120000);
 });

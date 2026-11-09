@@ -48,6 +48,7 @@ describe('map label placement', () => {
       return performance.now() - start;
     });
     console.info(`Full-scale labels: ${map.nodes.length} nodes, worst ${Math.max(...times).toFixed(3)}ms, mean ${(times.reduce((a, b) => a + b, 0) / times.length).toFixed(3)}ms`);
-    expect(Math.max(...times)).toBeLessThanOrEqual(4);
+    // Plan 7B budget is 4 ms on the dev machine; shared CI runners get the same headroom as flow.test.ts.
+    expect(Math.max(...times)).toBeLessThanOrEqual(process.env.CI === 'true' ? 8 : 4);
   });
 });

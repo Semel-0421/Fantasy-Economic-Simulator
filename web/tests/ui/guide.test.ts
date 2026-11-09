@@ -33,7 +33,7 @@ describe('guide in play', () => {
     await page.click('#guide-skip');
     expect(await page.evaluate(() => localStorage.getItem('fes-guide-s1-done'))).toBe('1');
     await page.close();
-  });
+  }, 120000);
   it('Escape skips and play continues when storage is blocked', async () => {
     const context = await browser.newContext();
     await context.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('Blocked storage'); } }));

@@ -1,6 +1,7 @@
 // The in-game screen: coins panel, date, Next week button, the map with its tools, side panels and the turn log.
 import { SLOTS, type SaveMode, type Slot } from '../save/store';
 import { button, el } from './dom';
+import { isMuted, toggleMute } from '../audio/sound';
 import { slotName } from './menu';
 import { calendarDate, type DateLabel, type LogLine } from './turn';
 
@@ -50,6 +51,11 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   for (const s of SLOTS.filter((x) => x !== 'auto')) slot.append(new Option(slotName(s), s));
   const saveButton = mode === 'free' ? button('Save', () => actions.save(slot.value as Slot), 'save') : null;
   const saveControls = saveButton ? [slot, saveButton] : [];
+  const mute = button('Sound', () => {
+    mute.setAttribute('aria-pressed', String(toggleMute()));
+  }, 'mute');
+  mute.setAttribute('aria-label', 'Mute sound');
+  mute.setAttribute('aria-pressed', String(isMuted()));
 
   root.replaceChildren(
     el(
@@ -62,7 +68,7 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Coins' }), coins),
         el('div', { className: 'panel' }, el('span', { className: 'label', text: 'Date' }), date),
         next,
-        el('div', { className: 'tools' }, ...saveControls, button('Menu', actions.menu, 'menu')),
+        el('div', { className: 'tools' }, mute, ...saveControls, button('Menu', actions.menu, 'menu')),
       ),
       el(
         'main',

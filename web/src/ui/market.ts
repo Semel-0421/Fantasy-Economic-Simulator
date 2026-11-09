@@ -1,3 +1,4 @@
+import { goodIcon } from '../assets/goods';
 // The market of the town the player stands in (market view): goods, buy price, trader offer, stock
 // and what the cart holds. Choosing a good opens the trade form; Buy or Sell first previews the
 // command (cost, or the simulation's refusal) and only Confirm queues it for this week.
@@ -64,7 +65,7 @@ function quantityInput(): HTMLInputElement {
   return qty;
 }
 
-export function marketPanel(nameOf: (good: number) => string, actions: MarketActions): MarketPanel {
+export function marketPanel(nameOf: (good: number) => string, actions: MarketActions, keyOf: (g: number) => string = nameOf): MarketPanel {
   const title = el('h2', { id: 'market-title', text: 'Market' });
   const body = el('tbody');
   const head = el('thead', {}, row('th', ['Good', 'Buy', 'Sell', 'Stock', 'Held']));
@@ -167,6 +168,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
         ...list.map((q) => {
           const pick = button(nameOf(q.good), () => choose(q.good));
           pick.className = 'link';
+          pick.prepend(goodIcon(keyOf(q.good), nameOf(q.good)));
           const tr = row('td', [pick, String(coinsOf(q.price)), String(q.offer), String(q.stock), String(held.get(q.good) ?? 0)]);
           tr.dataset.good = String(q.good);
           tr.classList.toggle('chosen', q.good === good);

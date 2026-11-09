@@ -3,3 +3,6 @@ dist/
 public/data/
 src/sim/pkg/
 dist-e2e/
+
+public/assets/present.json
+test-results/

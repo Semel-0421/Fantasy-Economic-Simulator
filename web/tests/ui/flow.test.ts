@@ -68,11 +68,17 @@ describe('web flow', () => {
       const w = window as unknown as { __long: number[] };
       w.__long = [];
       new PerformanceObserver((l) => l.getEntries().forEach((e) => w.__long.push(e.duration))).observe({ entryTypes: ['longtask'] });
+      // Capture the handler's state before a fast Worker turn can finish during Playwright's click wait.
+      document.getElementById('next')!.addEventListener('click', () => {
+        const next = document.querySelector<HTMLButtonElement>('#next')!;
+        Object.assign(window, { __busy: { busy: next.getAttribute('aria-busy'), disabled: next.disabled, label: next.textContent } });
+      }, { once: true });
     });
     await page.click('#next');
-    expect(await page.getAttribute('#next', 'aria-busy')).toBe('true');
-    expect(await page.isDisabled('#next')).toBe(true);
-    expect(await page.textContent('#next-label')).toContain('moving');
+    const busy = await page.evaluate(() => (window as unknown as { __busy: { busy: string; disabled: boolean; label: string } }).__busy);
+    expect(busy.busy).toBe('true');
+    expect(busy.disabled).toBe(true);
+    expect(busy.label).toContain('moving');
     await page.click('#map');
     await page.waitForFunction(() => document.getElementById('date')?.textContent === 'Year 1, Week 2', null, { timeout: 60000 });
     expect(await page.getAttribute('#next', 'aria-busy')).toBe('false');

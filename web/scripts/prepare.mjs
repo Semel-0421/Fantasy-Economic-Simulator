@@ -1,7 +1,7 @@
 // Build-time assets: the wasm package (src/sim/pkg) and the game data (public/data).
 // The wasm is rebuilt only when missing or with --force (`npm run wasm`).
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -61,3 +61,14 @@ function copyData() {
 
 if (process.argv.includes('--force') || !existsSync(join(pkg, 'fes_wasm_bg.wasm'))) buildWasm();
 copyData();
+
+// Optional art/audio must never produce speculative runtime requests.
+const assetRoot = join(web, 'public', 'assets');
+function presentFiles(dir, prefix = '') {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = prefix + entry.name;
+    if (entry.isDirectory()) return presentFiles(join(dir, entry.name), `${path}/`);
+    return ['.gitkeep', 'README.md', 'present.json'].includes(entry.name) ? [] : [path];
+  });
+}
+writeFileSync(join(assetRoot, 'present.json'), JSON.stringify(presentFiles(assetRoot).sort()));

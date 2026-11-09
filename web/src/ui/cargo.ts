@@ -1,6 +1,7 @@
 // The cart and the player's warehouses (cargo view).
 import type { Views } from '../sim/types';
 import { el } from './dom';
+import { goodIcon } from '../assets/goods';
 
 export interface CartRow {
   good: number;
@@ -12,7 +13,7 @@ export function cartRows(cart: [number, number][], nameOf: (good: number) => str
   return cart.filter(([, q]) => q > 0).map(([good, quantity]) => ({ good, name: nameOf(good), quantity }));
 }
 
-export function cargoPanel(nameOf: (good: number) => string): { node: HTMLElement; update(cargo: Views['cargo']): void } {
+export function cargoPanel(nameOf: (good: number) => string, keyOf: (g: number) => string = nameOf): { node: HTMLElement; update(cargo: Views['cargo']): void } {
   const list = el('ul', { id: 'cart', className: 'rows' });
   const extra = el('p', { className: 'note', id: 'cargo-extra' });
   return {
@@ -21,7 +22,7 @@ export function cargoPanel(nameOf: (good: number) => string): { node: HTMLElemen
       const rows = cartRows(cargo.cart as [number, number][], nameOf);
       list.replaceChildren(
         ...(rows.length
-          ? rows.map((r) => el('li', {}, el('span', { text: r.name }), el('strong', { text: String(r.quantity) })))
+          ? rows.map((r) => el('li', {}, el('span', {}, goodIcon(keyOf(r.good), r.name), r.name), el('strong', { text: String(r.quantity) })))
           : [el('li', { className: 'note', text: 'The cart is empty.' })]),
       );
       const stored = cargo.warehouses.reduce((s, w) => s + w[2], 0);

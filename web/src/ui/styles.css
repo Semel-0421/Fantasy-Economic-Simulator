@@ -114,3 +114,10 @@ button.link { min-height: 36px; padding: 0.15rem 0.3rem; border: none; backgroun
 * { scrollbar-color: var(--wood) var(--paper-dark); }
 a { color: var(--sea); text-underline-offset: var(--space-1); }
 button:hover:enabled { box-shadow: var(--pixel-border); }
+
+.good-icon { display: inline-block; width: 24px; height: 24px; flex: 0 0 24px; margin-right: var(--space-2); vertical-align: middle; image-rendering: pixelated; }
+.good-chip { border: var(--border-width) solid var(--ink); background: var(--paper-dark); color: var(--ink); font-family: var(--font-display); line-height: 20px; text-align: center; }
+.good-chip::before { content: attr(data-initial); }
+.good-chip[data-category="food"] { border-color: var(--forest); }
+.good-chip[data-category="metal"] { border-color: var(--sea); }
+.card, .dialog { border-image: var(--frame-image, none) 4 / 4px / 0 stretch; }

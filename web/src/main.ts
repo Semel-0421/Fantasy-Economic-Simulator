@@ -3,6 +3,9 @@ import '@fontsource/pixelify-sans/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-400.css';
 import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import './ui/styles.css';
+import { prepareAssets } from './assets/loader';
+import { installSound, musicScene, setVolume } from './audio/sound';
+import { readVolume } from './ui/menu';
 import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';
 import type { PlayerCommand } from './sim/types';
@@ -79,6 +82,7 @@ async function openSaves(): Promise<void> {
 }
 
 async function showMenu(notice = ''): Promise<void> {
+  musicScene('menu');
   bridge?.dispose();
   bridge = null;
   mapScreen?.destroy();
@@ -111,6 +115,7 @@ async function resume(slot: Slot): Promise<void> {
 }
 
 async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Promise<void> {
+  musicScene('game');
   app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: 'Loading the simulation...' }));
   try {
     bridge = await starting;
@@ -158,11 +163,11 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number): Pro
     travel,
     map,
     goodName,
-    market: marketPanel(goodName, orders),
+    market: marketPanel(goodName, orders, (g) => goods[g]?.key ?? ''),
     exchange: exchangePanel(townOf, orders),
     bonds: bondsPanel(orders),
     licences: licencePanel(goods, goodName, orders),
-    cargo: cargoPanel(goodName),
+    cargo: cargoPanel(goodName, (g) => goods[g]?.key ?? ''),
     purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
   };
   if (info && scenarioNumber !== undefined) {
@@ -294,7 +299,9 @@ async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
 if (new URLSearchParams(location.search).get('bench') === 'fullscale') {
   showFullscaleBench();
 } else {
-  showMenu().catch((e: unknown) => {
+  setVolume(readVolume());
+  installSound();
+  prepareAssets().then(() => showMenu()).catch((e: unknown) => {
     app.textContent = `Could not start: ${message(e)}`;
   });
 

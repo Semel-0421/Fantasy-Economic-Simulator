@@ -2,6 +2,7 @@
 import { BROKEN_MESSAGE, type Slot, type SlotInfo } from '../save/store';
 import { SCENARIOS } from '../data/scenarios';
 import { button, el } from './dom';
+import { setVolume } from '../audio/sound';
 
 export interface MenuActions {
   scenario(n: number): void;
@@ -26,10 +27,11 @@ export function readVolume(): number {
 }
 
 function writeVolume(v: number): void {
+  setVolume(v);
   try {
     localStorage.setItem(VOLUME_KEY, String(v));
   } catch {
-    /* storage can be blocked; the setting is only a placeholder */
+    /* storage can be blocked; the setting still applies to this session */
   }
 }
 
@@ -45,7 +47,6 @@ function settings(): HTMLElement {
     { className: 'settings' },
     el('summary', { text: 'Settings' }),
     el('label', {}, 'Sound volume ', slider),
-    el('p', { className: 'note', text: 'Sound arrives in a later update.' }),
   );
 }
 

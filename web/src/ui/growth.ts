@@ -3,7 +3,7 @@
 // old total to the new, with a coin sound. One presentation per week covers all its gains (batched);
 // a click or a key skips it, and with reduced motion the number is set at once, without the grow.
 import type { SimEventRecord, TurnReport } from '../sim/types';
-import { playCoin } from '../audio/sfx';
+import { play } from '../audio/sound';
 import { el } from './dom';
 
 export interface Gain {
@@ -61,7 +61,7 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
   badge.title = gains.map((g) => `${g.label}: +${fmt(g.coins)}`).join('\n');
   badge.setAttribute('role', 'status');
   panel?.append(badge);
-  playCoin();
+  play('coin');
   const finish = (): void => {
     coins.textContent = fmt(to);
     panel?.classList.remove('growing');

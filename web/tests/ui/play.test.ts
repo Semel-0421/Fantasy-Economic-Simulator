@@ -63,7 +63,13 @@ describe('map', () => {
     const panned = await screenOf(page, dest);
     expect(panned.x - before.x).toBeCloseTo(60, 0);
     expect(panned.y - before.y).toBeCloseTo(30, 0);
+    const canvas = (await page.locator('#map canvas').boundingBox())!;
+    await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
     await page.mouse.wheel(0, -400);
+    await page.waitForFunction(({ node, position }) => {
+      const point = (window as unknown as { __fesMap: { screenOf(id: number): Pt } }).__fesMap.screenOf(node);
+      return point.x !== position.x || point.y !== position.y;
+    }, { node: dest, position: panned });
     const zoomed = await screenOf(page, dest);
     expect(zoomed).not.toEqual(panned);
     await page.locator('#map canvas').focus();

@@ -14,6 +14,7 @@
     "smoke": "node scripts/smoke.mjs",
     "check:assets": "node scripts/check-assets.mjs",
     "assets:log": "node scripts/assets-log.mjs",
+    "capture": "node --experimental-strip-types scripts/capture.mjs",
     "test:ui": "npm run prepare:assets && vitest run --config vitest.ui.config.ts"
   },
   "devDependencies": {

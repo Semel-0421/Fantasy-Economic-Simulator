@@ -116,3 +116,6 @@ InitTestScene*.unity*
 
 # Serena code-assistant tool settings (local)
 .serena/
+
+# Real-build capture media (Plan 7C)
+web/capture/

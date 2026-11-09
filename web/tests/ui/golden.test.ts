@@ -5,6 +5,7 @@
 // Each run must end with the net profit the engine's golden test records (Plan 6 Tasks 4-6).
 import { chromium, type Browser, type Page } from 'playwright';
 import { createServer, type ViteDevServer } from 'vite';
+import { confirmOrder, tradeGoods, travelTo } from '../helpers/scenario-actions';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 let server: ViteDevServer;
@@ -61,24 +62,12 @@ class Player {
 
   /** Clicks `ask`, expects the preview's Confirm (or fails with the refusal), confirms, waits for the log. */
   private async place(ask: string, prefix: string, confirm = `#${prefix}-confirm`): Promise<void> {
-    const before = await this.page.locator('#log li.message').count();
-    await this.page.click(ask);
-    const error = `#${prefix}-error`;
-    await this.page.waitForSelector(`${confirm}:visible, ${error}:visible`);
-    if (await this.page.locator(`${error}:visible`).count()) throw new Error(`refused: ${await this.page.textContent(error)}`);
-    await this.page.click(confirm);
-    await this.page.waitForFunction(
-      (n) => document.querySelectorAll('#log li.message').length > n,
-      before,
-    );
+    await confirmOrder(this.page, ask, prefix, confirm);
   }
 
   /** Market panel: choose the good, the quantity, Buy or Sell, Confirm. */
   async trade(side: 'buy' | 'sell', good: number, quantity: number): Promise<void> {
-    await this.page.click('#tab-market');
-    await this.page.click(`#market-table tr[data-good="${good}"] button`);
-    await this.page.fill('#qty', String(quantity));
-    await this.place(`#${side}`, 'trade', '#confirm');
+    await tradeGoods(this.page, side, good, quantity);
   }
 
   /** Exchange panel: choose the company, the count, Buy or Sell, Confirm. */
@@ -108,18 +97,7 @@ class Player {
 
   /** Travel panel: the route button, guards and insurance, Travel (no Confirm: it queues at once). */
   async travel(key: string, protectedTrip: boolean): Promise<void> {
-    // The travel card starts as a one-line summary; a player opens it to see the routes.
-    if ((await this.page.locator('#travel-panel[open]').count()) === 0) await this.page.click('#travel-summary');
-    await this.page.click(`#routes button[data-node="${this.node(key)}"]`);
-    await this.page.setChecked('#guards', protectedTrip);
-    await this.page.setChecked('#insurance', protectedTrip);
-    const before = await this.page.locator('#log li.message').count();
-    await this.page.click('#travel');
-    await this.page.waitForFunction(
-      (n) => document.querySelectorAll('#log li.message').length > n || !document.getElementById('travel-error')?.hidden,
-      before,
-    );
-    if (await this.page.locator('#travel-error:visible').count()) throw new Error(`refused: ${await this.page.textContent('#travel-error')}`);
+    await travelTo(this.page, this.node(key), protectedTrip);
   }
 
   async view<T>(name: string): Promise<T> {

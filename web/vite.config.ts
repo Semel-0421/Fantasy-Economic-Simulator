@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { version } from './package.json';
 
 function listFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -39,6 +40,7 @@ function serviceWorker(): Plugin {
 // Relative base: the build runs from any folder, including an itch.io HTML5 embed.
 export default defineConfig({
   base: './',
+  define: { __APP_VERSION__: JSON.stringify(version) },
   worker: { format: 'es' },
   build: { target: 'es2022', outDir: 'dist', emptyOutDir: true },
   plugins: [serviceWorker()],

@@ -21,6 +21,7 @@ export function renderCredits(root: HTMLElement, back: () => void): void {
   if (!art && !sound) disclosure.push(el('p', { text: 'Art and sound: placeholders drawn in code.' }));
   root.replaceChildren(el('main', { className: 'menu credits' },
     el('h1', { text: 'Credits' }),
+    el('p', { text: `v${__APP_VERSION__}` }),
     el('h2', { text: 'Fonts and libraries' }), el('ul', {}, ...licences),
     el('h2', { text: 'Production' }), ...disclosure,
     el('p', { text: 'English scenario text drafted with Claude and edited by the developer. The game makes no AI or network calls while you play.' }),

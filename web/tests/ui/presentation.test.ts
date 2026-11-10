@@ -84,6 +84,8 @@ describe('presentation', () => {
     expect(await page.locator('#credits').count()).toBe(1);
     await page.screenshot({ path: 'test-results/ui/task-6-menu.png' });
     await page.click('#credits');
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+    expect(await page.locator('.credits h1 + p').textContent()).toBe(`v${version}`);
     const text = await page.textContent('main');
     for (const licence of Object.values(BUNDLED_LICENSES)) expect(text).toContain(licence.name);
     expect(text).toContain('SIL Open Font License');

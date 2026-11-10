@@ -52,6 +52,7 @@ named_enum! {
     WorldLevel { Continent = 0, Nation = 1, Region = 2, City = 3, Village = 4 }
 }
 
+// Kept: `named_enum!` declares the enum and cannot attach `#[default]` to one variant.
 #[allow(clippy::derivable_impls)]
 impl Default for WorldLevel {
     fn default() -> Self {

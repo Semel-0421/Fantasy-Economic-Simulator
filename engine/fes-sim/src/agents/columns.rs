@@ -114,6 +114,7 @@ macro_rules! native_table {
             }
 
             /// Moves the last row into `row` (C# `NativeTable.RemoveRowSwapBack`).
+            // Kept: the macro makes this for every table, and not every table removes rows.
             #[allow(dead_code)]
             pub fn remove_row_swap_back(&mut self, row: usize) {
                 $( self.$field.swap_remove(row); )+

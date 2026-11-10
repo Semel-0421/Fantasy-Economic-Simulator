@@ -1,4 +1,5 @@
 //! Sample-world helpers shared by the merchant tests (C# `TestWorlds`).
+// Kept: each integration test binary includes this module and uses only some of its helpers.
 #![allow(dead_code)]
 use fes_data::database::CONFIG_FILE;
 use fes_data::{DataError, DataSource, FileDataSource};

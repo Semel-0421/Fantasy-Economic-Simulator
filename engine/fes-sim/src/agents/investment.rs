@@ -6,7 +6,7 @@ use super::asset_prices::land_price;
 use super::bond_desk::{offered, raise, CompanyRooms};
 use super::credit::{BondOffers, CreditStats};
 use super::development::DevelopmentState;
-use super::facilities::{FacilityTable, MODE_AUTOMATED, OWNER_NPC};
+use super::facilities::{FacilityTable, NewFacility, MODE_AUTOMATED, OWNER_NPC};
 use super::groups::{
     private_enterprise_at, GroupTable, KIND_COMPANY, KIND_PRIVATE_ENTERPRISE, KIND_STATE_ENTERPRISE,
 };
@@ -442,15 +442,15 @@ impl Investor<'_> {
         // The builders, and the plot's price to the households who sold it.
         pay_households(self.world, self.nodes, node, project.cost - start);
         let facilities = self.world.get_mut::<FacilityTable>();
-        let id = facilities.add(
+        let id = facilities.add(NewFacility {
             node,
-            project.def,
-            OWNER_NPC,
-            MODE_AUTOMATED,
-            1,
-            Fx::ONE,
-            start,
-        );
+            def_index: project.def,
+            owner: OWNER_NPC,
+            mode: MODE_AUTOMATED,
+            level: 1,
+            efficiency: Fx::ONE,
+            cash: start,
+        });
         facilities.group[id] = group;
         self.sys.facilities_at[node as usize].push(id as i32);
         self.events.publish(FacilityFounded {

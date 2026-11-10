@@ -1,5 +1,6 @@
 //! Plays the shipped teaching scenarios (`data/scenarios/*.ron`) on the full-scale world, the way a
 //! player does: queue the week's commands, press Next week.
+// Kept: each integration test binary includes this module and uses only some of its helpers.
 #![allow(dead_code)]
 use fes_core::QualityGrade;
 use fes_data::FileDataSource;

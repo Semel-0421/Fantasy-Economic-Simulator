@@ -59,29 +59,30 @@ pub struct ContractRoute {
     pub to_node: i32,
 }
 
+/// A signed contract's terms (the arguments of C# `ContractTable.Add`).
+pub struct NewContract {
+    pub seller: i32,
+    pub buyer: i32,
+    pub route: ContractRoute,
+    pub quantity: i32,
+    pub unit_price: i64,
+    pub end_turn: i32,
+    pub prepaid: i64,
+}
+
 impl ContractTable {
     /// C# `ContractTable.Add`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn add(
-        &mut self,
-        seller: i32,
-        buyer: i32,
-        route: ContractRoute,
-        quantity: i32,
-        unit_price: i64,
-        end_turn: i32,
-        prepaid: i64,
-    ) {
-        self.seller.push(seller);
-        self.buyer.push(buyer);
-        self.from_cell.push(route.from_cell);
-        self.to_cell.push(route.to_cell);
-        self.from_node.push(route.from_node);
-        self.to_node.push(route.to_node);
-        self.quantity.push(quantity);
-        self.unit_price.push(unit_price);
-        self.end_turn.push(end_turn);
-        self.prepaid.push(prepaid);
+    pub fn add(&mut self, new: NewContract) {
+        self.seller.push(new.seller);
+        self.buyer.push(new.buyer);
+        self.from_cell.push(new.route.from_cell);
+        self.to_cell.push(new.route.to_cell);
+        self.from_node.push(new.route.from_node);
+        self.to_node.push(new.route.to_node);
+        self.quantity.push(new.quantity);
+        self.unit_price.push(new.unit_price);
+        self.end_turn.push(new.end_turn);
+        self.prepaid.push(new.prepaid);
     }
 }
 
@@ -313,15 +314,15 @@ impl Signer<'_> {
         pay(self.world, buyer, -deposit);
         pay(self.world, seller, deposit);
         // Delivery runs before signing, so the first week is next turn.
-        self.world.get_mut::<ContractTable>().add(
+        self.world.get_mut::<ContractTable>().add(NewContract {
             seller,
             buyer,
             route,
-            t.quantity,
-            t.unit,
-            self.turn + t.term + 1,
-            deposit,
-        );
+            quantity: t.quantity,
+            unit_price: t.unit,
+            end_turn: self.turn + t.term + 1,
+            prepaid: deposit,
+        });
         self.events.publish(SupplyContractSigned {
             seller,
             buyer,

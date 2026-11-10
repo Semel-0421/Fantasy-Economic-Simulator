@@ -3,7 +3,7 @@
 //! at a time starts as the reserve can pay, and farmland and mines open state-enterprise facilities.
 use super::banks::BankState;
 use super::development::{DevelopmentState, StateProject};
-use super::facilities::{FacilityTable, MODE_AUTOMATED, OWNER_NPC};
+use super::facilities::{FacilityTable, NewFacility, MODE_AUTOMATED, OWNER_NPC};
 use super::groups::{private_enterprise_at, GroupTable};
 use super::land::LandState;
 use super::money_ledger::{pay_households, state_excess};
@@ -467,15 +467,15 @@ impl Planner<'_> {
         bank.reserve[nation] -= cash;
         let state = state_enterprise_of(groups, self.banks.nation_node(self.nodes, p.nation));
         let facilities = self.world.get_mut::<FacilityTable>();
-        let id = facilities.add(
-            p.node,
-            p.def_index,
-            OWNER_NPC,
-            MODE_AUTOMATED,
-            1,
-            Fx::ONE,
+        let id = facilities.add(NewFacility {
+            node: p.node,
+            def_index: p.def_index,
+            owner: OWNER_NPC,
+            mode: MODE_AUTOMATED,
+            level: 1,
+            efficiency: Fx::ONE,
             cash,
-        );
+        });
         facilities.group[id] = state;
     }
 

@@ -87,17 +87,6 @@ impl NodeTable {
         }
     }
 
-    /// The classes a node falls in, largest first, ending with itself.
-    pub fn class_path(&self, node: i32) -> String {
-        let mut path = self.key_of(node).to_string();
-        let mut n = self.parent[node as usize];
-        while n >= 0 {
-            path = format!("{}/{path}", self.key_of(n));
-            n = self.parent[n as usize];
-        }
-        path
-    }
-
     pub fn try_find(&self, key: &str) -> Option<NodeId> {
         self.index_by_key.get(key).map(|&i| NodeId(i))
     }

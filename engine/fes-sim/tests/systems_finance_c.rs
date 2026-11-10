@@ -11,7 +11,7 @@ use fes_core::WorldLevel;
 use fes_data::database::GameDatabase;
 use fes_data::{FileDataSource, MapDef};
 use fes_sim::agents::bank_seizure::trader_offer;
-use fes_sim::agents::contract_system::{ContractRoute, ContractSystem};
+use fes_sim::agents::contract_system::{ContractRoute, ContractSystem, NewContract};
 use fes_sim::agents::demand_forecast::DemandForecastSystem;
 use fes_sim::agents::facilities::OWNER_NPC;
 use fes_sim::agents::groups::{city_of, KIND_COMPANY, KIND_GUILD};
@@ -495,9 +495,15 @@ fn contract_deposit_is_drawn_down_and_the_rest_returns_at_the_end() {
         from_node: from as i32,
         to_node: to,
     };
-    world
-        .get_mut::<ContractTable>()
-        .add(0, 1, route, 1, 10, 0, 500);
+    world.get_mut::<ContractTable>().add(NewContract {
+        seller: 0,
+        buyer: 1,
+        route,
+        quantity: 1,
+        unit_price: 10,
+        end_turn: 0,
+        prepaid: 500,
+    });
     step(&mut sim);
     assert_eq!(sim.context().world.get::<ContractTable>().count(), 0);
     assert!(sim.context().world.get::<GroupTable>().cash[1] >= buyer + 500 - 1000);
@@ -530,9 +536,15 @@ fn contract_delivers_at_its_price() {
         from_node: from as i32,
         to_node: to,
     };
-    world
-        .get_mut::<ContractTable>()
-        .add(0, 1, route, 10, unit, 100, 0);
+    world.get_mut::<ContractTable>().add(NewContract {
+        seller: 0,
+        buyer: 1,
+        route,
+        quantity: 10,
+        unit_price: unit,
+        end_turn: 100,
+        prepaid: 0,
+    });
     ContractSystem::default()
         .execute(sim.context_mut())
         .unwrap();

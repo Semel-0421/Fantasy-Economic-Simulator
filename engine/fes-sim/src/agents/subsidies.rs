@@ -4,7 +4,7 @@
 use super::asset_prices::land_price;
 use super::banks::BankState;
 use super::development::{DevelopmentState, SubsidyPolicy};
-use super::facilities::{FacilityTable, MODE_AUTOMATED, OWNER_NPC};
+use super::facilities::{FacilityTable, NewFacility, MODE_AUTOMATED, OWNER_NPC};
 use super::groups::{
     city_of, private_enterprise_at, GroupTable, KIND_COMPANY, KIND_GUILD, KIND_PRIVATE_ENTERPRISE,
 };
@@ -242,15 +242,15 @@ impl Opener<'_> {
         }
         pay_households(self.world, self.nodes, site, plot);
         let facilities = self.world.get_mut::<FacilityTable>();
-        let id = facilities.add(
-            site,
-            def.index,
-            OWNER_NPC,
-            MODE_AUTOMATED,
-            1,
-            Fx::ONE,
-            facility_cash,
-        );
+        let id = facilities.add(NewFacility {
+            node: site,
+            def_index: def.index,
+            owner: OWNER_NPC,
+            mode: MODE_AUTOMATED,
+            level: 1,
+            efficiency: Fx::ONE,
+            cash: facility_cash,
+        });
         facilities.group[id] = group;
         self.count[site as usize] += 1;
     }

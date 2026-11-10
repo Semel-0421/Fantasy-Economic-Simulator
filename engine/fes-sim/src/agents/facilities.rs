@@ -37,26 +37,27 @@ native_table! {
     }
 }
 
+/// What a new facility starts with (the arguments of C# `FacilityTable.Add`).
+pub struct NewFacility {
+    pub node: i32,
+    pub def_index: i32,
+    pub owner: i32,
+    pub mode: u8,
+    pub level: i32,
+    pub efficiency: Fx,
+    pub cash: i64,
+}
+
 impl FacilityTable {
     /// C# `FacilityTable.Add`; returns the new row.
-    #[allow(clippy::too_many_arguments)]
-    pub fn add(
-        &mut self,
-        node: i32,
-        def_index: i32,
-        owner: i32,
-        mode: u8,
-        level: i32,
-        efficiency: Fx,
-        cash: i64,
-    ) -> usize {
-        self.node.push(node);
-        self.def_index.push(def_index);
-        self.owner.push(owner);
-        self.mode.push(mode);
-        self.level.push(level);
-        self.efficiency.push(efficiency.raw());
-        self.cash.push(cash);
+    pub fn add(&mut self, new: NewFacility) -> usize {
+        self.node.push(new.node);
+        self.def_index.push(new.def_index);
+        self.owner.push(new.owner);
+        self.mode.push(new.mode);
+        self.level.push(new.level);
+        self.efficiency.push(new.efficiency.raw());
+        self.cash.push(new.cash);
         self.negative_cash_weeks.push(0);
         self.warehouse_claim_until.push(-1);
         self.group.push(-1);
@@ -167,15 +168,15 @@ impl<'a> FacilitySpawn<'a> {
         if nodes.absorbed() && def.core_only && !nodes.is_seat(at) {
             at = nodes.core[nodes.ancestor_at(node as i32, WorldLevel::Region) as usize];
         }
-        table.add(
-            at,
-            def.index,
-            OWNER_NPC,
-            MODE_AUTOMATED,
-            1,
-            Fx::ONE,
-            self.db.config.facility_start_cash[def.tier as usize],
-        );
+        table.add(NewFacility {
+            node: at,
+            def_index: def.index,
+            owner: OWNER_NPC,
+            mode: MODE_AUTOMATED,
+            level: 1,
+            efficiency: Fx::ONE,
+            cash: self.db.config.facility_start_cash[def.tier as usize],
+        });
     }
 
     fn draw(&self, node: usize, tier: usize, k: i32) -> Option<&'a FacilityDef> {
@@ -231,15 +232,15 @@ fn spawn_continental(
         let mut k = 0;
         while k < per && count > 0 {
             let at = villages[((def.index + k * count / per) % count) as usize];
-            table.add(
-                at,
-                def.index,
-                OWNER_NPC,
-                MODE_AUTOMATED,
-                1,
-                Fx::ONE,
-                db.config.facility_start_cash[def.tier as usize],
-            );
+            table.add(NewFacility {
+                node: at,
+                def_index: def.index,
+                owner: OWNER_NPC,
+                mode: MODE_AUTOMATED,
+                level: 1,
+                efficiency: Fx::ONE,
+                cash: db.config.facility_start_cash[def.tier as usize],
+            });
             k += 1;
         }
     }

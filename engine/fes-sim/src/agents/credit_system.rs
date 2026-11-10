@@ -34,11 +34,6 @@ const BILL_FACILITY_BASE: i32 = -3;
 /// C# `BondTable.PlayerHolder`.
 pub const BOND_PLAYER_HOLDER: i32 = i32::MIN;
 
-/// C# `BillHolders.Facility`.
-pub fn bill_facility(facility: i32) -> i32 {
-    BILL_FACILITY_BASE - facility
-}
-
 /// A company too long behind on its bonds defaulted (C# `BondDefaulted`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

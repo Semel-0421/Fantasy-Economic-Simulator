@@ -6,6 +6,16 @@ import { catalogues, COMPLETE_LANGUAGES, catalogueCoverage } from '../src/i18n/c
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
 
 describe('language state and formatting', () => {
+  it('localizes all engine grades in good labels while preserving unknown suffixes', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => 'ko' });
+    const { goodLabel } = await import('../src/ui/market');
+    expect(goodLabel('g1_0@low')).toBe('황금 밀 (하급)');
+    expect(goodLabel('g1_0@mid')).toBe('황금 밀 (중급)');
+    expect(goodLabel('g1_0@high')).toBe('황금 밀 (상급)');
+    expect(goodLabel('g1_0@best')).toBe('황금 밀 (최상급)');
+    expect(goodLabel('g1_0')).toBe('황금 밀');
+    expect(goodLabel('g1_0@unknown')).toBe('황금 밀 (unknown)');
+  });
   it('defaults to English without storage and never detects the browser language', async () => {
     vi.stubGlobal('navigator', { language: 'ar' });
     vi.stubGlobal('localStorage', { getItem: () => null });

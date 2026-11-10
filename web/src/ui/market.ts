@@ -24,7 +24,10 @@ export const coinsOf = (raw: number): number => Math.floor(raw / FX_ONE);
 export function goodLabel(key: string): string {
   const [base = key, grade] = key.split('@');
   const name = goodName(base);
-  return grade ? i18nText('market.graded-good', { name, grade }) : name;
+  if (!grade) return name;
+  const label = grade === 'low' || grade === 'mid' || grade === 'high' || grade === 'best'
+    ? i18nText(`grade.${grade}`) : grade;
+  return i18nText('market.graded-good', { name, grade: label });
 }
 
 /**

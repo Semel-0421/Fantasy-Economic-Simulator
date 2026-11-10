@@ -8,6 +8,9 @@ import { LANGUAGES } from '../src/i18n/languages.ts';
 import { en } from '../src/i18n/en.ts';
 
 const screenshots = new Set(['ko', 'ar', 'ur', 'ja', 'zh-Hans', 'hi', 'de', 'ru']);
+const requested = process.argv.slice(2);
+if (requested.some(code => !LANGUAGES.some(language => language.code === code))) throw new Error('Unknown language code');
+const languages = LANGUAGES.filter(language => !requested.length || requested.includes(language.code));
 const report = [], output = 'test-results';
 mkdirSync(output, { recursive: true });
 process.env.NODE_ENV = 'production';
@@ -20,7 +23,7 @@ let browser;
 const save = () => writeFileSync(`${output}/ui-languages-report.json`, JSON.stringify(report, null, 2));
 try {
   browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL ?? 'msedge', headless: true });
-  for (const language of LANGUAGES) for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+  for (const language of languages) for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     const context = await browser.newContext({ viewport, reducedMotion: 'reduce', serviceWorkers: 'block' });
     const page = await context.newPage(), errors = [];
     let stage = 'startup';
@@ -83,5 +86,6 @@ try {
   await browser?.close(); await new Promise(done => server.httpServer.close(done)); save();
 }
 const failures = report.filter(row => !row.passed);
+if (report.length !== languages.length * 14) throw new Error('Incomplete language review');
 console.log(JSON.stringify({ checked: report.length, failures: failures.length, screenshots: report.filter(row => row.screenshot).length, report: `${output}/ui-languages-report.json` }));
 if (failures.length) process.exitCode = 1;

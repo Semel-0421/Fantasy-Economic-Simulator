@@ -37,6 +37,12 @@ describe('map layout', () => {
     expect(out.map((d) => d.to).sort()).toEqual(map.routes.filter((r) => r.from === from).map((r) => r.to).sort());
   });
 
+  it('chooses the same direction for equal-time route pairs after reordering', () => {
+    const routes = [{ from: 7, to: 3, turns: 1, terrain: 0 }, { from: 3, to: 7, turns: 1, terrain: 0 }];
+    expect(routePairs({ ...map, routes })).toEqual([routes[1]]);
+    expect(routePairs({ ...map, routes: [...routes].reverse() })).toEqual([routes[1]]);
+  });
+
   it('picks the nearest town within the radius, or none', () => {
     const { points } = layoutMap(map);
     const town = map.nodes.find(isTown)!;

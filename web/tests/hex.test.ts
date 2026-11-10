@@ -54,7 +54,7 @@ describe('full-scale seeded hex layout (wrapped east-west)', () => {
     }
     expect(pickHexTown(map, layout, 10, -1000)).toBe(-1);
   });
-  for (const seed of ['scenario-1', 'sample-7']) {
+  for (const seed of ['scenario-1', 'sample-7', 'sample-5']) {
     it(`keeps every continent, nation and region connected across the seam (${seed})`, () => {
       const l = seed === 'scenario-1' ? layout : layoutHexMap(map, seed);
       for (const [level, field] of [[0, 'continent'], [1, 'nation'], [2, 'region']] as const) {

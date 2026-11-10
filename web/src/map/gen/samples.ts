@@ -59,12 +59,12 @@ async function renderSeed(seed: string): Promise<Record<string, unknown>> {
   screen?.destroy(); screen = null;
   const host = document.getElementById('map')!;
   host.replaceChildren();
-  const t0 = performance.now();
-  const world = generateWorld(seed, continentNeeds(map));
-  const genMs = performance.now() - t0;
   const t1 = performance.now();
   const layout = layoutHexMap(map, seed);
   const layoutMs = performance.now() - t1;
+  const t0 = performance.now();
+  const world = generateWorld(layout.worldSeed, continentNeeds(map));
+  const genMs = performance.now() - t0;
   drawDebug(world);
   screen = await createMap(host, map, () => {}, seed);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -72,7 +72,7 @@ async function renderSeed(seed: string): Promise<Record<string, unknown>> {
   world.biome.forEach((b, i) => { if (world.land[i]) biome[b] = (biome[b] ?? 0) + 1; });
   for (const k of Object.keys(biome)) biome[k] = Math.round(1000 * biome[k]! / land) / 10;
   return {
-    seed, attempt: world.attempt, grid: `${world.grid.cols}x${world.grid.rows}`, landShare: Math.round(1000 * land / world.grid.size) / 10,
+    seed, worldSeed: layout.worldSeed, layout: world.layout, attempt: world.attempt, grid: `${world.grid.cols}x${world.grid.rows}`, landShare: Math.round(1000 * land / world.grid.size) / 10,
     continents: world.continents.map((c) => c.length), islands: land - world.continents.reduce((a, c) => a + c.length, 0),
     biomePercent: biome, riverHexes: world.river.reduce((a, b) => a + b, 0), lakeHexes: world.drainage.lake.reduce((a, b) => a + b, 0),
     routeConsistency: Math.round(1000 * routeConsistency(map, layout)) / 10, generateMs: Math.round(genMs), layoutMs: Math.round(layoutMs),

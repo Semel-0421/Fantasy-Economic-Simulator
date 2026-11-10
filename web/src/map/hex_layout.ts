@@ -3,13 +3,15 @@ import { routePairs, type Layout, type MapData, type MapNode, type Box } from '.
 import { generateWorld } from './gen/world';
 import type { Biome } from './gen/climate';
 import { partitionHexes } from './hex_partition';
-import { axialToPixel, hexDistance, hexKey, hexLine, pixelToAxial, type Axial } from './hex';
+import { axialToPixel, hexDistance, hexKey, hexLine, pixelToAxial, neighbours, type Axial } from './hex';
 
 export type Terrain = Biome;
 export interface HexTile extends Axial { continent: number; nation: number; region: number; terrain: Terrain; road: boolean; river: boolean }
 export interface HexLayout extends Layout {
   /** The map seed this layout was generated from. */
   seed: string;
+  /** Actual generator seed, including a deterministic fitting retry suffix if needed. */
+  worldSeed: string;
   hexes: Map<string, HexTile>;
   nodeHexes: Map<number, Axial>;
   occupants: Map<string, number>;
@@ -55,7 +57,7 @@ export function continentNeeds(map: MapData): number[] {
 function partition(cells: Axial[], sizes: number[], id: number, minimums: number[]): Axial[][] {
   let last: unknown;
   for (let k = 0; k < 8; k++) {
-    try { return partitionHexes(cells, sizes, id + 31 * k, minimums); } catch (e) { last = e; }
+    try { return partitionHexes(cells, sizes, id + 4 * k, minimums); } catch (e) { last = e; }
   }
   throw last;
 }
@@ -86,7 +88,7 @@ function layoutOnce(map: MapData, seed: string, worldSeed: string): HexLayout {
   roots.forEach(count);
   const world = generateWorld(worldSeed, continentNeeds(map));
   const { grid } = world, axial = (i: number): Axial => ({ q: grid.q[i]!, r: grid.r[i]! });
-  const out: HexLayout = { seed, points: new Map(), boxes: new Map(), hexes: new Map(), nodeHexes: new Map(), occupants: new Map(), rivers: [], landBounds: { x: 0, y: 0, w: 0, h: 0 }, width: grid.width, cols: grid.cols, rows: grid.rows };
+  const out: HexLayout = { seed, worldSeed, points: new Map(), boxes: new Map(), hexes: new Map(), nodeHexes: new Map(), occupants: new Map(), rivers: [], landBounds: { x: 0, y: 0, w: 0, h: 0 }, width: grid.width, cols: grid.cols, rows: grid.rows };
   const coastal = new Uint8Array(grid.size);
   for (let i = 0; i < grid.size; i++) {
     for (let n = 0; n < 6 && world.land[i]; n++) { const j = grid.nb[i * 6 + n]!; if (j >= 0 && !world.land[j]) coastal[i] = 1; }
@@ -116,11 +118,16 @@ function layoutOnce(map: MapData, seed: string, worldSeed: string): HexLayout {
     }
     kids.forEach((child, i) => place(child, areas[i + 1]!, continent, nation, region));
   };
-  // A continent may straddle the east-west seam: unwrap it round its first cell so its territories
-  // are carved from one connected patch of coordinates; tiles are stored canonically.
+  // Follow land adjacency across the seam; a long peninsula can lie more than half a world
+  // from the first cell, so unwrapping each cell independently would cut the carving graph.
   roots.forEach((root, k) => {
     const cells = world.continents[k]!.map(axial), ref = cells[0]!;
-    place(root, cells.map((hex) => nearestCopy(out, ref, hex)), root.id, -1, -1);
+    const members = new Set(cells.map(hexKey)), placed = new Map([[hexKey(ref), ref]]), queue = [ref];
+    for (let head = 0; head < queue.length; head++) for (const hex of neighbours(queue[head]!)) {
+      const key = hexKey(wrapHex(out, hex));
+      if (members.has(key) && !placed.has(key)) { placed.set(key, hex); queue.push(hex); }
+    }
+    place(root, cells.map((hex) => placed.get(hexKey(hex))!), root.id, -1, -1);
   });
   for (let i = 0; i < grid.size; i++) {
     const d = world.drainage.down[i]!;

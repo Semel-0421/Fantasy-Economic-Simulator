@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { rng, wrappedFbm } from '../src/map/gen/rng';
 import { makeGrid, wrapDx } from '../src/map/gen/grid';
 import { drain } from '../src/map/gen/hydro';
-import { generateWorld } from '../src/map/gen/world';
+import { DEFAULT_GEN_OPTIONS, generateWorld, type GenOptions } from '../src/map/gen/world';
+import { elevation, erode, growPlates } from '../src/map/gen/geology';
+import { growContinents } from '../src/map/gen/crust';
+import { fullscaleMap } from './fullscale-map';
+import { continentNeeds } from '../src/map/hex_layout';
 
 describe('map generator', () => {
   it('draws the same numbers from the same seed and different ones from another', () => {
@@ -48,5 +52,72 @@ describe('map generator', () => {
     const needs = [380, 400, 360, 390, 370], w = generateWorld('test-world', needs);
     needs.forEach((n, k) => expect(w.continents[k]!.length).toBeGreaterThanOrEqual(n));
     expect(new Set(w.continents.flat()).size).toBe(w.continents.flat().length);
+  });
+  it('avoids repeated latitude rows and near-equal sizes across the review seeds', () => {
+    const needs = continentNeeds(fullscaleMap);
+    let varied = 0, spread = 0, equatorial = 0;
+    for (const seed of ['scenario-1', 'scenario-2', 'scenario-3', ...Array.from({ length: 27 }, (_, i) => `sample-${i + 4}`)]) {
+      const w = generateWorld(seed, needs), bands = new Map<number, number>();
+      for (const cells of w.continents) {
+        const lat = cells.reduce((s, i) => s + w.climate.latitude[Math.floor(i / w.grid.cols)]!, 0) / cells.length;
+        const band = Math.floor(lat / 10);
+        bands.set(band, (bands.get(band) ?? 0) + 1);
+      }
+      const occupied = [...bands.values()].sort((a, b) => b - a);
+      if (occupied[0]! <= 2 && occupied[0]! + occupied[1]! < 4) spread++;
+      const sizes = w.continents.map((c) => c.length);
+      if (Math.max(...sizes) / Math.min(...sizes) >= 1.4) varied++;
+      if (w.land.some((v, i) => v === 1 && Math.abs(w.climate.latitude[Math.floor(i / w.grid.cols)]!) < 10)) equatorial++;
+      needs.forEach((n, k) => expect(sizes[k]).toBeGreaterThanOrEqual(n));
+    }
+    expect(varied).toBeGreaterThanOrEqual(20);
+    expect(spread).toBeGreaterThanOrEqual(20);
+    expect(equatorial).toBeGreaterThanOrEqual(24);
+  });
+  it('applies explicit generation controls deterministically', () => {
+    const needs = [380, 380, 380, 380, 380];
+    const options = { latitudeTop: 40, latitudeBottom: -35, plateCount: 8, noiseStrength: 0.5, erosionStrength: 0.5, riverThreshold: 10000, seedSpacing: 0.8, lowLatitudeBias: 0.4, continentSizeRange: [1.4, 1.9] as const };
+    const w = generateWorld('options', needs, options), again = generateWorld('options', needs, options);
+    expect(w.height).toEqual(again.height);
+    expect(w.continents).toEqual(again.continents);
+    expect(w.climate.latitude[0]).toBe(40);
+    expect(w.climate.latitude[w.grid.rows - 1]).toBe(-35);
+    expect(new Set(w.plates.plate).size).toBe(8);
+    expect(w.river.some(Boolean)).toBe(false);
+    const defaults = generateWorld('options', needs);
+    expect(w.height).not.toEqual(defaults.height);
+  });
+  it('keeps the crust separated by three hexes with cached exclusion zones', () => {
+    const grid = makeGrid(40, 24), crust = growContinents(grid, [70, 90, 110], rng('gap'), DEFAULT_GEN_OPTIONS, growPlates(grid, 12, rng('gap-plates')), 'scattered');
+    for (let i = 0; i < grid.size; i++) if (crust[i]! >= 0) {
+      let ring = new Set([i]);
+      for (let d = 0; d < 3; d++) {
+        const next = new Set<number>();
+        for (const c of ring) for (let n = 0; n < 6; n++) {
+          const j = grid.nb[c * 6 + n]!;
+          if (j >= 0) { expect(crust[j] === -1 || crust[j] === crust[i]).toBe(true); next.add(j); }
+        }
+        ring = next;
+      }
+    }
+  });
+  it('scales elevation noise and erosion without changing their input', () => {
+    const grid = makeGrid(40, 24), crust = growContinents(grid, [70, 90, 110], rng('stages'), DEFAULT_GEN_OPTIONS, growPlates(grid, 12, rng('stage-plates')), 'scattered');
+    const plates = growPlates(grid, 8, rng('plates'));
+    const smooth = elevation(grid, plates, crust, rng('height'), 0), noisy = elevation(grid, plates, crust, rng('height'), 1);
+    expect(noisy).not.toEqual(smooth);
+    const copy = noisy.slice();
+    expect(erode(grid, noisy, 4, 0)).toEqual(noisy);
+    expect(erode(grid, noisy, 4, 1)).not.toEqual(noisy);
+    expect(noisy).toEqual(copy);
+  });
+  it.each<Partial<GenOptions>>([
+    { latitudeTop: 0 }, { latitudeBottom: 1 }, { latitudeTop: 91 },
+    { seedSpacing: 0 }, { lowLatitudeBias: 2 }, { latitudeSpacing: -1 },
+    { continentSizeRange: [1.3, 1.2] }, { continentSizeRange: [1.3, Infinity] },
+    { plateCount: 2.5 }, { plateCount: 0 }, { noiseStrength: NaN },
+    { erosionStrength: 2 }, { riverThreshold: 0 },
+  ])('rejects invalid generation options %j', (options) => {
+    expect(() => generateWorld('invalid', [380], options)).toThrow('Invalid map generation options');
   });
 });

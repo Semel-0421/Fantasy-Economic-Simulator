@@ -48,64 +48,6 @@ export function growPlates(grid: Grid, count: number, random: Rng): Plates {
   return { plate, vx, vy };
 }
 
-/**
- * Continental crust: one blob per continent, grown from far-apart seeds with uneven random growth
- * (ragged, fractal-like coasts) and never closer than `gap` hexes to another blob, so the
- * continents stay separate landmasses with open sea between them.
- */
-export function growContinents(grid: Grid, targets: number[], random: Rng, gap = 3): Int32Array {
-  const owner = new Int32Array(grid.size).fill(-1), margin = Math.min(6, Math.floor(grid.rows / 4)), seeds: number[] = [];
-  // A low-frequency field makes some directions grow faster: peninsulas, bays, irregular shapes.
-  const shape = wrappedFbm(random.int(1 << 30), 3, 90, grid.width), drift = wrappedFbm(random.int(1 << 30), 3, 160, grid.width);
-  // Only the poles are edges: east and west wrap round.
-  const edgeOk = (i: number): boolean => { const row = Math.floor(i / grid.cols); return Math.min(row, grid.rows - 1 - row) >= 3 + 3 * (0.5 + 0.5 * shape(grid.x[i]!, grid.y[i]!)); };
-  const interior = (i: number): boolean => { const row = Math.floor(i / grid.cols); return row >= margin && row < grid.rows - margin; };
-  let first = random.int(grid.size);
-  while (!interior(first)) first = random.int(grid.size);
-  seeds.push(first);
-  while (seeds.length < targets.length) {
-    let best = -1, bestD = -1;
-    for (let k = 0; k < 400; k++) {
-      const c = random.int(grid.size);
-      if (!interior(c)) continue;
-      const d = Math.min(...seeds.map((s) => cellDistance(grid, s, c)));
-      if (d > bestD) { bestD = d; best = c; }
-    }
-    seeds.push(best);
-  }
-  const near = (cell: number, b: number): boolean => {
-    const seen = new Set([cell]); let ring = [cell];
-    for (let d = 0; d < gap; d++) {
-      const next: number[] = [];
-      for (const c of ring) for (let n = 0; n < 6; n++) {
-        const j = grid.nb[c * 6 + n]!;
-        if (j < 0 || seen.has(j)) continue;
-        if (owner[j]! >= 0 && owner[j] !== b) return true;
-        seen.add(j); next.push(j);
-      }
-      ring = next;
-    }
-    return false;
-  };
-  const frontier = seeds.map((s, b) => { owner[s] = b; return [s]; }), size = seeds.map(() => 1);
-  const rate = seeds.map(() => random.range(0.7, 1.3));
-  for (let guard = 0; guard < grid.size * 40; guard++) {
-    const open = [...frontier.keys()].filter((b) => frontier[b]!.length && size[b]! < targets[b]!);
-    if (!open.length) break;
-    let pick = random.next() * open.reduce((a, b) => a + rate[b]!, 0), b = open[0]!;
-    for (const o of open) if ((pick -= rate[o]!) <= 0) { b = o; break; }
-    const list = frontier[b]!, k = random.int(list.length), cell = list[k]!;
-    const options: number[] = [];
-    for (let n = 0; n < 6; n++) { const j = grid.nb[cell * 6 + n]!; if (j >= 0 && owner[j] === -1 && edgeOk(j) && !near(j, b)) options.push(j); }
-    if (!options.length) { list[k] = list[list.length - 1]!; list.pop(); continue; }
-    const j = options[random.int(options.length)]!;
-    // Uneven acceptance from the shape field: growth stalls in some directions and races in others.
-    if (random.next() > 0.45 + 0.55 * (0.5 + 0.5 * drift(grid.x[j]!, grid.y[j]!))) continue;
-    owner[j] = b; size[b]!++; list.push(j);
-  }
-  return owner;
-}
-
 /** Breadth-first distance (in hexes) from every cell to the nearest cell in `sources`. */
 export function distanceFrom(grid: Grid, sources: number[], limit = 1e9): Int32Array {
   const dist = new Int32Array(grid.size).fill(1e9), queue = new Int32Array(grid.size);
@@ -120,7 +62,7 @@ export function distanceFrom(grid: Grid, sources: number[], limit = 1e9): Int32A
 }
 
 /** Raw elevation (sea level is chosen later): crust, boundary uplift, noise, hotspots, edge falloff. */
-export function elevation(grid: Grid, plates: Plates, crust: Int32Array, random: Rng): Float32Array {
+export function elevation(grid: Grid, plates: Plates, crust: Int32Array, random: Rng, noiseStrength = 1): Float32Array {
   const { plate, vx, vy } = plates, h = new Float32Array(grid.size), stress = new Float32Array(grid.size);
   const boundary: number[] = [];
   for (let i = 0; i < grid.size; i++) {
@@ -160,7 +102,7 @@ export function elevation(grid: Grid, plates: Plates, crust: Int32Array, random:
     // The deep ocean floor is calmer than continental crust (abyssal plains), so noise rarely
     // builds land bridges between continents.
     const roughness = land ? 1 : 0.45;
-    v += roughness * (0.32 * noise(x, y) + 0.12 * Math.abs(ridge(x, y)));
+    v += noiseStrength * roughness * (0.32 * noise(x, y) + 0.12 * Math.abs(ridge(x, y)));
     for (const s of hotspots) v += 0.75 * Math.exp(-(cellDistance(grid, i, s) ** 2) / 2500);
     // Keep the polar rims at sea; east and west wrap, so there is no edge there.
     const row = Math.floor(i / grid.cols);
@@ -172,7 +114,7 @@ export function elevation(grid: Grid, plates: Plates, crust: Int32Array, random:
 }
 
 /** Thermal erosion (slopes steeper than the talus angle slide down) and light smoothing. */
-export function erode(grid: Grid, h: Float32Array, passes = 4): Float32Array {
+export function erode(grid: Grid, h: Float32Array, passes = 4, strength = 1): Float32Array {
   let cur = h.slice();
   for (let pass = 0; pass < passes; pass++) {
     const next = cur.slice();
@@ -184,8 +126,8 @@ export function erode(grid: Grid, h: Float32Array, passes = 4): Float32Array {
         sum += cur[j]!; count++;
         if (cur[i]! - cur[j]! > drop) { drop = cur[i]! - cur[j]!; low = j; }
       }
-      if (low >= 0 && drop > 0.14) { const move = 0.25 * (drop - 0.14); next[i] = next[i]! - move; next[low] = next[low]! + move; }
-      next[i] = next[i]! * 0.85 + (count ? sum / count : cur[i]!) * 0.15;
+      if (low >= 0 && drop > 0.14) { const move = strength * 0.25 * (drop - 0.14); next[i] = next[i]! - move; next[low] = next[low]! + move; }
+      next[i] = next[i]! * (1 - strength * 0.15) + (count ? sum / count : cur[i]!) * strength * 0.15;
     }
     cur = next;
   }

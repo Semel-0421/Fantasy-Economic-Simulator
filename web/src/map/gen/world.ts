@@ -2,13 +2,54 @@
 // -> rivers. Retries deterministically (seed|attempt) until the land splits into enough separate
 // landmasses, each big enough for the continent the simulation's map data puts on it.
 import { makeGrid, gridFor, type Grid } from './grid';
-import { growPlates, growContinents, elevation, erode, type Plates } from './geology';
+import { growPlates, elevation, erode, distanceFrom, type Plates } from './geology';
+import { growContinents } from './crust';
+import { roughenCoasts } from './coast';
 import { drain, landComponents, accumulate, type Drainage } from './hydro';
 import { climate, biomes, type Biome, type Climate } from './climate';
 import { rng } from './rng';
 
+export type WorldLayout = 'scattered' | 'clustered' | 'rifted';
+
+export interface GenOptions {
+  layout: WorldLayout | 'mixed';
+  /** Scattered, clustered, rifted weights; selected once per world seed. */
+  layoutWeights: readonly [number, number, number];
+  boundaryAttraction: number;
+  stretchRange: readonly [number, number];
+  spacingVariation: number;
+  peninsulaStrength: number;
+  riftRoughness: number;
+  /** Initial seed separation as a fraction of the two crust blobs' estimated radii. */
+  seedSpacing: number;
+  /** Rejection bias toward the equator: 0 uniform, 1 strongest at the latitude limits. */
+  lowLatitudeBias: number;
+  /** Soft repulsion between seed latitudes, in degrees; 0 disables it. */
+  latitudeSpacing: number;
+  latitudeTop: number;
+  latitudeBottom: number;
+  /** Crust target / required land cells, sampled in shuffled strata to retain size variety. */
+  continentSizeRange: readonly [number, number];
+  plateCount: number;
+  noiseStrength: number;
+  erosionStrength: number;
+  /** Minimum upstream catchment in hexes. */
+  riverThreshold: number;
+}
+
+export const DEFAULT_GEN_OPTIONS: Readonly<GenOptions> = Object.freeze({
+  layout: 'mixed', layoutWeights: Object.freeze([0.3, 0.45, 0.25] as const),
+  boundaryAttraction: 0.7, stretchRange: Object.freeze([1.2, 2.5] as const),
+  spacingVariation: 0.55, peninsulaStrength: 0.7, riftRoughness: 0.8,
+  seedSpacing: 0.9, lowLatitudeBias: 0.5, latitudeSpacing: 12.8,
+  latitudeTop: 48, latitudeBottom: -48,
+  continentSizeRange: Object.freeze([1.3, 2.1] as const),
+  plateCount: 14, noiseStrength: 1, erosionStrength: 1, riverThreshold: 6,
+});
+
 export interface GenWorld {
   seed: string;
+  layout: WorldLayout;
   attempt: number;
   grid: Grid;
   plates: Plates;
@@ -26,15 +67,50 @@ export interface GenWorld {
   continents: number[][];
 }
 
-export function generateWorld(seed: string, needs: number[]): GenWorld {
+export function generateWorld(seed: string, needs: number[], options: Partial<GenOptions> = {}): GenWorld {
+  const o = { ...DEFAULT_GEN_OPTIONS, ...options };
+  if (!Array.isArray(o.continentSizeRange) || o.continentSizeRange.length !== 2
+    || !Array.isArray(o.stretchRange) || o.stretchRange.length !== 2
+    || !Array.isArray(o.layoutWeights) || o.layoutWeights.length !== 3) throw new Error('Invalid map generation options');
+  const [minSize, maxSize] = o.continentSizeRange;
+  const weightTotal = o.layoutWeights.reduce((a, b) => a + b, 0);
+  if (Object.entries(o).some(([key, v]) => !['layout', 'layoutWeights', 'stretchRange', 'continentSizeRange'].includes(key) && !Number.isFinite(v))
+    || !['mixed', 'scattered', 'clustered', 'rifted'].includes(o.layout)
+    || o.layoutWeights.some((v) => !Number.isFinite(v) || v < 0) || !Number.isFinite(weightTotal) || weightTotal <= 0
+    || o.stretchRange.some((v) => !Number.isFinite(v)) || o.stretchRange[0] < 1 || o.stretchRange[1] < o.stretchRange[0] || o.stretchRange[1] > 2.5
+    || o.boundaryAttraction < 0 || o.boundaryAttraction > 2 || o.spacingVariation < 0 || o.spacingVariation > 0.9 || o.peninsulaStrength < 0 || o.peninsulaStrength > 1
+    || o.riftRoughness < 0 || o.riftRoughness > 1
+    || !Number.isFinite(minSize) || !Number.isFinite(maxSize)
+    || o.latitudeTop <= 0 || o.latitudeTop > 90 || o.latitudeBottom >= 0 || o.latitudeBottom < -90
+    || o.seedSpacing <= 0 || o.seedSpacing > 2 || o.lowLatitudeBias < 0 || o.lowLatitudeBias > 1
+    || o.latitudeSpacing < 0 || o.latitudeSpacing > 30
+    || minSize < 1.2 || maxSize < minSize || maxSize > 2.5
+    || !Number.isInteger(o.plateCount) || o.plateCount < 2 || o.plateCount > 32
+    || o.noiseStrength < 0 || o.noiseStrength > 2 || o.erosionStrength < 0 || o.erosionStrength > 1
+    || o.riverThreshold < 1) throw new Error('Invalid map generation options');
   const total = needs.reduce((a, b) => a + b, 0);
-  const { cols, rows } = gridFor(total * 1.3, 0.33);
+  const { cols, rows } = gridFor(total * 1.4, 0.33);
   const grid = makeGrid(cols, rows);
+  let layout: WorldLayout = o.layout === 'mixed' ? 'rifted' : o.layout;
+  if (o.layout === 'mixed') {
+    let pick = rng(`${seed}|layout`).next() * weightTotal;
+    for (const [k, type] of (['scattered', 'clustered', 'rifted'] as const).entries()) if ((pick -= o.layoutWeights[k]!) < 0) { layout = type; break; }
+  }
+  if (layout === 'rifted' && o.plateCount < needs.length) throw new Error('Rifted worlds need at least one plate per continent');
   for (let attempt = 0; attempt < 24; attempt++) {
     const random = rng(`${seed}|${attempt}`);
-    const crust = growContinents(grid, needs.map((n) => Math.ceil(n * 1.32)), random);
-    const plates = growPlates(grid, 10 + random.int(5), random);
-    const height = erode(grid, elevation(grid, plates, crust, random));
+    const sizes = needs.map((_, k) => minSize + (maxSize - minSize) * (k + random.next()) / needs.length);
+    for (let k = sizes.length - 1; k > 0; k--) { const j = random.int(k + 1); [sizes[k], sizes[j]] = [sizes[j]!, sizes[k]!]; }
+    const plates = growPlates(grid, o.plateCount, random);
+    const crust = growContinents(grid, needs.map((n, k) => Math.ceil(n * sizes[k]!)), random, o, plates, layout);
+    const crustCounts = new Uint32Array(needs.length);
+    for (const b of crust) if (b >= 0) crustCounts[b]!++;
+    if (needs.some((n, b) => crustCounts[b]! < n)) continue;
+    const height = erode(grid, elevation(grid, plates, crust, random, o.noiseStrength), 4, o.erosionStrength);
+    // Preserve the rift/strait buffer after uplift and erosion; offshore islands remain possible.
+    const shore = distanceFrom(grid, [...crust.keys()].filter((i) => crust[i]! >= 0), 2);
+    for (let i = 0; i < grid.size; i++) if (crust[i] === -1 && shore[i]! <= 2) height[i] = Math.min(height[i]!, -0.01);
+    roughenCoasts(grid, height, crust, random);
     {
       // Sea level is the crust's own datum: continental crust stands above it, ocean floor below.
       const sea = 0;
@@ -43,6 +119,7 @@ export function generateWorld(seed: string, needs: number[]): GenWorld {
       for (let i = 0; i < grid.size; i++) land[i] = height[i]! >= sea && !drainage.lake[i] ? 1 : 0;
       // Each continent is the landmass holding most of its crust blob.
       const comps = landComponents(grid, land), continents: number[][] = [];
+      if (comps.length < needs.length) continue;
       let ok = true;
       for (let b = 0; b < needs.length && ok; b++) {
         const best = comps.map((c) => c.filter((i) => crust[i] === b).length).reduce((m, v, k, a) => v > a[m]! ? k : m, 0);
@@ -54,20 +131,21 @@ export function generateWorld(seed: string, needs: number[]): GenWorld {
       for (let i = 0; i < grid.size; i++) water[i] = land[i] ? 0 : 1;
       let peak = sea;
       for (let i = 0; i < grid.size; i++) if (land[i] && height[i]! > peak) peak = height[i]!;
-      // Temperate-centred worlds (a playable band, like a regional map rather than pole to pole).
-      const latTop = random.range(38, 60), latBottom = latTop - random.range(70, 95);
-      const c = climate(grid, height, water, sea, peak, latTop, latBottom);
+      const c = climate(grid, height, water, sea, peak, o.latitudeTop, o.latitudeBottom);
       const biome = biomes(grid, height, land, c);
       const flow = accumulate(grid, drainage, c.rain, land);
-      // Rivers: cells draining a large catchment (9+ hexes) that also gets at least 50 % of the
+      // Rivers: cells draining a large catchment that also gets at least 50 % of the
       // land's average rain per hex, so dry basins have fewer rivers than wet ones.
       const area = accumulate(grid, drainage, Float32Array.from({ length: grid.size }, () => 1), land);
       let rainSum = 0, landCount = 0;
       for (let i = 0; i < grid.size; i++) if (land[i]) { rainSum += c.rain[i]!; landCount++; }
       const meanRain = rainSum / Math.max(1, landCount);
       const river = new Uint8Array(grid.size);
-      for (let i = 0; i < grid.size; i++) if (land[i] && area[i]! >= 9 && flow[i]! >= 0.5 * area[i]! * meanRain && biome[i] !== 'mountain') river[i] = 1;
-      return { seed, attempt, grid, plates, height, sea, land, drainage, climate: c, biome, flow, river, continents };
+      const channels = [...land.keys()].filter((i) => land[i] && area[i]! >= o.riverThreshold && flow[i]! >= 0.5 * area[i]! * meanRain && biome[i] !== 'mountain');
+      // Long, narrow continents split catchments: admit small tributaries, then retain the main flow.
+      channels.sort((a, b) => flow[b]! - flow[a]! || a - b);
+      for (const i of channels.slice(0, Math.ceil(landCount * 0.035))) river[i] = 1;
+      return { seed, layout, attempt, grid, plates, height, sea, land, drainage, climate: c, biome, flow, river, continents };
     }
   }
   throw new Error(`No world for seed ${seed}: land would not split into ${needs.length} large enough landmasses`);

@@ -106,7 +106,7 @@ export function routePairs(map: MapData): MapRoute[] {
   for (const r of map.routes) {
     const key = `${Math.min(r.from, r.to)}-${Math.max(r.from, r.to)}`;
     const old = seen.get(key);
-    if (!old || r.turns < old.turns) seen.set(key, r);
+    if (!old || r.turns < old.turns || r.turns === old.turns && (r.from < old.from || r.from === old.from && r.terrain < old.terrain)) seen.set(key, r);
   }
   return [...seen.values()];
 }

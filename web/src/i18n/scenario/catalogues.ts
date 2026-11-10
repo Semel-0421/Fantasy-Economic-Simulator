@@ -1,0 +1,23 @@
+import type { LanguageCode } from '../languages';
+import { scenarioKo } from './ko';
+import { scenarioEs } from './es';
+import { scenarioPt } from './pt';
+import { scenarioFr } from './fr';
+import { scenarioDe } from './de';
+import { scenarioTr } from './tr';
+import { scenarioId } from './id';
+import { scenarioVi } from './vi';
+import { scenarioHa } from './ha';
+import { scenarioPcm } from './pcm';
+import { scenarioRu } from './ru';
+import { scenarioJa } from './ja';
+import { scenarioZhHans } from './zh-Hans';
+import { scenarioHi } from './hi';
+import { scenarioMr } from './mr';
+import { scenarioBn } from './bn';
+import { scenarioTe } from './te';
+import { scenarioTa } from './ta';
+import { scenarioAr } from './ar';
+import { scenarioUr } from './ur';
+
+export const scenarioCatalogues: Record<Exclude<LanguageCode, 'en'>, Record<string, string>> = { "ko": scenarioKo, "es": scenarioEs, "pt": scenarioPt, "fr": scenarioFr, "de": scenarioDe, "tr": scenarioTr, "id": scenarioId, "vi": scenarioVi, "ha": scenarioHa, "pcm": scenarioPcm, "ru": scenarioRu, "ja": scenarioJa, "zh-Hans": scenarioZhHans, "hi": scenarioHi, "mr": scenarioMr, "bn": scenarioBn, "te": scenarioTe, "ta": scenarioTa, "ar": scenarioAr, "ur": scenarioUr };

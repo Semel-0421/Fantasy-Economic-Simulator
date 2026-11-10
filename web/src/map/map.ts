@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // The world map drawn with PixiJS: region outlines, routes, towns by level, the player's position and
 // destination, and the selected town. Drag pans, the wheel and a two-finger pinch zoom, a tap selects
 // the nearest town. All input is DOM pointer events on the canvas; the Pixi scene only draws.
@@ -78,7 +79,7 @@ export async function createMap(host: HTMLElement, map: MapData, onSelect: (node
   canvas.style.touchAction = 'none';
   canvas.tabIndex = 0;
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', 'World map. Plus and minus zoom; zero fits the world. Choose a route below to travel by keyboard.');
+  canvas.setAttribute('aria-label', t('map.description'));
   host.prepend(canvas);
 
   const scene: Scene = { world: new Container(), marks: new Graphics(), labels: new Map() };

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { licenceChoices } from '../src/ui/licence_goods';
 import { heldLicenceText } from '../src/ui/finance';
+import { scenarioDate } from '../src/ui/turn';
 import type { Views } from '../src/sim/types';
 
 const csv = readFileSync('../engine/fixtures/fullscale/goods.csv', 'utf8');
@@ -29,7 +30,7 @@ describe('licence goods', () => {
   });
   it('renders held base-good identity, nation and expiry, plus trade scope', () => {
     const name = (base: number): string => base === 950 ? 'G19 0' : `Base ${base}`;
-    expect(heldLicenceText({ base_good: 950, nation: 7, expires_turn: 55 }, name, () => 'East nation', (turn) => `Week ${turn - 3}`))
+    expect(heldLicenceText({ base_good: 950, nation: 7, expires_turn: 55 }, name, () => 'East nation', scenarioDate(4)))
       .toBe('Licence to sell G19 0 · East nation · expires week 52');
     expect(heldLicenceText({ base_good: -1, nation: 7, expires_turn: 55 }, name, () => 'East nation'))
       .toContain('International trade licence');

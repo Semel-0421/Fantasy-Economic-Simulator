@@ -72,7 +72,7 @@ function settings(replay: () => void): HTMLElement {
     { className: 'settings' },
     el('summary', { text: i18nText("menu.settings") }),
     languageLabel,
-    el('label', {}, i18nText("menu.sound-volume-2"), slider),
+    el('label', {}, i18nText(language.code === 'en' ? 'menu.sound-volume-2' : 'menu.sound-volume'), slider),
     el('label', { className: 'check' }, music, i18nText("menu.music")),
     el('p', { className: 'note', text: i18nText("menu.reduced-motion-follows-your-system-setting") }),
     button(i18nText("menu.show-the-guide-again"), replay, 'guide-replay'),

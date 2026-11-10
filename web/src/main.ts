@@ -345,7 +345,7 @@ async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
   try {
     if (!saves) throw new Error(i18nText("main.saving-is-unavailable-in-this-browser"));
     await saves.write(slot, 'free', await game.save(), await game.turn(), game.mapSeed);
-    hud.addMessage(i18nText("main.saved-to", { arg1: slot.replace('manual', i18nText("main.slot")) }));
+    hud.addMessage(slot.startsWith('manual') ? i18nText('main.saved-slot', { slot: slot.slice('manual'.length) }) : i18nText('main.saved-to', { arg1: slot }));
   } catch (e) {
     hud.addMessage(i18nText("main.save-failed", { arg1: message(e) }));
   }

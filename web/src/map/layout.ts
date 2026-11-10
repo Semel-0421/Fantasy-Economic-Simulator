@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 // Deterministic map layout. The map data (map_nodes.csv) has no coordinates, so positions follow
 // the node tree: the world box is split into a grid of continents, each continent into a grid of
 // its nations, and so on down to regions; a city sits in the middle of its box and its villages
@@ -12,7 +13,7 @@ export const WORLD_W = 2000;
 export const WORLD_H = 1200;
 
 export const LEVEL = { continent: 0, nation: 1, region: 2, city: 3, village: 4 } as const;
-export const TERRAIN_NAMES = ['Road', 'Mountain', 'River', 'Sea'] as const;
+export const TERRAIN_NAMES = [t('terrain.road'), t('terrain.mountain'), t('terrain.river'), t('terrain.sea')] as const;
 
 export interface Point {
   x: number;

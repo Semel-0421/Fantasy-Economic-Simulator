@@ -26,8 +26,13 @@ describe('language state and formatting', () => {
     applyLanguage(root);
     expect(root).toEqual({ lang: 'ar', dir: 'rtl' });
     expect(language.code).toBe('ar');
+    expect(t('menu.language')).toBe(catalogues.ar['menu.language']);
+    expect(t('main.couldn-t-start-the-game', { arg1: '{arg2} <error>' })).toBe(catalogues.ar['main.couldn-t-start-the-game']!.replace('{arg1}', '{arg2} <error>'));
+    const { catalogues: activeCatalogues } = await import('../src/i18n/catalogues');
+    const translated = activeCatalogues.ar['menu.language'];
+    delete activeCatalogues.ar['menu.language'];
     expect(t('menu.language')).toBe('Language');
-    expect(t('main.couldn-t-start-the-game', { arg1: '{arg2} <error>' })).toBe("Couldn't start the game: {arg2} <error>");
+    activeCatalogues.ar['menu.language'] = translated;
     expect(formatNumber(1234)).toMatch(/1.*234/);
     expect(formatNumber(1234)).not.toMatch(/[٠-٩]/);
     expect(getItem).toHaveBeenCalledExactlyOnceWith('fes-lang');
@@ -44,6 +49,15 @@ describe('language state and formatting', () => {
     expect(reload).toHaveBeenCalledOnce();
     setItem.mockImplementation(() => { throw new Error('blocked'); });
     expect(() => chooseLanguage('ar')).not.toThrow();
+  });
+  it('uses structured scenario weeks for Korean licence expiry rather than a Week prefix', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => 'ko' });
+    const { heldLicenceText } = await import('../src/ui/finance');
+    const { scenarioDate } = await import('../src/ui/turn');
+    const text = heldLicenceText({ base_good: -1, nation: 7, expires_turn: 55 }, () => 'Goods', () => 'Nation', scenarioDate(4));
+    expect(text).toContain('52주');
+    expect(text).not.toContain('Week');
+    expect(text).not.toContain('56');
   });
 });
 

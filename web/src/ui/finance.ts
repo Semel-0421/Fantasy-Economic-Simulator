@@ -1,4 +1,4 @@
-import { t as i18nText, formatNumber } from '../i18n';
+import { t as i18nText, formatNumber, language } from '../i18n';
 // Panels for the scenario 2 and 3 tools: the exchange (shares listed at the bank the player stands
 // in), the nation's bonds, and licences. Each order is previewed first; a refusal shows the
 // simulation's own message, and only Confirm queues it for this week.
@@ -209,9 +209,10 @@ export interface LicencePanel {
 }
 
 export function heldLicenceText(held: Views['licences'][number], baseName: (base: number) => string, nationName: (nation: number) => string,
-  dateLabel: DateLabel = (turn) => i18nText("finance.week", { arg1: turn + 1 })): string {
-  const date = dateLabel(held.expires_turn);
-  const expiry = date.startsWith(i18nText("finance.week-2")) ? date.toLowerCase() : i18nText("finance.week-3", { arg1: held.expires_turn + 1, arg2: date });
+  dateLabel?: DateLabel): string {
+  const week = dateLabel ? dateLabel.weekOf?.(held.expires_turn) : held.expires_turn + 1;
+  const date = week === undefined ? dateLabel!(held.expires_turn) : i18nText('finance.week', { arg1: week });
+  const expiry = week === undefined ? i18nText("finance.week-3", { arg1: held.expires_turn + 1, arg2: date }) : language.code === 'en' ? date.toLowerCase() : date;
   return i18nText("finance.expires", { arg1: licenceName(held.base_good, baseName), arg2: nationName(held.nation), arg3: expiry });
 }
 
@@ -227,7 +228,7 @@ export function licencePanel(goods: Views['goods'], goodName: (g: number) => str
   const baseName = (base: number): string => baseNames.get(base) ?? i18nText("finance.good-2", { arg1: base });
   const showAll = el('input', { type: 'checkbox', id: 'licence-show-all' });
   const trade = (kind: number) => (): void =>
-    void form.ask({ BuyTradeLicense: { kind } }, i18nText("finance.buy-an-for-a-year", { arg1: licenceName(kind, goodName).toLowerCase() }));
+    void form.ask({ BuyTradeLicense: { kind } }, i18nText("finance.buy-an-for-a-year", { arg1: language.code === 'en' ? licenceName(kind, goodName).toLowerCase() : licenceName(kind, goodName) }));
   const forGood = (): void => {
     if (!select.value) return;
     const good = Number(select.value);

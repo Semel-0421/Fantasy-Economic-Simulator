@@ -4,6 +4,7 @@ import { t as i18nText } from '../i18n';
 import type { SaveMode, SaveStore } from '../save/store';
 import type { SimEventRecord, TurnReport } from '../sim/types';
 import { displayText } from '../data/names';
+import { translateScenario } from '../i18n/scenario';
 
 export const WEEKS_PER_YEAR = 52;
 
@@ -13,7 +14,7 @@ export function dateOf(turn: number): { year: number; week: number } {
 }
 
 /** How the game names a turn: the calendar in free mode, the scenario week in a scenario. */
-export type DateLabel = (turn: number) => string;
+export type DateLabel = { (turn: number): string; weekOf?(turn: number): number };
 
 export const calendarDate: DateLabel = (turn) => {
   const d = dateOf(turn);
@@ -21,10 +22,10 @@ export const calendarDate: DateLabel = (turn) => {
 };
 
 /** Scenario weeks count from the turn the scenario starts on (after its warm-up): that turn is Week 1. */
-export const scenarioDate =
-  (startTurn: number): DateLabel =>
-  (turn) =>
-    i18nText("turn.week", { arg1: turn - startTurn + 1 });
+export function scenarioDate(startTurn: number): DateLabel {
+  const weekOf = (turn: number): number => turn - startTurn + 1;
+  return Object.assign((turn: number) => i18nText("turn.week", { arg1: weekOf(turn) }), { weekOf });
+}
 
 export interface LogLine {
   title: string;
@@ -41,7 +42,7 @@ export function describeEvent(event: SimEventRecord, nameOf: (field: string, val
     body !== null && typeof body === 'object'
       ? Object.entries(body as Record<string, unknown>)
           .filter(([, v]) => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
-          .map(([k, v]) => i18nText('turn.field-value', { field: k.replace(/_/g, ' '), value: displayText(nameOf(k, v)) }))
+          .map(([k, v]) => i18nText('turn.field-value', { field: k.replace(/_/g, ' '), value: displayText(translateScenario(nameOf(k, v))) }))
           .join(', ')
       : '';
   return { title: humanise(name), detail };

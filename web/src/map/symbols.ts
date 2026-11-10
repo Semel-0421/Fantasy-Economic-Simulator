@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { Graphics } from 'pixi.js';
 import { INK, GOLD } from './colours';
 import { button, el } from '../ui/dom';
@@ -10,9 +11,9 @@ export function playerMark(g: Graphics, x: number, y: number, scale: number): vo
 export function mapControls(zoom: (factor: number) => void, fit: () => void): HTMLElement {
   const node = el('div', { className: 'map-controls' });
   for (const [label, path, action] of [
-    ['Zoom in', 'M12 4V20 M4 12H20', () => zoom(1.5)],
-    ['Zoom out', 'M4 12H20', () => zoom(1 / 1.5)],
-    ['Fit map', 'M4 9V4H9 M15 4H20V9 M20 15V20H15 M9 20H4V15', fit],
+    [t('map.zoom-in'), 'M12 4V20 M4 12H20', () => zoom(1.5)],
+    [t('map.zoom-out'), 'M4 12H20', () => zoom(1 / 1.5)],
+    [t('map.fit'), 'M4 9V4H9 M15 4H20V9 M20 15V20H15 M9 20H4V15', fit],
   ] as const) {
     const b = button('', action);
     b.title = label;

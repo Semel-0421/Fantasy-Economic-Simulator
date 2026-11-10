@@ -1,3 +1,4 @@
+import { translateScenario } from '../i18n/scenario';
 // The teaching scenarios (spec 5): their data files (data/scenarios, shipped as public/data/scenarios)
 // and the full-scale world they are played on (public/data/fullscale).
 export interface ScenarioEntry {
@@ -10,9 +11,9 @@ export interface ScenarioEntry {
 }
 
 export const SCENARIOS: readonly ScenarioEntry[] = [
-  { n: 1, title: 'First Venture', file: 's1_first_venture.ron', pitch: 'Learn to trade: buy cheap, sell dear, deliver a contract.', targetProfit: 1000 },
-  { n: 2, title: 'Shares and Bonds', file: 's2_shares_and_bonds.ron', pitch: 'Grow coins through company shares and bonds.', targetProfit: 2500 },
-  { n: 3, title: 'Licences and Trade Abroad', file: 's3_licences_abroad.ron', pitch: 'Licences and trade between nations.', targetProfit: 1000 },
+  { n: 1, title: translateScenario('First Venture'), file: 's1_first_venture.ron', pitch: translateScenario('Learn to trade: buy cheap, sell dear, deliver a contract.'), targetProfit: 1000 },
+  { n: 2, title: translateScenario('Shares and Bonds'), file: 's2_shares_and_bonds.ron', pitch: translateScenario('Grow coins through company shares and bonds.'), targetProfit: 2500 },
+  { n: 3, title: translateScenario('Licences and Trade Abroad'), file: 's3_licences_abroad.ron', pitch: translateScenario('Licences and trade between nations.'), targetProfit: 1000 },
 ];
 
 /** The scenario after `n`, or null after the last. */

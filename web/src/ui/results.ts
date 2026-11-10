@@ -4,6 +4,7 @@ import { t as i18nText, formatNumber } from '../i18n';
 import type { Views } from '../sim/types';
 import { button, el } from './dom';
 import { play } from '../audio/sound';
+import { translateScenario } from '../i18n/scenario';
 
 type Statement = NonNullable<Views['results']>;
 const fmt = formatNumber;
@@ -68,7 +69,7 @@ export function renderResults(root: HTMLElement, title: string, s: Statement, ob
     el(
       'main',
       { className: 'menu results', id: 'results' },
-      el('h1', { text: i18nText("results.results", { arg1: title }) }),
+      el('h1', { text: i18nText("results.results", { arg1: translateScenario(title) }) }),
       el('p', { id: 'score', className: 'score', text: i18nText("results.net-profit-coins-in-weeks", { arg1: fmt(s.net_profit), arg2: s.weeks }) }),
       el('p', { id: 'results-target', text: i18nText("results.target-you", { arg1: fmt(target), arg2: fmt(s.net_profit), arg3: target > 0 ? i18nText("results.x", { arg1: (s.net_profit / target).toFixed(1) }) : '' }) }),
       table,

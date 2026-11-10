@@ -23,7 +23,7 @@ import { vi } from './vi';
 import { ko } from './ko';
 
 export const catalogues: Record<LanguageCode, Catalogue> = { en, "zh-Hans": zh_Hans, "hi": hi, "es": es, "ar": ar, "fr": fr, "bn": bn, "pt": pt, "ru": ru, "id": id, "ur": ur, "de": de, "ja": ja, "pcm": pcm, "mr": mr, "te": te, "tr": tr, "ha": ha, "ta": ta, "vi": vi, "ko": ko };
-export const COMPLETE_LANGUAGES: readonly LanguageCode[] = [];
+export const COMPLETE_LANGUAGES: readonly LanguageCode[] = ["ko","es","pt","fr","de","tr","id","vi","ha","pcm","ru","ja","zh-Hans","hi","mr","bn","te","ta","ar","ur"];
 
 const parameters = (text: string): string => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort().join(',');
 

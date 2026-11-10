@@ -2,6 +2,7 @@ import { t as i18nText } from '../i18n';
 // Modal dialogs for scenario news: one at a time, in order. While one is open the rest of the page
 // takes no input (it is inert behind a backdrop) until the player presses Continue.
 import { button, el } from './dom';
+import { translateScenario } from '../i18n/scenario';
 import { play } from '../audio/sound';
 
 export interface DialogText {
@@ -29,7 +30,7 @@ export function dialogs(host: HTMLElement, page: () => HTMLElement | null): Dial
       );
       ok.classList.add('primary');
       const box = el('div', { className: 'dialog', id: 'dialog' }, el('h2', { text: item.title, id: 'dialog-title' }));
-      for (const para of item.text.split('\n\n')) box.append(el('p', { text: para }));
+      for (const para of translateScenario(item.text).split('\n\n')) box.append(el('p', { text: para }));
       box.append(ok);
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-modal', 'true');

@@ -62,7 +62,6 @@ export const en = {
   "finance.bonds-held-coins-at-face": "Bonds held: {arg1} coins at face.",
   "finance.no-bonds-held": "No bonds held.",
   "finance.week": "Week {arg1}",
-  "finance.week-2": "Week ",
   "finance.week-3": "week {arg1} ({arg2})",
   "finance.expires": "{arg1} · {arg2} · expires {arg3}",
   "finance.good": "Good",
@@ -231,5 +230,14 @@ export const en = {
   "travel.node": "Node {id}",
   "travel.selected-details": "{place}: {details}.",
   "travel.route-button": "{name} - {weeks} wk",
-  "turn.field-value": "{field} {value}"
+  "turn.field-value": "{field} {value}",
+  "terrain.road": "Road",
+  "terrain.mountain": "Mountain",
+  "terrain.river": "River",
+  "terrain.sea": "Sea",
+  "map.zoom-in": "Zoom in",
+  "map.zoom-out": "Zoom out",
+  "map.fit": "Fit map",
+  "map.description": "World map. Plus and minus zoom; zero fits the world. Choose a route below to travel by keyboard.",
+  "main.saved-slot": "Saved to slot {slot}."
 } as const;

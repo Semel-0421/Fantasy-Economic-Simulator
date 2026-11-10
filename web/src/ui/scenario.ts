@@ -5,6 +5,7 @@ import type { TurnReport, Views } from '../sim/types';
 import type { DialogText } from './dialog';
 import { button, el } from './dom';
 import { displayText } from '../data/names';
+import { translateScenario } from '../i18n/scenario';
 
 type Contract = Views['scenario_contracts'][number];
 type Objective = Views['objectives'][number];
@@ -16,7 +17,8 @@ export function scenarioDialogs(report: TurnReport): DialogText[] {
   for (const e of report.events) {
     if (typeof e === 'object' && 'ScenarioDialog' in e) {
       const d = e.ScenarioDialog;
-      out.push({ title: i18nText("scenario.news"), text: displayText(d.coins > 0 ? i18nText("scenario.you-receive-coins", { arg1: d.text, arg2: fmt(d.coins) }) : d.text) });
+      const text = translateScenario(d.text);
+      out.push({ title: i18nText("scenario.news"), text: displayText(d.coins > 0 ? i18nText("scenario.you-receive-coins", { arg1: text, arg2: fmt(d.coins) }) : text) });
     }
   }
   return out;

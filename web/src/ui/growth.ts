@@ -7,6 +7,7 @@ import type { SimEventRecord, TurnReport } from '../sim/types';
 import { play } from '../audio/sound';
 import { el } from './dom';
 import { displayText } from '../data/names';
+import { translateScenario } from '../i18n/scenario';
 
 export interface Gain {
   label: string;
@@ -30,7 +31,7 @@ export function gainsOf(report: TurnReport, goodName: (good: number) => string):
       const t = e.GoodsTraded;
       if (!t.bought && t.filled > 0) out.push({ label: i18nText("growth.sold", { arg1: t.filled, arg2: goodName(t.good) }), coins: t.filled * t.price });
     } else if ('ScenarioDialog' in e && e.ScenarioDialog.coins > 0) {
-      out.push({ label: displayText(e.ScenarioDialog.text), coins: e.ScenarioDialog.coins });
+      out.push({ label: displayText(translateScenario(e.ScenarioDialog.text)), coins: e.ScenarioDialog.coins });
     }
   }
   return out;

@@ -1,14 +1,20 @@
 import { en } from './en';
-import { catalogues } from './catalogues';
 import { languageOf } from './languages';
 import type { MessageId, Params } from './types';
+import { loadLanguage } from './loaders';
+import { englishNames } from '../data/name-data/en';
+import { loadLanguageFont } from './fonts';
 
 function readLanguage(): string | null {
   try { return localStorage.getItem('fes-lang'); } catch { return null; }
 }
 
 export const language = languageOf(readLanguage());
-const catalogue = catalogues[language.code];
+const bundle = language.code === 'en' ? { catalogue: en, scenario: {}, names: englishNames } : await loadLanguage(language.code);
+const catalogue = bundle.catalogue;
+export const activeNames = bundle.names;
+export const scenarioMessages: Record<string, string> = bundle.scenario;
+await loadLanguageFont(language);
 const numbers = new Intl.NumberFormat(language.locale, { numberingSystem: 'latn' });
 const ungrouped = new Intl.NumberFormat(language.locale, { numberingSystem: 'latn', useGrouping: false, maximumFractionDigits: 20 });
 

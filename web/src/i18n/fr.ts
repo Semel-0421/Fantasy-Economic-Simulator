@@ -240,5 +240,6 @@ export const fr = {
   "map.zoom-out": "Zoom arrière",
   "map.fit": "Ajuster la carte",
   "map.description": "Carte du monde. Plus et moins pour zoomer ; zéro affiche le monde entier. Choisissez un itinéraire ci-dessous pour voyager au clavier.",
-  "main.saved-slot": "Enregistré dans l’emplacement {slot}."
+  "main.saved-slot": "Enregistré dans l’emplacement {slot}.",
+  "credits.machine-translations": "Les traductions autres que l’anglais et le coréen sont automatiques et non relues."
 } satisfies Catalogue;

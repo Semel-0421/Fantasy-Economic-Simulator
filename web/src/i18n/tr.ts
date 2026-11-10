@@ -240,5 +240,6 @@ export const tr = {
   "map.zoom-out": "Uzaklaştır",
   "map.fit": "Haritayı sığdır",
   "map.description": "Dünya haritası. Artı ve eksi yakınlaştırır; sıfır tüm dünyayı gösterir. Klavyeyle yolculuk için aşağıdan bir rota seç.",
-  "main.saved-slot": "Kaydedildi: yuva {slot}."
+  "main.saved-slot": "Kaydedildi: yuva {slot}.",
+  "credits.machine-translations": "İngilizce ve Korece dışındaki çeviriler makine çevirisidir ve gözden geçirilmemiştir."
 } satisfies Catalogue;

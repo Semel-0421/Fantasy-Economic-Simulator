@@ -1,4 +1,4 @@
-import { t as i18nText } from '../i18n';
+import { t as i18nText, language } from '../i18n';
 // Offline play and updates: registers the service worker and, when a new build is waiting, offers a
 // reload. The waiting worker activates only when the player agrees, so a running game is never
 // swapped under them.
@@ -32,9 +32,10 @@ export function registerServiceWorker(): void {
       waiting.postMessage({ type: 'activate' });
     });
   };
-  window.addEventListener('load', () => {
+  const install = (): void => {
     sw.register('./sw.js')
       .then((reg) => {
+        void sw.ready.then(ready => ready.active?.postMessage({ type: 'language', code: language.code }));
         // A controller means an older build is running; without one this is the first install.
         if (reg.waiting && sw.controller) offer(reg.waiting);
         reg.addEventListener('updatefound', () => {
@@ -48,5 +49,8 @@ export function registerServiceWorker(): void {
         });
       })
       .catch((e: unknown) => console.warn('Service worker not registered', e));
-  });
+  };
+  // A selected language/font can finish loading after the window's load event.
+  if (document.readyState === 'complete') install();
+  else window.addEventListener('load', install, { once: true });
 }

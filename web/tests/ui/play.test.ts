@@ -55,7 +55,14 @@ describe('map', () => {
     await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('#travel')!.disabled);
     expect(await page.textContent('#selected')).toMatch(/week/);
 
-    const before = await screenOf(page, dest);
+    // screenOf chooses the nearest cylindrical copy; a central anchor cannot switch copies during this drag.
+    const anchor = await page.evaluate(async () => {
+      const handles = window as unknown as { __fesGame: { view(name: string): Promise<{ nodes: { id: number }[] }> }; __fesMap: { screenOf(id: number): Pt } };
+      const nodes = (await handles.__fesGame.view('map')).nodes;
+      const centre = document.querySelector('#map canvas')!.clientWidth / 2;
+      return nodes.reduce((best, node) => Math.abs(handles.__fesMap.screenOf(node.id).x - centre) < Math.abs(handles.__fesMap.screenOf(best.id).x - centre) ? node : best).id;
+    });
+    const before = await screenOf(page, anchor);
     const canvas = (await page.locator('#map canvas').boundingBox())!;
     const drag = { x: canvas.x + canvas.width * 0.7, y: canvas.y + Math.min(100, canvas.height / 3) };
     expect(await page.locator('#map canvas').evaluate((node, point) => document.elementFromPoint(point.x, point.y) === node, drag)).toBe(true);
@@ -63,7 +70,7 @@ describe('map', () => {
     await page.mouse.down();
     await page.mouse.move(drag.x + 60, drag.y + 30, { steps: 5 });
     await page.mouse.up();
-    const panned = await screenOf(page, dest);
+    const panned = await screenOf(page, anchor);
     expect(panned.x - before.x).toBeCloseTo(60, 0);
     expect(panned.y - before.y).toBeCloseTo(30, 0);
     await page.mouse.move(drag.x, drag.y);
@@ -71,16 +78,16 @@ describe('map', () => {
     await page.waitForFunction(({ node, position }) => {
       const point = (window as unknown as { __fesMap: { screenOf(id: number): Pt } }).__fesMap.screenOf(node);
       return point.x !== position.x || point.y !== position.y;
-    }, { node: dest, position: panned });
-    const zoomed = await screenOf(page, dest);
+    }, { node: anchor, position: panned });
+    const zoomed = await screenOf(page, anchor);
     expect(zoomed).not.toEqual(panned);
     await page.locator('#map canvas').focus();
     await page.keyboard.press('0');
-    expect(await screenOf(page, dest)).toEqual(before);
+    expect(await screenOf(page, anchor)).toEqual(before);
     await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-    expect(await screenOf(page, dest)).not.toEqual(before);
+    expect(await screenOf(page, anchor)).not.toEqual(before);
     await page.getByRole('button', { name: 'Fit map', exact: true }).click();
-    expect(await screenOf(page, dest)).toEqual(before);
+    expect(await screenOf(page, anchor)).toEqual(before);
 
     await page.click('#travel');
     await page.waitForFunction(() => document.querySelector('#log .message')?.textContent?.includes('Travel to'));

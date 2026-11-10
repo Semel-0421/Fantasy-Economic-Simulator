@@ -240,5 +240,6 @@ export const id = {
   "map.zoom-out": "Perkecil",
   "map.fit": "Paskan peta",
   "map.description": "Peta dunia. Plus dan minus untuk zoom; nol menampilkan seluruh dunia. Pilih rute di bawah untuk bepergian dengan papan ketik.",
-  "main.saved-slot": "Disimpan ke slot {slot}."
+  "main.saved-slot": "Disimpan ke slot {slot}.",
+  "credits.machine-translations": "Terjemahan selain bahasa Inggris dan Korea dibuat oleh mesin dan belum ditinjau."
 } satisfies Catalogue;

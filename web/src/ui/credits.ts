@@ -9,7 +9,7 @@ export const BUNDLED_LICENSES = {
 };
 
 export function renderCredits(root: HTMLElement, back: () => void): void {
-  const licences = Object.values(BUNDLED_LICENSES).map((item) => {
+  const licences = [...Object.values(BUNDLED_LICENSES), { name: 'Galmuri11', licence: i18nText('credits.sil-open-font-license-1-1'), file: 'galmuri.txt' }].map((item) => {
     const link = el('a', { text: i18nText('credits.licence-line', { name: item.name, licence: item.licence }) });
     link.href = `licenses/${item.file}`;
     return el('li', {}, link);
@@ -26,6 +26,7 @@ export function renderCredits(root: HTMLElement, back: () => void): void {
     el('h2', { text: i18nText("credits.fonts-and-libraries") }), el('ul', {}, ...licences),
     el('h2', { text: i18nText("credits.production") }), ...disclosure,
     el('p', { text: i18nText("credits.english-scenario-text-drafted-with-claude-and-edited") }),
+    el('p', { text: i18nText('credits.machine-translations') }),
     button(i18nText("credits.main-menu"), back, 'credits-back'),
   ));
 }

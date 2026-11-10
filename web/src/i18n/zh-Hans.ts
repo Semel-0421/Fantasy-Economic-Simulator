@@ -240,5 +240,6 @@ export const zh_Hans = {
   "map.zoom-out": "缩小",
   "map.fit": "适应地图",
   "map.description": "世界地图。加号和减号缩放；零键显示整个世界。如需用键盘出行，请在下方选择路线。",
-  "main.saved-slot": "已保存到存档位 {slot}。"
+  "main.saved-slot": "已保存到存档位 {slot}。",
+  "credits.machine-translations": "除英语和韩语外，其他译文均为机器翻译，未经审校。"
 } satisfies Catalogue;

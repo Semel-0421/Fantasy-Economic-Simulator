@@ -239,5 +239,6 @@ export const en = {
   "map.zoom-out": "Zoom out",
   "map.fit": "Fit map",
   "map.description": "World map. Plus and minus zoom; zero fits the world. Choose a route below to travel by keyboard.",
-  "main.saved-slot": "Saved to slot {slot}."
+  "main.saved-slot": "Saved to slot {slot}.",
+  "credits.machine-translations": "Translations other than English and Korean are machine-made and unreviewed."
 } as const;

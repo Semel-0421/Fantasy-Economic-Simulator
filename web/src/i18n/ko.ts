@@ -240,5 +240,6 @@ export const ko = {
   "map.zoom-out": "축소",
   "map.fit": "지도 맞추기",
   "map.description": "세계 지도. 더하기와 빼기로 확대·축소하고, 0을 누르면 세계 전체가 보여요. 키보드로 이동하려면 아래에서 경로를 고르세요.",
-  "main.saved-slot": "슬롯 {slot}에 저장했어요."
+  "main.saved-slot": "슬롯 {slot}에 저장했어요.",
+  "credits.machine-translations": "영어와 한국어를 제외한 번역은 기계 번역이며 검수되지 않았어요."
 } satisfies Catalogue;

@@ -240,5 +240,6 @@ export const pt = {
   "map.zoom-out": "Afastar",
   "map.fit": "Ajustar mapa",
   "map.description": "Mapa do mundo. Mais e menos ajustam o zoom; zero mostra o mundo inteiro. Escolha uma rota abaixo para viajar pelo teclado.",
-  "main.saved-slot": "Salvo no espaço {slot}."
+  "main.saved-slot": "Salvo no espaço {slot}.",
+  "credits.machine-translations": "As traduções além do inglês e do coreano são automáticas e não foram revisadas."
 } satisfies Catalogue;

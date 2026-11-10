@@ -240,5 +240,6 @@ export const pcm = {
   "map.zoom-out": "Zoom out",
   "map.fit": "Make map fit",
   "map.description": "World map. Plus and minus dey zoom; zero go show the whole world. Pick one route for down to travel with keyboard.",
-  "main.saved-slot": "E don save for slot {slot}."
+  "main.saved-slot": "E don save for slot {slot}.",
+  "credits.machine-translations": "All di translation wey no be English and Korean na machine do am, nobody check am."
 } satisfies Catalogue;

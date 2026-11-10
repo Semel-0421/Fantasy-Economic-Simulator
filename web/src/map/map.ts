@@ -1,4 +1,4 @@
-import { t } from '../i18n';
+import { t, language } from '../i18n';
 // The world map drawn with PixiJS: region outlines, routes, towns by level, the player's position and
 // destination, and the selected town. Drag pans, the wheel and a two-finger pinch zoom, a tap selects
 // the nearest town. All input is DOM pointer events on the canvas; the Pixi scene only draws.
@@ -44,7 +44,7 @@ function drawLabels(map: MapData, layer: Container): Map<number, Text> {
   const labels = new Map<number, Text>();
   for (const node of map.nodes) {
     const text = new Text({ text: node.name, style: {
-      fontFamily: 'Atkinson Hyperlegible, system-ui', fontSize: 14, fill: PAPER, stroke: { color: INK, width: 2 },
+      fontFamily: language.code === 'en' ? 'Atkinson Hyperlegible, system-ui' : language.fontStack, fontSize: 14, fill: PAPER, stroke: { color: INK, width: 2 },
     } });
     text.visible = false;
     labels.set(node.id, text);

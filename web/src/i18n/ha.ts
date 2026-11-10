@@ -240,5 +240,6 @@ export const ha = {
   "map.zoom-out": "Rage girma",
   "map.fit": "Daidaita taswira",
   "map.description": "Taswirar duniya. Ƙari da ragi suna canza girma; sifili yana nuna duniya gaba ɗaya. Zaɓi hanya a ƙasa don tafiya da madannai.",
-  "main.saved-slot": "An ajiye a ma'ajiya {slot}."
+  "main.saved-slot": "An ajiye a ma'ajiya {slot}.",
+  "credits.machine-translations": "Fassarorin da ba na Turanci da Koriya ba na na'ura ne kuma ba a duba su ba."
 } satisfies Catalogue;

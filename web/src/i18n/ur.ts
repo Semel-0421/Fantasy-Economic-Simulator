@@ -240,5 +240,6 @@ export const ur = {
   "map.zoom-out": "چھوٹا کریں",
   "map.fit": "نقشہ فٹ کریں",
   "map.description": "دنیا کا نقشہ۔ جمع اور تفریق سے زوم کریں؛ صفر پوری دنیا دکھاتا ہے۔ کی بورڈ سے سفر کے لیے نیچے کوئی راستہ چنیں۔",
-  "main.saved-slot": "سلاٹ {slot} میں محفوظ ہو گیا۔"
+  "main.saved-slot": "سلاٹ {slot} میں محفوظ ہو گیا۔",
+  "credits.machine-translations": "انگریزی اور کوریائی کے علاوہ تراجم مشینی ہیں اور ان کی جانچ نہیں ہوئی۔"
 } satisfies Catalogue;

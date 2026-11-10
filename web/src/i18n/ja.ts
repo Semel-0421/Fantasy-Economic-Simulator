@@ -240,5 +240,6 @@ export const ja = {
   "map.zoom-out": "縮小",
   "map.fit": "地図を合わせる",
   "map.description": "世界地図。プラスとマイナスで拡大・縮小、ゼロで世界全体を表示します。キーボードで移動するには、下のルートを選んでください。",
-  "main.saved-slot": "スロット{slot}に保存しました。"
+  "main.saved-slot": "スロット{slot}に保存しました。",
+  "credits.machine-translations": "英語と韓国語以外の翻訳は機械翻訳で、確認されていません。"
 } satisfies Catalogue;

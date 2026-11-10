@@ -240,5 +240,6 @@ export const mr = {
   "map.zoom-out": "लहान करा",
   "map.fit": "नकाशा बसवा",
   "map.description": "जगाचा नकाशा. अधिक आणि उणे झूम करतात; शून्य संपूर्ण जग दाखवते. कीबोर्डने प्रवासासाठी खाली एक मार्ग निवडा.",
-  "main.saved-slot": "स्लॉट {slot} मध्ये जतन केले."
+  "main.saved-slot": "स्लॉट {slot} मध्ये जतन केले.",
+  "credits.machine-translations": "इंग्रजी आणि कोरियन सोडून इतर भाषांतरे यंत्राने केलेली असून तपासलेली नाहीत."
 } satisfies Catalogue;

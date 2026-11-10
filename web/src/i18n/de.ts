@@ -240,5 +240,6 @@ export const de = {
   "map.zoom-out": "Verkleinern",
   "map.fit": "Karte einpassen",
   "map.description": "Weltkarte. Plus und Minus zoomen, Null zeigt die ganze Welt. Wähle unten eine Route, um per Tastatur zu reisen.",
-  "main.saved-slot": "In Speicherplatz {slot} gespeichert."
+  "main.saved-slot": "In Speicherplatz {slot} gespeichert.",
+  "credits.machine-translations": "Übersetzungen außer Englisch und Koreanisch sind maschinell erstellt und ungeprüft."
 } satisfies Catalogue;

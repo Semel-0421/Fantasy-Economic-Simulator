@@ -1,10 +1,11 @@
 // Service worker template. The build (vite.config.ts) fills in a content-versioned cache name and the
-// list of every file of dist, and writes the result to dist/sw.js.
+// core precache and optional language groups, and writes the result to dist/sw.js.
 // An update never takes over a running game: a new worker installs, waits, and the page offers a
 // reload (src/ui/update.ts); only that reload message activates it, and only then are the old
 // caches deleted. The first install does not claim open pages either: it serves from the next load.
 const CACHE = '__CACHE__';
 const FILES = JSON.parse('__FILES__');
+const LANGUAGES = /*__OPTIONAL__*/ {};
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
@@ -20,6 +21,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'activate') self.skipWaiting();
+  if (event.data?.type === 'language') event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(LANGUAGES[event.data.code] ?? [])));
 });
 
 self.addEventListener('fetch', (event) => {

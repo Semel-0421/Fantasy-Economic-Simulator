@@ -240,5 +240,6 @@ export const vi = {
   "map.zoom-out": "Thu nhỏ",
   "map.fit": "Vừa bản đồ",
   "map.description": "Bản đồ thế giới. Phím cộng và trừ để phóng to, thu nhỏ; số 0 hiện toàn bộ thế giới. Chọn một tuyến bên dưới để di chuyển bằng bàn phím.",
-  "main.saved-slot": "Đã lưu vào ô {slot}."
+  "main.saved-slot": "Đã lưu vào ô {slot}.",
+  "credits.machine-translations": "Các bản dịch ngoài tiếng Anh và tiếng Hàn là dịch máy và chưa được kiểm tra."
 } satisfies Catalogue;

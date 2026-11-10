@@ -2,14 +2,15 @@
 doc: REFACTORING
 title: Refactoring standards
 status: draft
-updated: 2026-11-02
+updated: 2026-11-10
 related: [DEC-108, 01_Extension_Guide]
 ---
 
 # Refactoring standards
 
-The limits below are the published defaults of the rules they name, not numbers picked for this project. Tests enforce them
-(`CodeStandardsTests`, `GoldenRunTests`), so code that breaks them fails the EditMode run (DEC-108).
+The limits below are the published defaults of the rules they name, not numbers picked for this project. They are enforced
+in all three code bases: the C# reference by tests (`CodeStandardsTests`, `GoldenRunTests`, DEC-108), the Rust engine and the
+web client by lint and scripts that CI runs (see "Enforcement by code base"), so code that breaks them fails the build.
 
 ## What counts as a refactoring
 A change to the internal structure of the code that leaves its observable behaviour unchanged, made as a series of small
@@ -38,12 +39,39 @@ what a run saves: a refactoring does not change a single byte of `GoldenRunTests
 | Duplicated block | none of 100 tokens over 10 lines | [Sonar's definition](https://docs.sonarsource.com/sonarqube-server/latest/user-guide/code-metrics/metrics-definition/) |
 | Private method nothing calls | none | Sonar [S1144](https://raw.githubusercontent.com/SonarSource/sonar-dotnet/master/analyzers/rspec/cs/S1144.json) |
 
+## Enforcement by code base
+The C# code in `Assets/` is the frozen reference (its limits are tested as above); new work happens in `engine/` (Rust) and
+`web/` (TypeScript). CI runs everything below: the `engine` workflow for Rust, the shared `web-build` action for the web client.
+
+| Limit | C# (frozen reference) | Rust (`engine/`) | Web (`web/`) |
+|---|---|---|---|
+| Cognitive complexity 15 | `CodeStandardsTests` | clippy `cognitive_complexity` = deny, `clippy.toml` threshold 15 | `sonarjs/cognitive-complexity` 15 |
+| Cyclomatic complexity 25 | `CodeStandardsTests` | not checked on its own (clippy has no such lint; cognitive complexity is the tighter limit) | `complexity` 25 |
+| Lines in a function 80 | `CodeStandardsTests` | clippy `too_many_lines` = deny, threshold 80 | `max-lines-per-function` 80 (blank lines and comments skipped; test files 160 because `describe` blocks are long) |
+| Nesting | 3 | clippy `excessive_nesting` = deny, threshold 4 (clippy counts nesting differently from Sonar, and 4 is its default) | `max-depth` 3 |
+| Parameters 7 | `CodeStandardsTests` | clippy `too_many_arguments`, threshold 7, denied by `-D warnings` | `max-params` 7 |
+| Lines in a file 1,000 | `CodeStandardsTests` | `bash engine/scripts/check_file_length.sh` | `max-lines` 1,000 (blank lines and comments skipped) |
+| Duplicated block (100 tokens, 10 lines) | `CodeStandardsTests` | `npm run dup` in `web/` (jscpd; also reads the six engine crates) | `npm run dup` in `web/` (jscpd over `src` and `scripts`; language tables, generated bindings and assets excluded by path) |
+| Unused code | unused private methods: `CodeStandardsTests` | rustc `dead_code` and `unused` warnings, denied by `-D warnings`; unused `pub` items across crates by hand-review (no tool in CI) | `npm run deadcode` (knip: unused files, exports, types and dependencies) |
+
+Commands (all must exit 0):
+- Rust, in `engine/`: `cargo fmt --check`; `cargo clippy --all-targets --all-features -- -D warnings`; `cargo test --all-features`; `cargo check -p fes-sim --target wasm32-unknown-unknown`; `bash scripts/check_file_length.sh`.
+- Web, in `web/`: `npm run lint`; `npm run typecheck`; `npm run deadcode`; `npm run dup`; `npm test`; `npm run build`.
+- Behaviour proof for any refactoring: the parity commands of `.github/workflows/engine.yml` (no new hashes), the scenario goldens, and, after an engine change, the turn bench (`web/bench`: `npm run wasm && node run-bench.mjs`).
+
+Exemptions follow the same rule in every code base: an entry or comment next to the code with a one-line reason, and rarely.
+Rust: a `#[allow(clippy::...)]` or `#[allow(dead_code)]` with its reason on the line above or beside it (now: `derivable_impls` on
+`WorldLevel`, the fixed-point `suspicious_arithmetic_impl` on `Fx` multiplication and division, `dead_code` on the macro-made
+`remove_row_swap_back` and on shared test-helper modules). Web: none; no `eslint-disable` comment may be added to pass a limit,
+and `knip.json` lists only entry points that tools reach dynamically (worker, service-worker template, samples page) and
+binaries called by path (`binaryen`, `wasm-bindgen`).
+
 Cognitive complexity counts as sonar-dotnet's
 [C# metric](https://raw.githubusercontent.com/SonarSource/sonar-dotnet/master/analyzers/src/SonarAnalyzer.CSharp/Metrics/CSharpCognitiveComplexityMetric.cs)
 does. Microsoft's page on [cyclomatic complexity](https://learn.microsoft.com/en-us/visualstudio/code-quality/code-metrics-cyclomatic-complexity)
 quotes NIST on 10 as a starting point; this project takes CA1502's 25 because cognitive complexity is the tighter limit in practice.
 
-The limits apply to production code (`Core`, `Data`, `World`, `Economy`, `Agents`, `Persistence`, `Simulation`, `Unity`), not to tests.
+The limits apply to production code (C#: `Core`, `Data`, `World`, `Economy`, `Agents`, `Persistence`, `Simulation`, `Unity`; Rust: every crate's `src`; web: `src` and `scripts`), not to tests, except that the Rust lints also run over test targets (`--all-targets`) and the web lint also runs over tests with the 160-line function limit.
 
 ## Exemptions
 A method may break a limit only with an entry and a reason in `CodeStandardsTests.Exempt`. Microsoft names a large `switch` as

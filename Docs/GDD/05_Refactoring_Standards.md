@@ -60,7 +60,7 @@ Commands (all must exit 0):
 - Behaviour proof for any refactoring: the parity commands of `.github/workflows/engine.yml` (no new hashes), the scenario goldens, and, after an engine change, the turn bench (`web/bench`: `npm run wasm && node run-bench.mjs`).
 
 Exemptions follow the same rule in every code base: an entry or comment next to the code with a one-line reason, and rarely.
-Rust: a `#[allow(clippy::...)]` or `#[allow(dead_code)]` with its reason on the line above or beside it (now: `derivable_impls` on
+Rust: a `#[allow(clippy::...)]` or `#[allow(dead_code)]` with its reason on the line above or beside it (now: `too_many_arguments` on the hot-path `weekly_memo`, `weekly_on` and `step_cell`, where a parameter struct measured 4-6% slower, `derivable_impls` on
 `WorldLevel`, the fixed-point `suspicious_arithmetic_impl` on `Fx` multiplication and division, `dead_code` on the macro-made
 `remove_row_swap_back` and on shared test-helper modules). Web: none; no `eslint-disable` comment may be added to pass a limit,
 and `knip.json` lists only entry points that tools reach dynamically (worker, service-worker template, samples page) and

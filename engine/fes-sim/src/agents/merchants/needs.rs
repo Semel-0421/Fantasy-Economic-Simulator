@@ -2,9 +2,7 @@
 //! week at the price that nothing at hand covers (their stores, the stock, this week's supply).
 //! Arriving merchants sell into it first. A pure function of saved state, refreshed every turn.
 use crate::context::SimContext;
-use crate::economy::pricing::demand::{
-    cell_base, weekly_memo, CurveMemo, DemandParams, WeeklyInput,
-};
+use crate::economy::pricing::demand::{cell_base, weekly_memo, CurveMemo, DemandParams};
 use crate::economy::pricing::luxury_share;
 use crate::economy::{CurrencyState, HouseholdCash, HouseholdState, MarketStore};
 use crate::world::NodeTable;
@@ -51,14 +49,12 @@ pub fn refresh_needs(ctx: &SimContext, units: &mut Vec<i64>, memo: &mut CurveMem
             let wished = weekly_memo(
                 &demand,
                 memo,
-                WeeklyInput {
-                    weekly_at_anchor: base,
-                    price: markets.price[c],
-                    anchor,
-                    luxury_share: share,
-                    necessity_weight: necessity,
-                    luxury_weight: luxury,
-                },
+                base,
+                markets.price[c],
+                anchor,
+                share,
+                necessity,
+                luxury,
             )
             .met;
             let at_hand = i64::from(home_grown[c])

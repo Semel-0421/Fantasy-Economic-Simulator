@@ -120,37 +120,65 @@ impl CurveMemo {
     }
 }
 
-/// What one household cell asks of `weekly`: the base demand at the anchor price, the price and
-/// anchor, and the luxury share and the two weights.
-#[derive(Clone, Copy)]
-pub struct WeeklyInput {
-    pub weekly_at_anchor: i64,
-    pub price: i32,
-    pub anchor: i64,
-    pub luxury_share: i64,
-    pub necessity_weight: i64,
-    pub luxury_weight: i64,
-}
-
 /// C# `HouseholdDemand.Weekly`.
-pub fn weekly(p: &DemandParams, input: WeeklyInput) -> WeeklyWish {
-    weekly_on(p, None, input)
-}
-
-/// `weekly` reading the necessity factor through the memo (`prepare` it first).
-pub fn weekly_memo(p: &DemandParams, memo: &mut CurveMemo, input: WeeklyInput) -> WeeklyWish {
-    weekly_on(p, Some(memo), input)
-}
-
-fn weekly_on(p: &DemandParams, memo: Option<&mut CurveMemo>, input: WeeklyInput) -> WeeklyWish {
-    let WeeklyInput {
+pub fn weekly(
+    p: &DemandParams,
+    weekly_at_anchor: i64,
+    price: i32,
+    anchor: i64,
+    luxury_share: i64,
+    necessity_weight: i64,
+    luxury_weight: i64,
+) -> WeeklyWish {
+    weekly_on(
+        p,
+        None,
         weekly_at_anchor,
         price,
         anchor,
         luxury_share,
         necessity_weight,
         luxury_weight,
-    } = input;
+    )
+}
+
+/// `weekly` reading the necessity factor through the memo (`prepare` it first).
+// Kept: hot path: a parameter struct measured 4-6% slower, Plan 8 Task 3.
+#[allow(clippy::too_many_arguments)]
+pub fn weekly_memo(
+    p: &DemandParams,
+    memo: &mut CurveMemo,
+    weekly_at_anchor: i64,
+    price: i32,
+    anchor: i64,
+    luxury_share: i64,
+    necessity_weight: i64,
+    luxury_weight: i64,
+) -> WeeklyWish {
+    weekly_on(
+        p,
+        Some(memo),
+        weekly_at_anchor,
+        price,
+        anchor,
+        luxury_share,
+        necessity_weight,
+        luxury_weight,
+    )
+}
+
+// Kept: hot path: a parameter struct measured 4-6% slower, Plan 8 Task 3.
+#[allow(clippy::too_many_arguments)]
+fn weekly_on(
+    p: &DemandParams,
+    memo: Option<&mut CurveMemo>,
+    weekly_at_anchor: i64,
+    price: i32,
+    anchor: i64,
+    luxury_share: i64,
+    necessity_weight: i64,
+    luxury_weight: i64,
+) -> WeeklyWish {
     if weekly_at_anchor == 0 {
         return WeeklyWish::default();
     }

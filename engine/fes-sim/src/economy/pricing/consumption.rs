@@ -1,7 +1,7 @@
 //! Household consumption per market cell, shared by the repricing pass of markets that reprice
 //! every turn and by C# `ConsumptionJob` for the others (ported as a plain loop over markets in
 //! order).
-use super::demand::{cell_base, weekly_memo, CurveMemo, DemandParams, WeeklyInput};
+use super::demand::{cell_base, weekly_memo, CurveMemo, DemandParams};
 use crate::economy::markets::MODIFIER_TARGETS;
 use crate::economy::{HouseholdCash, MarketStore};
 use fes_core::Fx;
@@ -116,14 +116,12 @@ impl Scratch<'_> {
         let wish = weekly_memo(
             &self.demand,
             b.curve,
-            WeeklyInput {
-                weekly_at_anchor: weekly_base,
-                price,
-                anchor,
-                luxury_share: self.good_luxury_share[good],
-                necessity_weight: self.necessity_weight[market],
-                luxury_weight: self.luxury_weight[market],
-            },
+            weekly_base,
+            price,
+            anchor,
+            self.good_luxury_share[good],
+            self.necessity_weight[market],
+            self.luxury_weight[market],
         );
         let eaten = i64::from(cash.home_grown[c]).min(wish.met);
         cash.home_grown[c] -= eaten as i32;

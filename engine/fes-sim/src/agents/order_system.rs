@@ -5,7 +5,7 @@ use super::merchants::AgentTable;
 use super::orders::{MerchantTripStats, OrderTable};
 use super::purses::PurseState;
 use crate::context::SimContext;
-use crate::economy::pricing::demand::{cell_base, weekly, DemandParams, WeeklyInput};
+use crate::economy::pricing::demand::{cell_base, weekly, DemandParams};
 use crate::economy::{CurrencyState, HouseholdCash, HouseholdState, MarketStore};
 use crate::error::SimError;
 use crate::events::EventBus;
@@ -222,14 +222,12 @@ impl Ask<'_> {
         );
         let units = weekly(
             &self.demand,
-            WeeklyInput {
-                weekly_at_anchor: base,
-                price: self.markets.price[c],
-                anchor,
-                luxury_share: Fx::ONE_RAW,
-                necessity_weight: self.population.necessity_weight(n, level, config).raw(),
-                luxury_weight: self.population.luxury_weight(n, level, config).raw(),
-            },
+            base,
+            self.markets.price[c],
+            anchor,
+            Fx::ONE_RAW,
+            self.population.necessity_weight(n, level, config).raw(),
+            self.population.luxury_weight(n, level, config).raw(),
         )
         .units;
         Fx::round_shift(units.wrapping_mul(share)) * i64::from(QUARTER_WEEKS)

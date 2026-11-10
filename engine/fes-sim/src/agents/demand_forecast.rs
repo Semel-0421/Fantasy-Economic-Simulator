@@ -9,7 +9,7 @@ use super::orders::{DemandForecast, OrderTable};
 use super::production::lines::find_nearest_market;
 use super::purses::PurseState;
 use crate::context::SimContext;
-use crate::economy::pricing::demand::{cell_base, weekly, DemandParams, WeeklyInput};
+use crate::economy::pricing::demand::{cell_base, weekly, DemandParams};
 use crate::economy::pricing::luxury_share;
 use crate::economy::{CurrencyState, HouseholdState, MarketStore};
 use crate::error::SimError;
@@ -47,14 +47,12 @@ pub fn at_anchor(
     );
     weekly(
         p,
-        WeeklyInput {
-            weekly_at_anchor: base,
-            price: anchor.min(i64::from(i32::MAX)) as i32,
-            anchor,
-            luxury_share: luxury_share(config, good).raw(),
-            necessity_weight,
-            luxury_weight,
-        },
+        base,
+        anchor.min(i64::from(i32::MAX)) as i32,
+        anchor,
+        luxury_share(config, good).raw(),
+        necessity_weight,
+        luxury_weight,
     )
     .units
 }

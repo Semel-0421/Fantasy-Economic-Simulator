@@ -116,16 +116,6 @@ fn delivered_value(m: &MarketStore, c: usize, pending: i32) -> i64 {
     }
 }
 
-/// The cell `step_cell` steps: its market, its index, the market's level, and whether households
-/// consume inline.
-#[derive(Clone, Copy)]
-struct CellStep {
-    market: usize,
-    c: usize,
-    level: usize,
-    inline: bool,
-}
-
 /// C# `PriceUpdateJob` constants.
 pub struct Reprice {
     pub params: PriceParams,
@@ -156,13 +146,7 @@ impl Reprice {
         let mut tally = Tally::default();
         let mut spent = 0i64;
         for c in start..end {
-            let at = CellStep {
-                market,
-                c,
-                level,
-                inline,
-            };
-            spent += self.step_cell(s, at, b, &mut tally);
+            spent += self.step_cell(s, market, c, level, inline, b, &mut tally);
         }
         b.necessity_wanted[market] += tally.wanted;
         b.necessity_met[market] += tally.met;
@@ -180,13 +164,18 @@ impl Reprice {
     }
 
     /// Steps one cell; returns what its households paid.
-    fn step_cell(&self, s: &Scratch<'_>, at: CellStep, b: &mut Books, tally: &mut Tally) -> i64 {
-        let CellStep {
-            market,
-            c,
-            level,
-            inline,
-        } = at;
+    // Kept: hot path: a parameter struct measured 4-6% slower, Plan 8 Task 3.
+    #[allow(clippy::too_many_arguments)]
+    fn step_cell(
+        &self,
+        s: &Scratch<'_>,
+        market: usize,
+        c: usize,
+        level: usize,
+        inline: bool,
+        b: &mut Books,
+        tally: &mut Tally,
+    ) -> i64 {
         let value_mul = s.value_mul(market, c, b.markets);
         let pending = if inline {
             let consumed = s.consume_cell(market, c, value_mul, b, tally);

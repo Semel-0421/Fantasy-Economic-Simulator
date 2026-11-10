@@ -1,6 +1,7 @@
 body { background: var(--surface-frame); }
 .menu { max-width: 40rem; padding: var(--space-8) var(--space-4); color: var(--text-on-frame); gap: var(--space-3); }
 .menu h1 { text-wrap: balance; margin-bottom: var(--space-4); }
+:lang(de) .menu h1 { letter-spacing: normal; overflow-wrap: anywhere; }
 .menu > h2, .credits h2 { margin-top: var(--space-6); }
 .menu :focus-visible { outline-color: var(--focus-on-frame); }
 .scenarios { display: flex; flex-direction: column; gap: var(--space-3); }

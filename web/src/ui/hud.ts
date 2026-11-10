@@ -66,10 +66,11 @@ export function renderHud(root: HTMLElement, mode: SaveMode, actions: HudActions
   const mute = button(i18nText("hud.sound"), () => {
     mute.setAttribute('aria-pressed', String(toggleMute()));
   }, 'mute');
-  mute.setAttribute('aria-label', i18nText("hud.mute-sound"));
+  mute.setAttribute('aria-description', i18nText("hud.mute-sound"));
   mute.setAttribute('aria-pressed', String(isMuted()));
   const menuButton = button('', actions.menu, 'menu');
-  menuButton.setAttribute('aria-label', i18nText("hud.main-menu"));
+  menuButton.setAttribute('aria-label', i18nText("hud.menu"));
+  menuButton.setAttribute('aria-description', i18nText("hud.main-menu"));
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   icon.setAttribute('viewBox', '0 0 24 24');
   icon.setAttribute('class', 'menu-icon');

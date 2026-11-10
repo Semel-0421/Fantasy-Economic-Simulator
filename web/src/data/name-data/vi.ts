@@ -2,17 +2,15 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: vi name tables. Latin script: the English fantasy place names are kept, so there are
 // no curatedPlaces/starts/middles/ends. Same order and length as web/src/data/names.ts.
-export const curatedGoods: Record<string, string> = { g1_0: 'Lúa mì vàng', g6_0: 'Dụng cụ rèn', g17_5: 'Phụ kiện đồng', g19_0: 'Đá mặt trời' };
+const curatedGoods: Record<string, string> = { g1_0: 'Lúa mì vàng', g6_0: 'Dụng cụ rèn', g17_5: 'Phụ kiện đồng', g19_0: 'Đá mặt trời' };
 
 // landforms (7): a prefix before the place name
-export const landforms = ['Thung lũng', 'Đầm lầy', 'Đồi', 'Vùng', 'Đồng hoang', 'Trũng', 'Biên địa'];
-export const landformPositionVi: 'before' | 'after' = 'before';
+const landforms = ['Thung lũng', 'Đầm lầy', 'Đồi', 'Vùng', 'Đồng hoang', 'Trũng', 'Biên địa'];
 // qualifiers (12): placed after the noun
-export const qualifiers = ['vùng cao', 'vùng thấp', 'ven biển', 'ven sông', 'phương Bắc', 'phương Nam', 'phương Đông', 'phương Tây', 'đồi', 'đầm lầy', 'thung lũng', 'phố cổ'];
-export const qualifierPositionVi: 'before' | 'after' = 'after';
+const qualifiers = ['vùng cao', 'vùng thấp', 'ven biển', 'ven sông', 'phương Bắc', 'phương Nam', 'phương Đông', 'phương Tây', 'đồi', 'đầm lầy', 'thung lũng', 'phố cổ'];
 // Fallback goods name pattern: `Hàng hóa ${qualifier}`  (the English source is `Trade goods ${qualifier}`)
 
-export const categoryNouns = [
+const categoryNouns = [
   'củ cải|cải bắp|hành tây|tỏi tây|cà rốt|củ dền',
   'lúa mì|đại mạch|yến mạch|lúa mạch đen|kê|lúa mì spelt',
   'táo|lê|mận|anh đào|sung|mộc qua',

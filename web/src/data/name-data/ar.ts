@@ -1,20 +1,20 @@
 import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: ar name tables, same order and length as names-ko.ts.
-export const curatedPlaces: Record<string, string> = {
+const curatedPlaces: Record<string, string> = {
   k0: 'ألدرمير', k1: 'كيسرين', k2: 'سولفين', k3: 'ثالغارد', k4: 'إمبرفيل', k0n0: 'فارن', k0n1: 'هالفيش', k0n2: 'كورويث', k0n3: 'برانوك', k0n4: 'إلزمير', k1n0: 'درافيك', k1n1: 'سيرافل', k1n2: 'موروفن', k1n3: 'إيسترل', k1n4: 'كويلمارك', k2n0: 'أشكار', k2n1: 'تاماريس', k2n2: 'أوندريا', k2n3: 'زيفران', k2n4: 'كالفوس', k3n0: 'غريمهولت', k3n1: 'نورفيك', k3n2: 'سكيلدي', k3n3: 'هروثمار', k3n4: 'إيزنفالد', k4n0: 'بيران', k4n1: 'لوميث', k4n2: 'سيندريل', k4n3: 'فاروومور', k4n4: 'سولاس', k0n0r0: 'وادي أشفورد', k0n0r1: 'غريفن', k0n0r0c0: 'أشفورد', k0n0r0c1: 'ثورنهولد', k0n0r0c2: 'فيرنلي', k0n0r0c3: 'أوكهيرست', k0n0r0c4: 'سولتمارش', k0n0r1c4: 'رافنزغيت', k0n0r0c0v1: 'ميلبروك',
 };
-export const curatedGoods: Record<string, string> = { g1_0: 'قمح ذهبي', g6_0: 'أدوات الحدادة', g17_5: 'تجهيزات نحاسية', g19_0: 'حجر الشمس' };
+const curatedGoods: Record<string, string> = { g1_0: 'قمح ذهبي', g6_0: 'أدوات الحدادة', g17_5: 'تجهيزات نحاسية', g19_0: 'حجر الشمس' };
 
-export const starts = 'أل بيل كور دال إل فال غال هال إيل كيل لور ميل نور أور بل فيل'.split(' ');
-export const middles = 'ا با دي ان فا غا ها ي لا مي نا و را سي تا في'.split(' ');
-export const ends = 'بان دن فن غار لن مير مون نار رن ريس سار تن تور فال فين وين'.split(' ');
+const starts = 'أل بيل كور دال إل فال غال هال إيل كيل لور ميل نور أور بل فيل'.split(' ');
+const middles = 'ا با دي ان فا غا ها ي لا مي نا و را سي تا في'.split(' ');
+const ends = 'بان دن فن غار لن مير مون نار رن ريس سار تن تور فال فين وين'.split(' ');
 
-export const landforms = ['وادي', 'مستنقع', 'تلال', 'امتداد', 'سهل', 'منخفض', 'تخوم'];
-export const qualifiers = ['جبلي', 'سهلي', 'ساحلي', 'نهري', 'شمالي', 'جنوبي', 'شرقي', 'غربي', 'تلّي', 'أهواري', 'وادوي', 'عتيق'];
+const landforms = ['وادي', 'مستنقع', 'تلال', 'امتداد', 'سهل', 'منخفض', 'تخوم'];
+const qualifiers = ['جبلي', 'سهلي', 'ساحلي', 'نهري', 'شمالي', 'جنوبي', 'شرقي', 'غربي', 'تلّي', 'أهواري', 'وادوي', 'عتيق'];
 // Fallback goods name: `Trade goods ${qualifier}` -> `${qualifier} سلع تجارية`
 
-export const categoryNouns = [
+const categoryNouns = [
   'لفت|ملفوف|بصل|كراث|جزر|شمندر',
   'قمح|شعير|شوفان|جاودار|دخن|حنطة',
   'تفاح|كمثرى|برقوق|كرز|تين|سفرجل',

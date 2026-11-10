@@ -6,7 +6,7 @@ import type { SimEventRecord, TurnReport } from '../sim/types';
 import { displayText } from '../data/names';
 import { translateScenario } from '../i18n/scenario';
 
-export const WEEKS_PER_YEAR = 52;
+const WEEKS_PER_YEAR = 52;
 
 /** The calendar position of a turn count: turn 0 is Year 1, Week 1. */
 export function dateOf(turn: number): { year: number; week: number } {

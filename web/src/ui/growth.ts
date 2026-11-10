@@ -45,7 +45,7 @@ export function countedValue(from: number, to: number, elapsed: number, duration
   return Math.round(from + (to - from) * eased);
 }
 
-export const prefersReducedMotion = (): boolean =>
+const prefersReducedMotion = (): boolean =>
   typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export interface GrowthTargets {

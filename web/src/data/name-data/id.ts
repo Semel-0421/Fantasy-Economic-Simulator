@@ -2,10 +2,10 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: id name tables (Latin script: English fantasy place names are kept, so no place/syllable tables).
 // Fallback goods name pattern: NOTE: Indonesian puts the qualifier AFTER the noun (e.g. "Wortel Dataran Tinggi"); intended pattern `${noun} ${qualifier}`; fallback goods name: `Barang dagangan ${qualifier}`
-export const curatedGoods: Record<string, string> = { 'g1_0': 'Gandum emas', 'g6_0': 'Perkakas tempaan', 'g17_5': 'Perlengkapan tembaga', 'g19_0': 'Batu surya' };
-export const landforms = ['Lembah', 'Rawa', 'Bukit', 'Tepian', 'Padang', 'Cekungan', 'Perbatasan'];
-export const qualifiers = ['Dataran Tinggi', 'Dataran Rendah', 'Pesisir', 'Sungai', 'Utara', 'Selatan', 'Timur', 'Barat', 'Bukit', 'Rawa', 'Lembah', 'Kota Lama'];
-export const categoryNouns = [
+const curatedGoods: Record<string, string> = { 'g1_0': 'Gandum emas', 'g6_0': 'Perkakas tempaan', 'g17_5': 'Perlengkapan tembaga', 'g19_0': 'Batu surya' };
+const landforms = ['Lembah', 'Rawa', 'Bukit', 'Tepian', 'Padang', 'Cekungan', 'Perbatasan'];
+const qualifiers = ['Dataran Tinggi', 'Dataran Rendah', 'Pesisir', 'Sungai', 'Utara', 'Selatan', 'Timur', 'Barat', 'Bukit', 'Rawa', 'Lembah', 'Kota Lama'];
+const categoryNouns = [
   'Lobak|Kubis|Bawang bombai|Bawang perai|Wortel|Bit',
   'Gandum|Jelai|Haver|Gandum hitam|Millet|Gandum spelta',
   'Apel|Pir|Prem|Ceri|Ara|Kwins',

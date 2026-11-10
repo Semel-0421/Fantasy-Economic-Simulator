@@ -1,7 +1,7 @@
 import type { Point } from './layout';
 
 export interface Axial { q: number; r: number }
-export const HEX_W = 28, HEX_H = 32;
+const HEX_W = 28;
 export const hexKey = (hex: Axial): string => `${hex.q},${hex.r}`;
 export const axialToPixel = ({ q, r }: Axial): Point => ({ x: HEX_W * (q + r / 2), y: 24 * r });
 export const hexDistance = (a: Axial, b: Axial): number => Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(a.q + a.r - b.q - b.r));

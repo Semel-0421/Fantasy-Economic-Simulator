@@ -1,0 +1,10 @@
+{
+  "path": ["src", "scripts", "../engine/fes-core/src", "../engine/fes-data/src", "../engine/fes-save/src", "../engine/fes-sim/src", "../engine/fes-parity/src", "../engine/fes-wasm/src"],
+  "format": ["typescript", "javascript", "rust"],
+  "minTokens": 100,
+  "minLines": 10,
+  "threshold": 0,
+  "ignore": ["**/src/i18n/**", "**/src/data/name-data/**", "**/src/sim/pkg/**", "**/src/assets/**"],
+  "reporters": ["console"],
+  "gitignore": true
+}

@@ -2,10 +2,10 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: pt name tables. Latin script: the English fantasy place names are kept.
 // Fallback goods name: `Mercadorias ${qualifier}`; generated goods names use noun first: `${noun} ${qualifier}`.
-export const curatedGoods: Record<string, string> = { g1_0: 'Trigo dourado', g6_0: 'Ferramentas de ferraria', g17_5: 'Ferragens de cobre', g19_0: 'Pedra solar' };
-export const landforms = ['Vale', 'Pântano', 'Colinas', 'Margem', 'Charneca', 'Grota', 'Marca'];
-export const qualifiers = ['das terras altas', 'das terras baixas', 'da costa', 'do rio', 'do norte', 'do sul', 'do leste', 'do oeste', 'da colina', 'do brejo', 'do vale', 'da cidade velha'];
-export const categoryNouns = [
+const curatedGoods: Record<string, string> = { g1_0: 'Trigo dourado', g6_0: 'Ferramentas de ferraria', g17_5: 'Ferragens de cobre', g19_0: 'Pedra solar' };
+const landforms = ['Vale', 'Pântano', 'Colinas', 'Margem', 'Charneca', 'Grota', 'Marca'];
+const qualifiers = ['das terras altas', 'das terras baixas', 'da costa', 'do rio', 'do norte', 'do sul', 'do leste', 'do oeste', 'da colina', 'do brejo', 'do vale', 'da cidade velha'];
+const categoryNouns = [
   'nabos|repolhos|cebolas|alhos-porós|cenouras|beterrabas',
   'trigo|cevada|aveia|centeio|painço|espelta',
   'maçãs|peras|ameixas|cerejas|figos|marmelos',

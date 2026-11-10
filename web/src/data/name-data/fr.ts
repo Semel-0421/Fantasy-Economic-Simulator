@@ -2,10 +2,10 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: fr name tables. Latin script: the English fantasy place names are kept.
 // Fallback goods name: `Marchandises ${qualifier}`; generated goods names use noun first: `${noun} ${qualifier}`.
-export const curatedGoods: Record<string, string> = { g1_0: 'Blé doré', g6_0: 'Outils de forge', g17_5: 'Ferrures en cuivre', g19_0: 'Pierre solaire' };
-export const landforms = ['Val', 'Marais', 'Collines', 'Rive', 'Lande', 'Creux', 'Marche'];
-export const qualifiers = ['des hautes terres', 'des basses terres', 'de la côte', 'de la rivière', 'du nord', 'du sud', 'de l\'est', 'de l\'ouest', 'de la colline', 'du marécage', 'de la vallée', 'de la vieille ville'];
-export const categoryNouns = [
+const curatedGoods: Record<string, string> = { g1_0: 'Blé doré', g6_0: 'Outils de forge', g17_5: 'Ferrures en cuivre', g19_0: 'Pierre solaire' };
+const landforms = ['Val', 'Marais', 'Collines', 'Rive', 'Lande', 'Creux', 'Marche'];
+const qualifiers = ['des hautes terres', 'des basses terres', 'de la côte', 'de la rivière', 'du nord', 'du sud', 'de l\'est', 'de l\'ouest', 'de la colline', 'du marécage', 'de la vallée', 'de la vieille ville'];
+const categoryNouns = [
   'navets|choux|oignons|poireaux|carottes|betteraves',
   'blé|orge|avoine|seigle|millet|épeautre',
   'pommes|poires|prunes|cerises|figues|coings',

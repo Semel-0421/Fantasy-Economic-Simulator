@@ -2,10 +2,10 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: de name tables (Latin script: English fantasy place names are kept, so no place/syllable tables).
 // Fallback goods name pattern: `${qualifier} ${noun}` (e.g. "Hochland Rüben"); fallback goods name: `Handelsware ${qualifier}`
-export const curatedGoods: Record<string, string> = { 'g1_0': 'Goldweizen', 'g6_0': 'Schmiedewerkzeuge', 'g17_5': 'Kupferbeschläge', 'g19_0': 'Sonnenstein' };
-export const landforms = ['Tal', 'Sumpf', 'Hügel', 'Ufer', 'Heide', 'Senke', 'Mark'];
-export const qualifiers = ['Hochland', 'Tiefland', 'Küsten', 'Fluss', 'Nord', 'Süd', 'Ost', 'West', 'Hügel', 'Sumpf', 'Tal', 'Altstadt'];
-export const categoryNouns = [
+const curatedGoods: Record<string, string> = { 'g1_0': 'Goldweizen', 'g6_0': 'Schmiedewerkzeuge', 'g17_5': 'Kupferbeschläge', 'g19_0': 'Sonnenstein' };
+const landforms = ['Tal', 'Sumpf', 'Hügel', 'Ufer', 'Heide', 'Senke', 'Mark'];
+const qualifiers = ['Hochland', 'Tiefland', 'Küsten', 'Fluss', 'Nord', 'Süd', 'Ost', 'West', 'Hügel', 'Sumpf', 'Tal', 'Altstadt'];
+const categoryNouns = [
   'Rüben|Kohl|Zwiebeln|Lauch|Karotten|Rote Bete',
   'Weizen|Gerste|Hafer|Roggen|Hirse|Dinkel',
   'Äpfel|Birnen|Pflaumen|Kirschen|Feigen|Quitten',

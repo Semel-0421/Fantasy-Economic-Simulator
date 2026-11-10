@@ -1,5 +1,5 @@
 // The game data files the engine reads (`{name: text}`), served from `data/` next to index.html.
-export const REQUIRED_FILES = [
+const REQUIRED_FILES = [
   'config.csv',
   'events.csv',
   'facilities.csv',
@@ -11,7 +11,7 @@ export const REQUIRED_FILES = [
 ] as const;
 
 /** Not every data set ships these; a 404 skips the file. */
-export const OPTIONAL_FILES = ['specialties.csv'] as const;
+const OPTIONAL_FILES = ['specialties.csv'] as const;
 
 export type GameFiles = Record<string, string>;
 

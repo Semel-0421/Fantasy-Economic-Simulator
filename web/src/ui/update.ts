@@ -5,7 +5,7 @@ import { t as i18nText, language } from '../i18n';
 import { button, el } from './dom';
 
 /** The "new version" bar; the page reloads once the new worker has taken over. */
-export function showUpdatePrompt(root: HTMLElement, activate: () => void): HTMLElement {
+function showUpdatePrompt(root: HTMLElement, activate: () => void): HTMLElement {
   const existing = document.getElementById('update-prompt');
   if (existing) return existing;
   const bar = el('div', { id: 'update-prompt', className: 'update-prompt' }, el('span', { text: i18nText("update.a-new-version-is-ready") }));

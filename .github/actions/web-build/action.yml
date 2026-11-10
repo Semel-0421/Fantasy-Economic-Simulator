@@ -34,7 +34,7 @@ runs:
       shell: bash
       working-directory: web
       run: npx playwright install --with-deps chromium
-    - name: Lint and typecheck
+    - name: Lint, typecheck, dead code and duplication
       shell: bash
       working-directory: web
       env:
@@ -42,6 +42,8 @@ runs:
       run: |
         npm run lint
         npm run typecheck
+        npm run deadcode
+        npm run dup
     - name: Test except scenario golden paths
       shell: bash
       working-directory: web

@@ -2,10 +2,10 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: tr name tables (Latin script: English fantasy place names are kept, so no place/syllable tables).
 // Fallback goods name pattern: `${qualifier} ${noun}` (e.g. "Yayla Şalgam", no suffix needed); fallback goods name: `Ticaret malı ${qualifier}`
-export const curatedGoods: Record<string, string> = { 'g1_0': 'Altın buğday', 'g6_0': 'Demirci aletleri', 'g17_5': 'Bakır bağlantılar', 'g19_0': 'Güneş taşı' };
-export const landforms = ['Vadi', 'Bataklık', 'Tepeler', 'Kıyı', 'Bozkır', 'Çukur', 'Sınır'];
-export const qualifiers = ['Yayla', 'Ova', 'Kıyı', 'Nehir', 'Kuzey', 'Güney', 'Doğu', 'Batı', 'Tepe', 'Bataklık', 'Vadi', 'Eski şehir'];
-export const categoryNouns = [
+const curatedGoods: Record<string, string> = { 'g1_0': 'Altın buğday', 'g6_0': 'Demirci aletleri', 'g17_5': 'Bakır bağlantılar', 'g19_0': 'Güneş taşı' };
+const landforms = ['Vadi', 'Bataklık', 'Tepeler', 'Kıyı', 'Bozkır', 'Çukur', 'Sınır'];
+const qualifiers = ['Yayla', 'Ova', 'Kıyı', 'Nehir', 'Kuzey', 'Güney', 'Doğu', 'Batı', 'Tepe', 'Bataklık', 'Vadi', 'Eski şehir'];
+const categoryNouns = [
   'Şalgam|Lahana|Soğan|Pırasa|Havuç|Pancar',
   'Buğday|Arpa|Yulaf|Çavdar|Darı|Alaca buğday',
   'Elma|Armut|Erik|Kiraz|İncir|Ayva',

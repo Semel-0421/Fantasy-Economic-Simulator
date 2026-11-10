@@ -2,17 +2,15 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: pcm name tables. Latin script: the English fantasy place names are kept, so there are
 // no curatedPlaces/starts/middles/ends. Same order and length as web/src/data/names.ts.
-export const curatedGoods: Record<string, string> = { g1_0: 'Gold wheat', g6_0: 'Smith tools', g17_5: 'Copper fitting', g19_0: 'Sunstone' };
+const curatedGoods: Record<string, string> = { g1_0: 'Gold wheat', g6_0: 'Smith tools', g17_5: 'Copper fitting', g19_0: 'Sunstone' };
 
 // landforms (7): a suffix after the place name
-export const landforms = ['Valley', 'Swamp', 'Hills', 'Reach', 'Moor', 'Hollow', 'Border'];
-export const landformPositionPcm: 'before' | 'after' = 'after';
+const landforms = ['Valley', 'Swamp', 'Hills', 'Reach', 'Moor', 'Hollow', 'Border'];
 // qualifiers (12): placed before the noun
-export const qualifiers = ['High land', 'Low land', 'Sea side', 'River side', 'North', 'South', 'East', 'West', 'Hill', 'Swamp', 'Valley', 'Old town'];
-export const qualifierPositionPcm: 'before' | 'after' = 'before';
+const qualifiers = ['High land', 'Low land', 'Sea side', 'River side', 'North', 'South', 'East', 'West', 'Hill', 'Swamp', 'Valley', 'Old town'];
 // Fallback goods name pattern: `Trade goods ${qualifier}`  (the English source is `Trade goods ${qualifier}`)
 
-export const categoryNouns = [
+const categoryNouns = [
   'turnip|cabbage|onion|leek|carrot|beetroot',
   'wheat|barley|oat|rye|millet|spelt',
   'apple|pear|plum|cherry|fig|quince',

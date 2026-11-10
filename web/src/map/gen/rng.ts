@@ -2,7 +2,7 @@
 // Map generation is UI decoration and never touches the simulation's own random stream.
 
 /** FNV-1a 32-bit hash of a string. */
-export function fnv1a(text: string): number {
+function fnv1a(text: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
@@ -41,7 +41,7 @@ export function rng(seed: string): Rng {
  * Smooth value noise in [-1, 1] on a lattice hashed from the seed. With `period` (lattice cells),
  * the noise repeats every `period` units in x, so it tiles seamlessly round a cylinder.
  */
-export function valueNoise(seed: number, period = 0): (x: number, y: number) => number {
+function valueNoise(seed: number, period = 0): (x: number, y: number) => number {
   const at = (ix: number, iy: number): number => {
     if (period > 0) ix = (ix % period + period) % period;
     let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ seed;
@@ -58,7 +58,7 @@ export function valueNoise(seed: number, period = 0): (x: number, y: number) => 
 }
 
 /** Fractal (fBm) sum of value noise octaves, roughly in [-1, 1]; `period` as in valueNoise. */
-export function fbm(seed: number, octaves = 5, period = 0): (x: number, y: number) => number {
+function fbm(seed: number, octaves = 5, period = 0): (x: number, y: number) => number {
   const layers = Array.from({ length: octaves }, (_, i) => valueNoise(seed + i * 1013, period * 2 ** i));
   return (x, y) => {
     let sum = 0, amp = 0.5, freq = 1, norm = 0;

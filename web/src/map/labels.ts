@@ -15,7 +15,7 @@ export function labelCandidates(map: MapData, layout: Layout, measure: (name: st
 }
 export const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 /** Space kept clear around each placed label, in CSS pixels. */
-export const LABEL_MARGIN = 2;
+const LABEL_MARGIN = 2;
 const padded = (b: Box): Box => ({ x: b.x - LABEL_MARGIN, y: b.y - LABEL_MARGIN, w: b.w + 2 * LABEL_MARGIN, h: b.h + 2 * LABEL_MARGIN });
 
 /** Greedy placement is in CSS pixels: font size and the collision margin never shrink with zoom. */

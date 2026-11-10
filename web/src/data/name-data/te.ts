@@ -2,7 +2,7 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3 (te): name tables, same order and length as web/src/data/names.ts.
 // Places are transliterated by sound; each English syllable maps to one entry, so a generated name is the same name in this script.
-export const curatedPlaces: Record<string, string> = {
+const curatedPlaces: Record<string, string> = {
   k0: 'అల్డర్‌మీర్', k1: 'కెస్రిన్', k2: 'సోల్వేన్', k3: 'తాల్గార్డ్', k4: 'ఎంబర్‌వేల్',
   k0n0: 'వార్న్', k0n1: 'హాల్వెష్', k0n2: 'కోర్విత్', k0n3: 'బ్రాన్నాక్', k0n4: 'ఎల్స్‌మీర్',
   k1n0: 'డ్రావిక్', k1n1: 'సెరవెల్', k1n2: 'మారోఫెన్', k1n3: 'ఇస్ట్రెల్', k1n4: 'క్వెల్‌మార్క్',
@@ -13,20 +13,20 @@ export const curatedPlaces: Record<string, string> = {
   k0n0r0c0: 'ఆష్‌ఫర్డ్', k0n0r0c1: 'థార్న్‌హోల్డ్', k0n0r0c2: 'ఫెర్న్లీ', k0n0r0c3: 'ఓక్‌హర్స్ట్', k0n0r0c4: 'సాల్ట్‌మార్ష్',
   k0n0r1c4: 'రేవెన్స్‌గేట్', k0n0r0c0v1: 'మిల్‌బ్రూక్',
 };
-export const curatedGoods: Record<string, string> = { g1_0: 'బంగారు గోధుమ', g6_0: 'కమ్మరి పనిముట్లు', g17_5: 'రాగి అలంకరణలు', g19_0: 'సూర్యకాంత శిల' };
+const curatedGoods: Record<string, string> = { g1_0: 'బంగారు గోధుమ', g6_0: 'కమ్మరి పనిముట్లు', g17_5: 'రాగి అలంకరణలు', g19_0: 'సూర్యకాంత శిల' };
 
-export const starts = 'అల్ బెల్ కోర్ డాల్ ఎల్ ఫాల్ గాల్ హాల్ ఇల్ కెల్ లోర్ మెల్ నోర్ ఓర్ పెల్ వెల్'.split(' ');
-export const middles = 'అ బ డె ఎన్ ఫ గ హ ఇ ల మె న ఒ ర సె త వె'.split(' ');
-export const ends = 'బన్ డెన్ ఫెన్ గార్ లెన్ మెర్ మోన్ నార్ రెన్ రిస్ సార్ టెన్ టోర్ వాల్ వెన్ విన్'.split(' ');
+const starts = 'అల్ బెల్ కోర్ డాల్ ఎల్ ఫాల్ గాల్ హాల్ ఇల్ కెల్ లోర్ మెల్ నోర్ ఓర్ పెల్ వెల్'.split(' ');
+const middles = 'అ బ డె ఎన్ ఫ గ హ ఇ ల మె న ఒ ర సె త వె'.split(' ');
+const ends = 'బన్ డెన్ ఫెన్ గార్ లెన్ మెర్ మోన్ నార్ రెన్ రిస్ సార్ టెన్ టోర్ వాల్ వెన్ విన్'.split(' ');
 // Syllables are distinct on purpose; the generator still checks uniqueness on the final string and probes on a clash.
 
 // landforms (a suffix after the name): Vale, Fen, Downs, Reach, Moor, Hollow, March
-export const landforms = ['లోయ', 'బురదనేల', 'మెట్టలు', 'తీరం', 'బీడుభూమి', 'పల్లం', 'సరిహద్దు'];
+const landforms = ['లోయ', 'బురదనేల', 'మెట్టలు', 'తీరం', 'బీడుభూమి', 'పల్లం', 'సరిహద్దు'];
 // qualifiers (prefix before the noun)
-export const qualifiers = ['ఎగువ', 'దిగువ', 'తీర', 'నదీ', 'ఉత్తర', 'దక్షిణ', 'తూర్పు', 'పశ్చిమ', 'కొండ', 'చిత్తడి', 'లోయ', 'పాత పట్టణ'];
+const qualifiers = ['ఎగువ', 'దిగువ', 'తీర', 'నదీ', 'ఉత్తర', 'దక్షిణ', 'తూర్పు', 'పశ్చిమ', 'కొండ', 'చిత్తడి', 'లోయ', 'పాత పట్టణ'];
 // Fallback goods name: `Trade goods ${qualifier}` -> `${qualifier} వాణిజ్య వస్తువులు`
 
-export const categoryNouns = [
+const categoryNouns = [
   'టర్నిప్‌లు|క్యాబేజీలు|ఉల్లిపాయలు|లీక్స్|క్యారెట్లు|బీట్‌రూట్లు',
   'గోధుమలు|బార్లీ|ఓట్స్|రై|సామలు|స్పెల్ట్',
   'ఆపిళ్లు|బేరిపండ్లు|ప్లమ్స్|చెర్రీలు|అంజీరాలు|క్విన్స్ పండ్లు',

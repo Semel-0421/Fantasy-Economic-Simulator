@@ -2,7 +2,7 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3 (ta): name tables, same order and length as web/src/data/names.ts.
 // Places are transliterated by sound; each English syllable maps to one entry, so a generated name is the same name in this script.
-export const curatedPlaces: Record<string, string> = {
+const curatedPlaces: Record<string, string> = {
   k0: 'அல்டர்மீர்', k1: 'கெஸ்ரின்', k2: 'சோல்வேன்', k3: 'தால்கார்ட்', k4: 'எம்பர்வேல்',
   k0n0: 'வார்ன்', k0n1: 'ஹால்வெஷ்', k0n2: 'கோர்விஸ்', k0n3: 'பிரானாக்', k0n4: 'எல்ஸ்மீர்',
   k1n0: 'டிராவிக்', k1n1: 'செரவெல்', k1n2: 'மொரோஃபென்', k1n3: 'இஸ்ட்ரெல்', k1n4: 'க்வெல்மார்க்',
@@ -13,20 +13,20 @@ export const curatedPlaces: Record<string, string> = {
   k0n0r0c0: 'ஆஷ்ஃபோர்டு', k0n0r0c1: 'தோர்ன்ஹோல்டு', k0n0r0c2: 'ஃபெர்ன்லி', k0n0r0c3: 'ஓக்ஹர்ஸ்ட்', k0n0r0c4: 'சால்ட்மார்ஷ்',
   k0n0r1c4: 'ரேவன்ஸ்கேட்', k0n0r0c0v1: 'மில்புரூக்',
 };
-export const curatedGoods: Record<string, string> = { g1_0: 'தங்கக் கோதுமை', g6_0: 'கொல்லர் கருவிகள்', g17_5: 'செம்பு அலங்காரங்கள்', g19_0: 'சூரியக்கல்' };
+const curatedGoods: Record<string, string> = { g1_0: 'தங்கக் கோதுமை', g6_0: 'கொல்லர் கருவிகள்', g17_5: 'செம்பு அலங்காரங்கள்', g19_0: 'சூரியக்கல்' };
 
-export const starts = 'அல் பெல் கோர் டால் எல் ஃபால் கால் ஹால் இல் கெல் லோர் மெல் நோர் ஓர் பேல் வெல்'.split(' ');
-export const middles = 'அ ப டெ என் ஃப க ஹ இ ல மெ ந ஒ ர செ த வெ'.split(' ');
-export const ends = 'பன் டென் ஃபென் கார் லென் மெர் மோன் நார் ரென் ரிஸ் சார் தென் டோர் வால் வென் வின்'.split(' ');
+const starts = 'அல் பெல் கோர் டால் எல் ஃபால் கால் ஹால் இல் கெல் லோர் மெல் நோர் ஓர் பேல் வெல்'.split(' ');
+const middles = 'அ ப டெ என் ஃப க ஹ இ ல மெ ந ஒ ர செ த வெ'.split(' ');
+const ends = 'பன் டென் ஃபென் கார் லென் மெர் மோன் நார் ரென் ரிஸ் சார் தென் டோர் வால் வென் வின்'.split(' ');
 // Syllables are distinct on purpose; the generator still checks uniqueness on the final string and probes on a clash.
 
 // landforms (a suffix after the name): Vale, Fen, Downs, Reach, Moor, Hollow, March
-export const landforms = ['பள்ளத்தாக்கு', 'சதுப்பு', 'மேடுகள்', 'கரை', 'தரிசு நிலம்', 'பள்ளம்', 'எல்லை'];
+const landforms = ['பள்ளத்தாக்கு', 'சதுப்பு', 'மேடுகள்', 'கரை', 'தரிசு நிலம்', 'பள்ளம்', 'எல்லை'];
 // qualifiers (prefix before the noun)
-export const qualifiers = ['மேட்டுநில', 'தாழ்நில', 'கடலோர', 'ஆற்றோர', 'வடக்கு', 'தெற்கு', 'கிழக்கு', 'மேற்கு', 'குன்று', 'சதுப்பு', 'பள்ளத்தாக்கு', 'பழைய நகர'];
+const qualifiers = ['மேட்டுநில', 'தாழ்நில', 'கடலோர', 'ஆற்றோர', 'வடக்கு', 'தெற்கு', 'கிழக்கு', 'மேற்கு', 'குன்று', 'சதுப்பு', 'பள்ளத்தாக்கு', 'பழைய நகர'];
 // Fallback goods name: `Trade goods ${qualifier}` -> `${qualifier} வர்த்தகப் பொருட்கள்`
 
-export const categoryNouns = [
+const categoryNouns = [
   'டர்னிப்|முட்டைக்கோஸ்|வெங்காயம்|லீக் கீரை|கேரட்|பீட்ரூட்',
   'கோதுமை|பார்லி|ஓட்ஸ்|ரை|தினை|ஸ்பெல்ட்',
   'ஆப்பிள்|பேரிக்காய்|பிளம்|செர்ரி|அத்திப்பழம்|குயின்ஸ் பழம்',

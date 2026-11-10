@@ -2,12 +2,6 @@
 // lakes in filled basins, and rivers where accumulated rainfall is large.
 import type { Grid } from './grid';
 
-/** Elevation value below which the given share of cells lies. */
-export function quantile(values: Float32Array, share: number): number {
-  const sorted = Float32Array.from(values).sort();
-  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(share * sorted.length)))]!;
-}
-
 /** Binary min-heap of cell indices keyed by a float priority (deterministic ties by index). */
 class Heap {
   private items: number[] = [];

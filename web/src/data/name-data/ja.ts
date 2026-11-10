@@ -2,7 +2,7 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: ja name tables, same order and length as web/src/data/names.ts.
 // Places are transliterations of the English fantasy names; the syllable tables map one to one.
-export const curatedPlaces: Record<string, string> = {
+const curatedPlaces: Record<string, string> = {
   k0: 'アルダーミア', k1: 'ケスリン', k2: 'ソルヴェイン', k3: 'タールガード', k4: 'エンバーヴェイル',
   k0n0: 'ヴァーン', k0n1: 'ハルヴェッシュ', k0n2: 'コーウィス', k0n3: 'ブラノック', k0n4: 'エルズミア',
   k1n0: 'ドラヴィク', k1n1: 'セラヴェル', k1n2: 'モローフェン', k1n3: 'イストレル', k1n4: 'クウェルマーク',
@@ -12,22 +12,22 @@ export const curatedPlaces: Record<string, string> = {
   k0n0r0: 'アッシュフォード谷', k0n0r1: 'グレイフェン', k0n0r0c0: 'アッシュフォード', k0n0r0c1: 'ソーンホールド', k0n0r0c2: 'ファーンリー',
   k0n0r0c3: 'オークハースト', k0n0r0c4: 'ソルトマーシュ', k0n0r1c4: 'レイヴンズゲート', k0n0r0c0v1: 'ミルブルック',
 };
-export const curatedGoods: Record<string, string> = { g1_0: '黄金の小麦', g6_0: '鍛冶道具', g17_5: '銅の飾り金具', g19_0: '太陽の石' };
+const curatedGoods: Record<string, string> = { g1_0: '黄金の小麦', g6_0: '鍛冶道具', g17_5: '銅の飾り金具', g19_0: '太陽の石' };
 
 // starts: 'al bel cor dal el fal gal hal il kel lor mel nor or pel vel'
-export const starts = 'アル ベル コル ダル エル ファル ガル ハル イル ケル ロル メル ノル オル ペル ヴェル'.split(' ');
+const starts = 'アル ベル コル ダル エル ファル ガル ハル イル ケル ロル メル ノル オル ペル ヴェル'.split(' ');
 // middles: 'a ba de en fa ga ha i la me na o ra se ta ve'
-export const middles = 'ア バ デ エン ファ ガ ハ イ ラ メ ナ オ ラー セ タ ヴェ'.split(' ');
+const middles = 'ア バ デ エン ファ ガ ハ イ ラ メ ナ オ ラー セ タ ヴェ'.split(' ');
 // ends: 'ban den fen gar len mer mon nar ren ris sar ten tor val ven win'
-export const ends = 'バン デン フェン ガル レン メル モン ナル レーン リス サル テン トル ヴァル ヴェン ウィン'.split(' ');
+const ends = 'バン デン フェン ガル レン メル モン ナル レーン リス サル テン トル ヴァル ヴェン ウィン'.split(' ');
 
 // landforms: 'Vale', 'Fen', 'Downs', 'Reach', 'Moor', 'Hollow', 'March' (a suffix after the name)
-export const landforms = ['谷', '沼沢', '丘陵', '河畔', '荒野', '窪地', '辺境'];
+const landforms = ['谷', '沼沢', '丘陵', '河畔', '荒野', '窪地', '辺境'];
 // qualifiers (prefix before the noun)
-export const qualifiers = ['高地の', '低地の', '沿岸の', '川沿いの', '北部の', '南部の', '東部の', '西部の', '丘陵の', '湿地の', '谷間の', '旧市街の'];
+const qualifiers = ['高地の', '低地の', '沿岸の', '川沿いの', '北部の', '南部の', '東部の', '西部の', '丘陵の', '湿地の', '谷間の', '旧市街の'];
 // Fallback goods name (English: `Trade goods ${qualifier}`): `${qualifier}交易品`
 
-export const categoryNouns = [
+const categoryNouns = [
   'かぶ|キャベツ|玉ねぎ|ポロねぎ|にんじん|ビート',
   '小麦|大麦|オーツ麦|ライ麦|キビ|スペルト小麦',
   'りんご|梨|すもも|さくらんぼ|いちじく|マルメロ',

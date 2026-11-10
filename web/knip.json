@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/sim/worker.ts",
+    "src/sw.template.js",
+    "samples.html",
+    "src/map/gen/samples.ts",
+    "scripts/*.mjs",
+    "tests/**/*.{ts,mjs}",
+    "bench/*.{ts,mjs}"
+  ],
+  "project": ["src/**/*.{ts,js}", "scripts/**/*.mjs", "tests/**/*.{ts,mjs}", "bench/*.{ts,mjs}"],
+  "ignoreDependencies": ["binaryen"],
+  "ignoreBinaries": ["wasm-bindgen"]
+}

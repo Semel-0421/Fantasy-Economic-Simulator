@@ -16,7 +16,9 @@
     "assets:log": "node scripts/assets-log.mjs",
     "capture": "node --experimental-strip-types scripts/capture.mjs",
     "test:ui": "npm run prepare:assets && vitest run --config vitest.ui.config.ts",
-    "maps:samples": "npm run prepare:assets && node scripts/map-samples.mjs"
+    "maps:samples": "npm run prepare:assets && node scripts/map-samples.mjs",
+    "deadcode": "knip",
+    "dup": "jscpd --config .jscpd.json"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
@@ -27,6 +29,8 @@
     "eslint-plugin-sonarjs": "^2.0.4",
     "fake-indexeddb": "6.2.7",
     "globals": "^16.2.0",
+    "jscpd": "5.4.3",
+    "knip": "6.44.2",
     "playwright": "1.53.0",
     "typescript": "5.8.3",
     "typescript-eslint": "8.35.1",

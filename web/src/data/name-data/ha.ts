@@ -2,17 +2,15 @@ import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: ha name tables. Latin script: the English fantasy place names are kept, so there are
 // no curatedPlaces/starts/middles/ends. Same order and length as web/src/data/names.ts.
-export const curatedGoods: Record<string, string> = { g1_0: 'Alkamar zinariya', g6_0: 'Kayan aikin maƙera', g17_5: 'Kayan jan ƙarfe', g19_0: 'Dutsen rana' };
+const curatedGoods: Record<string, string> = { g1_0: 'Alkamar zinariya', g6_0: 'Kayan aikin maƙera', g17_5: 'Kayan jan ƙarfe', g19_0: 'Dutsen rana' };
 
 // landforms (7): a prefix before the place name
-export const landforms = ['Kwari', 'Fadama', 'Tuddai', 'Yanki', 'Fili', 'Rami', 'Iyaka'];
-export const landformPositionHa: 'before' | 'after' = 'before';
+const landforms = ['Kwari', 'Fadama', 'Tuddai', 'Yanki', 'Fili', 'Rami', 'Iyaka'];
 // qualifiers (12): placed after the noun
-export const qualifiers = ['na tudu', 'na ƙasa', 'na bakin teku', 'na kogi', 'na arewa', 'na kudu', 'na gabas', 'na yamma', 'na tsauni', 'na fadama', 'na kwari', 'na tsohon gari'];
-export const qualifierPositionHa: 'before' | 'after' = 'after';
+const qualifiers = ['na tudu', 'na ƙasa', 'na bakin teku', 'na kogi', 'na arewa', 'na kudu', 'na gabas', 'na yamma', 'na tsauni', 'na fadama', 'na kwari', 'na tsohon gari'];
 // Fallback goods name pattern: `Kayan ciniki ${qualifier}`  (the English source is `Trade goods ${qualifier}`)
 
-export const categoryNouns = [
+const categoryNouns = [
   'turnif|kabeji|albasa|lik|karas|gwoza',
   "alkama|sha'ir|oatsi|hatsin rai|gero|alkamar spelt",
   'tuffa|pia|plam|cheri|ɓaure|kwins',

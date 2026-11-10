@@ -4,7 +4,7 @@ import type { WasmSim } from './pkg/fes_wasm.js';
 import { runFullscaleBench } from './fullscale_bench';
 import type { Request, Response } from './protocol';
 
-export interface HostResult {
+interface HostResult {
   response: Response;
   /** Buffers to move (not copy) with the response. */
   transfer: Transferable[];

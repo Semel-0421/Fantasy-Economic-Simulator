@@ -57,7 +57,6 @@ const tripQuote = obj({
   cargo_value: num,
   encounter_chance: num,
 });
-export type TripQuote = Infer<typeof tripQuote>;
 
 const edgeTurn = obj({ from: num, to: num, turn: num });
 const yearOnly = obj({ year: num });
@@ -228,7 +227,6 @@ export const commandPreviewSchema = obj({
   cargo: viewSchemas.cargo,
   stock: arr(tup(num, num)),
 });
-export type CommandPreview = Infer<typeof commandPreviewSchema>;
 
 export type ViewName = keyof typeof viewSchemas;
 export type Views = { [K in ViewName]: Infer<(typeof viewSchemas)[K]> };

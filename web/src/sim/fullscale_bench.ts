@@ -14,7 +14,7 @@ export interface FullscaleBenchResult {
   hashMatches: boolean;
 }
 
-export const FULLSCALE_TURNS = 54;
+const FULLSCALE_TURNS = 54;
 
 export function runFullscaleBench(
   sim: BenchSimulation,

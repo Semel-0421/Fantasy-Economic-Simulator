@@ -5,7 +5,7 @@ import type { Biome } from './gen/climate';
 import { partitionHexes } from './hex_partition';
 import { axialToPixel, hexDistance, hexKey, hexLine, pixelToAxial, neighbours, type Axial } from './hex';
 
-export type Terrain = Biome;
+type Terrain = Biome;
 export interface HexTile extends Axial { continent: number; nation: number; region: number; terrain: Terrain; road: boolean; river: boolean }
 export interface HexLayout extends Layout {
   /** The map seed this layout was generated from. */
@@ -38,7 +38,7 @@ export function nearestCopy(layout: { cols: number }, a: Axial, b: Axial): Axial
 }
 
 /** Hexes on the shortest line between two hexes of the wrapped world, in canonical coordinates. */
-export function wrappedLine(layout: { cols: number }, a: Axial, b: Axial): Axial[] {
+function wrappedLine(layout: { cols: number }, a: Axial, b: Axial): Axial[] {
   return hexLine(a, nearestCopy(layout, a, b)).map((hex) => wrapHex(layout, hex));
 }
 

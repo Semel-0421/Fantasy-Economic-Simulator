@@ -1,7 +1,7 @@
 import type { NameData } from '../name-types';
 import { englishNames } from './en';
 // Plan 7D Task 3: bn name tables, same order and length as web/src/data/names.ts. Places are transliterated by sound.
-export const curatedPlaces: Record<string, string> = {
+const curatedPlaces: Record<string, string> = {
   k0: 'অল্ডারমিয়ার', k1: 'কেসরিন', k2: 'সলভেন', k3: 'থালগার্ড', k4: 'এমবারভেল',
   k0n0: 'ভার্ন', k0n1: 'হালভেশ', k0n2: 'কর্উইথ', k0n3: 'ব্র্যানক', k0n4: 'এলসমিয়ার',
   k1n0: 'ড্রাভিক', k1n1: 'সেরাভেল', k1n2: 'মোরোফেন', k1n3: 'ইস্ট্রেল', k1n4: 'কুয়েলমার্ক',
@@ -11,22 +11,22 @@ export const curatedPlaces: Record<string, string> = {
   k0n0r0: 'অ্যাশফোর্ড উপত্যকা', k0n0r1: 'গ্রেফেন', k0n0r0c0: 'অ্যাশফোর্ড', k0n0r0c1: 'থর্নহোল্ড', k0n0r0c2: 'ফার্নলি',
   k0n0r0c3: 'ওকহার্স্ট', k0n0r0c4: 'সল্টমার্শ', k0n0r1c4: 'রেভেনসগেট', k0n0r0c0v1: 'মিলব্রুক',
 };
-export const curatedGoods: Record<string, string> = { g1_0: 'সোনালি গম', g6_0: 'কামারের যন্ত্র', g17_5: 'তামার সাজ', g19_0: 'সূর্যমণি' };
+const curatedGoods: Record<string, string> = { g1_0: 'সোনালি গম', g6_0: 'কামারের যন্ত্র', g17_5: 'তামার সাজ', g19_0: 'সূর্যমণি' };
 
 // starts: 'al bel cor dal el fal gal hal il kel lor mel nor or pel vel'
-export const starts = 'অল বেল কর ডাল এল ফাল গাল হাল ইল কেল লর মেল নর অর পেল ভেল'.split(' ');
+const starts = 'অল বেল কর ডাল এল ফাল গাল হাল ইল কেল লর মেল নর অর পেল ভেল'.split(' ');
 // middles: 'a ba de en fa ga ha i la me na o ra se ta ve'
-export const middles = 'অ বা দে এন ফা গা হা ই লা মে না ও রা সে তা ভে'.split(' ');
+const middles = 'অ বা দে এন ফা গা হা ই লা মে না ও রা সে তা ভে'.split(' ');
 // ends: 'ban den fen gar len mer mon nar ren ris sar ten tor val ven win'
-export const ends = 'বান ডেন ফেন গার লেন মের মন নার রেন রিস সার টেন টর ভাল ভেন উইন'.split(' ');
+const ends = 'বান ডেন ফেন গার লেন মের মন নার রেন রিস সার টেন টর ভাল ভেন উইন'.split(' ');
 
 // landforms: 'Vale', 'Fen', 'Downs', 'Reach', 'Moor', 'Hollow', 'March' (a suffix after the name)
-export const landforms = ['উপত্যকা', 'জলাভূমি', 'টিলা', 'বিস্তার', 'প্রান্তর', 'খাদ', 'সীমান্ত'];
+const landforms = ['উপত্যকা', 'জলাভূমি', 'টিলা', 'বিস্তার', 'প্রান্তর', 'খাদ', 'সীমান্ত'];
 // qualifiers (prefix before the noun)
-export const qualifiers = ['উচ্চভূমির', 'নিম্নভূমির', 'উপকূলীয়', 'নদীতীরের', 'উত্তরের', 'দক্ষিণের', 'পূর্বের', 'পশ্চিমের', 'পাহাড়ি', 'জলাভূমির', 'উপত্যকার', 'পুরনো শহরের'];
+const qualifiers = ['উচ্চভূমির', 'নিম্নভূমির', 'উপকূলীয়', 'নদীতীরের', 'উত্তরের', 'দক্ষিণের', 'পূর্বের', 'পশ্চিমের', 'পাহাড়ি', 'জলাভূমির', 'উপত্যকার', 'পুরনো শহরের'];
 // Fallback goods name: `Trade goods ${qualifier}` -> `{qualifier} বাণিজ্যপণ্য`
 
-export const categoryNouns = [
+const categoryNouns = [
   'শালগম|বাঁধাকপি|পেঁয়াজ|লিক|গাজর|বিট',
   'গম|যব|জই|রাই|বাজরা|স্পেল্ট',
   'আপেল|নাশপাতি|আলুবোখারা|চেরি|ডুমুর|কুইন্স',

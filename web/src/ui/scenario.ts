@@ -1,3 +1,4 @@
+import { t as i18nText, formatNumber } from '../i18n';
 // The scenario HUD panel (objectives, the deadline, offered contracts) and the scenario parts of a
 // turn report (news dialogs, the end).
 import type { TurnReport, Views } from '../sim/types';
@@ -7,7 +8,7 @@ import { displayText } from '../data/names';
 
 type Contract = Views['scenario_contracts'][number];
 type Objective = Views['objectives'][number];
-const fmt = (n: number): string => n.toLocaleString('en-US');
+const fmt = formatNumber;
 
 /** The news dialogs a turn brought, in order. */
 export function scenarioDialogs(report: TurnReport): DialogText[] {
@@ -15,7 +16,7 @@ export function scenarioDialogs(report: TurnReport): DialogText[] {
   for (const e of report.events) {
     if (typeof e === 'object' && 'ScenarioDialog' in e) {
       const d = e.ScenarioDialog;
-      out.push({ title: 'News', text: displayText(d.coins > 0 ? `${d.text}\n\nYou receive ${fmt(d.coins)} coins.` : d.text) });
+      out.push({ title: i18nText("scenario.news"), text: displayText(d.coins > 0 ? i18nText("scenario.you-receive-coins", { arg1: d.text, arg2: fmt(d.coins) }) : d.text) });
     }
   }
   return out;
@@ -37,17 +38,17 @@ export function scenarioEnd(report: TurnReport): { net_profit: number; objective
 /** "Week 3 of 20 - 18 weeks left" after `played` weeks. */
 export function deadlineText(played: number, weeks: number): string {
   const left = weeks - played;
-  return `Week ${played + 1} of ${weeks} - ${left <= 1 ? 'last week' : `${left} weeks left`}`;
+  return i18nText("scenario.week-of", { arg1: played + 1, arg2: weeks, arg3: left <= 1 ? i18nText("scenario.last-week") : i18nText("scenario.weeks-left", { arg1: left }) });
 }
 
 export function contractLine(c: Contract, goodName: (g: number) => string, nodeName: (n: number) => string): string {
-  return `${c.quantity} ${goodName(c.good)} to ${nodeName(c.node)} by week ${c.deadline_week} - ${fmt(c.reward)} coins`;
+  return i18nText("scenario.to-by-week-coins", { arg1: c.quantity, arg2: goodName(c.good), arg3: nodeName(c.node), arg4: c.deadline_week, arg5: fmt(c.reward) });
 }
 
 function contractState(c: Contract): string {
-  if (c.delivered) return 'Delivered';
-  if (c.expired) return 'Expired';
-  return c.accepted ? 'Accepted' : '';
+  if (c.delivered) return i18nText("scenario.delivered");
+  if (c.expired) return i18nText("scenario.expired");
+  return c.accepted ? i18nText("scenario.accepted") : '';
 }
 
 export interface ScenarioPanel {
@@ -69,7 +70,7 @@ export function scenarioPanel(
     { className: 'card scenario-card' },
     el('h2', { text: title }),
     deadline,
-    el('h3', { text: 'Objectives' }),
+    el('h3', { text: i18nText("scenario.objectives") }),
     goals,
     offers,
   );
@@ -84,7 +85,7 @@ export function scenarioPanel(
             { className: o.done ? 'done' : '' },
             objectiveMark(o.done),
             el('span', { className: 'objective-text', text: o.text }),
-            el('span', { text: o.done ? `Done, week ${o.done_week}` : 'To do' }),
+            el('span', { text: o.done ? i18nText("scenario.done-week", { arg1: o.done_week }) : i18nText("scenario.to-do") }),
           ),
         ),
       );
@@ -92,7 +93,7 @@ export function scenarioPanel(
         ...contracts.map((c) => {
           const row = el('li', { className: 'contract' }, el('span', { text: contractLine(c, names.good, names.node), title: c.text }));
           const state = contractState(c);
-          row.append(state ? el('span', { text: state }) : button('Accept', () => accept(c.id), `accept-${c.id}`));
+          row.append(state ? el('span', { text: state }) : button(i18nText("scenario.accept"), () => accept(c.id), `accept-${c.id}`));
           return row;
         }),
       );

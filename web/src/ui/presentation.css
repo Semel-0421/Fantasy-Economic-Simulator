@@ -5,7 +5,7 @@ body { background: var(--surface-frame); }
 .menu :focus-visible { outline-color: var(--focus-on-frame); }
 .scenarios { display: flex; flex-direction: column; gap: var(--space-3); }
 .scenarios li { display: block; padding: var(--space-3); background: var(--paper); color: var(--ink); border: var(--border-width) solid var(--wood-light); }
-.scenarios button { width: 100%; text-align: left; font-size: var(--type-xl); }
+.scenarios button { width: 100%; text-align: start; font-size: var(--type-xl); }
 .scenarios p { margin: var(--space-2) 0 0; }
 .scenario-pitch { font-size: var(--type-body); }
 .scenarios :focus-visible { outline-color: var(--focus); }
@@ -24,7 +24,7 @@ body { background: var(--surface-frame); }
 .results .rows li { padding: var(--space-3); align-items: center; flex-wrap: wrap; }
 .results .rows li > span:nth-child(2) { flex: 1; }
 .objective-mark { display: inline-block; position: relative; flex: 0 0 16px; width: 16px; height: 16px; border: var(--border-width) solid var(--ink); }
-.objective-mark.checked::after { content: ''; position: absolute; width: 5px; height: 10px; left: 3px; top: -1px; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.objective-mark.checked::after { content: ''; position: absolute; width: 5px; height: 10px; inset-inline-start: 3px; top: -1px; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .backdrop { background: var(--scrim); }
 .dialog { color: var(--ink); border: var(--border-width) solid var(--border-card); box-shadow: var(--pixel-border); border-radius: var(--radius-small); font-family: var(--font-body); }
 .dialog h2 { font-family: var(--font-body); font-weight: bold; }

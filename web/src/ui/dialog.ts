@@ -1,3 +1,4 @@
+import { t as i18nText } from '../i18n';
 // Modal dialogs for scenario news: one at a time, in order. While one is open the rest of the page
 // takes no input (it is inert behind a backdrop) until the player presses Continue.
 import { button, el } from './dom';
@@ -22,7 +23,7 @@ export function dialogs(host: HTMLElement, page: () => HTMLElement | null): Dial
     new Promise((resolve) => {
       const close = (): void => { backdrop.remove(); resolve(); };
       const ok = button(
-        'Continue',
+        i18nText("dialog.continue"),
         close,
         'dialog-ok',
       );

@@ -1,3 +1,4 @@
+import { t as i18nText, applyLanguage } from './i18n';
 // Entry point: main menu, then a free-mode or scenario game on the simulation Worker.
 import './ui/fonts.css';
 import '@fontsource/atkinson-hyperlegible/latin-400.css';
@@ -34,6 +35,7 @@ import { gainsOf, presentGrowth } from './ui/growth';
 import { finishWeek } from './ui/week_end';
 import { guideDone, showGuide, freeHint } from './ui/guide';
 
+applyLanguage();
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app');
 const app: HTMLElement = root;
@@ -103,7 +105,7 @@ async function showMenu(notice = ''): Promise<void> {
   await openSaves();
   const list = saves ? await saves.list().catch(() => []) : [];
   const latest = saves ? await saves.latest().catch(() => null) : null;
-  const unavailable = saves ? '' : 'Saving is unavailable in this browser.';
+  const unavailable = saves ? '' : i18nText("main.saving-is-unavailable-in-this-browser");
   renderMenu(
     app,
     list,
@@ -135,11 +137,11 @@ const scenarioMapSeed = (n: number): string => `scenario-${n}`;
 
 async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapSeed?: string): Promise<void> {
   musicScene('game');
-  app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: 'Loading the simulation...' }));
+  app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: i18nText("main.loading-the-simulation") }));
   try {
     bridge = await starting;
   } catch (e) {
-    await showMenu(`Couldn't start the game: ${message(e)}`);
+    await showMenu(i18nText("main.couldn-t-start-the-game", { arg1: message(e) }));
     return;
   }
   const game = bridge;
@@ -163,7 +165,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
   for (const node of map.nodes) if (/^k\d+(?:n\d+)?(?:r\d+)?(?:c\d+)?(?:v\d+)?$/.test(node.key)) node.name = placeName(node.key);
-  const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : `Good ${g}`);
+  const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : i18nText("main.good", { arg1: g }));
   const select = (node: number): void => {
     mapScreen?.select(node);
     travel.select(node);
@@ -182,7 +184,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
     queue: (c: PlayerCommand) => game.queue(c),
     ordered: (text: string) => hud.addMessage(text),
   };
-  const townOf = (n: number): string => map.nodes[n]?.name ?? `Place ${n}`;
+  const townOf = (n: number): string => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n });
   const screens: Screens = {
     hud,
     dateLabel,
@@ -197,7 +199,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
     purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
   };
   if (info && scenarioNumber !== undefined) {
-    const panel = scenarioPanel(info.title, info.weeks, { good: goodName, node: (n) => map.nodes[n]?.name ?? `Place ${n}` }, (id) => void accept(game, screens, id));
+    const panel = scenarioPanel(info.title, info.weeks, { good: goodName, node: (n) => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n }) }, (id) => void accept(game, screens, id));
     screens.scenario = { n: scenarioNumber, title: info.title, panel, dialogs: dialogs(document.body, () => app.querySelector('.game')) };
     hud.panels.goal.append(panel.node);
   }
@@ -215,7 +217,7 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
     // The browser tests find towns on the canvas through this handle (development builds only).
     if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
   } catch (e) {
-    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: `The map couldn't be drawn (${message(e)}). Use the routes list to travel.` }));
+    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: i18nText("main.the-map-couldn-t-be-drawn-use-the-routes-list-to-tra", { arg1: message(e) }) }));
   }
   await refresh(game, screens);
   if (info && screens.scenario) await showDialogs(screens, [{ title: info.title, text: info.intro }]);
@@ -242,9 +244,9 @@ async function showDialogs(s: Screens, items: { title: string; text: string }[])
 async function accept(game: SimBridge, s: Screens, id: string): Promise<void> {
   try {
     await game.acceptContract(id);
-    s.hud.addMessage('Contract accepted.');
+    s.hud.addMessage(i18nText("main.contract-accepted"));
   } catch (e) {
-    s.hud.addMessage(`Couldn't accept the contract: ${message(e)}`);
+    s.hud.addMessage(i18nText("main.couldn-t-accept-the-contract", { arg1: message(e) }));
   }
   await refresh(game, s);
 }
@@ -288,8 +290,8 @@ async function refresh(game: SimBridge, s: Screens): Promise<void> {
   mapScreen?.setCaravans(caravans);
   s.travel.setPlayer(purse.node, purse.travel_destination, purse.arrival_turn);
   s.hud.setTravel(purse.travel_destination >= 0
-    ? `Travelling to ${s.map.nodes[purse.travel_destination]?.name ?? ''} · Arrives ${s.dateLabel(purse.arrival_turn)}`
-    : `At ${s.map.nodes[purse.node]?.name ?? ''}`);
+    ? i18nText("main.travelling-to-arrives", { arg1: s.map.nodes[purse.travel_destination]?.name ?? '', arg2: s.dateLabel(purse.arrival_turn) })
+    : i18nText("main.at", { arg1: s.map.nodes[purse.node]?.name ?? '' }));
   if (s.scenario) {
     const [results, objectives, contracts] = await Promise.all([game.view('results'), game.view('objectives'), game.view('scenario_contracts')]);
     s.scenario.panel.update(results?.weeks ?? 0, objectives, contracts);
@@ -311,8 +313,8 @@ async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
       if (field.endsWith('continent')) return s.map.nodes.find((node) => node.level === 0 && node.continent === value)?.name ?? String(value);
       return String(value);
     })));
-    for (const reason of rejectionsIn(report)) hud.addMessage(`Order refused: ${reason}`);
-    if (saveError) hud.addMessage(`Autosave failed: ${saveError}`);
+    for (const reason of rejectionsIn(report)) hud.addMessage(i18nText("main.order-refused", { arg1: reason }));
+    if (saveError) hud.addMessage(i18nText("main.autosave-failed", { arg1: saveError }));
     await refresh(game, s);
     mapScreen?.moveCaravans(false);
     const gains = gainsOf(report, s.goodName);
@@ -327,10 +329,10 @@ async function nextWeek(game: SimBridge, s: Screens): Promise<void> {
       },
       dialogs: () => showDialogs(s, scenarioDialogs(report)),
       results: () => showResults(game, s),
-      onError: (e) => hud.addMessage(`Something went wrong while showing this week: ${message(e)}`),
+      onError: (e) => hud.addMessage(i18nText("main.something-went-wrong-while-showing-this-week", { arg1: message(e) })),
     });
   } catch (e) {
-    hud.addMessage(`The turn failed: ${message(e)}`);
+    hud.addMessage(i18nText("main.the-turn-failed", { arg1: message(e) }));
   } finally {
     mapScreen?.moveCaravans(false);
     if (bridge === game) hud.setBusy(false);
@@ -341,11 +343,11 @@ const localCoins = (p: { coins: number[]; local_continent: number }): number => 
 
 async function saveNow(game: SimBridge, hud: Hud, slot: Slot): Promise<void> {
   try {
-    if (!saves) throw new Error('Saving is unavailable in this browser.');
+    if (!saves) throw new Error(i18nText("main.saving-is-unavailable-in-this-browser"));
     await saves.write(slot, 'free', await game.save(), await game.turn(), game.mapSeed);
-    hud.addMessage(`Saved to ${slot.replace('manual', 'slot ')}.`);
+    hud.addMessage(i18nText("main.saved-to", { arg1: slot.replace('manual', i18nText("main.slot")) }));
   } catch (e) {
-    hud.addMessage(`Save failed: ${message(e)}`);
+    hud.addMessage(i18nText("main.save-failed", { arg1: message(e) }));
   }
 }
 
@@ -356,7 +358,7 @@ if (new URLSearchParams(location.search).get('bench') === 'fullscale') {
   setMusic(readMusic());
   installSound();
   prepareAssets().then(() => showMenu()).catch((e: unknown) => {
-    app.textContent = `Couldn't start the game: ${message(e)}`;
+    app.textContent = i18nText("main.couldn-t-start-the-game", { arg1: message(e) });
   });
 
   // Offline after one visit, and a reload prompt when a new build is waiting (production only).

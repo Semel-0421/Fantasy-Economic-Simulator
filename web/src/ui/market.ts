@@ -1,3 +1,4 @@
+import { t as i18nText } from '../i18n';
 import { goodIcon } from '../assets/goods';
 import { goodName } from '../data/names';
 // The market of the town the player stands in (market view): goods, buy price, trader offer, stock
@@ -23,7 +24,7 @@ export const coinsOf = (raw: number): number => Math.floor(raw / FX_ONE);
 export function goodLabel(key: string): string {
   const [base = key, grade] = key.split('@');
   const name = goodName(base);
-  return grade ? `${name} (${grade})` : name;
+  return grade ? i18nText('market.graded-good', { name, grade }) : name;
 }
 
 /**
@@ -37,10 +38,10 @@ export function estimate(side: Side, q: Quote, quantity: number, held: number): 
 }
 
 export function previewText(side: Side, label: string, quantity: number, e: Estimate): string {
-  const verb = side === 'buy' ? 'Buy' : 'Sell';
-  const amount = e.units === quantity ? `${quantity}` : `${e.units} of ${quantity}`;
-  const cut = e.units === quantity ? '' : ` (only ${e.units} can be filled now)`;
-  return `${verb} ${amount} ${label} at ${e.unit} each (estimated, at today's price): ${e.total} coins${cut}.`;
+  const verb = side === 'buy' ? i18nText("market.buy") : i18nText("market.sell");
+  const amount = e.units === quantity ? `${quantity}` : i18nText("market.of", { arg1: e.units, arg2: quantity });
+  const cut = e.units === quantity ? '' : i18nText("market.only-can-be-filled-now", { arg1: e.units });
+  return i18nText("market.at-each-estimated-at-today-s-price-coins", { arg1: verb, arg2: amount, arg3: label, arg4: e.unit, arg5: e.total, arg6: cut });
 }
 
 export interface MarketActions {
@@ -61,25 +62,25 @@ function row(cell: 'td' | 'th', items: (string | Node)[]): HTMLTableRowElement {
 function quantityInput(): HTMLInputElement {
   const qty = el('input', { id: 'qty', type: 'number' });
   Object.assign(qty, { min: '1', step: '1', value: '1', inputMode: 'numeric' });
-  qty.setAttribute('aria-label', 'Quantity');
+  qty.setAttribute('aria-label', i18nText("market.quantity"));
   return qty;
 }
 
 export function marketPanel(nameOf: (good: number) => string, actions: MarketActions, keyOf: (g: number) => string = nameOf): MarketPanel {
-  const title = el('h2', { id: 'market-title', text: 'Market' });
+  const title = el('h2', { id: 'market-title', text: i18nText("market.market") });
   const body = el('tbody');
-  const head = el('thead', {}, row('th', ['Good', 'Buy', 'Sell', 'Stock', 'Held']));
+  const head = el('thead', {}, row('th', [i18nText("market.good"), i18nText("market.buy"), i18nText("market.sell"), i18nText("market.stock"), i18nText("market.held")]));
   const table = el('table', { id: 'market-table', className: 'grid' }, head, body);
-  const chosen = el('p', { id: 'trade-good', text: 'Choose a good to trade.' });
+  const chosen = el('p', { id: 'trade-good', text: i18nText("market.choose-a-good-to-trade") });
   const qty = quantityInput();
   const deposit = el('input', { id: 'from-deposit', type: 'checkbox' });
   const preview = el('p', { id: 'trade-preview' });
   const error = errorBox('trade-error');
-  const confirm = button('Confirm order', () => void place(), 'confirm');
+  const confirm = button(i18nText("market.confirm-order"), () => void place(), 'confirm');
   confirm.className = 'primary';
-  const pending = el('div', { className: 'row', id: 'trade-confirm' }, confirm, button('Cancel', () => reset(), 'cancel'));
-  const buy = button('Buy', () => void ask('buy'), 'buy');
-  const sell = button('Sell', () => void ask('sell'), 'sell');
+  const pending = el('div', { className: 'row', id: 'trade-confirm' }, confirm, button(i18nText("market.cancel"), () => reset(), 'cancel'));
+  const buy = button(i18nText("market.buy"), () => void ask('buy'), 'buy');
+  const sell = button(i18nText("market.sell"), () => void ask('sell'), 'sell');
   let quotes: Quote[] = [];
   let cart = new Map<number, number>();
   let good = -1;
@@ -124,7 +125,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
     setBusy(true);
     try {
       await actions.queue(command);
-      actions.ordered(`Order for this week: ${text}`);
+      actions.ordered(i18nText("market.order-for-this-week", { arg1: text }));
       reset();
     } catch (e) {
       error.show(e instanceof Error ? e.message : String(e));
@@ -152,7 +153,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
     { id: 'trade', className: 'trade' },
     chosen,
     el('div', { className: 'row' }, qty, buy, sell),
-    el('label', { className: 'check' }, deposit, 'Pay the rest from your bank deposit'),
+    el('label', { className: 'check' }, deposit, i18nText("market.pay-the-rest-from-your-bank-deposit")),
     error.node,
     preview,
     pending,
@@ -161,7 +162,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
   return {
     node,
     update(town, list, held) {
-      title.textContent = `Market - ${town}`;
+      title.textContent = i18nText("market.market-2", { arg1: town });
       quotes = list;
       cart = held;
       body.replaceChildren(
@@ -177,7 +178,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
       );
       if (good >= 0 && !list.some((q) => q.good === good)) {
         good = -1;
-        chosen.textContent = 'Choose a good to trade.';
+        chosen.textContent = i18nText("market.choose-a-good-to-trade");
       }
       reset();
       setBusy(false);

@@ -1,7 +1,8 @@
+import { t as i18nText, language } from '../i18n';
 import { button, el } from './dom';
 
 export type Tab = 'goal' | 'market' | 'cargo' | 'finance' | 'log' | 'more';
-const TITLES: Record<Tab, string> = { goal: 'Goal', market: 'Market', cargo: 'Cargo', finance: 'Finance', log: 'Log', more: 'More' };
+const TITLES: Record<Tab, string> = { goal: i18nText("tabs.goal"), market: i18nText("tabs.market"), cargo: i18nText("tabs.cargo"), finance: i18nText("tabs.finance"), log: i18nText("tabs.log"), more: i18nText("tabs.more") };
 export interface GameTabs {
   node: HTMLElement;
   panels: Record<Tab, HTMLElement>;
@@ -24,7 +25,7 @@ export function gameTabs(scenario: boolean): GameTabs {
   const visibleIds = (): Tab[] => ids.filter((id) => mobile.matches ? id !== 'finance' && id !== 'log' : id !== 'more');
   const list = el('div', { className: 'tabs' });
   list.setAttribute('role', 'tablist');
-  list.setAttribute('aria-label', 'Merchant desk');
+  list.setAttribute('aria-label', i18nText("tabs.merchant-desk"));
   const body = el('div', { className: 'sheet-content', id: 'merchant-panels' }, ...ids.map((id) => panels[id]));
   const node = el('aside', { className: 'side' }, list, body);
   const buttons = ids.map((id) => {
@@ -41,8 +42,10 @@ export function gameTabs(scenario: boolean): GameTabs {
     panels[id].tabIndex = 0;
     tab.addEventListener('keydown', (event) => {
       const visible = visibleIds(), index = visible.indexOf(id);
+      const forward = language.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+      const backward = language.dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
       const next = event.key === 'Home' ? 0 : event.key === 'End' ? visible.length - 1
-        : event.key === 'ArrowRight' ? (index + 1) % visible.length : event.key === 'ArrowLeft' ? (index + visible.length - 1) % visible.length : -1;
+        : event.key === forward ? (index + 1) % visible.length : event.key === backward ? (index + visible.length - 1) % visible.length : -1;
       if (next < 0) return;
       event.preventDefault();
       activate(visible[next]!);

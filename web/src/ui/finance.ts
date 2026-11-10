@@ -1,3 +1,4 @@
+import { t as i18nText, formatNumber } from '../i18n';
 // Panels for the scenario 2 and 3 tools: the exchange (shares listed at the bank the player stands
 // in), the nation's bonds, and licences. Each order is previewed first; a refusal shows the
 // simulation's own message, and only Confirm queues it for this week.
@@ -17,24 +18,24 @@ export interface OrderActions {
   ordered(text: string): void;
 }
 
-const fmt = (n: number): string => n.toLocaleString('en-US');
+const fmt = formatNumber;
 const TRADE_INTERNATIONAL = -1;
 const TRADE_INTERCONTINENTAL = -2;
 
 export function shareText(side: ShareSide, row: Listing, count: number, town: string): string {
-  const verb = side === 'buy' ? 'Buy' : 'Sell';
-  return `${verb} ${count} shares of ${goodLabel(row.name)} in ${town} at ${row.price} each (today's price): ${fmt(count * row.price)} coins.`;
+  const verb = side === 'buy' ? i18nText("finance.buy") : i18nText("finance.sell");
+  return i18nText("finance.shares-of-in-at-each-today-s-price-coins", { arg1: verb, arg2: count, arg3: goodLabel(row.name), arg4: town, arg5: row.price, arg6: fmt(count * row.price) });
 }
 
 /** Bonds sell in whole hundreds of coins. */
 export const roundBond = (coins: number): number => Math.max(0, Math.floor(coins / 100) * 100);
 
-export const bondText = (amount: number): string => `Buy ${fmt(amount)} coins of this nation's bonds at face.`;
+export const bondText = (amount: number): string => i18nText("finance.buy-coins-of-this-nation-s-bonds-at-face", { arg1: fmt(amount) });
 
 export function licenceName(baseGood: number, goodName: (g: number) => string): string {
-  if (baseGood === TRADE_INTERNATIONAL) return 'International trade licence';
-  if (baseGood === TRADE_INTERCONTINENTAL) return 'Intercontinental trade licence';
-  return `Licence to sell ${goodName(baseGood)}`;
+  if (baseGood === TRADE_INTERNATIONAL) return i18nText("finance.international-trade-licence");
+  if (baseGood === TRADE_INTERCONTINENTAL) return i18nText("finance.intercontinental-trade-licence");
+  return i18nText("finance.licence-to-sell", { arg1: goodName(baseGood) });
 }
 
 interface OrderForm {
@@ -48,9 +49,9 @@ function orderForm(prefix: string, actions: OrderActions): OrderForm {
   const preview = el('p', { id: `${prefix}-preview` });
   const error = errorBox(`${prefix}-error`);
   let order: { command: PlayerCommand; text: string } | null = null;
-  const confirm = button('Confirm order', () => void place(), `${prefix}-confirm`);
+  const confirm = button(i18nText("finance.confirm-order"), () => void place(), `${prefix}-confirm`);
   confirm.className = 'primary';
-  const pending = el('div', { className: 'row' }, confirm, button('Cancel', () => reset(), `${prefix}-cancel`));
+  const pending = el('div', { className: 'row' }, confirm, button(i18nText("finance.cancel"), () => reset(), `${prefix}-cancel`));
   const show = (e: unknown): void => error.show(e instanceof Error ? e.message : String(e));
   function reset(): void {
     order = null;
@@ -63,7 +64,7 @@ function orderForm(prefix: string, actions: OrderActions): OrderForm {
     confirm.disabled = true;
     try {
       await actions.queue(command);
-      actions.ordered(`Order for this week: ${text}`);
+      actions.ordered(i18nText("finance.order-for-this-week", { arg1: text }));
       reset();
     } catch (e) {
       show(e);
@@ -105,10 +106,10 @@ export interface ExchangePanel {
 
 export function exchangePanel(townOf: (node: number) => string, actions: OrderActions): ExchangePanel {
   const body = el('tbody');
-  const head = el('thead', {}, el('tr', {}, ...['Company', 'Price', 'Held', 'For sale'].map((h) => el('th', { text: h }))));
-  const empty = el('p', { className: 'note', text: 'Shares trade at a bank of their nation.' });
-  const chosen = el('p', { id: 'share-chosen', text: 'Choose a company.' });
-  const count = numberInput('share-count', 'Shares', '1');
+  const head = el('thead', {}, el('tr', {}, ...[i18nText("finance.company"), i18nText("finance.price"), i18nText("finance.held"), i18nText("finance.for-sale")].map((h) => el('th', { text: h }))));
+  const empty = el('p', { className: 'note', text: i18nText("finance.shares-trade-at-a-bank-of-their-nation") });
+  const chosen = el('p', { id: 'share-chosen', text: i18nText("finance.choose-a-company") });
+  const count = numberInput('share-count', i18nText("finance.shares"), '1');
   const form = orderForm('share', actions);
   let list: Listing[] = [];
   let picked = -1;
@@ -121,18 +122,18 @@ export function exchangePanel(townOf: (node: number) => string, actions: OrderAc
   };
   const choose = (row: Listing): void => {
     picked = row.facility;
-    chosen.textContent = `${goodLabel(row.name)} in ${townOf(row.node)} (company ${row.facility})`;
+    chosen.textContent = i18nText("finance.in-company", { arg1: goodLabel(row.name), arg2: townOf(row.node), arg3: row.facility });
     form.reset();
   };
   count.addEventListener('input', () => form.reset());
   const node = el(
     'section',
     { id: 'exchange', className: 'card' },
-    el('h2', { text: 'Exchange' }),
+    el('h2', { text: i18nText("finance.exchange") }),
     empty,
     el('div', { className: 'scroll' }, el('table', { id: 'exchange-table', className: 'grid' }, head, body)),
     chosen,
-    el('div', { className: 'row' }, count, button('Buy', () => ask('buy'), 'share-buy'), button('Sell', () => ask('sell'), 'share-sell')),
+    el('div', { className: 'row' }, count, button(i18nText("finance.buy"), () => ask('buy'), 'share-buy'), button(i18nText("finance.sell"), () => ask('sell'), 'share-sell')),
     ...form.nodes,
   );
   return {
@@ -142,7 +143,7 @@ export function exchangePanel(townOf: (node: number) => string, actions: OrderAc
       empty.hidden = next.length > 0;
       body.replaceChildren(
         ...next.map((r) => {
-          const pick = button(`${goodLabel(r.name)}, ${townOf(r.node)}`, () => choose(r), `share-${r.facility}`);
+          const pick = button(i18nText('finance.company-choice', { good: goodLabel(r.name), town: townOf(r.node) }), () => choose(r), `share-${r.facility}`);
           pick.className = 'link';
           const tr = el('tr', {}, el('td', {}, pick), ...[r.price, r.held, r.room].map((v) => el('td', { text: fmt(v) })));
           tr.dataset.facility = String(r.facility);
@@ -151,7 +152,7 @@ export function exchangePanel(townOf: (node: number) => string, actions: OrderAc
       );
       if (!next.some((r) => r.facility === picked)) {
         picked = -1;
-        chosen.textContent = 'Choose a company.';
+        chosen.textContent = i18nText("finance.choose-a-company");
       }
       form.reset();
     },
@@ -166,7 +167,7 @@ export interface BondsPanel {
 /** The nation's bonds at the bank the player stands in (issuer -1); held bonds at face. */
 export function bondsPanel(actions: OrderActions): BondsPanel {
   const held = el('p', { id: 'bonds-held' });
-  const amount = numberInput('bond-amount', 'Bond amount (coins)', '100');
+  const amount = numberInput('bond-amount', i18nText("finance.bond-amount-coins"), '100');
   amount.step = '100';
   const form = orderForm('bond', actions);
   let coins = 0;
@@ -175,7 +176,7 @@ export function bondsPanel(actions: OrderActions): BondsPanel {
     void form.ask({ BuyBond: { issuer: -1, amount: n } }, bondText(n));
   };
   const all = button(
-    'All coins',
+    i18nText("finance.all-coins"),
     () => {
       amount.value = String(roundBond(coins));
       form.reset();
@@ -186,9 +187,9 @@ export function bondsPanel(actions: OrderActions): BondsPanel {
   const node = el(
     'section',
     { id: 'bonds', className: 'card' },
-    el('h2', { text: 'Bonds' }),
+    el('h2', { text: i18nText("finance.bonds") }),
     held,
-    el('div', { className: 'row' }, amount, all, button("Buy the nation's bonds", ask, 'bond-buy')),
+    el('div', { className: 'row' }, amount, all, button(i18nText("finance.buy-the-nation-s-bonds"), ask, 'bond-buy')),
     ...form.nodes,
   );
   return {
@@ -196,7 +197,7 @@ export function bondsPanel(actions: OrderActions): BondsPanel {
     update(purse) {
       coins = purse.coins[purse.local_continent] ?? 0;
       const face = purse.bonds.reduce((s, [, a]) => s + a, 0);
-      held.textContent = face > 0 ? `Bonds held: ${fmt(face)} coins at face.` : 'No bonds held.';
+      held.textContent = face > 0 ? i18nText("finance.bonds-held-coins-at-face", { arg1: fmt(face) }) : i18nText("finance.no-bonds-held");
       form.reset();
     },
   };
@@ -208,10 +209,10 @@ export interface LicencePanel {
 }
 
 export function heldLicenceText(held: Views['licences'][number], baseName: (base: number) => string, nationName: (nation: number) => string,
-  dateLabel: DateLabel = (turn) => `Week ${turn + 1}`): string {
+  dateLabel: DateLabel = (turn) => i18nText("finance.week", { arg1: turn + 1 })): string {
   const date = dateLabel(held.expires_turn);
-  const expiry = date.startsWith('Week ') ? date.toLowerCase() : `week ${held.expires_turn + 1} (${date})`;
-  return `${licenceName(held.base_good, baseName)} · ${nationName(held.nation)} · expires ${expiry}`;
+  const expiry = date.startsWith(i18nText("finance.week-2")) ? date.toLowerCase() : i18nText("finance.week-3", { arg1: held.expires_turn + 1, arg2: date });
+  return i18nText("finance.expires", { arg1: licenceName(held.base_good, baseName), arg2: nationName(held.nation), arg3: expiry });
 }
 
 /** Trade licences and licences to sell a good, bought in the nation the player stands in. */
@@ -219,20 +220,20 @@ export function licencePanel(goods: Views['goods'], goodName: (g: number) => str
   source: { csv: string; scenario: string; nation: (nation: number) => string; dateLabel: DateLabel }): LicencePanel {
   const list = el('ul', { id: 'licences-held', className: 'rows' });
   const select = el('select', { id: 'licence-good' });
-  select.setAttribute('aria-label', 'Good');
+  select.setAttribute('aria-label', i18nText("finance.good"));
   const form = orderForm('licence', actions);
   const all = licenceChoices(goods, source.csv, source.scenario, true);
   const baseNames = new Map(all.map((good) => [good.base, good.name]));
-  const baseName = (base: number): string => baseNames.get(base) ?? `Good ${base}`;
+  const baseName = (base: number): string => baseNames.get(base) ?? i18nText("finance.good-2", { arg1: base });
   const showAll = el('input', { type: 'checkbox', id: 'licence-show-all' });
   const trade = (kind: number) => (): void =>
-    void form.ask({ BuyTradeLicense: { kind } }, `Buy an ${licenceName(kind, goodName).toLowerCase()} for a year.`);
+    void form.ask({ BuyTradeLicense: { kind } }, i18nText("finance.buy-an-for-a-year", { arg1: licenceName(kind, goodName).toLowerCase() }));
   const forGood = (): void => {
     if (!select.value) return;
     const good = Number(select.value);
-    void form.ask({ BuyLicense: { good } }, `Buy a licence to sell ${select.selectedOptions[0]!.text} in this nation for a year.`);
+    void form.ask({ BuyLicense: { good } }, i18nText("finance.buy-a-licence-to-sell-in-this-nation-for-a-year", { arg1: select.selectedOptions[0]!.text }));
   };
-  const buy = button('Buy licence', forGood, 'licence-buy');
+  const buy = button(i18nText("finance.buy-licence"), forGood, 'licence-buy');
   const populate = (): void => {
     const previous = select.value;
     const choices = showAll.checked ? all : licenceChoices(goods, source.csv, source.scenario, false);
@@ -247,16 +248,16 @@ export function licencePanel(goods: Views['goods'], goodName: (g: number) => str
   const node = el(
     'section',
     { id: 'licences', className: 'card' },
-    el('h2', { text: 'Licences' }),
+    el('h2', { text: i18nText("finance.licences") }),
     list,
-    el('p', { className: 'note', text: 'International: trade between nations. Intercontinental: trade between continents.' }),
+    el('p', { className: 'note', text: i18nText("finance.international-trade-between-nations-intercontinental") }),
     el(
       'div',
       { className: 'row' },
-      button('International trade licence', trade(TRADE_INTERNATIONAL), 'licence-trade'),
-      button('Intercontinental trade licence', trade(TRADE_INTERCONTINENTAL), 'licence-trade-far'),
+      button(i18nText("finance.international-trade-licence"), trade(TRADE_INTERNATIONAL), 'licence-trade'),
+      button(i18nText("finance.intercontinental-trade-licence"), trade(TRADE_INTERCONTINENTAL), 'licence-trade-far'),
     ),
-    el('label', { className: 'check' }, showAll, 'Show all goods'),
+    el('label', { className: 'check' }, showAll, i18nText("finance.show-all-goods")),
     el('div', { className: 'row' }, select, buy),
     ...form.nodes,
   );
@@ -264,7 +265,7 @@ export function licencePanel(goods: Views['goods'], goodName: (g: number) => str
     node,
     update(held) {
       list.replaceChildren(
-        ...(held.length ? held.map((l) => el('li', { text: heldLicenceText(l, baseName, source.nation, source.dateLabel) })) : [el('li', { text: 'No licences held.' })]),
+        ...(held.length ? held.map((l) => el('li', { text: heldLicenceText(l, baseName, source.nation, source.dateLabel) })) : [el('li', { text: i18nText("finance.no-licences-held") })]),
       );
       form.reset();
     },

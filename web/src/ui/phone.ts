@@ -1,3 +1,4 @@
+import { t as i18nText } from '../i18n';
 import { button, el } from './dom';
 import type { GameTabs } from './tabs';
 
@@ -13,13 +14,13 @@ export function phoneShell(game: HTMLElement, tabs: GameTabs, controls: {
   handle.className = 'sheet-handle phone-only';
   handle.append(el('span', { className: 'sheet-grip' }));
   handle.setAttribute('aria-controls', 'merchant-panels');
-  const heading = el('h2', { text: 'Travel options', className: 'phone-only' });
+  const heading = el('h2', { text: i18nText("phone.travel-options"), className: 'phone-only' });
   const extras = el('div', { className: 'more-tools phone-only' });
-  const menu = button('Menu', controls.menu, 'more-menu');
+  const menu = button(i18nText("phone.menu"), controls.menu, 'more-menu');
   extras.append(menu);
   tabs.panels.more.append(heading, extras);
   const selected = el('p');
-  const compact = el('div', { className: 'phone-travel phone-only card', id: 'phone-travel' }, selected, button('Travel options', () => {
+  const compact = el('div', { className: 'phone-travel phone-only card', id: 'phone-travel' }, selected, button(i18nText("phone.travel-options"), () => {
     tabs.activate('more');
     setHeight(1);
     controls.travel.scrollIntoView({ block: 'nearest' });
@@ -31,7 +32,7 @@ export function phoneShell(game: HTMLElement, tabs: GameTabs, controls: {
   function setHeight(index: number): void {
     height = index;
     game.dataset.sheet = states[index];
-    handle.setAttribute('aria-label', index === 1 ? 'Collapse panel' : 'Expand panel');
+    handle.setAttribute('aria-label', index === 1 ? i18nText("phone.collapse-panel") : i18nText("phone.expand-panel"));
     handle.setAttribute('aria-expanded', String(index !== 2));
   }
   const layout = (): void => {

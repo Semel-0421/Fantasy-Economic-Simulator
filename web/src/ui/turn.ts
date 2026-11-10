@@ -1,3 +1,4 @@
+import { t as i18nText } from '../i18n';
 // Turn flow (spec 5.2a): the player acts, presses Next week, the Worker moves the NPCs, and the
 // report's events come back. Pure logic here; the DOM lives in hud.ts and main.ts.
 import type { SaveMode, SaveStore } from '../save/store';
@@ -16,14 +17,14 @@ export type DateLabel = (turn: number) => string;
 
 export const calendarDate: DateLabel = (turn) => {
   const d = dateOf(turn);
-  return `Year ${d.year}, Week ${d.week}`;
+  return i18nText("turn.year-week", { arg1: d.year, arg2: d.week });
 };
 
 /** Scenario weeks count from the turn the scenario starts on (after its warm-up): that turn is Week 1. */
 export const scenarioDate =
   (startTurn: number): DateLabel =>
   (turn) =>
-    `Week ${turn - startTurn + 1}`;
+    i18nText("turn.week", { arg1: turn - startTurn + 1 });
 
 export interface LogLine {
   title: string;
@@ -35,12 +36,12 @@ const humanise = (name: string): string => name.replace(/([a-z0-9])([A-Z])/g, '$
 /** A readable line for one engine event: its name, and its fields as "key value" pairs. */
 export function describeEvent(event: SimEventRecord, nameOf: (field: string, value: unknown) => string = (_, value) => String(value)): LogLine {
   if (typeof event === 'string') return { title: humanise(event), detail: '' };
-  const [name, body] = Object.entries(event)[0] ?? ['Unknown', null];
+  const [name, body] = Object.entries(event)[0] ?? [i18nText("turn.unknown"), null];
   const detail =
     body !== null && typeof body === 'object'
       ? Object.entries(body as Record<string, unknown>)
           .filter(([, v]) => typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
-          .map(([k, v]) => `${k.replace(/_/g, ' ')} ${displayText(nameOf(k, v))}`)
+          .map(([k, v]) => i18nText('turn.field-value', { field: k.replace(/_/g, ' '), value: displayText(nameOf(k, v)) }))
           .join(', ')
       : '';
   return { title: humanise(name), detail };

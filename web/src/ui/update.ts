@@ -1,3 +1,4 @@
+import { t as i18nText } from '../i18n';
 // Offline play and updates: registers the service worker and, when a new build is waiting, offers a
 // reload. The waiting worker activates only when the player agrees, so a running game is never
 // swapped under them.
@@ -7,9 +8,9 @@ import { button, el } from './dom';
 export function showUpdatePrompt(root: HTMLElement, activate: () => void): HTMLElement {
   const existing = document.getElementById('update-prompt');
   if (existing) return existing;
-  const bar = el('div', { id: 'update-prompt', className: 'update-prompt' }, el('span', { text: 'A new version is ready — ' }));
+  const bar = el('div', { id: 'update-prompt', className: 'update-prompt' }, el('span', { text: i18nText("update.a-new-version-is-ready") }));
   bar.setAttribute('role', 'status');
-  bar.append(button('Reload', activate, 'update-reload'));
+  bar.append(button(i18nText("update.reload"), activate, 'update-reload'));
   root.append(bar);
   return bar;
 }

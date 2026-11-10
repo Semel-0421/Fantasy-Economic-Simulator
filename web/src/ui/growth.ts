@@ -1,3 +1,4 @@
+import { t as i18nText, formatNumber } from '../i18n';
 // The growth presentation (spec 5.6): when a week brings coins in (a sale, a dividend, a coupon, a
 // delivered contract), input pauses briefly, the coins panel grows and its number counts up from the
 // old total to the new, with a coin sound. One presentation per week covers all its gains (batched);
@@ -18,7 +19,7 @@ export function growthDuration(total: number, coinsBefore: number): number {
   return Math.min(2000, 800 + 1200 * Math.log1p(relative) / Math.log(11));
 }
 
-const fmt = (n: number): string => n.toLocaleString('en-US');
+const fmt = formatNumber;
 
 /** The week's coin gains, in event order: filled sales and scripted payments. */
 export function gainsOf(report: TurnReport, goodName: (good: number) => string): Gain[] {
@@ -27,7 +28,7 @@ export function gainsOf(report: TurnReport, goodName: (good: number) => string):
     if (typeof e !== 'object') continue;
     if ('GoodsTraded' in e) {
       const t = e.GoodsTraded;
-      if (!t.bought && t.filled > 0) out.push({ label: `Sold ${t.filled} ${goodName(t.good)}`, coins: t.filled * t.price });
+      if (!t.bought && t.filled > 0) out.push({ label: i18nText("growth.sold", { arg1: t.filled, arg2: goodName(t.good) }), coins: t.filled * t.price });
     } else if ('ScenarioDialog' in e && e.ScenarioDialog.coins > 0) {
       out.push({ label: displayText(e.ScenarioDialog.text), coins: e.ScenarioDialog.coins });
     }
@@ -62,8 +63,8 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
   const panel = coins.parentElement;
   const total = gains.reduce((s, g) => s + g.coins, 0);
   const duration = growthDuration(total, from);
-  const badge = el('span', { id: 'growth', className: 'growth', text: `+${fmt(total)}` });
-  badge.title = gains.map((g) => `${g.label}: +${fmt(g.coins)}`).join('\n');
+  const badge = el('span', { id: 'growth', className: 'growth', text: i18nText('growth.badge', { amount: fmt(total) }) });
+  badge.title = gains.map((g) => i18nText('growth.gain-line', { label: g.label, amount: fmt(g.coins) })).join('\n');
   badge.setAttribute('aria-hidden', 'true');
   const announcement = el('span', { id: 'growth-announcement', className: 'sr-only' });
   announcement.setAttribute('role', 'status');
@@ -71,7 +72,7 @@ export function presentGrowth(targets: GrowthTargets, from: number, to: number, 
   announcement.setAttribute('aria-atomic', 'true');
   document.body.append(announcement);
   requestAnimationFrame(() => {
-    if (announcement.isConnected) announcement.textContent = `+${fmt(total)}. ${badge.title.replaceAll('\n', '. ')}`;
+    if (announcement.isConnected) announcement.textContent = i18nText('growth.announcement', { amount: fmt(total), details: badge.title.replaceAll('\n', '. ') });
   });
   panel?.append(badge);
   play('coin');

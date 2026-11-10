@@ -3,7 +3,7 @@
 .hud .panel { min-width: 0; padding: 0 var(--space-2); border: 0; background: var(--surface-frame); color: var(--text-on-frame); }
 .hud .label { font-size: var(--type-sm); }
 .hud #coins { color: var(--accent-coin); font-size: var(--type-title); line-height: 1.2; white-space: nowrap; }
-.hud .growth { top: auto; bottom: calc(-1 * var(--space-2)); right: 0; font-size: var(--type-sm); }
+.hud .growth { top: auto; bottom: calc(-1 * var(--space-2)); inset-inline-end: 0; font-size: var(--type-sm); }
 .panel.growing { box-shadow: 0 0 0 2px var(--accent-coin), 0 0 0 4px var(--wood); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 #date { font-family: var(--font-display); font-size: var(--type-lg); }
@@ -20,14 +20,14 @@
 .tab-panel .card { border: 0; padding: var(--space-1) 0 var(--space-4); }
 .tab-panel .card + .card { border-top: var(--border-width) solid var(--border-card); padding-top: var(--space-4); }
 .game button.primary:not(#next) { background: var(--sea); color: var(--paper); font-size: var(--type-body); }
-.maptools { position: absolute; z-index: 2; bottom: var(--space-3); left: var(--space-3); width: min(26rem, calc(100% - 24px)); max-height: 52%; overflow: auto; color: var(--text-on-card); touch-action: auto; }
+.maptools { position: absolute; z-index: 2; bottom: var(--space-3); inset-inline-start: var(--space-3); width: min(26rem, calc(100% - 24px)); max-height: 52%; overflow: auto; color: var(--text-on-card); touch-action: auto; }
 .maptools .card { border: var(--border-width) solid var(--border-card); box-shadow: var(--pixel-border); }
 .routes button, button.link { min-height: 44px; }
 .settings summary { min-height: 44px; }
 h1 { font-size: var(--type-title); }
 h2 { font-size: var(--type-lg); }
 h3 { font-size: var(--type-body); }
-.map-controls { position: absolute; z-index: 3; top: var(--space-2); right: var(--space-2); display: flex; gap: var(--space-1); }
+.map-controls { position: absolute; z-index: 3; top: var(--space-2); inset-inline-end: var(--space-2); display: flex; gap: var(--space-1); }
 .map-controls button { width: 44px; height: 44px; padding: var(--space-2); }
 .map-controls svg { display: block; width: 24px; height: 24px; }
 @media (min-width: 900px) {
@@ -40,7 +40,7 @@ h3 { font-size: var(--type-body); }
 /* Review round 1: one-line travel summary, tab labels that always fit, objective rows with drawn marks. */
 .travel > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; cursor: pointer; list-style: none; }
 .travel > summary::-webkit-details-marker { display: none; }
-.travel > summary::after { content: '\25BE'; margin-left: auto; }
+.travel > summary::after { content: '\25BE'; margin-inline-start: auto; }
 .travel[open] > summary::after { content: '\25B4'; }
 .travel-title { font-family: var(--font-display); font-size: var(--type-lg); }
 .travel-where { font-size: var(--type-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

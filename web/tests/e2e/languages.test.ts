@@ -48,7 +48,9 @@ it('loads only Korean language data/font before rendering, then serves it offlin
       return urls.some(path => /language-ko-/.test(path)) && urls.some(path => /Galmuri11/.test(path));
     }, null, { timeout: 30000 });
     expect(requests.filter(path => /language-[^/]+\.js/.test(path) && !/language-ko-/.test(path))).toEqual([]);
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
     await page.reload(); await page.waitForSelector('#scenario-1');
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await context.setOffline(true);
     await page.reload(); await page.waitForSelector('#scenario-1');
     await page.click('#scenario-1'); await page.waitForSelector('#dialog');

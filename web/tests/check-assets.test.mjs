@@ -7,13 +7,24 @@ import { checkPng } from '../scripts/lib/png.mjs';
 import { checkOgg } from '../scripts/lib/ogg.mjs';
 import { checkAssets } from '../scripts/lib/asset-check.mjs';
 
-function crc(bytes, ogg = false) {
-  let value = ogg ? 0 : 0xffffffff;
+function crcOgg(bytes) {
+  let value = 0;
   for (const byte of bytes) {
-    value ^= ogg ? byte << 24 : byte;
-    for (let bit = 0; bit < 8; bit++) value = ogg ? (value << 1) ^ (value & 0x80000000 ? 0x04c11db7 : 0) : (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+    value ^= byte << 24;
+    for (let bit = 0; bit < 8; bit++) value = (value << 1) ^ (value & 0x80000000 ? 0x04c11db7 : 0);
   }
-  return (ogg ? value : value ^ 0xffffffff) >>> 0;
+  return value >>> 0;
+}
+function crcPng(bytes) {
+  let value = 0xffffffff;
+  for (const byte of bytes) {
+    value ^= byte;
+    for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+  }
+  return (value ^ 0xffffffff) >>> 0;
+}
+function crc(bytes, ogg = false) {
+  return ogg ? crcOgg(bytes) : crcPng(bytes);
 }
 function chunk(type, data) {
   const body = Buffer.concat([Buffer.from(type), data]), out = Buffer.alloc(body.length + 8);

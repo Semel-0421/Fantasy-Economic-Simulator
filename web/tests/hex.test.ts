@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { axialToPixel, pixelToAxial, neighbours, hexLine, hexKey, hexDistance } from '../src/map/hex';
-import { layoutHexMap, pickHexTown, hexRouteEdges, nearestCopy, wrapHex, type HexTile } from '../src/map/hex_layout';
+import { layoutHexMap, pickHexTown, hexRouteEdges, nearestCopy, wrapHex, type HexLayout, type HexTile } from '../src/map/hex_layout';
 import { fullscaleMap as map } from './fullscale-map';
 import { NATION_COLOURS, HEX_TERRAIN_COLOURS, INK } from '../src/map/colours';
+
+/** How many of the given tiles can be reached from the first one by stepping through the group across the seam. */
+function reachableCount(l: HexLayout, cells: HexTile[]): number {
+  const pending = [cells[0]!], seen = new Set<string>(), members = new Set(cells.map(hexKey));
+  while (pending.length) {
+    const tile = pending.pop()!, key = hexKey(tile);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const n of neighbours(tile)) {
+      const k = hexKey(wrapHex(l, n));
+      if (members.has(k) && !seen.has(k)) pending.push(l.hexes.get(k)!);
+    }
+  }
+  return seen.size;
+}
 
 describe('pointy 28x32 hex grid', () => {
   it('uses the Planner terrain palette and an ink-backed eight-colour territory border', () => {
@@ -31,6 +46,12 @@ describe('pointy 28x32 hex grid', () => {
 describe('full-scale seeded hex layout (wrapped east-west)', () => {
   const layout = layoutHexMap(map, 'scenario-1');
   const at = (hex: { q: number; r: number }): HexTile | undefined => layout.hexes.get(hexKey(wrapHex(layout, hex)));
+  const expectSeparated = (tile: HexTile, id: number): void => {
+    for (const n of neighbours(tile)) {
+      const other = at(n);
+      if (other && other.continent >= 0) expect(other.continent).toBe(id);
+    }
+  };
   it('is deterministic per seed, independent of input order, and differs between seeds', () => {
     const again = layoutHexMap({ nodes: [...map.nodes].reverse(), routes: [...map.routes].reverse() }, 'scenario-1');
     expect(again).toEqual(layout);
@@ -60,17 +81,7 @@ describe('full-scale seeded hex layout (wrapped east-west)', () => {
       for (const [level, field] of [[0, 'continent'], [1, 'nation'], [2, 'region']] as const) {
         for (const node of map.nodes.filter((n) => n.level === level)) {
           const cells = [...l.hexes.values()].filter((tile) => tile[field] === node.id);
-          const pending = [cells[0]!], seen = new Set<string>(), members = new Set(cells.map(hexKey));
-          while (pending.length) {
-            const tile = pending.pop()!, key = hexKey(tile);
-            if (seen.has(key)) continue;
-            seen.add(key);
-            for (const n of neighbours(tile)) {
-              const k = hexKey(wrapHex(l, n));
-              if (members.has(k) && !seen.has(k)) pending.push(l.hexes.get(k)!);
-            }
-          }
-          expect(seen.size, `${field} ${node.key}`).toBe(cells.length);
+          expect(reachableCount(l, cells), `${field} ${node.key}`).toBe(cells.length);
         }
       }
     });
@@ -92,10 +103,7 @@ describe('full-scale seeded hex layout (wrapped east-west)', () => {
     }
     for (const id of new Set(land.map((t) => t.continent).filter((c) => c >= 0))) {
       // No land hex of one continent touches another continent: the sea keeps them apart.
-      for (const tile of land.filter((t) => t.continent === id)) for (const n of neighbours(tile)) {
-        const other = at(n);
-        if (other && other.continent >= 0) expect(other.continent).toBe(id);
-      }
+      for (const tile of land.filter((t) => t.continent === id)) expectSeparated(tile, id);
     }
   });
   it('draws each road edge once and marks road hexes only on land', () => {

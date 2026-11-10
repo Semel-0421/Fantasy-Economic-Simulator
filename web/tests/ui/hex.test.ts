@@ -6,6 +6,10 @@ import type { MapScreen } from '../../src/map/map';
 import { overlaps } from '../../src/map/labels';
 import { fullscaleMap } from '../fullscale-map';
 
+function expectNoOverlaps(boxes: ReturnType<MapScreen['renderedLabelBoxes']>): void {
+  for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(overlaps(a, b)).toBe(false);
+}
+
 let server: ViteDevServer, browser: Browser, url: string;
 beforeAll(async () => {
   server = await createServer({ server: { port: 4192, strictPort: true }, logLevel: 'error' });
@@ -26,7 +30,7 @@ it('shows the full-scale hex map at three widths and samples actual pan/zoom fra
       expect(await page.evaluate(async () => (await (window as unknown as { __fesGame: { view(name: string): Promise<{ nodes: { key: string }[] }> } }).__fesGame.view('map')).nodes.map((node) => node.key))).toEqual(fullscaleMap.nodes.map((node) => node.key));
       const boxes = await page.evaluate(() => (window as unknown as { __fesMap: MapScreen }).__fesMap.renderedLabelBoxes());
       expect(boxes.length).toBeGreaterThan(0);
-      for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(overlaps(a, b)).toBe(false);
+      expectNoOverlaps(boxes);
       await page.screenshot({ path: `test-results/hex/${width}.png`, fullPage: true });
       // Render on demand: an idle map draws no frames.
       const idle = await page.evaluate(async () => {

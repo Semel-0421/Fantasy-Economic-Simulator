@@ -1,6 +1,6 @@
 // A seeded, geology-based world (gen/) with the simulation's places partitioned onto its land.
 import { routePairs, type Layout, type MapData, type MapNode, type Box } from './layout';
-import { generateWorld } from './gen/world';
+import { generateWorld, type GenWorld } from './gen/world';
 import type { Biome } from './gen/climate';
 import { partitionHexes } from './hex_partition';
 import { axialToPixel, hexDistance, hexKey, hexLine, pixelToAxial, neighbours, type Axial } from './hex';
@@ -74,7 +74,14 @@ export function layoutHexMap(map: MapData, seed: string): HexLayout {
   throw last;
 }
 
-function layoutOnce(map: MapData, seed: string, worldSeed: string): HexLayout {
+interface Tree {
+  children: Map<number, MapNode[]>;
+  counts: Map<number, number>;
+  roots: MapNode[];
+}
+
+/** Children per parent and the number of places in each subtree. */
+function placeTree(map: MapData): Tree {
   const children = new Map<number, MapNode[]>(), counts = new Map<number, number>();
   for (const node of [...map.nodes].sort((a, b) => a.id - b.id)) {
     const siblings = children.get(node.parent) ?? [];
@@ -86,57 +93,96 @@ function layoutOnce(map: MapData, seed: string, worldSeed: string): HexLayout {
   };
   const roots = children.get(-1) ?? [];
   roots.forEach(count);
+  return { children, counts, roots };
+}
+
+/** Everything the carving of one world shares. */
+interface Carving {
+  out: HexLayout;
+  tree: Tree;
+  site: (hex: Axial) => number;
+}
+
+function setBox(out: HexLayout, node: MapNode, cells: Axial[]): void {
+  const points = cells.map(axialToPixel), xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+  const x = Math.min(...xs) - 14, y = Math.min(...ys) - 16;
+  out.boxes.set(node.id, { x, y, w: Math.max(...xs) + 14 - x, h: Math.max(...ys) + 16 - y });
+}
+
+function placeAreas(c: Carving, node: MapNode, cells: Axial[], kids: MapNode[]): Axial[][] {
+  const { counts } = c.tree;
+  let remaining = cells.length - 1, remainingNeeded = kids.reduce((sum, child) => sum + counts.get(child.id)!, 0);
+  const sizes = kids.map((child) => { const required = counts.get(child.id)!, size = Math.floor(remaining * required / remainingNeeded); remaining -= size; remainingNeeded -= required; return size; });
+  if (node.level >= 3) return [[cells[0]!], ...kids.map((_, i) => [cells[i + 1]!])];
+  return kids.length ? partition(cells, [1, ...sizes], node.id, [1, ...kids.map((child) => counts.get(child.id)!)]) : [cells];
+}
+
+function place(c: Carving, node: MapNode, cells: Axial[], continent: number, nation: number, region: number): void {
+  const { out } = c;
+  if (node.level === 1) nation = node.id;
+  if (node.level === 2) region = node.id;
+  const kids = c.tree.children.get(node.id) ?? [];
+  // A town and its villages take the best sites of their patch: the town the very best.
+  if (node.level >= 3) cells = [...cells].sort((a, b) => c.site(b) - c.site(a) || a.r - b.r || a.q - b.q);
+  const areas = placeAreas(c, node, cells, kids);
+  const first = wrapHex(out, areas[0]![0]!);
+  out.nodeHexes.set(node.id, first); out.points.set(node.id, axialToPixel(first)); out.occupants.set(hexKey(first), node.id);
+  for (const hex of cells) Object.assign(out.hexes.get(hexKey(wrapHex(out, hex)))!, { continent, nation, region });
+  if (node.level <= 2) setBox(out, node, cells);
+  kids.forEach((child, i) => place(c, child, areas[i + 1]!, continent, nation, region));
+}
+
+/** Follow land adjacency across the seam; a long peninsula can lie more than half a world
+ * from the first cell, so unwrapping each cell independently would cut the carving graph. */
+function unwrapContinent(out: HexLayout, cells: Axial[]): Axial[] {
+  const ref = cells[0]!;
+  const members = new Set(cells.map(hexKey)), placed = new Map([[hexKey(ref), ref]]), queue = [ref];
+  for (let head = 0; head < queue.length; head++) for (const hex of neighbours(queue[head]!)) {
+    const key = hexKey(wrapHex(out, hex));
+    if (members.has(key) && !placed.has(key)) { placed.set(key, hex); queue.push(hex); }
+  }
+  return cells.map((hex) => placed.get(hexKey(hex))!);
+}
+
+function paintRoad(out: HexLayout, a: Axial, b: Axial): void {
+  for (const hex of wrappedLine(out, a, b)) { const tile = out.hexes.get(hexKey(hex)); if (tile && tile.terrain !== 'water') tile.road = true; }
+}
+
+function paintRoads(map: MapData, out: HexLayout): void {
+  for (const route of routePairs(map).filter((route) => route.terrain === 0).sort((a, b) => a.from - b.from || a.to - b.to)) {
+    const a = out.nodeHexes.get(route.from), b = out.nodeHexes.get(route.to);
+    if (a && b) paintRoad(out, a, b);
+  }
+}
+
+/** True when a land cell has a non-land neighbour. */
+function isCoastal(world: GenWorld, i: number): boolean {
+  const { grid } = world;
+  for (let n = 0; n < 6 && world.land[i]; n++) { const j = grid.nb[i * 6 + n]!; if (j >= 0 && !world.land[j]) return true; }
+  return false;
+}
+
+function layoutOnce(map: MapData, seed: string, worldSeed: string): HexLayout {
+  const tree = placeTree(map);
   const world = generateWorld(worldSeed, continentNeeds(map));
   const { grid } = world, axial = (i: number): Axial => ({ q: grid.q[i]!, r: grid.r[i]! });
   const out: HexLayout = { seed, worldSeed, points: new Map(), boxes: new Map(), hexes: new Map(), nodeHexes: new Map(), occupants: new Map(), rivers: [], landBounds: { x: 0, y: 0, w: 0, h: 0 }, width: grid.width, cols: grid.cols, rows: grid.rows };
   const coastal = new Uint8Array(grid.size);
   for (let i = 0; i < grid.size; i++) {
-    for (let n = 0; n < 6 && world.land[i]; n++) { const j = grid.nb[i * 6 + n]!; if (j >= 0 && !world.land[j]) coastal[i] = 1; }
+    if (isCoastal(world, i)) coastal[i] = 1;
     out.hexes.set(hexKey(axial(i)), { ...axial(i), continent: -1, nation: -1, region: -1, terrain: world.biome[i]!, road: false, river: world.river[i] === 1 });
   }
   const site = (hex: Axial): number => {
     const i = grid.index(hex), tile = out.hexes.get(hexKey(wrapHex(out, hex)))!;
     return SITE[tile.terrain] + (tile.river ? 3 : 0) + (coastal[i] ? 2 : 0);
   };
-  const place = (node: MapNode, cells: Axial[], continent: number, nation: number, region: number): void => {
-    if (node.level === 1) nation = node.id;
-    if (node.level === 2) region = node.id;
-    const kids = children.get(node.id) ?? [];
-    // A town and its villages take the best sites of their patch: the town the very best.
-    if (node.level >= 3) cells = [...cells].sort((a, b) => site(b) - site(a) || a.r - b.r || a.q - b.q);
-    let remaining = cells.length - 1, remainingNeeded = kids.reduce((sum, child) => sum + counts.get(child.id)!, 0);
-    const sizes = kids.map((child) => { const required = counts.get(child.id)!, size = Math.floor(remaining * required / remainingNeeded); remaining -= size; remainingNeeded -= required; return size; });
-    const areas = node.level >= 3 ? [[cells[0]!], ...kids.map((_, i) => [cells[i + 1]!])]
-      : kids.length ? partition(cells, [1, ...sizes], node.id, [1, ...kids.map((child) => counts.get(child.id)!)]) : [cells];
-    const first = wrapHex(out, areas[0]![0]!);
-    out.nodeHexes.set(node.id, first); out.points.set(node.id, axialToPixel(first)); out.occupants.set(hexKey(first), node.id);
-    for (const hex of cells) Object.assign(out.hexes.get(hexKey(wrapHex(out, hex)))!, { continent, nation, region });
-    if (node.level <= 2) {
-      const points = cells.map(axialToPixel), xs = points.map((p) => p.x), ys = points.map((p) => p.y);
-      const x = Math.min(...xs) - 14, y = Math.min(...ys) - 16;
-      out.boxes.set(node.id, { x, y, w: Math.max(...xs) + 14 - x, h: Math.max(...ys) + 16 - y });
-    }
-    kids.forEach((child, i) => place(child, areas[i + 1]!, continent, nation, region));
-  };
-  // Follow land adjacency across the seam; a long peninsula can lie more than half a world
-  // from the first cell, so unwrapping each cell independently would cut the carving graph.
-  roots.forEach((root, k) => {
-    const cells = world.continents[k]!.map(axial), ref = cells[0]!;
-    const members = new Set(cells.map(hexKey)), placed = new Map([[hexKey(ref), ref]]), queue = [ref];
-    for (let head = 0; head < queue.length; head++) for (const hex of neighbours(queue[head]!)) {
-      const key = hexKey(wrapHex(out, hex));
-      if (members.has(key) && !placed.has(key)) { placed.set(key, hex); queue.push(hex); }
-    }
-    place(root, cells.map((hex) => placed.get(hexKey(hex))!), root.id, -1, -1);
-  });
+  const carving: Carving = { out, tree, site };
+  tree.roots.forEach((root, k) => place(carving, root, unwrapContinent(out, world.continents[k]!.map(axial)), root.id, -1, -1));
   for (let i = 0; i < grid.size; i++) {
     const d = world.drainage.down[i]!;
     if (world.river[i] && d >= 0) out.rivers.push({ from: axial(i), to: axial(d) });
   }
-  for (const route of routePairs(map).filter((route) => route.terrain === 0).sort((a, b) => a.from - b.from || a.to - b.to)) {
-    const a = out.nodeHexes.get(route.from), b = out.nodeHexes.get(route.to);
-    if (a && b) for (const hex of wrappedLine(out, a, b)) { const tile = out.hexes.get(hexKey(hex)); if (tile && tile.terrain !== 'water') tile.road = true; }
-  }
+  paintRoads(map, out);
   const land = [...out.hexes.values()].filter((tile) => tile.continent >= 0).map(axialToPixel);
   const y = Math.min(...land.map((p) => p.y)) - 16;
   // East-west the world is the whole circumference; north-south it is the land's extent.

@@ -13,7 +13,7 @@ import { installSound, musicScene, setVolume, setMusic } from './audio/sound';
 import { readVolume, readMusic } from './ui/menu';
 import { BROKEN_MESSAGE, SaveStore, type Slot } from './save/store';
 import { SimBridge } from './sim/bridge';
-import type { PlayerCommand } from './sim/types';
+import type { PlayerCommand, Views } from './sim/types';
 import { renderHud, type Hud } from './ui/hud';
 import { renderMenu } from './ui/menu';
 import { calendarDate, describeEvent, playTurn, scenarioDate, type DateLabel } from './ui/turn';
@@ -135,6 +135,77 @@ async function resume(slot: Slot): Promise<void> {
 /** Every player sees the same map in a scenario; free mode gets its own from the game seed. */
 const scenarioMapSeed = (n: number): string => `scenario-${n}`;
 
+type Info = Views['scenario'];
+
+/** The player's orders, previewed or queued through the game, with a note shown on the HUD. */
+function orderActions(game: SimBridge, hud: Hud) {
+  return {
+    preview: (c: PlayerCommand) => game.preview(c),
+    queue: (c: PlayerCommand) => game.queue(c),
+    ordered: (text: string) => hud.addMessage(text),
+  };
+}
+
+function buildScreens(game: SimBridge, hud: Hud, map: MapData, goods: Views['goods'], travel: TravelPanel, dateLabel: DateLabel): Screens {
+  const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : i18nText("main.good", { arg1: g }));
+  const orders = orderActions(game, hud);
+  const townOf = (n: number): string => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n });
+  return {
+    hud,
+    dateLabel,
+    travel,
+    map,
+    goodName,
+    market: marketPanel(goodName, orders, (g) => goods[g]?.key ?? ''),
+    exchange: exchangePanel(townOf, orders),
+    bonds: bondsPanel(orders),
+    licences: licencePanel(goods, goodName, orders, { csv: game.sourceFiles['goods.csv'] ?? '', scenario: game.scenarioSource, nation: townOf, dateLabel }),
+    cargo: cargoPanel(goodName, (g) => goods[g]?.key ?? ''),
+    purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
+  };
+}
+
+/** Adds a scenario's goal panel and its news dialogs to the screens. */
+function addScenarioScreen(game: SimBridge, screens: Screens, info: NonNullable<Info>, scenarioNumber: number): void {
+  const { hud, map, goodName } = screens;
+  const panel = scenarioPanel(info.title, info.weeks, { good: goodName, node: (n) => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n }) }, (id) => void accept(game, screens, id));
+  screens.scenario = { n: scenarioNumber, title: info.title, panel, dialogs: dialogs(document.body, () => app.querySelector('.game')) };
+  hud.panels.goal.append(panel.node);
+}
+
+/** Draws the map into the HUD; returns the towns a scenario teaches with (none in free mode). */
+async function mountMap(game: SimBridge, hud: Hud, map: MapData, select: (node: number) => void, scenarioNumber: number | undefined): Promise<number[]> {
+  let teachingTargets: number[] = [];
+  try {
+    mapScreen = await createMap(hud.mapHost, map, select, game.mapSeed);
+    if (scenarioNumber !== undefined) {
+      const keys = new Set(scenarioNodeKeys(game.scenarioSource));
+      teachingTargets = map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id);
+      mapScreen.setTargets(teachingTargets);
+    }
+    // The browser tests find towns on the canvas through this handle (development builds only).
+    if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
+  } catch (e) {
+    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: i18nText("main.the-map-couldn-t-be-drawn-use-the-routes-list-to-tra", { arg1: message(e) }) }));
+  }
+  return teachingTargets;
+}
+
+/** The first scenario's guide, pointing at the market tab, the target town and the next-week button. */
+function startFirstGuide(hud: Hud, map: MapData, select: (node: number) => void, teachingTargets: number[]): void {
+  const target = map.nodes.find((node) => node.level === 3 && teachingTargets.includes(node.id))?.id ?? -1;
+  guideCleanup = showGuide(app.querySelector<HTMLElement>('.game')!, (step) => {
+    if (step === 1) hud.showTab('market');
+    if (step === 2) {
+      if (target >= 0) select(target);
+      const point = mapScreen?.screenOf(target), mapBox = hud.mapHost.getBoundingClientRect();
+      const card = app.querySelector<HTMLElement>(matchMedia('(max-width: 899px)').matches ? '#phone-travel' : '#travel-panel');
+      return [...(point ? [new DOMRect(mapBox.left + point.x - 12, mapBox.top + point.y - 12, 24, 24)] : []), ...(card ? [card.getBoundingClientRect()] : [])];
+    }
+    return [app.querySelector<HTMLElement>(step === 0 ? '#coins' : step === 1 ? '#tab-market' : '#next')!.getBoundingClientRect()];
+  });
+}
+
 async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapSeed?: string): Promise<void> {
   musicScene('game');
   app.replaceChildren(Object.assign(document.createElement('p'), { className: 'loading', id: 'status', textContent: i18nText("main.loading-the-simulation") }));
@@ -165,7 +236,6 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
   game.onFailure((e) => hud.fail(e.message));
   const [map, goods] = await Promise.all([game.view('map'), game.view('goods')]);
   for (const node of map.nodes) if (/^k\d+(?:n\d+)?(?:r\d+)?(?:c\d+)?(?:v\d+)?$/.test(node.key)) node.name = placeName(node.key);
-  const goodName = (g: number): string => (goods[g] ? goodLabel(goods[g].key) : i18nText("main.good", { arg1: g }));
   const select = (node: number): void => {
     mapScreen?.select(node);
     travel.select(node);
@@ -179,61 +249,16 @@ async function begin(starting: Promise<SimBridge>, scenarioNumber?: number, mapS
     dateLabel,
   });
   hud.mapTools.append(travel.node);
-  const orders = {
-    preview: (c: PlayerCommand) => game.preview(c),
-    queue: (c: PlayerCommand) => game.queue(c),
-    ordered: (text: string) => hud.addMessage(text),
-  };
-  const townOf = (n: number): string => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n });
-  const screens: Screens = {
-    hud,
-    dateLabel,
-    travel,
-    map,
-    goodName,
-    market: marketPanel(goodName, orders, (g) => goods[g]?.key ?? ''),
-    exchange: exchangePanel(townOf, orders),
-    bonds: bondsPanel(orders),
-    licences: licencePanel(goods, goodName, orders, { csv: game.sourceFiles['goods.csv'] ?? '', scenario: game.scenarioSource, nation: townOf, dateLabel }),
-    cargo: cargoPanel(goodName, (g) => goods[g]?.key ?? ''),
-    purse: pursePanel(map.nodes.filter((n) => n.level === 0).sort((a, b) => a.continent - b.continent).map((n) => n.name)),
-  };
-  if (info && scenarioNumber !== undefined) {
-    const panel = scenarioPanel(info.title, info.weeks, { good: goodName, node: (n) => map.nodes[n]?.name ?? i18nText("main.place", { arg1: n }) }, (id) => void accept(game, screens, id));
-    screens.scenario = { n: scenarioNumber, title: info.title, panel, dialogs: dialogs(document.body, () => app.querySelector('.game')) };
-    hud.panels.goal.append(panel.node);
-  }
+  const screens = buildScreens(game, hud, map, goods, travel, dateLabel);
+  if (info && scenarioNumber !== undefined) addScenarioScreen(game, screens, info, scenarioNumber);
   hud.panels.market.append(screens.market.node);
   hud.panels.cargo.append(screens.cargo.node);
   hud.panels.finance.append(screens.purse.node, screens.exchange.node, screens.bonds.node, screens.licences.node);
-  let teachingTargets: number[] = [];
-  try {
-    mapScreen = await createMap(hud.mapHost, map, select, game.mapSeed);
-    if (scenarioNumber !== undefined) {
-      const keys = new Set(scenarioNodeKeys(game.scenarioSource));
-      teachingTargets = map.nodes.filter((node) => keys.has(node.key)).map((node) => node.id);
-      mapScreen.setTargets(teachingTargets);
-    }
-    // The browser tests find towns on the canvas through this handle (development builds only).
-    if (import.meta.env.DEV) Object.assign(window, { __fesMap: mapScreen, __fesGame: game });
-  } catch (e) {
-    hud.mapHost.append(Object.assign(document.createElement('p'), { className: 'note', textContent: i18nText("main.the-map-couldn-t-be-drawn-use-the-routes-list-to-tra", { arg1: message(e) }) }));
-  }
+  const teachingTargets = await mountMap(game, hud, map, select, scenarioNumber);
   await refresh(game, screens);
   if (info && screens.scenario) await showDialogs(screens, [{ title: info.title, text: info.intro }]);
-  if (scenarioNumber === 1 && !guideDone()) {
-    const target = map.nodes.find((node) => node.level === 3 && teachingTargets.includes(node.id))?.id ?? -1;
-    guideCleanup = showGuide(app.querySelector<HTMLElement>('.game')!, (step) => {
-      if (step === 1) hud.showTab('market');
-      if (step === 2) {
-        if (target >= 0) select(target);
-        const point = mapScreen?.screenOf(target), mapBox = hud.mapHost.getBoundingClientRect();
-        const card = app.querySelector<HTMLElement>(matchMedia('(max-width: 899px)').matches ? '#phone-travel' : '#travel-panel');
-        return [...(point ? [new DOMRect(mapBox.left + point.x - 12, mapBox.top + point.y - 12, 24, 24)] : []), ...(card ? [card.getBoundingClientRect()] : [])];
-      }
-      return [app.querySelector<HTMLElement>(step === 0 ? '#coins' : step === 1 ? '#tab-market' : '#next')!.getBoundingClientRect()];
-    });
-  } else if (!info) freeHint(hud.panels.market);
+  if (scenarioNumber === 1 && !guideDone()) startFirstGuide(hud, map, select, teachingTargets);
+  else if (!info) freeHint(hud.panels.market);
 }
 
 /** News dialogs; the game behind them is inert (no input) until the last is dismissed. */

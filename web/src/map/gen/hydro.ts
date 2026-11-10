@@ -44,10 +44,8 @@ export interface Drainage {
   lake: Uint8Array;
 }
 
-/** Priority-flood from the sea (Barnes et al. style): fills sinks and records flow direction. */
-export function drain(grid: Grid, h: Float32Array, sea: number): Drainage {
-  const filled = h.slice(), down = new Int32Array(grid.size).fill(-1), done = new Uint8Array(grid.size), lake = new Uint8Array(grid.size);
-  const heap = new Heap(filled);
+function floodFromSea(grid: Grid, h: Float32Array, sea: number, filled: Float32Array, down: Int32Array): void {
+  const done = new Uint8Array(grid.size), heap = new Heap(filled);
   for (let i = 0; i < grid.size; i++) if (h[i]! < sea) { done[i] = 1; heap.push(i); }
   while (heap.size) {
     const c = heap.pop();
@@ -60,14 +58,31 @@ export function drain(grid: Grid, h: Float32Array, sea: number): Drainage {
       heap.push(j);
     }
   }
+}
+
+function hasLakeNeighbour(grid: Grid, lake: Uint8Array, i: number): boolean {
+  for (let n = 0; n < 6; n++) { const j = grid.nb[i * 6 + n]!; if (j >= 0 && lake[j]) return true; }
+  return false;
+}
+
+/** Priority-flood from the sea (Barnes et al. style): fills sinks and records flow direction. */
+export function drain(grid: Grid, h: Float32Array, sea: number): Drainage {
+  const filled = h.slice(), down = new Int32Array(grid.size).fill(-1), lake = new Uint8Array(grid.size);
+  floodFromSea(grid, h, sea, filled, down);
   for (let i = 0; i < grid.size; i++) if (h[i]! >= sea && filled[i]! - h[i]! > 0.035) lake[i] = 1;
   // A single flooded cell is a pond, not a lake.
-  for (let i = 0; i < grid.size; i++) if (lake[i]) {
-    let wet = 0;
-    for (let n = 0; n < 6; n++) { const j = grid.nb[i * 6 + n]!; if (j >= 0 && lake[j]) wet++; }
-    if (!wet) lake[i] = 0;
-  }
+  for (let i = 0; i < grid.size; i++) if (lake[i] && !hasLakeNeighbour(grid, lake, i)) lake[i] = 0;
   return { filled, down, lake };
+}
+
+/** The land cells reachable from start, which is marked seen along with them. */
+function floodComponent(grid: Grid, land: Uint8Array, seen: Uint8Array, start: number): number[] {
+  const comp = [start]; seen[start] = 1;
+  for (let k = 0; k < comp.length; k++) {
+    const c = comp[k]!;
+    for (let n = 0; n < 6; n++) { const j = grid.nb[c * 6 + n]!; if (j >= 0 && land[j] && !seen[j]) { seen[j] = 1; comp.push(j); } }
+  }
+  return comp;
 }
 
 /** Connected groups of land cells (largest first, then by smallest index). */
@@ -75,12 +90,7 @@ export function landComponents(grid: Grid, land: Uint8Array): number[][] {
   const seen = new Uint8Array(grid.size), out: number[][] = [];
   for (let i = 0; i < grid.size; i++) {
     if (!land[i] || seen[i]) continue;
-    const comp = [i]; seen[i] = 1;
-    for (let k = 0; k < comp.length; k++) {
-      const c = comp[k]!;
-      for (let n = 0; n < 6; n++) { const j = grid.nb[c * 6 + n]!; if (j >= 0 && land[j] && !seen[j]) { seen[j] = 1; comp.push(j); } }
-    }
-    out.push(comp.sort((a, b) => a - b));
+    out.push(floodComponent(grid, land, seen, i).sort((a, b) => a - b));
   }
   return out.sort((a, b) => b.length - a.length || a[0]! - b[0]!);
 }

@@ -25,6 +25,14 @@ export interface TravelPanel {
 
 const levelName = (level: number): string => (level === LEVEL.city ? i18nText("travel.city") : level === LEVEL.village ? i18nText("travel.village") : i18nText("travel.area"));
 
+const checkLabel = (box: HTMLInputElement, text: string): HTMLLabelElement => el('label', { className: 'check' }, box, text);
+
+function routeItem(r: { to: number; turns: number }, nameOf: (id: number) => string, actions: TravelActions): HTMLLIElement {
+  const b = button(i18nText('travel.route-button', { name: nameOf(r.to), weeks: r.turns }), () => actions.select(r.to));
+  b.dataset.node = String(r.to);
+  return el('li', {}, b);
+}
+
 export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
   const nameOf = (id: number): string => map.nodes[id]?.name ?? i18nText('travel.node', { id });
   const where = el('p', { id: 'where' });
@@ -71,18 +79,7 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
   };
 
   const listRoutes = (): void => {
-    routes.replaceChildren(
-      ...destinations(map, player).map((r) => {
-        const b = button(i18nText('travel.route-button', { name: nameOf(r.to), weeks: r.turns }), () => actions.select(r.to));
-        b.dataset.node = String(r.to);
-        return el('li', {}, b);
-      }),
-    );
-  };
-
-  const check = (box: HTMLInputElement, text: string): HTMLLabelElement => {
-    const label = el('label', { className: 'check' }, box, text);
-    return label;
+    routes.replaceChildren(...destinations(map, player).map((r) => routeItem(r, nameOf, actions)));
   };
 
   // Collapsed to one line until the player opens it or picks a town, so it never hides the map.
@@ -94,7 +91,7 @@ export function travelPanel(map: MapData, actions: TravelActions): TravelPanel {
     summary,
     where,
     selected,
-    el('div', { className: 'row' }, check(guards, i18nText("travel.guards")), check(insurance, i18nText("travel.insurance")), go),
+    el('div', { className: 'row' }, checkLabel(guards, i18nText("travel.guards")), checkLabel(insurance, i18nText("travel.insurance")), go),
     error.node,
     el('h3', { text: i18nText("travel.routes-from-here") }),
     routes,

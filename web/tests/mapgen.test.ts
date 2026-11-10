@@ -9,6 +9,23 @@ import { growContinents } from '../src/map/gen/crust';
 import { fullscaleMap } from './fullscale-map';
 import { continentNeeds } from '../src/map/hex_layout';
 
+/** Every cell within three hexes of crust cell i belongs to the same continent or to the sea. */
+function expectBufferAround(grid: ReturnType<typeof makeGrid>, crust: Int32Array, i: number): void {
+  let ring = new Set([i]);
+  for (let d = 0; d < 3; d++) {
+    const next = new Set<number>();
+    for (const c of ring) expectNeighbourBuffer(grid, crust, i, c, next);
+    ring = next;
+  }
+}
+
+function expectNeighbourBuffer(grid: ReturnType<typeof makeGrid>, crust: Int32Array, i: number, c: number, next: Set<number>): void {
+  for (let n = 0; n < 6; n++) {
+    const j = grid.nb[c * 6 + n]!;
+    if (j >= 0) { expect(crust[j] === -1 || crust[j] === crust[i]).toBe(true); next.add(j); }
+  }
+}
+
 describe('map generator', () => {
   it('draws the same numbers from the same seed and different ones from another', () => {
     const seq = (seed: string): number[] => { const r = rng(seed); return Array.from({ length: 5 }, () => r.next()); };
@@ -89,17 +106,7 @@ describe('map generator', () => {
   });
   it('keeps the crust separated by three hexes with cached exclusion zones', () => {
     const grid = makeGrid(40, 24), crust = growContinents(grid, [70, 90, 110], rng('gap'), DEFAULT_GEN_OPTIONS, growPlates(grid, 12, rng('gap-plates')), 'scattered');
-    for (let i = 0; i < grid.size; i++) if (crust[i]! >= 0) {
-      let ring = new Set([i]);
-      for (let d = 0; d < 3; d++) {
-        const next = new Set<number>();
-        for (const c of ring) for (let n = 0; n < 6; n++) {
-          const j = grid.nb[c * 6 + n]!;
-          if (j >= 0) { expect(crust[j] === -1 || crust[j] === crust[i]).toBe(true); next.add(j); }
-        }
-        ring = next;
-      }
-    }
+    for (let i = 0; i < grid.size; i++) if (crust[i]! >= 0) expectBufferAround(grid, crust, i);
   });
   it('scales elevation noise and erosion without changing their input', () => {
     const grid = makeGrid(40, 24), crust = growContinents(grid, [70, 90, 110], rng('stages'), DEFAULT_GEN_OPTIONS, growPlates(grid, 12, rng('stage-plates')), 'scattered');

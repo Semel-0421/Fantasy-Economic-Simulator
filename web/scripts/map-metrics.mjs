@@ -65,15 +65,19 @@ export function straightCoastRuns(grid, water, continents) {
   const owner = new Int32Array(grid.size).fill(-1);
   continents.forEach((cells, b) => { for (const i of cells) owner[i] = b; });
   return continents.map((cells, b) => {
-    let longest = 0;
     const facesSea = (i, face) => i >= 0 && owner[i] === b && grid.nb[i * 6 + face] >= 0 && water[grid.nb[i * 6 + face]];
-    for (const i of cells) for (let face = 0; face < 6; face++) if (facesSea(i, face)) {
-      for (let step = 0; step < 6; step++) {
-        let run = 1, j = grid.nb[i * 6 + step];
-        while (run < cells.length && facesSea(j, face)) { run++; j = grid.nb[j * 6 + step]; }
-        longest = Math.max(longest, run);
-      }
-    }
+    const runFrom = (i, face, step) => {
+      let run = 1, j = grid.nb[i * 6 + step];
+      while (run < cells.length && facesSea(j, face)) { run++; j = grid.nb[j * 6 + step]; }
+      return run;
+    };
+    const longestAt = (i, face) => {
+      let best = 0;
+      for (let step = 0; step < 6; step++) best = Math.max(best, runFrom(i, face, step));
+      return best;
+    };
+    let longest = 0;
+    for (const i of cells) for (let face = 0; face < 6; face++) if (facesSea(i, face)) longest = Math.max(longest, longestAt(i, face));
     return longest;
   });
 }

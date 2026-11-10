@@ -60,29 +60,35 @@ export function validate(schema: Schema, value: unknown, path = '$'): string | n
       return value === null ? null : validate(schema.of, value, path);
     case 'lit':
       return typeof value === 'string' && schema.values.includes(value) ? null : bad(schema.values.join('|'));
-    case 'arr': {
-      if (!Array.isArray(value)) return bad('an array');
-      for (let i = 0; i < value.length; i++) {
-        const e = validate(schema.of, value[i], `${path}[${i}]`);
-        if (e) return e;
-      }
-      return null;
-    }
-    case 'tup': {
-      if (!Array.isArray(value) || value.length !== schema.items.length) {
-        return bad(`a ${schema.items.length}-tuple`);
-      }
-      for (let i = 0; i < schema.items.length; i++) {
-        const e = validate(schema.items[i] as Schema, value[i], `${path}[${i}]`);
-        if (e) return e;
-      }
-      return null;
-    }
+    case 'arr':
+      return validateArray(schema.of, value, path, bad);
+    case 'tup':
+      return validateTuple(schema.items, value, path, bad);
     case 'obj':
       return validateObject(schema.fields, value, path, bad);
     case 'tag':
       return validateTag(schema.cases, value, path, bad);
   }
+}
+
+function validateArray(of: Schema, value: unknown, path: string, bad: (what: string) => string): string | null {
+  if (!Array.isArray(value)) return bad('an array');
+  for (let i = 0; i < value.length; i++) {
+    const e = validate(of, value[i], `${path}[${i}]`);
+    if (e) return e;
+  }
+  return null;
+}
+
+function validateTuple(items: readonly unknown[], value: unknown, path: string, bad: (what: string) => string): string | null {
+  if (!Array.isArray(value) || value.length !== items.length) {
+    return bad(`a ${items.length}-tuple`);
+  }
+  for (let i = 0; i < items.length; i++) {
+    const e = validate(items[i] as Schema, value[i], `${path}[${i}]`);
+    if (e) return e;
+  }
+  return null;
 }
 
 function validateObject(

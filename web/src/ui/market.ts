@@ -69,16 +69,80 @@ function quantityInput(): HTMLInputElement {
   return qty;
 }
 
-export function marketPanel(nameOf: (good: number) => string, actions: MarketActions, keyOf: (g: number) => string = nameOf): MarketPanel {
+function quoteRow(q: Quote, nameOf: (good: number) => string, keyOf: (g: number) => string, held: Map<number, number>, chosenGood: number, choose: (g: number) => void): HTMLTableRowElement {
+  const pick = button(nameOf(q.good), () => choose(q.good));
+  pick.className = 'link';
+  pick.prepend(goodIcon(keyOf(q.good), nameOf(q.good)));
+  const tr = row('td', [pick, String(coinsOf(q.price)), String(q.offer), String(q.stock), String(held.get(q.good) ?? 0)]);
+  tr.dataset.good = String(q.good);
+  tr.classList.toggle('chosen', q.good === chosenGood);
+  return tr;
+}
+
+function marketTable(): { title: HTMLElement; body: HTMLTableSectionElement; table: HTMLElement } {
   const title = el('h2', { id: 'market-title', text: i18nText("market.market") });
   const body = el('tbody');
   const head = el('thead', {}, row('th', [i18nText("market.good"), i18nText("market.buy"), i18nText("market.sell"), i18nText("market.stock"), i18nText("market.held")]));
   const table = el('table', { id: 'market-table', className: 'grid' }, head, body);
+  return { title, body, table };
+}
+
+interface TradeForm {
+  chosen: HTMLElement;
+  qty: HTMLInputElement;
+  buy: HTMLElement;
+  sell: HTMLElement;
+  deposit: HTMLInputElement;
+  error: HTMLElement;
+  preview: HTMLElement;
+  pending: HTMLElement;
+}
+
+function tradeForm(f: TradeForm): HTMLElement {
+  return el(
+    'div',
+    { id: 'trade', className: 'trade' },
+    f.chosen,
+    el('div', { className: 'row' }, f.qty, f.buy, f.sell),
+    el('label', { className: 'check' }, f.deposit, i18nText("market.pay-the-rest-from-your-bank-deposit")),
+    f.error,
+    f.preview,
+    f.pending,
+  );
+}
+
+function tradeFields() {
   const chosen = el('p', { id: 'trade-good', text: i18nText("market.choose-a-good-to-trade") });
   const qty = quantityInput();
   const deposit = el('input', { id: 'from-deposit', type: 'checkbox' });
   const preview = el('p', { id: 'trade-preview' });
   const error = errorBox('trade-error');
+  return { chosen, qty, deposit, preview, error };
+}
+
+function orderCommand(side: Side, good: number, quantity: number, payFromDeposit: boolean): PlayerCommand {
+  return side === 'buy' ? { BuyGoods: { good, quantity, pay_from_deposit: payFromDeposit } } : { SellGoods: { good, quantity } };
+}
+
+function renderQuotes(body: HTMLTableSectionElement, list: Quote[], nameOf: (good: number) => string, keyOf: (g: number) => string, held: Map<number, number>, good: number, choose: (g: number) => void): void {
+  body.replaceChildren(...list.map((q) => quoteRow(q, nameOf, keyOf, held, good, choose)));
+}
+
+/** Runs one order step with the buttons disabled; a failure goes to the error box. */
+async function guarded(setBusy: (busy: boolean) => void, error: { show(text: string): void }, work: () => Promise<void>): Promise<void> {
+  setBusy(true);
+  try {
+    await work();
+  } catch (e) {
+    error.show(e instanceof Error ? e.message : String(e));
+  } finally {
+    setBusy(false);
+  }
+}
+
+export function marketPanel(nameOf: (good: number) => string, actions: MarketActions, keyOf: (g: number) => string = nameOf): MarketPanel {
+  const { title, body, table } = marketTable();
+  const { chosen, qty, deposit, preview, error } = tradeFields();
   const confirm = button(i18nText("market.confirm-order"), () => void place(), 'confirm');
   confirm.className = 'primary';
   const pending = el('div', { className: 'row', id: 'trade-confirm' }, confirm, button(i18nText("market.cancel"), () => reset(), 'cancel'));
@@ -104,10 +168,8 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
     if (!q) return;
     const quantity = Math.floor(Number(qty.value));
     reset();
-    const command: PlayerCommand =
-      side === 'buy' ? { BuyGoods: { good, quantity, pay_from_deposit: deposit.checked } } : { SellGoods: { good, quantity } };
-    setBusy(true);
-    try {
+    const command = orderCommand(side, good, quantity, deposit.checked);
+    await guarded(setBusy, error, async () => {
       const refused = rejection(await actions.preview(command));
       error.show(refused ?? '');
       if (refused !== null) return;
@@ -115,26 +177,17 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
       order = { command, text };
       preview.textContent = text;
       pending.hidden = false;
-    } catch (e) {
-      error.show(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   async function place(): Promise<void> {
     if (!order) return;
     const { command, text } = order;
-    setBusy(true);
-    try {
+    await guarded(setBusy, error, async () => {
       await actions.queue(command);
       actions.ordered(i18nText("market.order-for-this-week", { arg1: text }));
       reset();
-    } catch (e) {
-      error.show(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   function choose(g: number): void {
@@ -151,16 +204,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
   reset();
   setBusy(false);
 
-  const form = el(
-    'div',
-    { id: 'trade', className: 'trade' },
-    chosen,
-    el('div', { className: 'row' }, qty, buy, sell),
-    el('label', { className: 'check' }, deposit, i18nText("market.pay-the-rest-from-your-bank-deposit")),
-    error.node,
-    preview,
-    pending,
-  );
+  const form = tradeForm({ chosen, qty, buy, sell, deposit, error: error.node, preview, pending });
   const node = el('section', { id: 'market', className: 'card' }, title, el('div', { className: 'scroll' }, table), form);
   return {
     node,
@@ -168,17 +212,7 @@ export function marketPanel(nameOf: (good: number) => string, actions: MarketAct
       title.textContent = i18nText("market.market-2", { arg1: town });
       quotes = list;
       cart = held;
-      body.replaceChildren(
-        ...list.map((q) => {
-          const pick = button(nameOf(q.good), () => choose(q.good));
-          pick.className = 'link';
-          pick.prepend(goodIcon(keyOf(q.good), nameOf(q.good)));
-          const tr = row('td', [pick, String(coinsOf(q.price)), String(q.offer), String(q.stock), String(held.get(q.good) ?? 0)]);
-          tr.dataset.good = String(q.good);
-          tr.classList.toggle('chosen', q.good === good);
-          return tr;
-        }),
-      );
+      renderQuotes(body, list, nameOf, keyOf, held, good, choose);
       if (good >= 0 && !list.some((q) => q.good === good)) {
         good = -1;
         chosen.textContent = i18nText("market.choose-a-good-to-trade");

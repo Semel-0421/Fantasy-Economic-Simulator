@@ -38,74 +38,115 @@ function bake(renderer: Renderer, source: Container, frame: Rectangle, resolutio
   return tiles;
 }
 
+/** The layers the terrain bake draws into, and what drawing a tile needs to know about the layout. */
+interface Paint {
+  layout: HexLayout;
+  width: number;
+  ground: Graphics;
+  edges: Graphics;
+  roads: Graphics;
+  dots: Graphics;
+  tints: Graphics;
+  grid: Graphics;
+  terrain: Container;
+  nations: Map<number, number>;
+  at: (hex: Axial) => HexTile | undefined;
+}
+
+function addTerrainSprite(terrain: Container, texture: Texture, x: number, y: number): void {
+  const sprite = new Sprite(texture); sprite.anchor.set(0.5); sprite.position.set(x, y); sprite.width = 28; sprite.height = 32;
+  terrain.addChild(sprite);
+}
+
+/** Nation and region borders of one tile copy; a nation edge is drawn once, by the lower-numbered side. */
+function drawBorders(p: Paint, tile: HexTile, base: { x: number; y: number }[], dx: number): void {
+  // Vertex pairs in clockwise order correspond to these axial neighbour directions.
+  const adjacent = neighbours(tile), neighbourOrder = [5, 0, 1, 2, 3, 4];
+  for (let edge = 0; edge < 6; edge++) {
+    const other = p.at(adjacent[neighbourOrder[edge]!]!);
+    if (tile.nation < 0 || other?.nation === tile.nation && other.region === tile.region) continue;
+    const a = base[edge]!, b = base[(edge + 1) % 6]!;
+    if (other?.nation !== tile.nation) {
+      if (other && other.nation >= 0 && other.nation < tile.nation) continue;
+      p.edges.moveTo(a.x + dx, a.y).lineTo(b.x + dx, b.y).stroke({ color: INK, width: 4.5 });
+      p.edges.moveTo(a.x + dx, a.y).lineTo(b.x + dx, b.y).stroke({ color: p.nations.get(tile.nation)!, width: 2.5 });
+    } else if (tile.region >= 0) {
+      for (const t of [0.2, 0.6]) p.edges.circle(a.x + dx + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 0.8).fill(WOOD);
+    }
+  }
+}
+
+function drawTileCopy(p: Paint, tile: HexTile, centre: { x: number; y: number }, base: { x: number; y: number }[], coastal: boolean, dx: number): void {
+  const poly = base.flatMap((pt) => [pt.x + dx, pt.y]);
+  p.ground.poly(poly).fill(coastal ? WATER : HEX_TERRAIN_COLOURS[tile.terrain]);
+  p.grid.poly(poly).stroke({ width: 0.7, color: INK, alpha: 0.18 });
+  if (tile.nation >= 0) p.tints.poly(poly).fill({ color: p.nations.get(tile.nation)!, alpha: 0.12 });
+  const texture = textures.get(`terrain-${tile.terrain}`);
+  if (texture) addTerrainSprite(p.terrain, texture, centre.x + dx, centre.y);
+  if (tile.road && textures.has('terrain-road-overlay')) addTerrainSprite(p.terrain, textures.get('terrain-road-overlay')!, centre.x + dx, centre.y);
+  drawBorders(p, tile, base, dx);
+}
+
+/** Draws every tile on each visible copy and returns the vertical extent of the world. */
+function drawTiles(p: Paint): { top: number; bottom: number } {
+  let top = Infinity, bottom = -Infinity;
+  for (const tile of p.layout.hexes.values()) {
+    const centre = axialToPixel(tile), base = hexCorners(tile);
+    top = Math.min(top, centre.y - 16); bottom = Math.max(bottom, centre.y + 16);
+    const coastal = tile.terrain === 'water' && neighbours(tile).some((n) => { const other = p.at(n); return !!other && other.terrain !== 'water'; });
+    for (const dx of copies(centre.x, p.width)) drawTileCopy(p, tile, centre, base, coastal, dx);
+  }
+  return { top, bottom };
+}
+
+/** Rivers run from each river hex to the hex it drains into (generated hydrology, gen/hydro.ts). */
+function drawRivers(p: Paint): void {
+  const W = p.width;
+  for (const { from, to } of p.layout.rivers) {
+    const start = axialToPixel(from), raw = axialToPixel(to), q = { x: start.x + ((raw.x - start.x) - W * Math.round((raw.x - start.x) / W)), y: raw.y };
+    for (const dx of copies(start.x, W)) p.roads.moveTo(start.x + dx, start.y).lineTo(q.x + dx, q.y).stroke({ color: WATER, width: 2.2, alpha: 0.9, cap: 'round' });
+  }
+}
+
+function drawRoutes(map: MapData, p: Paint): void {
+  for (const edge of hexRouteEdges(map, p.layout)) {
+    const start = axialToPixel(edge.from), q = axialToPixel(edge.to);
+    const end = edge.terrain === 3 ? { x: (start.x + q.x) / 2, y: (start.y + q.y) / 2 } : q;
+    for (const dx of copies(start.x, p.width)) {
+      p.roads.moveTo(start.x + dx, start.y).lineTo(end.x + dx, end.y)
+        .stroke({ color: edge.terrain === 3 ? PAPER : TERRAIN_COLOURS[edge.terrain] ?? WOOD, width: edge.terrain === 2 ? 2.5 : 0.8, alpha: 0.55 });
+    }
+  }
+}
+
+function drawPlaces(map: MapData, p: Paint, emblems: Container, townSprites: Map<number, Sprite>): void {
+  for (const node of map.nodes) {
+    const pt = p.layout.points.get(node.id);
+    if (!pt) continue;
+    // Villages are small and soft so they do not speckle the zoomed-out map; towns stay crisp.
+    for (const dx of copies(pt.x, p.width)) {
+      if (node.level === 4) p.dots.circle(pt.x + dx, pt.y, 2).fill({ color: PAPER, alpha: 0.75 }).stroke({ width: 1, color: INK, alpha: 0.6 });
+      else p.dots.circle(pt.x + dx, pt.y, node.level === 3 ? 3.5 : 4).fill(PAPER).stroke({ width: 2, color: INK });
+    }
+    const texture = textures.get(`town-${LEVELS[node.level]}`);
+    if (texture) {
+      const sprite = new Sprite(texture); sprite.anchor.set(0.5); sprite.position.set(pt.x, pt.y); sprite.visible = false;
+      townSprites.set(node.id, sprite); emblems.addChild(sprite);
+    }
+  }
+}
+
 export function drawHexWorld(map: MapData, layout: HexLayout, world: Container, renderer: Renderer, maxTexture = 4096): HexWorld {
   const W = layout.width, terrain = new Container(), ground = new Graphics(), edges = new Graphics(), roads = new Graphics(), dots = new Graphics(), tints = new Graphics(), grid = new Graphics();
   const emblems = new Container(), townSprites = new Map<number, Sprite>();
   const nations = new Map(map.nodes.filter((node) => node.level === 1).sort((a, b) => a.id - b.id).map((node, i) => [node.id, NATION_COLOURS[i % NATION_COLOURS.length]!]));
   const at = (hex: Axial): HexTile | undefined => layout.hexes.get(hexKey(wrapHex(layout, hex)));
+  const paint: Paint = { layout, width: W, ground, edges, roads, dots, tints, grid, terrain, nations, at };
   terrain.addChild(ground);
-  let top = Infinity, bottom = -Infinity;
-  for (const tile of layout.hexes.values()) {
-    const centre = axialToPixel(tile), base = hexCorners(tile);
-    top = Math.min(top, centre.y - 16); bottom = Math.max(bottom, centre.y + 16);
-    const coastal = tile.terrain === 'water' && neighbours(tile).some((n) => { const other = at(n); return !!other && other.terrain !== 'water'; });
-    for (const dx of copies(centre.x, W)) {
-      const poly = base.flatMap((p) => [p.x + dx, p.y]);
-      ground.poly(poly).fill(coastal ? WATER : HEX_TERRAIN_COLOURS[tile.terrain]);
-      grid.poly(poly).stroke({ width: 0.7, color: INK, alpha: 0.18 });
-      if (tile.nation >= 0) tints.poly(poly).fill({ color: nations.get(tile.nation)!, alpha: 0.12 });
-      const texture = textures.get(`terrain-${tile.terrain}`);
-      if (texture) {
-        const sprite = new Sprite(texture); sprite.anchor.set(0.5); sprite.position.set(centre.x + dx, centre.y); sprite.width = 28; sprite.height = 32;
-        terrain.addChild(sprite);
-      }
-      if (tile.road && textures.has('terrain-road-overlay')) {
-        const sprite = new Sprite(textures.get('terrain-road-overlay')); sprite.anchor.set(0.5); sprite.position.set(centre.x + dx, centre.y); sprite.width = 28; sprite.height = 32;
-        terrain.addChild(sprite);
-      }
-      // Vertex pairs in clockwise order correspond to these axial neighbour directions.
-      const adjacent = neighbours(tile), neighbourOrder = [5, 0, 1, 2, 3, 4];
-      for (let edge = 0; edge < 6; edge++) {
-        const other = at(adjacent[neighbourOrder[edge]!]!);
-        if (tile.nation < 0 || other?.nation === tile.nation && other.region === tile.region) continue;
-        const a = base[edge]!, b = base[(edge + 1) % 6]!;
-        if (other?.nation !== tile.nation) {
-          if (other && other.nation >= 0 && other.nation < tile.nation) continue;
-          edges.moveTo(a.x + dx, a.y).lineTo(b.x + dx, b.y).stroke({ color: INK, width: 4.5 });
-          edges.moveTo(a.x + dx, a.y).lineTo(b.x + dx, b.y).stroke({ color: nations.get(tile.nation)!, width: 2.5 });
-        } else if (tile.region >= 0) {
-          for (const t of [0.2, 0.6]) edges.circle(a.x + dx + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 0.8).fill(WOOD);
-        }
-      }
-    }
-  }
-  // Rivers run from each river hex to the hex it drains into (generated hydrology, gen/hydro.ts).
-  for (const { from, to } of layout.rivers) {
-    const p = axialToPixel(from), raw = axialToPixel(to), q = { x: p.x + ((raw.x - p.x) - W * Math.round((raw.x - p.x) / W)), y: raw.y };
-    for (const dx of copies(p.x, W)) roads.moveTo(p.x + dx, p.y).lineTo(q.x + dx, q.y).stroke({ color: WATER, width: 2.2, alpha: 0.9, cap: 'round' });
-  }
-  for (const edge of hexRouteEdges(map, layout)) {
-    const p = axialToPixel(edge.from), q = axialToPixel(edge.to);
-    const end = edge.terrain === 3 ? { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 } : q;
-    for (const dx of copies(p.x, W)) {
-      roads.moveTo(p.x + dx, p.y).lineTo(end.x + dx, end.y)
-        .stroke({ color: edge.terrain === 3 ? PAPER : TERRAIN_COLOURS[edge.terrain] ?? WOOD, width: edge.terrain === 2 ? 2.5 : 0.8, alpha: 0.55 });
-    }
-  }
-  for (const node of map.nodes) {
-    const p = layout.points.get(node.id);
-    if (!p) continue;
-    // Villages are small and soft so they do not speckle the zoomed-out map; towns stay crisp.
-    for (const dx of copies(p.x, W)) {
-      if (node.level === 4) dots.circle(p.x + dx, p.y, 2).fill({ color: PAPER, alpha: 0.75 }).stroke({ width: 1, color: INK, alpha: 0.6 });
-      else dots.circle(p.x + dx, p.y, node.level === 3 ? 3.5 : 4).fill(PAPER).stroke({ width: 2, color: INK });
-    }
-    const texture = textures.get(`town-${LEVELS[node.level]}`);
-    if (texture) {
-      const sprite = new Sprite(texture); sprite.anchor.set(0.5); sprite.position.set(p.x, p.y); sprite.visible = false;
-      townSprites.set(node.id, sprite); emblems.addChild(sprite);
-    }
-  }
+  const { top, bottom } = drawTiles(paint);
+  drawRivers(paint);
+  drawRoutes(map, paint);
+  drawPlaces(map, paint, emblems, townSprites);
   terrain.addChild(tints, roads, edges, dots);
   // Twice the resolution keeps zoomed-in terrain sharp, where the GPU's texture limit allows it.
   const frame = new Rectangle(0, top, W, bottom - top);
